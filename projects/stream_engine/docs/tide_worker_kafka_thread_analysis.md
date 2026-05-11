@@ -31,16 +31,17 @@ rdk 线程模型:
 
 ```text
 旧模型: 28 个 subtask -> 28 个 KafkaConsumer handle -> 28 × 360 broker threads
-新模型: 28 个 subtask -> 1~4 个 UnifiedConsumer handle -> subscribe + dispatch -> per-subtask queue
+新模型: 28 个 subtask -> 1~4 个 UnifiedConsumer handle -> subscribe + dynamic dispatcher -> worker pool
 ```
 
 关键原则：
 
 1. **节点间分布式安全**：默认使用 `subscribe()` + Kafka group protocol，避免手动 `assign()` 在 100 个节点下出现重叠/遗漏。
 2. **节点内线程收敛**：一个节点内同 cluster/group/topics 共享 1 个 consumer handle；高吞吐时最多扩到 2~4 个 handle。
-3. **对象生命周期同线程**：用 `MsgSlotRing` 保证 Kafka message 的创建与销毁都在 poll thread，subtask 只借用 slot。
-4. **背压闭环**：bounded queue + per-partition pause/resume，慢 subtask 不拖垮整个进程。
-5. **可观测优先**：通过 Unix Domain Socket 导出 HTML/JSON/Prometheus，按 worker 端口隔离。
+3. **节点内动态均衡**：dispatcher 按 idle worker 动态分发 batch，不做 `partition -> subtask` 静态绑定。
+4. **对象生命周期同线程**：用 `MsgSlotRing` 保证 Kafka message 的创建与销毁都在 poll thread，worker 只借用 slot。
+5. **背压闭环**：基于 per-partition lease/in-flight、ready queue 与 `pause/resume`，慢 worker 不拖垮整个进程。
+6. **可观测优先**：通过 Unix Domain Socket 导出 HTML/JSON/Prometheus，按 worker 端口隔离。
 
 ### 0.3 目标线程预算
 
@@ -158,6 +159,21 @@ rdk_threads = handle_count × (1 + broker_count) + transient_threads
 KafkaSource -> ClusterConsumerObj -> RdKafka::KafkaConsumer
 ```
 
+首期实现要求与老代码隔离：
+
+```text
+new code:
+  src/source/kafka/consumer_v2/
+
+legacy code:
+  src/source/kafka/consumer_obj.cpp
+  src/source/kafka/consumer_obj.h
+
+integration rule:
+  对外通过稳定 API 暴露 UnifiedConsumer / WorkerQueue 能力
+  KafkaSource 通过适配层接入，不把新调度逻辑直接揉进 legacy implementation
+```
+
 不在首期扩散到：
 
 ```text
@@ -256,22 +272,28 @@ consumer#27 -> broker-0 thread, broker-1 thread, ..., broker-359 thread
                  v
       +---------------------+
       | poll-thread-0       |
-      | consume + route     |
+      | consume + buffer    |
       +----------+----------+
                  |
                  v
-       +---------+---------+---------+----------------+
-       |         |         |         |                |
-       v         v         v         v                v
-   +-------+ +-------+ +-------+ +-------+        +-------+
-   |queue-0| |queue-1| |queue-2| | ...   |        |queue-N|
-   +---+---+ +---+---+ +---+---+ +---+---+        +---+---+
-       |         |         |         |                |
-       v         v         v         v                v
-  subtask-0 subtask-1 subtask-2 subtask-3       subtask-N
+      +------------------------------+
+      | shared dispatcher            |
+      | - partition buffers          |
+      | - ready queue                |
+      | - lease table                |
+      +---------------+--------------+
+                      |
+                      v
+      +------------------------------+
+      | worker threads               |
+      | - worker-0                   |
+      | - worker-1                   |
+      | - ...                        |
+      | - worker-N                   |
+      +------------------------------+
 
   offset/checkpoint:
-      MsgSlotRing done prefix -> committable offset -> Tide checkpoint
+      per-partition done prefix -> committable offset -> Tide checkpoint
 ```
 
 ### 4.2 UnifiedConsumer key
@@ -282,10 +304,10 @@ consumer#27 -> broker-0 thread, broker-1 thread, ..., broker-359 thread
 unifiedConsumerKey = {
   cluster,
   groupId,
-  normalized_topic_set,
-  security_protocol,
-  sasl_user_or_identity,
-  extra_rdkafka_conf_fingerprint
+  normalizedTopicSet,
+  securityProtocol,
+  saslUserOrIdentity,
+  extraRdkafkaConfFingerprint
 }
 ```
 
@@ -296,14 +318,17 @@ unifiedConsumerKey = {
 | 决策点 | 选择 | 原因 |
 |---|---|---|
 | 跨节点分区协调 | 默认 `subscribe()` | 100 节点下由 Kafka group protocol 保证无重叠/遗漏 |
-| 节点内路由 | poll thread dispatch 到 subtask queue | 收敛 Kafka handle，同时保持 subtask 隔离 |
+| 节点内路由 | dynamic dispatcher + worker pool | 收敛 Kafka handle，同时让 dispatch 承担节点内负载均衡 |
 | handle 数 | 默认 1，最大 4 | 线程数硬控 ≤ 128；高吞吐可扩 |
 | Offset | Tide checkpoint 为准，可选同步 Kafka commit | 与 barrier 对齐，保证恢复语义 |
-| 背压 | bounded queue + pause/resume | 慢 subtask 只暂停相关 partition |
+| 背压 | ready queue + lease/in-flight + pause/resume | 慢 worker 只阻塞自己持有 lease 的 partition |
+| 实现隔离 | 新实现放在 `src/source/kafka/consumer_v2/` | 避免污染 legacy 路径，便于灰度与回退 |
 | 消息生命周期 | MsgSlotRing | 创建/销毁都在 poll thread |
 | Metrics | UDS + HTML/JSON | 不新增对外端口，不依赖外部服务 |
 
 ### 4.4 接口草案
+
+以下接口由 `src/source/kafka/consumer_v2/` 对外提供；legacy KafkaSource 只依赖这些 API，不直接依赖内部 dispatcher / lease / ring 细节：
 
 ```cpp
 class UnifiedConsumer {
@@ -316,31 +341,38 @@ public:
         // 默认 1；高吞吐可配置 2~4；线程数预算强约束 <= 128。
         int pollThreadCount = 1;
 
-        // per-subtask queue / ring 参数。
+        // dispatcher / worker / ring 参数。
         int queueCapacity = 1024;
         int highWatermark = 800;
         int lowWatermark = 400;
+        int dispatchBatchSize = 64;
+        int partitionBufferCapacity = 256;
         int ringCapacity = 4096;
 
         std::unordered_map<std::string, std::string> rdkafkaConf;
     };
 
-    static std::shared_ptr<MessageQueue> registerQueue(
+    static std::shared_ptr<WorkerQueue> registerWorker(
         const Config& config,
-        const std::string& subtaskId);
+        const std::string& workerId);
 
-    static void unregisterQueue(std::shared_ptr<MessageQueue> queue);
+    static void unregisterWorker(std::shared_ptr<WorkerQueue> queue);
 
     static Metrics getMetrics(
         const std::string& cluster,
         const std::string& groupId);
 };
 
-class MessageQueue {
+struct DispatchItem {
+    TopicPartition topicPartition;
+    std::vector<MsgSlot*> slots;
+    uint64_t leaseId = 0;
+};
+
+class WorkerQueue {
 public:
-    Status readMsg(MsgSlot** slot, int timeoutMs);
-    void ack(MsgSlot* slot);
-    std::map<TopicPartition, int64_t> committableOffsets();
+    Status readBatch(DispatchItem* item, int timeoutMs);
+    void ackBatch(const DispatchItem& item);
     size_t depth() const;
 };
 ```
@@ -387,8 +419,8 @@ public:
      partitions subset A          partitions subset B            partitions subset Z
             |                            |                              |
             v                            v                              v
-     local dispatch               local dispatch                 local dispatch
-     to subtask queues            to subtask queues              to subtask queues
+     local dynamic dispatch       local dynamic dispatch         local dynamic dispatch
+     to idle workers              to idle workers                to idle workers
 ```
 
 ### 5.3 Rebalance 回调
@@ -397,17 +429,17 @@ public:
 on_partitions_assigned(partitions):
   1. 根据 Tide checkpoint 查询每个 partition 起始 offset
   2. seek(partition, checkpoint_offset)
-  3. 建立 partition -> local subtask queue 路由
-  4. 初始化该 partition 的 MsgSlotRing offset 状态
+  3. 初始化 partition state / buffer / lease state
+  4. 把可消费 partition 放入 ready queue
   5. 标记 partition 为 consuming
 
 on_partitions_revoked(partitions):
   1. pause(revoked partitions)
-  2. 停止向这些 partition 的 queue dispatch 新消息
-  3. 等待 in-flight slot 完成或到达 revoke drain timeout
-  4. 计算 DONE prefix 对应的 committable offset
+  2. 停止向这些 partition dispatch 新 batch
+  3. 等待 lease holder 完成 in-flight batch 或到达 revoke drain timeout
+  4. 计算 per-partition done prefix 对应的 committable offset
   5. 写入 Tide checkpoint / 可选 commitSync
-  6. 删除 partition -> queue 路由
+  6. 删除 partition state / buffer / lease
 ```
 
 ### 5.4 assign 的保留用途
@@ -423,54 +455,85 @@ on_partitions_revoked(partitions):
 
 ---
 
-## 6. 节点内 dispatch 与背压
+## 6. 节点内动态 dispatcher 与背压
 
-### 6.1 Partition 亲和路由
+### 6.1 动态 dispatch 模型
 
-poll thread 从 Kafka 拉到消息后，按 `topic + partition` 路由到本节点 subtask queue：
+poll thread 从 Kafka 拉到消息后，不直接绑定到固定 subtask，而是先写入 `partition buffer`，再由 dispatcher 把可运行 partition 派发给空闲 worker：
 
 ```text
-route_key = topic + partition
-target    = RouteTable[route_key]
+partitionState = {
+  bufferedSlots,
+  inFlightLease,
+  paused,
+  ready
+}
+
+dispatch rule:
+  if partitionState.inFlightLease is empty
+     and partitionState.bufferedSlots is not empty
+     and idleWorker exists:
+       create DispatchItem(batch)
+       mark partitionState.inFlightLease = leaseId
+       assign batch to one idle worker
 
 保证:
-  同一个 partition 的消息总是进入同一个 subtask queue
-  同一个 partition 内顺序不被打乱
+  同一个 partition 在任一时刻最多只有一个 in-flight batch
+  同一个 partition 不绑定固定 worker
+  idle worker 会优先消费 ready partition，形成隐式负载均衡
 ```
 
 ### 6.2 背压状态机
 
 ```text
-queue capacity = 1024
-high watermark = 800
-low watermark  = 400
+partitionBufferCapacity = 256
+high watermark          = 800
+low watermark           = 400
 
-poll thread                         queue state              action
---------------------------------------------------------------------------------
-consume msg                         depth < 800              push slot
-consume msg                         depth >= 800             pause(partition)
-partition paused                    depth > 400              keep paused
-partition paused                    depth <= 400             resume(partition)
-ring free slots exhausted           ring full                pause(affected partition)
+layer 1: 调度抑制
+  worker holds lease too long
+    -> stop dispatching new batch for this partition
+
+layer 2: buffer 吸收
+  consume msg and buffer < partitionBufferCapacity
+    -> append slot into local partition buffer
+  worker still holds lease and buffer keeps growing
+    -> keep buffering, do not rebalance, do not migrate ownership
+
+layer 3: 本地 fetch 限流
+  partition buffer or ring reaches high watermark
+    -> pause(partition) locally to stop fetching more data for this assigned partition
+  lease released and queued <= low watermark
+    -> resume(partition) if previously paused
+
+note:
+  `pause(partition)` 是本地流控，不是调度手段，也不等价于 rebalance
+  正常路径优先依赖“停止 dispatch + 本地 buffer”，只有顶到水位才进入 pause/resume
+  ring free slots exhausted
+    -> pause(affected partition)
 ```
 
-### 6.3 慢 subtask 隔离
+### 6.3 慢 worker 隔离
 
 ```text
 +--------------------------------------------------------------------------------+
-|                                慢消费者隔离                                      |
+|                                慢 worker 隔离                                    |
 +--------------------------------------------------------------------------------+
 
-  partition p0 -> queue-0 -> subtask-0  OK
-  partition p1 -> queue-1 -> subtask-1  SLOW, depth >= high watermark
-  partition p2 -> queue-2 -> subtask-2  OK
+  partition p0 -> worker-0  OK
+  partition p1 -> worker-1  SLOW, lease held
+  partition p2 -> worker-2  OK
+  partition p3 -> idle worker pool 可继续消费
 
   动作:
-    pause(p1)
-    continue consume p0/p2
+    1. 调度层: stop dispatching new batch for p1
+    2. 缓冲层: continue buffering p1 in local partition buffer
+    3. 限流层: only pause(p1) if buffer/ring reaches watermark
+    4. 继续把 p0/p2/p3 dispatch 给其他 idle workers
 
   结果:
-    慢 subtask 只影响自己的 partition，不阻塞整个 poll thread。
+    慢 worker 只影响自己当前持有 lease 的 partition，不阻塞整个 dispatcher。
+    `pause(p1)` 只是本地 fetch throttling，不表示 p1 与 worker-1 重新耦合，也不意味着 rebalance。
 ```
 
 ---
@@ -501,7 +564,7 @@ msg = consumer->consume()   ----->   process(msg)
 ```text
 创建 RdKafka::Message: poll thread
 销毁 RdKafka::Message: poll thread
-subtask thread:        只读 payload + atomic 标记 DONE
+worker thread:         只读 payload + atomic 标记 done
 ```
 
 ### 7.3 Ring 结构
@@ -522,11 +585,11 @@ subtask thread:        只读 payload + atomic 标记 DONE
 
   slot state:
 
-      FREE -> FILLED -> DISPATCHED -> DONE -> FREE
+      free -> filled -> dispatched -> done -> free
         ^       |           |          |       ^
         |       |           |          |       |
-        |   consume()   push queue  subtask  poll thread
-        |   fill slot              ack done  batch reclaim
+        |   consume()  build batch  worker   poll thread
+        |   fill slot  grant lease  ack done batch reclaim
         +--------------------------------------+
 ```
 
@@ -562,24 +625,33 @@ Poll Thread:
        slot.offset = msg->offset()
        slot.state = filled
 
-    5. dispatch:
-       queue = route(slot.topic, slot.partition)
-       slot.state = dispatched
-       queue.push(&slot)
+    5. buffer by partition:
+       partitionBuffer = buffer(slot.topic, slot.partition)
+       partitionBuffer.push(&slot)
        tail++
 
+    6. dispatch if eligible:
+       if no active lease for partition and idle worker exists:
+           item = buildDispatchItem(partitionBuffer, dispatchBatchSize)
+           mark lease active
+           for each itemSlot in item.slots:
+               itemSlot.state = dispatched
+           workerQueue.push(item)
 
-Subtask Thread:
+
+Worker Thread:
 
   loop:
-    slot = queue.pop(timeout)
-    process(slot->payloadPtr, slot->payloadLen)
-    slot->state.store(done, release)
+    item = workerQueue.pop(timeout)
+    for slot in item.slots:
+        process(slot->payloadPtr, slot->payloadLen)
+        slot->state.store(done, release)
+    dispatcher.releaseLease(item.topicPartition, item.leaseId)
 ```
 
 ### 7.5 Offset tracking 与 ring 的天然对齐
 
-Kafka offset commit 需要“连续已处理”的最大 offset。Ring 的连续 `done prefix` 正好表达这个语义：
+Kafka offset commit 需要“连续已处理”的最大 offset。每个 partition 上 ring 的连续 `done prefix` 正好表达这个语义：
 
 ```text
 slots:   [done] [done] [done] [dispatched] [filled]
@@ -638,10 +710,10 @@ private:
 
 | 指标 | 普通 queue 方案 | MsgSlotRing |
 |---|---|---|
-| subtask 侧释放成本 | `delete msg`，可能 remote free | `atomic store` |
+| worker 侧释放成本 | `delete msg`，可能 remote free | `atomic store` |
 | poll thread 内存访问 | 分散 new/delete | 顺序 ring reclaim |
 | 内存碎片 | 高 | ring 预分配，低碎片 |
-| 背压信号 | queue depth + 额外状态 | ring full 即背压 |
+| 背压信号 | queue depth + 额外状态 | ready queue / lease / ring full 联合表达 |
 | offset tracking | 额外 ack map/bitmap | `done prefix` 天然表达 |
 
 ---
@@ -661,7 +733,7 @@ private:
               |
               +-- rdk:main
               +-- rdk:broker for active leaders
-              +-- poll-thread-0 -> dispatch all assigned partitions
+              +-- poll-thread-0 -> local dispatcher -> idle workers
 
   优点:
     线程最少，适合绝大多数场景。
@@ -678,15 +750,16 @@ private:
 
   UnifiedConsumer(pool_size = 4, same group.id)
 
-      +-- handle-0 -> poll-thread-0 -> partitions subset A -> queues
-      +-- handle-1 -> poll-thread-1 -> partitions subset B -> queues
-      +-- handle-2 -> poll-thread-2 -> partitions subset C -> queues
-      +-- handle-3 -> poll-thread-3 -> partitions subset D -> queues
+      +-- handle-0 -> poll-thread-0 --\
+      +-- handle-1 -> poll-thread-1 ----> shared dispatcher -> worker threads
+      +-- handle-2 -> poll-thread-2 ----/
+      +-- handle-3 -> poll-thread-3 --/
 
   特性:
     1. 每个 handle 只消费自己被分配的 partitions
-    2. partition 内顺序仍由单 poll thread 保证
-    3. 扩容/缩容通过 Kafka rebalance 完成
+    2. 图中多个 poll-thread 汇聚到同一个 dispatcher，强调它们共享同一调度状态
+    3. partition 内顺序仍由单 poll thread + per-partition lease 保证
+    4. 扩容/缩容通过 Kafka rebalance 完成
 ```
 
 ### 8.3 扩容触发条件
@@ -696,7 +769,7 @@ private:
 | poll_thread_cpu_percent | > 80% 持续 30s | pool_size + 1 |
 | poll_idle_percent | < 10% 持续 30s | pool_size + 1 |
 | consumer_lag 增长 | 连续 5min 增长 | pool_size + 1 或排查 downstream |
-| queue_depth 高但 poll idle 高 | queue > 90% 且 idle > 50% | 不扩 poll，瓶颈在 subtask |
+| ready_queue_depth 高但 poll idle 高 | queue > 90% 且 idle > 50% | 不扩 poll，瓶颈在 worker |
 | poll_thread_cpu_percent | < 20% 持续 5min | pool_size - 1 |
 
 ### 8.4 线程预算表
@@ -741,20 +814,22 @@ Layer 2: Poll thread
   - poll_idle_percent
   - dispatch_latency_us
 
-Layer 3: Queue / MsgSlotRing
-  - queue_depth
-  - queueCapacity
-  - queue_push_per_sec
-  - queue_pop_per_sec
+Layer 3: Dispatcher / MsgSlotRing
+  - ready_queue_depth
+  - idle_worker_count
+  - leased_partition_count
+  - partition_buffer_depth
+  - dispatch_batch_size
   - queue_full_pause_count
   - queue_resume_count
   - ring_inflight
   - ring_free_slots
   - ring_reclaim_per_sec
 
-Layer 4: Subtask
+Layer 4: Worker
   - process_msgs_per_sec
   - process_latency_us
+  - lease_hold_ms
   - ack_pending_count
   - checkpoint_offset_committed
 
@@ -769,8 +844,8 @@ Layer 5: Process/global
 
 | 现象 | 判断 | 动作 |
 |---|---|---|
-| lag 增长，poll CPU 高，queue 不深 | poll 瓶颈 | 增加 `pollThreadCount` |
-| lag 增长，queue 深，poll idle 高 | subtask 慢 | 排查业务处理，不能盲目扩 poll |
+| lag 增长，ready queue 不深，poll CPU 高 | poll 瓶颈 | 增加 `pollThreadCount` |
+| lag 增长，ready queue 深，poll idle 高 | worker 慢 | 排查业务处理，不能盲目扩 poll |
 | broker RTT 高，fetch 低 | Kafka/网络瓶颈 | 排查 broker/network |
 | ring free slots 低 | in-flight 太多 | 增大 ring 或定位慢 partition |
 | total_rdk_threads > 128 | handle 泄漏或扩容失控 | 阻断扩容并报警 |
@@ -827,10 +902,13 @@ done
 | Poll Threads                                                                   |
 |   poll-0  CPU 34%  idle 62%  msgs/s 42.3k  batch 128                           |
 |                                                                                |
-| Queues                                                                         |
-|   subtask      depth/cap    push/s   pop/s   paused   state                    |
-|   task-0       120/1024     5.2k     5.1k    0        OK                       |
-|   task-1       890/1024     5.3k     2.1k    3        SLOW                     |
+| Dispatcher                                                                     |
+|   ready-queue  12      idle-workers 9      leased-partitions 3                 |
+|                                                                                |
+| Workers                                                                        |
+|   worker       batch/s   msg/s   lease-hold-ms   state                         |
+|   worker-0     82        5.2k    14              OK                            |
+|   worker-1     31        2.1k    220             SLOW                          |
 |                                                                                |
 | MsgSlotRing                                                                    |
 |   capacity 4096   in-flight 1055   free 3041   reclaim/s 41.8k                 |
@@ -838,8 +916,8 @@ done
 |                                                                                |
 | Partitions                                                                     |
 |   topic:partition       offset       lag       leader      state                |
-|   access_out:0          883412       23        broker-5    consuming            |
-|   access_out:1          771209       102       broker-12   paused               |
+|   access_out:0          883412       23        broker-5    leased(worker-0)     |
+|   access_out:1          771209       102       broker-12   paused-buffered      |
 +--------------------------------------------------------------------------------+
 ```
 
@@ -933,9 +1011,10 @@ metadata.request.timeout.ms = 30000
 +--------------------------------------------------------------------------------+
 | Phase 1: shared handle                                                          |
 +--------------------------------------------------------------------------------+
+| 0. 在 `src/source/kafka/consumer_v2/` 下搭建新实现骨架                            |
 | 1. 定义 `unifiedConsumerKey`                                                     |
-| 2. 实现 `registerQueue()` / `unregisterQueue()`                                  |
-| 3. 同 key 多次 `registerQueue()` 只创建 1 个 KafkaConsumer handle                |
+| 2. 实现 `registerWorker()` / `unregisterWorker()`                                |
+| 3. 同 key 多次 `registerWorker()` 只创建 1 个 KafkaConsumer handle               |
 | 4. 使用 subscribe(topics)，接入 rebalance callback                                |
 +--------------------------------------------------------------------------------+
 ```
@@ -954,9 +1033,10 @@ TDD：
 +--------------------------------------------------------------------------------+
 | Phase 2: dispatch                                                               |
 +--------------------------------------------------------------------------------+
-| poll thread consume -> route(topic, partition) -> subtask queue                  |
-| queue 满 -> pause(partition)                                                     |
-| queue 降到 low watermark -> resume(partition)                                    |
+| poll thread consume -> partition buffer -> ready queue -> idle worker            |
+| layer 1: 调度抑制，先停止给慢 lease 对应 partition 派发新 batch                    |
+| layer 2: buffer 吸收，在本地 partition buffer 内继续消化积压                      |
+| layer 3: fetch 限流，只有水位触顶才对 assigned partition 做 local pause/resume    |
 +--------------------------------------------------------------------------------+
 ```
 
@@ -964,10 +1044,11 @@ TDD：
 
 | 测试 | 验收 |
 |---|---|
-| 多 partition dispatch | 无错误路由 |
-| 同 partition 顺序 | offset 单调 |
-| queue high watermark | 触发 pause |
-| queue low watermark | 触发 resume |
+| 多 partition dispatch | idle worker 可动态拿任务 |
+| 同 partition 顺序 | 任一时刻最多一个 in-flight batch，offset 单调 |
+| lease release | worker ack 后 partition 可再次被任意 worker 获取 |
+| queue high watermark | 在调度抑制和 buffer 吸收之后，才触发 local pause |
+| queue low watermark | local pause 后，回落到 low watermark 才 resume |
 
 ### 11.4 Phase 3：MsgSlotRing
 
@@ -976,8 +1057,8 @@ TDD：
 | Phase 3: same-thread lifecycle                                                  |
 +--------------------------------------------------------------------------------+
 | 1. poll thread `acquire()` / `fill()` / `reclaim()`                              |
-| 2. subtask 只拿 MsgSlot*                                                         |
-| 3. `ack()` 只做 state `done`                                                     |
+| 2. worker 只拿 `DispatchItem`，内部引用 `MsgSlot*`                               |
+| 3. `ackBatch()` 只做 state `done` + release lease                                |
 | 4. `reclaim()` 时在 poll thread delete `RdKafka::Message`                        |
 +--------------------------------------------------------------------------------+
 ```
@@ -987,7 +1068,7 @@ TDD：
 | 测试 | 验收 |
 |---|---|
 | slot 状态流转 | `free -> filled -> dispatched -> done -> free` |
-| subtask ack | 不 delete message |
+| worker ack | 不 delete message，且 release 对应 partition lease |
 | reclaim | delete 发生在 poll thread |
 | committable offset | 返回连续 `done prefix` 的下一个 offset |
 
@@ -997,10 +1078,12 @@ TDD：
 +--------------------------------------------------------------------------------+
 | Phase 4: KafkaSource integration                                                |
 +--------------------------------------------------------------------------------+
-| KafkaSource::Open()    -> UnifiedConsumer::registerQueue()                       |
-| KafkaSource::ReadMsg() -> MessageQueue::readMsg()                                |
-| KafkaSource::Ack()     -> MessageQueue::ack()                                    |
-| KafkaSource::Close()   -> UnifiedConsumer::unregisterQueue()                     |
+| 保持 legacy `consumer_obj.*` 不承载新调度实现                                    |
+| 新逻辑位于 `src/source/kafka/consumer_v2/`，对外暴露稳定 API                      |
+| KafkaSource::Open()    -> UnifiedConsumer::registerWorker()                      |
+| KafkaSource::ReadMsg() -> WorkerQueue::readBatch()                               |
+| KafkaSource::Ack()     -> WorkerQueue::ackBatch()                                |
+| KafkaSource::Close()   -> UnifiedConsumer::unregisterWorker()                    |
 +--------------------------------------------------------------------------------+
 ```
 
@@ -1037,6 +1120,128 @@ queue_depth
 ring_inflight
 consumer_lag
 ```
+
+### 11.7 测试策略重规划
+
+测试不复用旧实现，也不依赖仓库里已有的非自包含测试。这里直接为 `consumer_v2` 规划一套新的分层测试体系。
+
+#### 11.7.1 目标
+
+```text
+1. 验证 correctness:
+   lease / dispatch / ordering / checkpoint / rebalance
+
+2. 验证 resource:
+   handle_count / rdk_thread_count / memory watermark / queue depth
+
+3. 验证 operability:
+   metrics / local harness / restart / fault injection
+```
+
+#### 11.7.2 测试分层
+
+| 层级 | 目标 | 是否依赖 docker | 反馈速度 |
+|---|---|---:|---|
+| unit | 验证纯状态机与数据结构 | 否 | 最快 |
+| component | 验证 dispatcher / worker / ring 组合行为 | 否 | 快 |
+| e2e | 验证真实 Kafka broker / producer / rebalance / restart | 是 | 慢 |
+
+原则：
+
+1. unit 测试只测确定性逻辑，不接 Kafka。
+2. component 测试用 fake broker / fake producer 边界，不依赖 legacy `consumer_obj.*`。
+3. e2e 测试使用自包含 docker harness，验证真实链路。
+4. 旧测试只作为“场景灵感”，不作为实现基座。
+
+#### 11.7.3 目录规划
+
+```text
+dev/kafka_e2e/
+  docker-compose.yml
+  wait_ready.sh
+  create_topics.sh
+  produce_records.sh
+  teardown.sh
+
+src/test/kafka_v2/
+  lease_state_test.cpp
+  ready_queue_test.cpp
+  partition_buffer_test.cpp
+  msg_slot_ring_test.cpp
+  dispatcher_component_test.cpp
+  worker_pool_component_test.cpp
+  unified_consumer_e2e_test.cpp
+  kafka_source_v2_e2e_test.cpp
+  rebalance_e2e_test.cpp
+  restart_recovery_e2e_test.cpp
+```
+
+#### 11.7.4 优先实现顺序
+
+```text
+Step 1: unit
+  lease / ready queue / partition buffer / committable offset
+
+Step 2: component
+  dispatcher + worker threads + watermark + local pause/resume
+
+Step 3: e2e
+  docker broker + real producer push + consumer_v2 API
+
+Step 4: fault injection
+  slow worker / restart / revoke / assign / handle scale-out
+```
+
+#### 11.7.5 关键测试矩阵
+
+| 类别 | 场景 | 核心断言 |
+|---|---|---|
+| unit | lease acquire/release | 同一 partition 同时最多一个 in-flight lease |
+| unit | ready queue 去重 | 同一 partition ready 状态不重复入队 |
+| unit | done prefix | committable offset 正确推进 |
+| component | dispatch 动态均衡 | 空闲 worker 能持续拿到新 batch |
+| component | 慢 worker | 先停 dispatch，再 buffer，最后才 local pause |
+| component | watermark 回落 | local pause 后能按 low watermark resume |
+| e2e | 单 topic / 单 group | 主链路消费正确 |
+| e2e | 热点 partition | 不丢消息，不乱序 |
+| e2e | rebalance | revoke / assign 后 offset 正确衔接 |
+| e2e | restart recovery | checkpoint 恢复正确 |
+| e2e | 2~4 handles | 吞吐提升且线程预算不超标 |
+
+#### 11.7.6 本地端到端 Harness 原则
+
+1. 使用 docker 启动自包含 Kafka-compatible broker。
+2. producer 必须走真实 client push，不 mock `ReadMsg()`。
+3. topic 创建、投递、清理都由 harness 脚本统一完成。
+4. e2e 断言不仅看“消费成功”，还要看：
+   - `handle_count`
+   - `rdk_thread_count`
+   - `ready_queue_depth`
+   - `lease_hold_ms`
+   - `consumer_lag`
+5. e2e 优先覆盖 `src/source/kafka/consumer_v2/` 对外 API，不把测试写死到 legacy 接口。
+
+#### 11.7.7 覆盖率目标
+
+```text
+短期目标:
+  先把 consumer_v2 关键状态机和主路径覆盖做厚
+
+中期目标:
+  unit + component + e2e 三层形成稳定回归网
+
+长期目标:
+  通过分层覆盖逼近 98%+，而不是单纯堆 e2e 数量
+```
+
+覆盖率原则：
+
+- 高覆盖率不是目的，关键路径可验证才是目的。
+- 98%+ 可以作为长期目标，但前提是：
+  - unit 把状态机打透
+  - component 把组合行为打透
+  - e2e 把真实链路和故障注入打透
+- 不接受“只跑通 happy path 就算覆盖率很高”的假象。
 
 ---
 
