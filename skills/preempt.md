@@ -38,7 +38,7 @@
 - CPU 降到某个范围
 - 内存峰值不超过某个阈值
 
-#### 补充 production-ready 检查项
+### 补充 production-ready 检查项
 
 - 确认无内存泄漏。
 - 确认支持优雅退出。
