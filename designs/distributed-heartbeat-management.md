@@ -1,81 +1,86 @@
-# 分布式心跳管理系统设计初稿
+# 分布式心跳管理系统设计
 
 ## 结论
 
-这个系统的核心目标是用尽可能少的原子接口，完成 client 存活上报、server 间最终一致性同步，以及 client 扩展查询能力。
+用尽可能少的接口，完成 client 存活上报、高频心跳聚合、server 间最终一致性同步。
 
-系统不提供一个复杂的“节点管理大接口”，而是把能力拆成三个简单接口：
+系统只有三个接口：
 
 | 角色 | 接口 | 职责 |
 | --- | --- | --- |
-| server | `POST /heartbeat` | 接收 client 心跳，写入本地状态，并异步转发给 peers |
+| server | `POST /heartbeat` | 接收心跳（单条或批量），写入本地状态，可返回 redirect |
 | server | `POST /heartbeat_fwd` | 接收 peer 转发的心跳，只合并状态，不再次转发 |
-| client | `GET /kv?k=?` | 暴露简单 key-value 查询能力，用于后续扩展服务 |
+| client | `GET /kv?k=?` | 暴露简单 key-value 查询能力 |
 
-client 与 server 的通信是可选的。client 可以周期性向一个或多个 server 发送 `/heartbeat`，也可以只暴露 `/kv`，由外部系统按需发现和调用。
+**不增加新接口**。聚合能力通过 `/heartbeat` 数据结构中的 `nodes[]` 和 `redirect` 字段实现，client、group、server 使用同一个接口。
 
 ## 设计原则
 
-- 接口尽量少，每个接口只做一件事。
-- 写入接口必须尽量幂等，方便失败重试。
+- 接口尽量少，行为变化来自数据结构，不来自新接口。
+- 写入接口幂等，方便失败重试。
 - server 之间只追求最终一致性，不引入强一致协调协议。
-- client 不依赖单个 server，server 也不要求全局 leader。
-- 复杂能力通过上层组合实现，不在底层接口里塞过多参数。
+- client 不依赖单个 server，server 不要求全局 leader。
 
 ## 核心角色
 
 ### Client
 
-client 是被管理的节点或服务实例。
+被管理的节点或服务实例。
 
-职责：
-
-- 可选地周期性向 server 发送 `/heartbeat`。
-- 暴露 `/kv?k=?`，让其他系统读取扩展信息。
-- 自己维护本地 `node_id`、`epoch`、`seq` 等心跳版本信息。
+- 周期性向 server（或 group）发送 `/heartbeat`。
+- 维护本地 `node_id`、`epoch`、`seq`。
+- 收到响应中的 `redirect` 后，下次心跳发送到 `group_addr`。
 
 ### Server
 
-server 是心跳状态的接收、缓存和传播节点。
+心跳状态的接收、缓存和传播节点。
 
-职责：
-
-- 接收 client 心跳并更新本地视图。
+- 接收 `/heartbeat`（单条或批量），更新本地视图。
+- 可在响应中返回 `redirect`，引导 client 到 heartbeat group。
 - 通过 `/heartbeat_fwd` 把心跳转发到 peers。
-- 接收 peers 转发的心跳并做版本合并。
-- 根据 `ttl` 或 `expire_at` 判断节点是否可能离线。
+- 根据 `ttl` 判断节点存活。
+
+### Heartbeat Group
+
+心跳聚合代理。本身不是新角色，只是一个也监听 `/heartbeat` 的进程。
+
+- 接收 client 的 `/heartbeat`。
+- 在聚合窗口内收集多个 client 的心跳。
+- 窗口到期后，用同一个 `/heartbeat` 接口（`nodes[]` 携带多条）发送给 server。
+- 不做状态裁决，不做 peer 转发。
 
 ### Peer
 
-peer 是同一个 server 集群中的其他 server。
+同一个 server 集群中的其他 server。
 
-职责：
-
-- 接收转发心跳。
-- 按版本规则合并状态。
-- 不对 `/heartbeat_fwd` 再次转发，避免循环风暴。
+- 接收 `/heartbeat_fwd`，按版本规则合并。
+- 不再次转发。
 
 ## 最小 API
 
 ### `POST /heartbeat`
 
-由 client 调用 server。
+由 client 或 group 调用 server。也由 client 调用 group。
 
 请求：
 
 ```json
 {
-  "node_id": "client-1",
-  "epoch": 1,
-  "seq": 42,
-  "ttl_ms": 15000,
-  "addr": "10.0.0.12:8080",
-  "meta": {
-    "zone": "az-a",
-    "role": "worker"
-  }
+  "nodes": [
+    {
+      "node_id": "client-1",
+      "epoch": 1,
+      "seq": 42,
+      "ttl_ms": 15000,
+      "addr": "10.0.0.12:8080",
+      "meta": {"zone": "az-a", "role": "worker"}
+    }
+  ]
 }
 ```
+
+- `nodes` 是数组。client 直连时通常只有 1 条；group 聚合后可能有数百条。
+- 单条时也用 `nodes[1]`，保持结构统一。
 
 响应：
 
@@ -83,22 +88,23 @@ peer 是同一个 server 集群中的其他 server。
 {
   "ok": true,
   "server_id": "server-a",
-  "observed_at_ms": 1710000000000
+  "accepted": 1,
+  "redirect": {
+    "group_addr": "group-a:9000",
+    "ttl_ms": 60000
+  }
 }
 ```
 
-职责边界：
-
-- 只负责接收和记录心跳。
-- 可以异步转发到 peers。
-- 不负责保证所有 peers 立刻可见。
-- 不负责调用 client 的 `/kv`。
+- `redirect` 是可选字段。server 决定是否下发。
+- client 收到后，在 `ttl_ms` 内优先向 `group_addr` 发送心跳。
+- group 不可用时，client 回退到 server 地址。
 
 幂等规则：
 
-- 同一个 `node_id` 下，`epoch` 更大者优先。
-- `epoch` 相同，则 `seq` 更大者优先。
-- `epoch` 和 `seq` 都相同，则重复请求直接返回成功。
+- 同一个 `node_id`，`epoch` 更大者优先。
+- `epoch` 相同，`seq` 更大者优先。
+- 版本相同，重复请求直接返回成功。
 
 ### `POST /heartbeat_fwd`
 
@@ -109,16 +115,17 @@ peer 是同一个 server 集群中的其他 server。
 ```json
 {
   "source_server_id": "server-a",
-  "node_id": "client-1",
-  "epoch": 1,
-  "seq": 42,
-  "ttl_ms": 15000,
-  "addr": "10.0.0.12:8080",
-  "meta": {
-    "zone": "az-a",
-    "role": "worker"
-  },
-  "observed_at_ms": 1710000000000
+  "nodes": [
+    {
+      "node_id": "client-1",
+      "epoch": 1,
+      "seq": 42,
+      "ttl_ms": 15000,
+      "addr": "10.0.0.12:8080",
+      "meta": {"zone": "az-a", "role": "worker"},
+      "observed_at_ms": 1710000000000
+    }
+  ]
 }
 ```
 
@@ -128,48 +135,21 @@ peer 是同一个 server 集群中的其他 server。
 {
   "ok": true,
   "server_id": "server-b",
-  "merged": true
+  "accepted": 1,
+  "merged": 1
 }
 ```
 
-职责边界：
-
-- 只负责合并 peer 转发来的心跳。
 - 不再次向其他 peers 转发。
-- 不阻塞等待其他 server 确认。
-- 不把 peer 转发失败视为 client 心跳失败。
-
-幂等规则：
-
-- 使用与 `/heartbeat` 相同的版本比较规则。
-- 旧版本心跳可以返回 `ok=true, merged=false`。
+- 使用与 `/heartbeat` 相同的版本合并规则。
 
 ### `GET /kv?k=?`
 
-由 client 暴露，供外部系统或 server 按需读取扩展信息。
-
-请求示例：
+由 client 暴露，供外部系统按需读取扩展信息。
 
 ```text
-GET /kv?k=load
+GET /kv?k=load  ->  {"ok": true, "key": "load", "value": "0.42"}
 ```
-
-响应示例：
-
-```json
-{
-  "ok": true,
-  "key": "load",
-  "value": "0.42"
-}
-```
-
-职责边界：
-
-- 只提供简单 key-value 读取。
-- 不承担心跳写入职责。
-- 不要求 server 在心跳路径上同步调用。
-- key 的语义由上层业务定义。
 
 ## 状态模型
 
@@ -185,44 +165,100 @@ NodeState {
   ttl_ms: uint64
   observed_at_ms: int64
   expire_at_ms: int64
-  source_server_id: string
+  source: string          // "direct" | "group" | peer server_id
 }
 ```
 
-状态判断：
+- `now <= expire_at_ms`：`Alive`
+- `now > expire_at_ms`：`Suspect` / `Expired`
 
-- `now <= expire_at_ms`：节点视为 `Alive`。
-- `now > expire_at_ms`：节点视为 `Suspect` 或 `Expired`。
-- 具体是否删除过期状态由后台清理任务决定，不放进写入接口。
+## 心跳流程
 
-## 心跳写入流程
+### 直连路径
 
 ```text
-+------------------+
-| client           |
-+------------------+
-          |
-          | POST /heartbeat
-          v
-+------------------+
-| server-a         |
-| merge local view |
-+------------------+
-          |
-          | async POST /heartbeat_fwd
-          v
-+------------------+
-| server-b/c       |
-| merge peer view  |
-+------------------+
++------------+                +------------+                +------------+
+| client     |--- /heartbeat -->| server-a   |--- /heartbeat_fwd -->| server-b   |
++------------+                +------------+                +------------+
+```
+
+### 聚合路径（redirect）
+
+当 server 判断心跳频率过高时，在响应中返回 `redirect`。
+
+```text
++------------+                +------------+
+| client     |--- /heartbeat -->| server-a   |
++------------+                +------+-----+
+                                     |
+                              response: redirect
+                              group_addr: group-a:9000
+                                     |
+                                     v
++------------+                +------------+                +------------+
+| client     |--- /heartbeat -->| group-a    |--- /heartbeat -->| server-a   |
+| (next beat)|                | (aggregate)|  (nodes[N])   |            |
++------------+                +------------+                +------+-----+
+                                                                  |
+                                                           /heartbeat_fwd
+                                                                  |
+                                                                  v
+                                                           +------------+
+                                                           | server-b   |
+                                                           +------------+
 ```
 
 关键点：
 
-- client 只需要确认一个 server 接收成功。
-- server 本地写入成功后即可返回。
-- peer 转发可以异步执行并重试。
-- peer 短暂不可用时，系统进入临时不一致状态，恢复后继续收敛。
+- 全程只用 `/heartbeat`，数据结构决定行为。
+- client 发送时 `nodes[1]`；group 聚合后发送时 `nodes[N]`。
+- server 不关心请求来源是 client 还是 group，统一按 `nodes[]` 处理。
+- redirect 是优化路径，不是正确性依赖。group 失败时 client 回退直连。
+
+### Client 行为状态机
+
+```text
++-------------+
+| Direct Mode |<----------------------------------+
++------+------+                                   |
+       |                                          |
+       | send /heartbeat to server                |
+       v                                          |
++------+------+                                   |
+| got redirect|---- no --->[ stay Direct Mode ]    |
++------+------+                                   |
+       | yes                                      |
+       v                                          |
++------+--------+                                 |
+| Redirect Mode |                                 |
+| send to group |                                 |
++------+--------+                                 |
+       |                                          |
+       +--- group unreachable? ----->[ fallback ]-+
+       |
+       +--- redirect ttl expired? -->[ fallback ]-+
+```
+
+### Group 行为
+
+```text
++-------------------------------+
+| 收到 /heartbeat from client   |
++-------------------------------+
+              |
+              v
++-------------------------------+
+| 写入本地聚合窗口               |
++-------------------------------+
+              |
+              v
++-------------------------------+---- flush 条件 ----->+---------------------------+
+| 窗口未满 且 时间未到?          |                      | 发送 /heartbeat(nodes[N]) |
++-------------------------------+                      | 到 server                |
+                                                       +---------------------------+
+```
+
+flush 条件：窗口内心跳数达到 `batch_size`，或等待时间达到 `flush_interval`。
 
 ## 最终一致性策略
 
@@ -230,9 +266,9 @@ server 之间不选主，不做 quorum 写入。
 
 收敛依赖：
 
-- client 周期性重复发送 `/heartbeat`。
-- server 对 peers 周期性或按写入事件转发 `/heartbeat_fwd`。
-- peer 使用 `epoch + seq` 做确定性合并。
+- client 周期性发送 `/heartbeat`（直连或经 group）。
+- server 对 peers 异步转发 `/heartbeat_fwd`。
+- 所有合并使用 `epoch + seq` 确定性规则。
 - 旧心跳不会覆盖新心跳。
 
 推荐默认参数：
@@ -241,70 +277,34 @@ server 之间不选主，不做 quorum 写入。
 | --- | --- | --- |
 | `heartbeat_interval_ms` | `5000` | client 心跳周期 |
 | `ttl_ms` | `15000` | 允许 3 个周期抖动 |
+| `redirect_ttl_ms` | `60000` | client 使用 group address 的有效期 |
+| `group_flush_interval_ms` | `1000` | group 聚合窗口最大等待时间 |
+| `group_flush_batch_size` | `1000` | group 单批心跳数量上限 |
 | `forward_retry` | `3` | peer 转发失败重试次数 |
 | `peer_timeout_ms` | `1000` | 单次 peer 请求超时 |
 
 ## 失败处理
 
-### Client 到 Server 失败
-
-- client 可以重试同一个 server。
-- client 可以切换到另一个 server。
-- 重试不会产生副作用，因为 `/heartbeat` 按版本幂等。
-
-### Server 到 Peer 失败
-
-- server 记录转发失败并后台重试。
-- 不影响 `/heartbeat` 对 client 返回成功。
-- 如果 peer 长时间不可用，peer 本地视图可能过期，恢复后通过后续心跳重新收敛。
-
-### Client 重启
-
-- client 重启后递增 `epoch`。
-- 新 `epoch` 可以覆盖旧进程残留的高 `seq`。
-- 如果无法持久化 `epoch`，可以用启动时间或随机 incarnation id 替代。
-
-## 扩展方式
-
-基础接口保持不变，扩展能力放到组合层：
-
-| 目标 | 组合方式 |
+| 场景 | 处理 |
 | --- | --- |
-| 读取节点负载 | 先从 server 发现 `addr`，再访问 client `/kv?k=load` |
-| 获取节点版本 | 访问 client `/kv?k=version` |
-| 简单服务发现 | server 暴露只读列表接口时，返回未过期 `NodeState` |
-| 节点摘除 | 上层停止 client 心跳，等待 ttl 过期 |
-
-如果后续需要服务发现查询，可以新增只读接口，例如：
-
-```text
-GET /nodes
-GET /nodes/{node_id}
-```
-
-这类接口应保持只读，不隐式触发修复或转发。
+| client -> server 失败 | 重试或切换 server，幂等无副作用 |
+| client -> group 失败 | 回退到直连 server |
+| group -> server 失败 | group 重试，依赖幂等合并 |
+| server -> peer 失败 | 后台重试，不影响 client 返回 |
+| client 重启 | 递增 `epoch`，覆盖旧进程残留 |
+| redirect ttl 到期 | client 回到 Direct Mode |
 
 ## 非目标
 
 - 不实现强一致成员管理。
 - 不实现 leader election。
 - 不保证心跳写入后所有 server 立即可见。
-- 不在 `/heartbeat` 中内置复杂健康检查。
-- 不要求 server 同步调用 client `/kv`。
-
-## 待确认问题
-
-- server peer 列表是静态配置，还是后续由配置中心提供。
-- client 是否需要持久化 `epoch`，避免重启后版本回退。
-- `meta` 是否限制大小，避免心跳请求被滥用。
-- server 是否需要暴露只读查询接口，还是只作为内部状态组件。
+- 不要求所有 client 必须经过 group。
+- 不把 group 设计成状态权威。
 
 ## 小结
 
-这个设计优先保证接口简单：
-
-- `/heartbeat` 负责 client 到 server 的存活写入。
-- `/heartbeat_fwd` 负责 server 到 peer 的最终一致性传播。
-- `/kv?k=?` 负责 client 侧扩展信息读取。
-
-复杂能力不放进底层 API，而是通过周期心跳、异步转发、版本合并和上层查询组合出来。
+- 只用 `/heartbeat` + `/heartbeat_fwd` + `/kv` 三个接口。
+- 聚合能力来自数据结构（`nodes[]` + `redirect`），不来自新接口。
+- client、group、server 的行为变化，全部由心跳请求/响应中的字段驱动。
+- 简单才容易维护。
