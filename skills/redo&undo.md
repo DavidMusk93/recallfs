@@ -1,210 +1,210 @@
 # Redo & Undo
 
-目标：让 agent 正确区分 redo 和 undo 的语义，在设计持久化变更、事务、恢复流程时避免混淆。
+Goal: help agents use precise recovery terminology when designing durable state changes, transactions, rollback paths, and crash recovery protocols.
 
-## 1. 结论
+## 1. Summary
 
-| 概念 | 解决的问题 | 核心语义 |
+| Concept | Problem Solved | Core Semantics |
 | --- | --- | --- |
-| redo | 已提交结果不能丢 | 崩溃后重放已提交或应完成的变更 |
-| undo | 未提交结果要撤回 | 回滚未完成或被取消的变更 |
-| checkpoint | 缩短恢复时间 | 标记哪些状态已经安全落盘 |
-| idempotency | 避免重复副作用 | redo 重试时结果不变 |
+| redo | Committed results must not be lost | Replay changes that are committed or must be completed after recovery |
+| undo | Uncommitted results must be reverted | Roll back incomplete, aborted, or uncommitted changes |
+| checkpoint | Recovery must be bounded | Mark state that has already been safely persisted |
+| idempotency | Recovery may repeat work | Reapplying redo must not create duplicate side effects |
 
-关键点：
+Key points:
 
-- redo 不是单独保证原子性，它主要保证 durability，并参与 crash recovery。
-- undo 不只是“崩溃后逆序执行栈”，它还用于 rollback，并可能服务于一致性读。
-- 原子性通常来自事务状态、redo、undo、提交点和恢复协议的组合。
+- Redo does not, by itself, provide atomicity. It mainly supports durability and crash recovery.
+- Undo is not just a reverse-operation stack. In database systems, it also supports rollback and may support consistent reads.
+- Atomicity usually comes from the combination of transaction state, redo records, undo records, a commit point, and a recovery protocol.
 
-## 2. Agent 设计守则
+## 2. Agent Design Rules
 
-- 先定义操作状态：`planned`、`running`、`committed`、`rolled_back`。
-- redo 记录“如何把已决定生效的变更补齐”。
-- undo 记录“如何撤销尚未提交的变更”。
-- redo 操作必须幂等，重复执行不能产生额外副作用。
-- undo 操作也要尽量幂等，至少能识别已经撤销的状态。
-- 持久化顺序要明确：先写日志，再推进外部可见状态。
-- 崩溃恢复时先判断事务状态，再决定 redo 还是 undo。
+- Define operation states first: `planned`, `running`, `committed`, `rolled_back`.
+- Use redo records to describe how to complete changes that are already decided to take effect.
+- Use undo records to describe how to revert changes that have not reached the commit point.
+- Make redo operations idempotent. Replaying the same record must not create extra side effects.
+- Make undo operations idempotent where possible, or at least able to detect already-reverted state.
+- Define the persistence order explicitly: write recovery metadata before making state externally visible.
+- During recovery, inspect transaction state first, then decide whether to redo or undo.
 
-## 3. 通用流程
+## 3. Generic Flow
 
 ```text
 +----------------------+
-| 生成执行计划          |
+| Build execution plan |
 +----------+-----------+
            |
            v
 +----------------------+
-| 写入 redo/undo 记录   |
+| Write redo/undo logs |
 +----------+-----------+
            |
            v
 +----------------------+
-| 执行业务变更          |
+| Apply state changes  |
 +----------+-----------+
            |
            v
 +----------------------+---- fail ---->+----------------------+
-| 到达 commit 点?       |               | 使用 undo 回滚        |
+| Commit point reached?|               | Roll back with undo  |
 +----------+-----------+               +----------------------+
            | yes
            v
 +----------------------+
-| 标记 committed        |
+| Mark committed       |
 +----------+-----------+
            |
            v
 +----------------------+
-| 崩溃后使用 redo 补齐  |
+| Redo after crash     |
 +----------------------+
 ```
 
-## 4. 恢复决策
+## 4. Recovery Decision
 
 ```text
 +----------------------+
-| 系统启动恢复          |
+| Start crash recovery |
 +----------+-----------+
            |
            v
 +----------------------+
-| 读取日志和事务状态    |
+| Read logs and states |
 +----------+-----------+
            |
            v
 +----------------------+---- committed ---->+----------------------+
-| 事务是否已提交?       |                    | redo 已提交变更       |
+| Transaction committed?|                    | Redo committed work |
 +----------+-----------+                    +----------------------+
            |
            | not committed
            v
 +----------------------+
-| undo 未提交变更       |
+| Undo uncommitted work|
 +----------------------+
 ```
 
-## 5. MySQL 中的语义
+## 5. MySQL InnoDB Semantics
 
-MySQL InnoDB 里 redo 和 undo 的语义容易被误解。
+Redo and undo in MySQL InnoDB are often misunderstood because they serve different parts of the transaction and recovery model.
 
-| 机制 | 主要用途 | 典型内容 |
+| Mechanism | Primary Purpose | Typical Content |
 | --- | --- | --- |
-| redo log | 崩溃恢复、保证已提交修改持久化 | physical change records for database pages |
-| undo log | 回滚事务、MVCC 一致性读 | previous row versions for rollback and consistent reads |
-| binlog | 主从复制、时间点恢复 | 逻辑变更事件 |
-| doublewrite | 防止 partial page write | 数据页写入保护 |
+| redo log | Crash recovery and durability for committed changes | Physical change records for database pages |
+| undo log | Transaction rollback and MVCC consistent reads | Previous row versions for rollback and visibility reconstruction |
+| binlog | Replication and point-in-time recovery | Logical change events |
+| doublewrite buffer | Protection against partial page writes | A safe intermediate copy of data pages |
 
-### 5.1 Redo
+### 5.1 Redo Log
 
-redo log 的重点是：事务提交后，即使 dirty pages 还没刷到数据文件，崩溃恢复也能通过 redo 把修改补回来。
-
-```text
-+----------------------+
-| 修改 buffer pool page |
-+----------+-----------+
-           |
-           v
-+----------------------+
-| 写 redo log buffer    |
-+----------+-----------+
-           |
-           v
-+----------------------+
-| commit 时刷 redo      |
-+----------+-----------+
-           |
-           v
-+----------------------+
-| 崩溃恢复时 redo 重放  |
-+----------------------+
-```
-
-所以 redo 更接近：
-
-- 保证已提交事务的持久性。
-- 允许数据页延迟刷盘，提高性能。
-- 崩溃后把已经提交但尚未落盘的 page changes 补齐。
-
-### 5.2 Undo
-
-undo log 的重点是：事务未提交时可以回滚；其他事务做一致性读时可以看到旧版本。
+The redo log ensures that committed changes can be recovered even if dirty pages have not yet been flushed to data files.
 
 ```text
-+----------------------+
-| 更新一行数据          |
-+----------+-----------+
-           |
-           v
-+----------------------+
-| undo 记录旧版本       |
-+----------+-----------+
-           |
-           v
-+----------------------+---- rollback ---->+----------------------+
-| 写入新版本            |                   | 根据 undo 恢复旧版本  |
-+----------+-----------+                   +----------------------+
-           |
-           v
-+----------------------+
-| 一致性读可访问旧版本  |
-+----------------------+
++-------------------------+
+| Modify buffer pool page |
++-----------+-------------+
+            |
+            v
++-------------------------+
+| Write redo log buffer   |
++-----------+-------------+
+            |
+            v
++-------------------------+
+| Flush redo at commit    |
++-----------+-------------+
+            |
+            v
++-------------------------+
+| Replay redo after crash |
++-------------------------+
 ```
 
-所以 undo 不只是 rollback 栈：
+Redo log semantics:
 
-- 支持事务 rollback。
-- 支持 MVCC consistent read。
-- 崩溃恢复时用于清理未提交事务。
+- Preserve durability of committed transactions.
+- Allow data pages to be flushed lazily for performance.
+- Reconstruct committed page changes that had not reached data files before a crash.
 
-## 6. MySQL Case
+### 5.2 Undo Log
 
-### 6.1 已提交但数据页未刷盘
+The undo log stores the previous row versions needed to roll back uncommitted changes and to serve MVCC consistent reads.
 
-| 阶段 | 状态 |
+```text
++-------------------------+
+| Update a row            |
++-----------+-------------+
+            |
+            v
++-------------------------+
+| Store old row in undo   |
++-----------+-------------+
+            |
+            v
++-------------------------+---- rollback ---->+-------------------------+
+| Write new row version   |                    | Restore from undo      |
++-----------+-------------+                    +-------------------------+
+            |
+            v
++-------------------------+
+| Read old version if needed |
++-------------------------+
+```
+
+Undo log semantics:
+
+- Roll back uncommitted transactions.
+- Support MVCC consistent reads through old row versions.
+- Help crash recovery clean up transactions that did not commit.
+
+## 6. MySQL Cases
+
+### 6.1 Committed Transaction, Dirty Page Not Flushed
+
+| Phase | State |
 | --- | --- |
-| 事务修改数据页 | page 在 buffer pool 中变成 dirty page |
-| commit | redo 已刷盘 |
-| 数据页 | 可能还没写入磁盘 |
-| 崩溃恢复 | 通过 redo 重放，恢复已提交修改 |
+| Transaction modifies a page | The page becomes dirty in the buffer pool |
+| Commit | Redo records are durable |
+| Data page | The page may still not be written to the data file |
+| Crash recovery | Redo replay restores the committed page changes |
 
-结论：redo 保证 committed transaction 不丢。
+Conclusion: redo ensures committed transaction changes are not lost.
 
-### 6.2 未提交事务崩溃
+### 6.2 Crash with an Uncommitted Transaction
 
-| 阶段 | 状态 |
+| Phase | State |
 | --- | --- |
-| 事务修改数据 | 新版本可能已经写入 buffer pool |
-| undo | 保存旧版本 |
-| commit | 尚未发生 |
-| 崩溃恢复 | 识别未提交事务，用 undo 回滚 |
+| Transaction modifies data | The new row version may exist in the buffer pool |
+| Undo | The previous row version is recorded |
+| Commit | Commit has not happened |
+| Crash recovery | Recovery identifies the uncommitted transaction and rolls it back using undo |
 
-结论：undo 用于撤销未提交修改，避免脏数据变成可见结果。
+Conclusion: undo removes uncommitted changes so they do not become durable visible results.
 
-### 6.3 一致性读
+### 6.3 Consistent Read
 
-| 场景 | 行为 |
+| Scenario | Behavior |
 | --- | --- |
-| 事务 A 更新一行但未提交 | 产生新版本和 undo 旧版本 |
-| 事务 B 做一致性读 | 根据 Read View 判断是否可见 |
-| 新版本不可见 | 通过 undo 找到可见旧版本 |
+| Transaction A updates a row but has not committed | A new row version is created and the previous version is kept in undo |
+| Transaction B performs a consistent read | InnoDB checks visibility with a Read View |
+| The new version is not visible | InnoDB follows undo information to reconstruct a visible older version |
 
-结论：undo 还支撑 MVCC，不只是失败回滚。
+Conclusion: undo is also an MVCC mechanism, not only a rollback mechanism.
 
-## 7. 常见误区
+## 7. Common Misconceptions
 
-| 误区 | 更准确的说法 |
+| Misconception | More Accurate Statement |
 | --- | --- |
-| redo 确保原子性 | redo 主要保证持久性，原子性需要事务状态和 undo 配合 |
-| undo 就是崩溃后逆序执行栈 | undo 用于 rollback 和 MVCC，恢复时按事务状态处理 |
-| commit 后必须立刻刷数据页 | commit 通常只要求 redo 持久化，数据页可延迟刷盘 |
-| redo 和 binlog 是一回事 | redo 面向 InnoDB 崩溃恢复，binlog 面向复制和逻辑恢复 |
+| Redo guarantees atomicity | Redo mainly supports durability. Atomicity needs transaction state and undo as well |
+| Undo is just a reverse stack after crash | Undo supports rollback and MVCC; recovery applies it based on transaction state |
+| Commit must flush data pages immediately | Commit usually requires durable redo; data pages may be flushed later |
+| Redo log and binlog are the same thing | Redo is for InnoDB crash recovery; binlog is for replication and logical recovery |
 
-## 8. Agent 检查清单
+## 8. Agent Checklist
 
-- 是否区分了 commit 前和 commit 后的恢复策略？
-- redo 是否幂等？
-- undo 是否能撤销未提交的外部可见状态？
-- 是否定义了明确的提交点？
-- 是否避免把 redo 说成单独保证原子性？
-- 是否考虑 checkpoint，避免恢复时全量重放？
+- Is the pre-commit recovery path different from the post-commit recovery path?
+- Are redo operations idempotent?
+- Can undo revert all uncommitted externally visible state?
+- Is the commit point explicitly defined?
+- Does the design avoid claiming that redo alone provides atomicity?
+- Is there a checkpoint mechanism to avoid unbounded recovery replay?
