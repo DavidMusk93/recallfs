@@ -46,8 +46,19 @@
 | --- | --- |
 | Path | `demo/` |
 | Language |  |
-| Build Command |  |
-| Run Command |  |
+| Project Layout | `CMakeLists.txt`, `README.md`, `src/`, optional `include/` |
+| Build Command | `cmake -S demo -B demo/build && cmake --build demo/build` |
+| Run Command | `demo/build/<binary>` |
+| macOS Notes | Compiler, SDK, architecture, `dyld`, or `@rpath` issues |
+
+```text
+demo/
+  CMakeLists.txt
+  README.md
+  src/
+  include/
+  build/        # generated locally; do not commit
+```
 
 ## 6. Exploration Log
 

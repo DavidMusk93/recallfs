@@ -1,0 +1,21 @@
+radix top-k smallest
+  value= 0 index=7 key=[00 00 00 00]
+  value= 1 index=2 key=[00 00 00 01]
+  value= 2 index=10 key=[00 00 00 02]
+  value= 4 index=1 key=[00 00 00 04]
+sort baseline smallest
+  value= 0 index=7 key=[00 00 00 00]
+  value= 1 index=2 key=[00 00 00 01]
+  value= 2 index=10 key=[00 00 00 02]
+  value= 4 index=1 key=[00 00 00 04]
+radix top-k largest
+  value=14 index=8 key=[00 00 00 0e]
+  value=13 index=6 key=[00 00 00 0d]
+  value=12 index=0 key=[00 00 00 0c]
+  value=11 index=11 key=[00 00 00 0b]
+sort baseline largest
+  value=14 index=8 key=[00 00 00 0e]
+  value=13 index=6 key=[00 00 00 0d]
+  value=12 index=0 key=[00 00 00 0c]
+  value=11 index=11 key=[00 00 00 0b]
+validation ok
