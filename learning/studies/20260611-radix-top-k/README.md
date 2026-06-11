@@ -55,8 +55,8 @@
 | Item | Value |
 | --- | --- |
 | Path | `learning/studies/20260611-radix-top-k/demo/` |
-| Language | C++17 |
-| Project Layout | `CMakeLists.txt`, `README.md`, `src/` |
+| Language | C++20 |
+| Project Layout | `CMakeLists.txt`, `.clang-format`, `README.md`, `src/` |
 | Build Command | `cmake -S learning/studies/20260611-radix-top-k/demo -B learning/studies/20260611-radix-top-k/demo/build -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && cmake --build learning/studies/20260611-radix-top-k/demo/build` |
 | Run Command | `learning/studies/20260611-radix-top-k/demo/build/radix_top_k` |
 
@@ -75,4 +75,5 @@
 - Reusable insight: order-preserving key encoding separates comparison semantics from selection mechanics.
 - Failure pattern: calling this a DuckDB radix top-k implementation would be misleading; DuckDB's SQL TopN is heap-based.
 - macOS pitfall: a direct `c++` command may compile but still produce a binary that fails at runtime if the selected toolchain has unresolved runtime library paths.
+- Source boundary: the demo intentionally extracts DuckDB radix-key semantics instead of linking DuckDB, because the inspected DuckDB code does not contain a reusable standalone radix Top-K tree module.
 - Follow-up: extend the demo to signed integers and floats with DuckDB-style sign-bit and NaN handling.

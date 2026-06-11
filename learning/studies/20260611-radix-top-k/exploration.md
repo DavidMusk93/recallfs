@@ -16,9 +16,10 @@ Build a minimal C++ demo for Radix Top-K using DuckDB-inspired radix key ideas.
 | 6 | Read `physical_top_n.cpp` | Confirmed DuckDB production TopN uses sort keys plus bounded heap | `TopNHeap` |
 | 7 | Implemented standalone demo | Built implicit radix-tree Top-K over bit chunks | `demo/src/radix_top_k.cpp` |
 | 8 | Tried direct `c++` build on macOS | Binary failed at runtime with `dyld` / `@rpath` library resolution error | `evidence/run.log` before replacement |
-| 9 | Converted demo to CMake project | Standard project layout with explicit C++17 settings | `demo/CMakeLists.txt` |
+| 9 | Converted demo to CMake project | Standard project layout with explicit C++20 settings | `demo/CMakeLists.txt` |
 | 10 | Added Apple runtime search path | `/usr/lib` rpath fixed `@rpath/libc++.1.dylib` runtime lookup | `demo/CMakeLists.txt` |
 | 11 | Rebuilt and ran demo | Radix Top-K matched full-sort baseline | `evidence/run.log` |
+| 12 | Applied project code style | Added `.clang-format` and renamed functions/variables to little-camel-case | `demo/.clang-format`, `demo/src/radix_top_k.cpp` |
 
 ## 3. Key Observations
 
@@ -38,6 +39,17 @@ The demo does not copy DuckDB internals. It extracts the useful semantics:
 | DuckDB ART key | Treat encoded bytes as radix-tree path | Traverse fixed-size bit chunks |
 | Radix Top-K article | Prune buckets by prefix counts | Keep guaranteed buckets and recurse only into boundary bucket |
 | DuckDB TopN | Validate Top-K result semantics | Compare against full-sort baseline |
+
+DuckDB source is not linked or copied directly for this demo because the relevant pieces have different production purposes:
+
+| DuckDB Area | Why It Was Not Reused Directly |
+| --- | --- |
+| `Radix::EncodeData` | It is embedded in DuckDB's internal type system and allocator conventions; the demo only needs the byte-ordering semantics. |
+| ART key code | It builds index keys, not a standalone Top-K selection tree. |
+| `PhysicalTopN` / `TopNHeap` | DuckDB's production SQL TopN path is heap-based, not the blog's radix bucket pruning algorithm. |
+| Radix partitioning | It partitions hash values for execution internals, not ordered Top-K traversal. |
+
+The learning goal is therefore extraction and reproduction: keep the DuckDB-inspired key idea visible while implementing the article's Radix Top-K mechanism in a small, auditable C++20 project.
 
 ## 5. macOS Build Pitfall
 

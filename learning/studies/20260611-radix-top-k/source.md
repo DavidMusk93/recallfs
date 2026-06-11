@@ -26,3 +26,5 @@ DuckDB does not expose a standalone `radix top-k tree` implementation. The demo 
 - radix/ART-style traversal over key prefixes,
 - Top-K boundary pruning from the Radix Top-K article,
 - validation against a full-sort baseline.
+
+The demo intentionally does not link DuckDB or copy DuckDB source files. DuckDB's relevant code is tied to its internal execution engine, type system, allocators, and SQL TopN heap path. For this study, direct reuse would obscure the article's radix bucket pruning mechanism, so the demo keeps only the inspected semantics and implements the reproduction as a small standalone C++20 project.

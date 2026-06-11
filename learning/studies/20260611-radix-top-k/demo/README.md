@@ -1,12 +1,13 @@
 # Radix Top-K Demo
 
-This is a standalone CMake project that reproduces the Radix Top-K idea with a C++17 prototype.
+This is a standalone CMake project that reproduces the Radix Top-K idea with a C++20 prototype.
 
 ## 1. Layout
 
 ```text
 demo/
   CMakeLists.txt
+  .clang-format
   README.md
   src/radix_top_k.cpp
   build/              # generated locally; do not commit
@@ -47,3 +48,4 @@ The demo prints:
 - The demo implements an implicit radix tree over fixed-width unsigned integer keys.
 - It extracts DuckDB's byte-comparable key idea but does not depend on DuckDB headers.
 - It is a learning prototype, not a production replacement for DuckDB's heap-based `PhysicalTopN`.
+- Function and variable names follow `rules.md`: little-camel-case outside class and namespace names.
