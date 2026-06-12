@@ -32,10 +32,12 @@ PowerSort imagines the full input range as a virtual complete binary tree. For t
 
 The study demo focuses on the merge-policy core:
 
+- sort a natural `std::vector<int>` sequence,
 - detect natural ascending and strictly descending runs,
 - reverse strictly descending runs,
 - compute pair power with the CPython-style midpoint loop,
 - merge adjacent runs using a PowerSort-style stack rule,
-- validate stable sorted output against `std::stable_sort`.
+- compare against sequential run merging to show whether the idea helps,
+- validate sorted output against `std::stable_sort`.
 
 The demo does not reproduce production Timsort/Python optimizations such as minrun tuning, galloping mode, binary insertion sort for short runs, or reduced merge memory.

@@ -26,6 +26,7 @@ The demo is a learning reproduction, not a copy of CPython list sorting. It keep
 | Claim | Demo Check |
 | --- | --- |
 | Existing ordered fragments should be detected as runs | Print detected runs before merges |
-| Adjacent run pairs can be mapped to a virtual merge tree by `power` | Print computed powers |
-| Power-guided stack merges approximate balanced merge sort | Print merge trace and final sorted output |
-| Stability must be preserved | Compare against `std::stable_sort` and stable ids |
+| Adjacent run pairs can be mapped to a virtual merge tree by `power` | Explain `power` in code comments and print computed powers |
+| Sorting demos should use natural input | Sort `std::vector<int>` instead of a synthetic record sequence |
+| Power-guided stack merges should provide practical value | Compare merge work against sequential run merging |
+| Correctness must be preserved | Compare output against `std::stable_sort` |

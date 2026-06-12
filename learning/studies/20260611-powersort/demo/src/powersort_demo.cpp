@@ -5,14 +5,10 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace demo {
-
-struct Record {
-    int key;
-    int originalIndex;
-};
 
 struct Run {
     size_t start;
@@ -20,44 +16,57 @@ struct Run {
     int power;
 };
 
-bool recordLess(const Record &lhs, const Record &rhs) {
-    return lhs.key < rhs.key;
-}
+struct SortStats {
+    size_t mergeCount = 0;
+    size_t comparisonCount = 0;
+    size_t mergeWork = 0;
+    size_t maxStackDepth = 0;
+};
 
-std::string recordText(const Record &record) {
-    std::ostringstream out;
-    out << "(" << record.key << "," << record.originalIndex << ")";
-    return out.str();
-}
+struct SortResult {
+    std::vector<int> values;
+    SortStats stats;
+    std::string trace;
+};
 
-std::string rangeText(const std::vector<Record> &records, size_t start, size_t length) {
+struct TestCase {
+    std::string name;
+    std::vector<int> values;
+    bool verboseTrace;
+};
+
+std::string rangeText(const std::vector<int> &values, size_t start, size_t length) {
     std::ostringstream out;
     out << "[";
     for (size_t i = 0; i < length; i++) {
         if (i != 0) {
             out << " ";
         }
-        out << recordText(records[start + i]);
+        out << values[start + i];
     }
     out << "]";
     return out.str();
 }
 
-size_t countRunAndNormalize(std::vector<Record> &records, size_t start) {
-    const size_t size = records.size();
+std::string sequenceText(const std::vector<int> &values) {
+    return rangeText(values, 0, values.size());
+}
+
+size_t countRunAndNormalize(std::vector<int> &values, size_t start) {
+    const size_t size = values.size();
     if (start + 1 >= size) {
         return 1;
     }
 
     size_t end = start + 2;
-    if (records[start + 1].key < records[start].key) {
-        while (end < size && records[end].key < records[end - 1].key) {
+    if (values[start + 1] < values[start]) {
+        while (end < size && values[end] < values[end - 1]) {
             end++;
         }
-        std::reverse(records.begin() + static_cast<std::ptrdiff_t>(start),
-                     records.begin() + static_cast<std::ptrdiff_t>(end));
+        std::reverse(values.begin() + static_cast<std::ptrdiff_t>(start),
+                     values.begin() + static_cast<std::ptrdiff_t>(end));
     } else {
-        while (end < size && records[end].key >= records[end - 1].key) {
+        while (end < size && values[end] >= values[end - 1]) {
             end++;
         }
     }
@@ -65,6 +74,18 @@ size_t countRunAndNormalize(std::vector<Record> &records, size_t start) {
 }
 
 int computePower(size_t leftStart, size_t leftLength, size_t rightLength, size_t totalLength) {
+    /*
+    `power` describes where the boundary between two adjacent runs belongs in a virtual complete merge tree.
+
+    In this demo, power is computed with the CPython-style midpoint loop:
+    - compare the midpoints of the left and right runs,
+    - repeatedly zoom into the virtual binary partition of the whole input,
+    - return the first tree level where the two midpoints fall on different sides.
+
+    A smaller value means the boundary is closer to the root split, so it should usually wait for a larger,
+    more balanced merge. A larger value means the boundary is deeper, so the adjacent runs are more local.
+    The stack policy uses this value to avoid repeatedly appending tiny runs onto a large prefix.
+    */
     size_t leftMidTwice = 2 * leftStart + leftLength;
     size_t rightMidTwice = leftMidTwice + leftLength + rightLength;
     int power = 0;
@@ -82,127 +103,231 @@ int computePower(size_t leftStart, size_t leftLength, size_t rightLength, size_t
     }
 }
 
-void mergeStable(std::vector<Record> &records, const Run &leftRun, const Run &rightRun) {
-    std::vector<Record> merged;
+void mergeStable(std::vector<int> &values, const Run &leftRun, const Run &rightRun, SortStats &stats) {
+    std::vector<int> merged;
     merged.reserve(leftRun.length + rightRun.length);
 
-    const auto leftBegin = records.begin() + static_cast<std::ptrdiff_t>(leftRun.start);
-    const auto leftEnd = leftBegin + static_cast<std::ptrdiff_t>(leftRun.length);
-    const auto rightBegin = records.begin() + static_cast<std::ptrdiff_t>(rightRun.start);
-    const auto rightEnd = rightBegin + static_cast<std::ptrdiff_t>(rightRun.length);
+    size_t left = leftRun.start;
+    size_t right = rightRun.start;
+    const size_t leftEnd = leftRun.start + leftRun.length;
+    const size_t rightEnd = rightRun.start + rightRun.length;
 
-    std::merge(leftBegin, leftEnd, rightBegin, rightEnd, std::back_inserter(merged), recordLess);
-    std::copy(merged.begin(), merged.end(), leftBegin);
+    while (left < leftEnd && right < rightEnd) {
+        stats.comparisonCount++;
+        if (values[right] < values[left]) {
+            merged.push_back(values[right++]);
+        } else {
+            merged.push_back(values[left++]);
+        }
+    }
+    while (left < leftEnd) {
+        merged.push_back(values[left++]);
+    }
+    while (right < rightEnd) {
+        merged.push_back(values[right++]);
+    }
+
+    stats.mergeCount++;
+    stats.mergeWork += merged.size();
+    std::copy(merged.begin(), merged.end(), values.begin() + static_cast<std::ptrdiff_t>(leftRun.start));
 }
 
-void mergeAt(std::vector<Record> &records, std::vector<Run> &runStack, size_t index, std::ostream &trace) {
+void mergeAt(std::vector<int> &values, std::vector<Run> &runStack, size_t index, SortStats &stats,
+             std::ostream &trace) {
     const Run leftRun = runStack[index];
     const Run rightRun = runStack[index + 1];
 
-    trace << "merge runs: left(start=" << leftRun.start << ", len=" << leftRun.length << ", power=" << leftRun.power
+    trace << "merge: left(start=" << leftRun.start << ", len=" << leftRun.length << ", power=" << leftRun.power
           << ") right(start=" << rightRun.start << ", len=" << rightRun.length << ", power=" << rightRun.power << ")\n";
 
-    mergeStable(records, leftRun, rightRun);
+    mergeStable(values, leftRun, rightRun, stats);
     runStack[index] = Run{leftRun.start, leftRun.length + rightRun.length, leftRun.power};
     runStack.erase(runStack.begin() + static_cast<std::ptrdiff_t>(index + 1));
 }
 
-std::vector<Record> powerSort(std::vector<Record> records, std::ostream &trace) {
+std::vector<Run> detectRuns(std::vector<int> &values, std::ostream &trace) {
+    std::vector<Run> runs;
+    size_t start = 0;
+    while (start < values.size()) {
+        const size_t length = countRunAndNormalize(values, start);
+        runs.push_back(Run{start, length, 0});
+        trace << "run: start=" << start << " len=" << length << " values=" << rangeText(values, start, length) << "\n";
+        start += length;
+    }
+    return runs;
+}
+
+SortResult powerSort(std::vector<int> input, bool verboseTrace) {
     /*
-    PowerSort demo flow.
+    PowerSort uses natural runs and power-guided merges.
 
-    +-------------------------+
-    | scan natural run        |
-    +-----------+-------------+
-                |
-                v
-    +-------------------------+
-    | compute adjacent power  |
-    +-----------+-------------+
-                |
-                v
-    +-------------------------+---- power violation ---->+-------------------------+
-    | push run to stack       |                           | merge stack top runs   |
-    +-----------+-------------+                           +-------------------------+
-                |
-                v
-    +-------------------------+
-    | collapse final stack    |
-    +-------------------------+
-
-    The `power` calculation mirrors CPython's midpoint-loop idea at demo scale.
-    It maps adjacent run midpoints onto a virtual complete merge tree.
+    +--------------------------+
+    | input sequence<int>      |
+    +------------+-------------+
+                 |
+                 v
+    +--------------------------+
+    | detect natural runs      |
+    +------------+-------------+
+                 |
+                 v
+    +--------------------------+
+    | compute boundary power   |
+    +------------+-------------+
+                 |
+                 v
+    +--------------------------+---- lower new power ---->+--------------------------+
+    | push run on stack        |                           | merge previous top runs |
+    +------------+-------------+                           +--------------------------+
+                 |
+                 v
+    +--------------------------+
+    | collapse remaining stack |
+    +--------------------------+
     */
-    if (records.empty()) {
-        return records;
+    std::ostringstream trace;
+    SortStats stats;
+    if (input.empty()) {
+        return SortResult{input, stats, ""};
     }
 
+    auto detectedRuns = detectRuns(input, trace);
     std::vector<Run> runStack;
-    size_t start = 0;
-    size_t runLength = countRunAndNormalize(records, start);
-    runStack.push_back(Run{start, runLength, std::numeric_limits<int>::max()});
-    trace << "run: start=" << start << " len=" << runLength << " values=" << rangeText(records, start, runLength)
-          << "\n";
-    start += runLength;
+    runStack.push_back(Run{detectedRuns[0].start, detectedRuns[0].length, std::numeric_limits<int>::max()});
+    stats.maxStackDepth = runStack.size();
 
-    while (start < records.size()) {
-        runLength = countRunAndNormalize(records, start);
-        const int power = computePower(runStack.back().start, runStack.back().length, runLength, records.size());
-
-        trace << "run: start=" << start << " len=" << runLength << " power=" << power
-              << " values=" << rangeText(records, start, runLength) << "\n";
+    for (size_t i = 1; i < detectedRuns.size(); i++) {
+        const auto &nextRun = detectedRuns[i];
+        const int power = computePower(runStack.back().start, runStack.back().length, nextRun.length, input.size());
+        trace << "power: boundary(leftStart=" << runStack.back().start << ", leftLen=" << runStack.back().length
+              << ", rightLen=" << nextRun.length << ") -> " << power << "\n";
 
         while (runStack.size() > 1 && runStack.back().power > power) {
-            mergeAt(records, runStack, runStack.size() - 2, trace);
+            mergeAt(input, runStack, runStack.size() - 2, stats, trace);
         }
-
-        runStack.push_back(Run{start, runLength, power});
-        start += runLength;
+        runStack.push_back(Run{nextRun.start, nextRun.length, power});
+        stats.maxStackDepth = std::max(stats.maxStackDepth, runStack.size());
     }
 
     while (runStack.size() > 1) {
-        mergeAt(records, runStack, runStack.size() - 2, trace);
+        mergeAt(input, runStack, runStack.size() - 2, stats, trace);
     }
 
-    return records;
+    return SortResult{input, stats, verboseTrace ? trace.str() : ""};
 }
 
-bool sameRecords(const std::vector<Record> &lhs, const std::vector<Record> &rhs) {
-    if (lhs.size() != rhs.size()) {
-        return false;
+SortResult sequentialRunMergeSort(std::vector<int> input) {
+    std::ostringstream trace;
+    SortStats stats;
+    if (input.empty()) {
+        return SortResult{input, stats, ""};
     }
-    for (size_t i = 0; i < lhs.size(); i++) {
-        if (lhs[i].key != rhs[i].key || lhs[i].originalIndex != rhs[i].originalIndex) {
-            return false;
+
+    auto runs = detectRuns(input, trace);
+    if (runs.empty()) {
+        return SortResult{input, stats, ""};
+    }
+
+    Run mergedRun = runs[0];
+    stats.maxStackDepth = 2;
+    for (size_t i = 1; i < runs.size(); i++) {
+        std::vector<Run> pair{mergedRun, runs[i]};
+        mergeAt(input, pair, 0, stats, trace);
+        mergedRun = pair[0];
+    }
+
+    return SortResult{input, stats, ""};
+}
+
+std::vector<int> stableSortBaseline(std::vector<int> input) {
+    std::stable_sort(input.begin(), input.end());
+    return input;
+}
+
+std::vector<int> makeNearlySortedWithLateBatch() {
+    std::vector<int> values;
+    for (int value = 0; value < 40; value++) {
+        values.push_back(value);
+    }
+    for (int value = 10; value < 18; value++) {
+        values.push_back(value);
+    }
+    for (int value = 41; value < 55; value++) {
+        values.push_back(value);
+    }
+    return values;
+}
+
+std::vector<int> makeTimeWindowBatches() {
+    return {100, 101, 102, 103, 20, 21, 22, 23, 70, 71, 72, 10, 11, 12, 13, 200, 201, 202};
+}
+
+std::vector<int> makeAlternatingServicePages() {
+    std::vector<int> values;
+    const std::vector<std::pair<int, int>> ranges{{300, 316}, {10, 18}, {200, 214}, {50, 58}, {120, 132}, {80, 88}};
+    for (const auto &[begin, end] : ranges) {
+        for (int value = begin; value < end; value++) {
+            values.push_back(value);
         }
     }
-    return true;
+    return values;
 }
 
-void printRecords(const std::string &label, const std::vector<Record> &records) {
-    std::cout << label << "\n";
-    for (const auto &record : records) {
-        std::cout << "  key=" << record.key << " originalIndex=" << record.originalIndex << "\n";
+std::vector<int> makeReverseImportedChunk() {
+    return {1, 2, 3, 4, 5, 30, 29, 28, 27, 26, 40, 41, 42, 6, 7, 8, 9};
+}
+
+void printStats(const std::string &name, const SortStats &stats) {
+    std::cout << "  " << name << ": merges=" << stats.mergeCount << " comparisons=" << stats.comparisonCount
+              << " mergeWork=" << stats.mergeWork << " maxStackDepth=" << stats.maxStackDepth << "\n";
+}
+
+bool runCase(const TestCase &testCase) {
+    std::cout << "case: " << testCase.name << "\n";
+    std::cout << "input: " << sequenceText(testCase.values) << "\n";
+
+    const auto powersortResult = powerSort(testCase.values, testCase.verboseTrace);
+    const auto sequentialResult = sequentialRunMergeSort(testCase.values);
+    const auto baseline = stableSortBaseline(testCase.values);
+
+    if (testCase.verboseTrace) {
+        std::cout << "powersort trace\n" << powersortResult.trace;
     }
+
+    std::cout << "output: " << sequenceText(powersortResult.values) << "\n";
+    printStats("powersort", powersortResult.stats);
+    printStats("sequential-run-merge", sequentialResult.stats);
+
+    const bool valid = powersortResult.values == baseline && sequentialResult.values == baseline;
+    std::cout << "lesson: ";
+    if (powersortResult.stats.mergeWork < sequentialResult.stats.mergeWork) {
+        std::cout << "power-guided merges reduce total merge work for this run layout\n";
+    } else if (powersortResult.stats.maxStackDepth < sequentialResult.stats.maxStackDepth) {
+        std::cout << "power-guided merges keep stack usage lower for this run layout\n";
+    } else {
+        std::cout << "power-guided merges do not improve this case; the baseline is already adequate\n";
+    }
+    std::cout << "\n";
+    return valid;
 }
 
 } // namespace demo
 
 int main() {
-    const std::vector<demo::Record> input{{1, 0},  {2, 1}, {3, 2}, {9, 3},  {8, 4},   {7, 5},  {10, 6},
-                                          {11, 7}, {4, 8}, {5, 9}, {6, 10}, {12, 11}, {3, 12}, {13, 13}};
+    const std::vector<demo::TestCase> testCases{
+        {"nearly sorted list with a late small batch", demo::makeNearlySortedWithLateBatch(), true},
+        {"time-window batches from multiple producers", demo::makeTimeWindowBatches(), false},
+        {"alternating service pages", demo::makeAlternatingServicePages(), false},
+        {"reverse imported chunk inside sorted data", demo::makeReverseImportedChunk(), false},
+    };
 
-    std::ostringstream trace;
-    const auto powersortResult = demo::powerSort(input, trace);
+    bool allValid = true;
+    for (const auto &testCase : testCases) {
+        allValid = demo::runCase(testCase) && allValid;
+        std::cout << "\n";
+    }
 
-    auto stableSortResult = input;
-    std::stable_sort(stableSortResult.begin(), stableSortResult.end(), demo::recordLess);
-
-    std::cout << "powersort trace\n" << trace.str();
-    demo::printRecords("powersort result", powersortResult);
-    demo::printRecords("stable_sort baseline", stableSortResult);
-
-    if (!demo::sameRecords(powersortResult, stableSortResult)) {
+    if (!allValid) {
         std::cerr << "validation failed\n";
         return 1;
     }

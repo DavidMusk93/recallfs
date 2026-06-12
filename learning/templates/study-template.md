@@ -50,6 +50,9 @@
 | Build Command | `cmake -S demo -B demo/build && cmake --build demo/build` |
 | Run Command | `demo/build/<binary>` |
 | macOS Notes | Compiler, SDK, architecture, `dyld`, or `@rpath` issues |
+| Natural Input |  |
+| Baseline |  |
+| Practical Dataset |  |
 
 ```text
 demo/
@@ -66,7 +69,13 @@ demo/
 | --- | --- | --- | --- |
 | 1 |  |  |  |
 
-## 7. Lessons
+## 7. Comparison
+
+| Case | Dataset | Idea Result | Baseline Result | Lesson |
+| --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |
+
+## 8. Lessons
 
 - Reusable insight:
 - Failure pattern:

@@ -86,6 +86,10 @@ learning/
 - Every demo must be a directory with a standard project layout, not a loose single file.
 - Prefer CMake for C/C++ demos and use out-of-source builds under `demo/build/`.
 - Keep the demo small and focused on the article's core claim.
+- Use the natural input shape of the target problem. For example, a sorting demo should accept a sequence such as `std::vector<int>`, not an artificial record type unless the record is the real subject.
+- Add comments for non-obvious concepts, especially names introduced by the article. A reader should understand what the concept means before reading the implementation details.
+- Use practical test data that represents realistic usage, not only hand-picked toy values.
+- Add comparison tests against a baseline or simpler alternative. If an idea cannot show when it helps, it is not yet useful guidance for practice.
 - Record build commands, run commands, observed output, and mismatches.
 
 Recommended C/C++ demo layout:
@@ -122,6 +126,9 @@ macOS notes:
 - Is the core technical claim identified?
 - Is there a demo, or a clear reason why no demo is needed?
 - If there is a demo, is it a standard project folder rather than a loose source file?
+- Does the demo use the natural input shape of the problem?
+- Are important article-specific concepts explained in comments?
+- Does the demo include realistic data and baseline comparison?
 - Are commands and results reproducible?
 - Are macOS pitfalls and toolchain details recorded when relevant?
 - Are conclusions separated from exploration notes?
