@@ -12,6 +12,7 @@ target_compile_options(powersort_demo PRIVATE
   -Wall
   -Wextra
   -Wpedantic
+  -Werror=return-type
 )
 
 if(APPLE)

@@ -79,7 +79,7 @@
 | 1 | Archived source article | Core article claims preserved | `learning/sources/20260611-powersort.md` |
 | 2 | Read article and CPython notes | Identified PowerSort as run-stack merge policy | `source.md` |
 | 3 | Built C++20 demo | Implemented sequence input, run detection, power calculation, stack merges, and comparison metrics | `demo/src/powersort_demo.cpp` |
-| 4 | Validated output | Demo matches `std::stable_sort` and compares against sequential run merge | `evidence/run.log` |
+| 4 | Validated output | Demo checks `computePower`, matches `std::stable_sort`, and compares against sequential run merge | `evidence/run.log` |
 
 ## 8. Lessons
 

@@ -4,6 +4,7 @@
 #include <iterator>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -86,12 +87,15 @@ int computePower(size_t leftStart, size_t leftLength, size_t rightLength, size_t
     more balanced merge. A larger value means the boundary is deeper, so the adjacent runs are more local.
     The stack policy uses this value to avoid repeatedly appending tiny runs onto a large prefix.
     */
+    if (leftLength == 0 || rightLength == 0 || totalLength == 0 || leftStart + leftLength + rightLength > totalLength) {
+        throw std::invalid_argument("invalid adjacent runs for computePower");
+    }
+
     size_t leftMidTwice = 2 * leftStart + leftLength;
     size_t rightMidTwice = leftMidTwice + leftLength + rightLength;
-    int power = 0;
+    const int maxPower = std::numeric_limits<size_t>::digits + 1;
 
-    while (true) {
-        power++;
+    for (int power = 1; power <= maxPower; power++) {
         if (leftMidTwice >= totalLength) {
             leftMidTwice -= totalLength;
             rightMidTwice -= totalLength;
@@ -101,6 +105,13 @@ int computePower(size_t leftStart, size_t leftLength, size_t rightLength, size_t
         leftMidTwice <<= 1;
         rightMidTwice <<= 1;
     }
+
+    throw std::logic_error("computePower failed to separate adjacent run midpoints");
+}
+
+bool validatePowerExamples() {
+    return computePower(0, 4, 4, 8) == 1 && computePower(0, 4, 4, 16) == 2 && computePower(8, 4, 4, 16) == 2 &&
+           computePower(0, 40, 22, 62) == 1;
 }
 
 void mergeStable(std::vector<int> &values, const Run &leftRun, const Run &rightRun, SortStats &stats) {
@@ -314,6 +325,12 @@ bool runCase(const TestCase &testCase) {
 } // namespace demo
 
 int main() {
+    if (!demo::validatePowerExamples()) {
+        std::cerr << "computePower validation failed\n";
+        return 1;
+    }
+    std::cout << "computePower sanity: ok\n\n";
+
     const std::vector<demo::TestCase> testCases{
         {"nearly sorted list with a late small batch", demo::makeNearlySortedWithLateBatch(), true},
         {"time-window batches from multiple producers", demo::makeTimeWindowBatches(), false},

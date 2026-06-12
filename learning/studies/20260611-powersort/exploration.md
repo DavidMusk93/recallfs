@@ -13,6 +13,7 @@ Reproduce the PowerSort merge-policy core from the article with a small C++20 CM
 | 3 | Checked CPython listsort background | Confirmed natural runs, stable merge sort context, and production features outside demo scope | `source.md` |
 | 4 | Designed reproduction scope | Kept sequence input, run detection, power calculation, stack merges, and baseline validation | `demo/src/powersort_demo.cpp` |
 | 5 | Added comparison tests | Compared PowerSort with sequential run merging on practical run layouts | `evidence/run.log` |
+| 6 | Hardened `computePower` | Added bounded loop, invalid-input checks, `logic_error` fallback, and sanity cases | `demo/src/powersort_demo.cpp` |
 
 ## 3. Key Observations
 

@@ -32,7 +32,7 @@ cmake --build build
 
 ## 5. Expected Result
 
-The demo prints practical test cases, detected runs, computed powers, merge operations, comparison metrics, and `validation ok`.
+The demo prints `computePower sanity: ok`, practical test cases, detected runs, computed powers, merge operations, comparison metrics, and `validation ok`.
 
 ## 6. Comparison Baseline
 
