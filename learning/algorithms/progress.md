@@ -6,9 +6,9 @@
 
 | 字段 | 值 |
 | --- | --- |
-| next_id | 1 |
-| next_slug | two-sum |
-| next_title | 两数之和 |
+| next_id | 2 |
+| next_slug | add-two-numbers |
+| next_title | 两数相加 |
 | phase | not-started |
 | language | rust |
 | free_only | true |
@@ -18,7 +18,7 @@
 
 | 指标 | 值 |
 | --- | ---: |
-| accepted | 0 |
+| accepted | 1 |
 | local-pass only | 0 |
 | premium-skip | 0 |
 | skip | 0 |
@@ -28,11 +28,12 @@
 
 | id | slug | title | difficulty | status | patterns | updated |
 | --- | --- | --- | --- | --- | --- | --- |
-| — | — | （尚无完成题） | — | — | — | — |
+| 1 | two-sum | 两数之和 | Easy | accepted | hashmap-complement | 2026-07-15 |
 
 ## 4. 最近会话备忘
 
-- 2026-07-15：Algorithms Lab 骨架落地（workflow / templates / skill）；下一动作 `workflow @leetcode 1`。
+- 2026-07-15：Algorithms Lab 骨架落地。
+- 2026-07-15：题 1 two-sum 理解测 + Rust 一遍哈希 + 本地测通过；leetcode.cn **AC**（用户确认）。
 
 ## 5. 更新规则
 

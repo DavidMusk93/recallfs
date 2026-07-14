@@ -14,7 +14,7 @@
 
 | pattern | 一句话 | 例题 | 文件 |
 | --- | --- | --- | --- |
-| （空） | 完成第 1 题后开始沉淀 | — | — |
+| hashmap-complement | 扫 x 时查补数 need，先查后写 | 1 two-sum | [hashmap-complement.md](./hashmap-complement.md) |
 
 ## 3. 模板（新文件）
 

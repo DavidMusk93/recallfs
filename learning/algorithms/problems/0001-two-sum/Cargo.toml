@@ -1,0 +1,12 @@
+[package]
+name = "p0001_two_sum"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "LeetCode 1. 两数之和 (two-sum)"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

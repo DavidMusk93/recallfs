@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>1. 两数之和 · 理解测</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #fff;
+      --ink: #1a1a1a;
+      --muted: #666;
+      --line: #e5e5e5;
+      --ok: #0a7a3e;
+      --bad: #b00020;
+      --accent: #c45c26;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    header {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 0.5rem;
+    }
+    header h1 { font-size: 1.4rem; margin: 0 0 0.35rem; }
+    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    main { max-width: 720px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      margin: 1rem 0;
+    }
+    .card h2 {
+      font-size: 1.05rem;
+      margin: 0 0 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: #f0f0f0;
+      color: var(--muted);
+    }
+    .q { margin: 0.75rem 0; }
+    .q p { margin: 0 0 0.5rem; }
+    label.opt {
+      display: block;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin: 0.35rem 0;
+      cursor: pointer;
+    }
+    label.opt:hover { border-color: #bbb; }
+    label.opt.correct { border-color: var(--ok); background: #eefaf2; }
+    label.opt.wrong { border-color: var(--bad); background: #fdecee; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+    }
+    button {
+      appearance: none;
+      border: 0;
+      background: var(--ink);
+      color: #fff;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font: inherit;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    button.secondary { background: #eee; color: var(--ink); margin-left: 0.4rem; }
+    .feedback { margin-top: 0.6rem; font-size: 0.92rem; min-height: 1.2em; }
+    .feedback.ok { color: var(--ok); }
+    .feedback.bad { color: var(--bad); }
+    .hint { color: var(--muted); font-size: 0.88rem; }
+    .scorebar {
+      position: sticky;
+      bottom: 0;
+      background: rgba(255,255,255,0.95);
+      border-top: 1px solid var(--line);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+    img.asset {
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      margin: 0.5rem 0;
+      background: #fff;
+    }
+    .note {
+      border-left: 3px solid var(--accent);
+      padding-left: 0.75rem;
+      color: var(--muted);
+    }
+    pre.walk {
+      background: #f6f6f6;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      overflow-x: auto;
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>1. 两数之和</h1>
+    <p>
+      交互理解测 · Easy ·
+      <a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">题面</a>
+      · 分析见同目录 <code>analysis.md</code>
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>0. 学习约定 <span class="badge">必读</span></h2>
+      <p class="note">
+        本页是教学闸门。做完（或自觉掌握）后，回到对话告诉 agent：
+        <strong>「理解测完成，开始写 Rust」</strong>。
+        在此之前 agent 不会贴完整 AC 代码。
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>配图 · 认知锚点</h2>
+      <p class="hint">小黑图：补数查询 &amp; 暴力 vs 哈希（若图片尚未生成会暂时空白）</p>
+      <p><strong>1）我缺 need，柜里有没有？</strong></p>
+      <img class="asset" src="assets/01-complement-lookup.png" alt="补数哈希：小黑查柜" />
+      <p><strong>2）双环硬找 vs 走过记一笔</strong></p>
+      <img class="asset" src="assets/02-brute-vs-hash.png" alt="暴力与哈希对比" />
+    </section>
+
+    <section class="card">
+      <h2>手推草稿（可对着做 Q2）</h2>
+      <pre class="walk">nums = [2, 7, 11, 15], target = 9
+
+i=0, x=2,  need=7  → 表空，记 2→0
+i=1, x=7,  need=2  → 表里有 2@0 → 答案 [0,1]</pre>
+    </section>
+
+    <section class="card" data-quiz="concept">
+      <h2>1. 概念 <span class="badge">单选</span></h2>
+      <div class="q" data-answer="B">
+        <p><strong>Q1.</strong> 本题要求返回的是什么？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. 两个加数的值本身</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 两个加数在数组中的下标</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 所有满足条件的数对（可能多组）</label>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card" data-quiz="trace">
+      <h2>2. 手推样例 <span class="badge">填空</span></h2>
+      <div class="q" data-answer="1,2">
+        <p><strong>Q2.</strong> <code>nums = [3,2,4], target = 6</code>，合法输出是？（写成 <code>i,j</code> 升序下标）</p>
+        <p class="hint">提示：不是 3+3，因为只有一个 3。</p>
+        <input type="text" data-input placeholder="例如 0,1" />
+        <button type="button" data-check>检查</button>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card" data-quiz="complexity">
+      <h2>3. 复杂度 <span class="badge">单选</span></h2>
+      <div class="q" data-answer="A">
+        <p><strong>Q3.</strong> 一遍哈希主推解法的时间复杂度是？</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. O(n)</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. O(n²)</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. O(n log n)（必须排序）</label>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card" data-quiz="trap">
+      <h2>4. 陷阱 <span class="badge">多选</span></h2>
+      <div class="q" data-answer="A,C" data-multi>
+        <p><strong>Q4.</strong> 哪些说法正确？（多选）</p>
+        <label class="opt"><input type="checkbox" value="A" /> A. 不能使用同一个下标两次</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. 题目保证有多组解，要全部返回</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. 两个相同数值可以出现在不同下标（如 [3,3]）</label>
+        <button type="button" data-check-multi>检查多选</button>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card" data-quiz="code">
+      <h2>5. 关键结构 <span class="badge">填空</span></h2>
+      <div class="q" data-answer="need">
+        <p><strong>Q5.</strong> 扫到当前值 <code>x</code> 时，我们在哈希表里查的那个关键量常叫「补数」。它等于？（填英文小写词 <code>need</code> 或写出表达式含义的一个词：我们查的是 ______）</p>
+        <p class="hint">标准答：填 <code>need</code>（表示 target−x）。也接受 <code>complement</code>。</p>
+        <input type="text" data-input placeholder="need 或 complement" />
+        <button type="button" data-check data-alt="complement">检查</button>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card" data-quiz="order">
+      <h2>6. 顺序 <span class="badge">单选</span></h2>
+      <div class="q" data-answer="B">
+        <p><strong>Q6.</strong> 一遍哈希时，对当前 <code>x</code> 更稳妥的顺序是？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 先把 x 写入表，再查 target−x</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 先查 target−x，再把 x 写入表</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 顺序无所谓，永远不会用到自己</label>
+        <div class="feedback" data-fb></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>7. 自检通过？</h2>
+      <p>你应能不看答案口述：</p>
+      <ul>
+        <li>返回的是下标；</li>
+        <li>补数 = target − x；</li>
+        <li>先查后写；O(n) 时间 O(n) 空间。</li>
+      </ul>
+      <p>然后回复 agent：</p>
+      <p><code>理解测完成，开始写 Rust</code></p>
+      <p class="hint">或：<code>跳过测验，直接写代码</code></p>
+    </section>
+  </main>
+
+  <div class="scorebar">
+    <span id="score">已答对 0 / 可检查题</span>
+    <button type="button" class="secondary" id="reset">重置作答</button>
+  </div>
+
+  <script>
+    (function () {
+      const norm = (s) => String(s).trim().toLowerCase().replace(/\s+/g, "");
+
+      function updateScore() {
+        const fbs = [...document.querySelectorAll(".feedback.ok")];
+        const total = document.querySelectorAll(".q[data-answer]").length;
+        document.getElementById("score").textContent =
+          "已答对 " + fbs.length + " / " + total;
+      }
+
+      document.querySelectorAll(".q").forEach((q) => {
+        const answer = q.dataset.answer;
+        const fb = q.querySelector("[data-fb]");
+        if (!answer) return;
+
+        q.querySelectorAll('input[type="radio"]').forEach((input) => {
+          input.addEventListener("change", () => {
+            const labels = q.querySelectorAll("label.opt");
+            labels.forEach((l) => l.classList.remove("correct", "wrong"));
+            const lab = input.closest("label");
+            if (input.value === answer) {
+              lab.classList.add("correct");
+              fb.textContent = "正确。";
+              fb.className = "feedback ok";
+            } else {
+              lab.classList.add("wrong");
+              fb.textContent = "再想想。可回看 analysis 结论表与手推草稿。";
+              fb.className = "feedback bad";
+            }
+            updateScore();
+          });
+        });
+
+        const checkBtn = q.querySelector("[data-check]");
+        if (checkBtn && !q.querySelector("[data-check-multi]")) {
+          checkBtn.addEventListener("click", () => {
+            const val = q.querySelector("[data-input]").value;
+            const alts = [answer];
+            if (checkBtn.dataset.alt) alts.push(checkBtn.dataset.alt);
+            // allow 1,2 or [1,2] or 1 2
+            const n = norm(val).replace(/[\[\]]/g, "").replace(/;/g, ",");
+            const ok = alts.some((a) => {
+              const an = norm(a).replace(/[\[\]]/g, "");
+              return n === an || n === an.split("").reverse().join("");
+            }) || (answer.includes(",") && (n === norm(answer) || n === norm(answer.split(",").reverse().join(","))));
+            // special: need/complement
+            const wordOk = alts.some((a) => n === norm(a));
+            if (ok || wordOk) {
+              fb.textContent = "正确。";
+              fb.className = "feedback ok";
+            } else {
+              fb.textContent = "还不对。对照手推或 analysis 再试一次。";
+              fb.className = "feedback bad";
+            }
+            updateScore();
+          });
+        }
+
+        const multiBtn = q.querySelector("[data-check-multi]");
+        if (multiBtn) {
+          multiBtn.addEventListener("click", () => {
+            const want = answer.split(",").map((s) => s.trim()).sort().join(",");
+            const got = [...q.querySelectorAll('input[type="checkbox"]:checked')]
+              .map((c) => c.value)
+              .sort()
+              .join(",");
+            q.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
+            if (got === want) {
+              fb.textContent = "正确。";
+              fb.className = "feedback ok";
+              want.split(",").forEach((v) => {
+                const inp = q.querySelector('input[value="' + v + '"]');
+                if (inp) inp.closest("label").classList.add("correct");
+              });
+            } else {
+              fb.textContent = "组合不完整或不对。";
+              fb.className = "feedback bad";
+            }
+            updateScore();
+          });
+        }
+      });
+
+      document.getElementById("reset").addEventListener("click", () => {
+        document.querySelectorAll("input[type=radio], input[type=checkbox]").forEach((i) => {
+          i.checked = false;
+        });
+        document.querySelectorAll("input[type=text]").forEach((i) => (i.value = ""));
+        document.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
+        document.querySelectorAll(".feedback").forEach((f) => {
+          f.textContent = "";
+          f.className = "feedback";
+        });
+        updateScore();
+      });
+
+      updateScore();
+    })();
+  </script>
+</body>
+</html>

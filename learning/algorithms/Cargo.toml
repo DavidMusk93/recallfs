@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
-members = []
+members = [
+    "problems/0001-two-sum",
+]
 # new-problem.sh appends: "problems/NNNN-slug"
 
 [workspace.package]
