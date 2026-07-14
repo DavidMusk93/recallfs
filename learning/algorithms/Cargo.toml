@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = []
+# new-problem.sh appends: "problems/NNNN-slug"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

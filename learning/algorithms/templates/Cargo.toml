@@ -1,0 +1,12 @@
+[package]
+name = "{{CRATE}}"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "LeetCode {{ID}}. {{TITLE_ZH}} ({{SLUG}})"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

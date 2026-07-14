@@ -1,0 +1,14 @@
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Local / temp
+.tmp/
+.DS_Store
+*.swp
+*.swo
+
+# Optional local IDE
+.idea/
+.vscode/

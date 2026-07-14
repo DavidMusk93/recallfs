@@ -1,2 +1,14 @@
+.DS_Store
+**/.DS_Store
+
+# Local agent / temp
 .tmp/
+**/.tmp/
+
+# Learning study demos
 learning/studies/*/demo/build/
+
+# Rust build (algorithms lab)
+learning/algorithms/target/
+learning/algorithms/**/target/
+learning/algorithms/Cargo.lock

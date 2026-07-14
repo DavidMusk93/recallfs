@@ -1,0 +1,15 @@
+# Prefer Chinese crates.io mirror when network is slow.
+# Override anytime with network-accel SOCKS (with-proxy.sh cargo ...).
+# To disable: remove this file or comment the replace-with line.
+
+[source.crates-io]
+replace-with = "rsproxy-sparse"
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/crates.io-index/"
+
+[registries.rsproxy]
+index = "https://rsproxy.cn/crates.io-index"
+
+[net]
+git-fetch-with-cli = true
