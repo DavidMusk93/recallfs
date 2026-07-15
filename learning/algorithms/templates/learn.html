@@ -3,291 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ID}}. {{TITLE_ZH}} · 理解测</title>
-  <style>
-    :root {
-      --bg: #fafafa;
-      --card: #fff;
-      --ink: #1a1a1a;
-      --muted: #666;
-      --line: #e5e5e5;
-      --ok: #0a7a3e;
-      --bad: #b00020;
-      --accent: #c45c26;
-      --blue: #1a5fb4;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.55;
-    }
-    header {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 0.5rem;
-    }
-    header h1 { font-size: 1.4rem; margin: 0 0 0.35rem; }
-    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
-    main { max-width: 720px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 1.1rem 1.2rem;
-      margin: 1rem 0;
-    }
-    .card h2 {
-      font-size: 1.05rem;
-      margin: 0 0 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .badge {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      background: #f0f0f0;
-      color: var(--muted);
-    }
-    .q { margin: 0.75rem 0; }
-    .q p { margin: 0 0 0.5rem; }
-    label.opt {
-      display: block;
-      padding: 0.45rem 0.6rem;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      margin: 0.35rem 0;
-      cursor: pointer;
-    }
-    label.opt:hover { border-color: #bbb; }
-    label.opt.correct { border-color: var(--ok); background: #eefaf2; }
-    label.opt.wrong { border-color: var(--bad); background: #fdecee; }
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 0.5rem 0.65rem;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font: inherit;
-    }
-    button {
-      appearance: none;
-      border: 0;
-      background: var(--ink);
-      color: #fff;
-      padding: 0.55rem 1rem;
-      border-radius: 8px;
-      font: inherit;
-      cursor: pointer;
-      margin-top: 0.5rem;
-    }
-    button.secondary { background: #eee; color: var(--ink); margin-left: 0.4rem; }
-    .feedback { margin-top: 0.6rem; font-size: 0.92rem; min-height: 1.2em; }
-    .feedback.ok { color: var(--ok); }
-    .feedback.bad { color: var(--bad); }
-    .hint { color: var(--muted); font-size: 0.88rem; }
-    .scorebar {
-      position: sticky;
-      bottom: 0;
-      background: rgba(255,255,255,0.95);
-      border-top: 1px solid var(--line);
-      padding: 0.75rem 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-    img.asset { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); margin: 0.5rem 0; }
-    .note { border-left: 3px solid var(--accent); padding-left: 0.75rem; color: var(--muted); }
-  </style>
+  <title>{{ID}}. {{TITLE_ZH}} · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
 </head>
 <body>
-  <header>
-    <h1>{{ID}}. {{TITLE_ZH}}</h1>
-    <p>
-      交互理解测 · 先想再写代码 ·
-      <a href="https://leetcode.cn/problems/{{SLUG}}/" target="_blank" rel="noopener">题面</a>
-      · difficulty: {{DIFFICULTY}}
-    </p>
-  </header>
-
-  <main>
-    <section class="card">
-      <h2>0. 学习约定 <span class="badge">必读</span></h2>
-      <p class="note">
-        本页是教学闸门：做完（或自觉掌握）后再进入 Rust 实现。
-        答案默认隐藏，点选/提交后即时反馈。可本地反复打开，无需服务器。
+  <div class="wrap">
+    <header class="hero">
+      <h1>{{ID}}. {{TITLE_ZH}}</h1>
+      <p class="meta">
+        <span class="pill hot">{{DIFFICULTY}}</span>
+        <a href="https://leetcode.cn/problems/{{SLUG}}/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
       </p>
-      <p class="hint">配图目录：<code>assets/</code>（小黑流程图）</p>
-      <!-- 示例：<img class="asset" src="assets/01-core-idea.png" alt="核心思路" /> -->
+    </header>
+
+    <section class="card">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        本页结构：应用场景 → 多种解法与取舍 → 主推动画 → 发散 → 理解测。
+        测验<strong>统一提交</strong>，作答过程<strong>不公布对错</strong>。
+        全对：下一步提示复制到剪贴板；有错：展开解析，可再来一次。
+        算法服务于真实约束，不为技巧而技巧。
+      </p>
+      <ul class="scene-list">
+        <li><strong>自学</strong>：先读场景与多解，再测，再回对话写 Rust。</li>
+        <li><strong>复习</strong>：口头复述「何时用哪种解法」。</li>
+        <li><strong>卡关</strong>：看发散区约束变化，而不是死记模板。</li>
+      </ul>
     </section>
 
-    <section class="card" data-quiz="concept">
-      <h2>1. 概念 <span class="badge">单选</span></h2>
-      <div class="q" data-answer="B">
-        <p><strong>Q1.</strong> 用一句话描述本题要你求什么？（请按 analysis 改写选项）</p>
-        <label class="opt"><input type="radio" name="q1" value="A" /> A. （占位选项 A）</label>
-        <label class="opt"><input type="radio" name="q1" value="B" /> B. （占位正确选项）</label>
-        <label class="opt"><input type="radio" name="q1" value="C" /> C. （占位选项 C）</label>
-        <div class="feedback" data-fb></div>
-      </div>
-    </section>
-
-    <section class="card" data-quiz="trace">
-      <h2>2. 手推样例 <span class="badge">填空</span></h2>
-      <div class="q" data-answer="todo">
-        <p><strong>Q2.</strong> 对官方样例 1，写出你期望的输出（改成真实样例）。</p>
-        <p class="hint">输入：<code>（填写）</code></p>
-        <input type="text" data-input placeholder="输出是？" />
-        <button type="button" data-check>检查</button>
-        <div class="feedback" data-fb></div>
-      </div>
-    </section>
-
-    <section class="card" data-quiz="complexity">
-      <h2>3. 复杂度 <span class="badge">单选</span></h2>
-      <div class="q" data-answer="A">
-        <p><strong>Q3.</strong> 主推解法的时间复杂度是？</p>
-        <label class="opt"><input type="radio" name="q3" value="A" /> A. O(n)（占位，请改）</label>
-        <label class="opt"><input type="radio" name="q3" value="B" /> B. O(n²)</label>
-        <label class="opt"><input type="radio" name="q3" value="C" /> C. O(n log n)</label>
-        <div class="feedback" data-fb></div>
-      </div>
-    </section>
-
-    <section class="card" data-quiz="trap">
-      <h2>4. 陷阱 <span class="badge">多选</span></h2>
-      <div class="q" data-answer="A,C" data-multi>
-        <p><strong>Q4.</strong> 哪些是本题常见坑？（多选，按题改写）</p>
-        <label class="opt"><input type="checkbox" value="A" /> A. （坑 1）</label>
-        <label class="opt"><input type="checkbox" value="B" /> B. （干扰项）</label>
-        <label class="opt"><input type="checkbox" value="C" /> C. （坑 2）</label>
-        <button type="button" data-check-multi>检查多选</button>
-        <div class="feedback" data-fb></div>
-      </div>
-    </section>
-
-    <section class="card" data-quiz="code">
-      <h2>5. 微代码 <span class="badge">填空</span></h2>
-      <div class="q" data-answer="map">
-        <p><strong>Q5.</strong> 主推结构通常是？（例如 <code>HashMap</code> 填 <code>map</code> 等——按题改）</p>
-        <input type="text" data-input placeholder="一个词" />
-        <button type="button" data-check>检查</button>
-        <div class="feedback" data-fb></div>
+    <section class="card">
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="biz">场景</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="biz">
+          <ul class="scene-list">
+            <li>（填写 2–4 条真实/工程类比）</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">（说明主推结构在优化什么查询/状态，而不是「看起来高级」）</p>
+        </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>6. 自检通过？</h2>
-      <p>当你认为自己能不看答案口述思路与复杂度时，回到对话告诉 agent：</p>
-      <p><code>理解测完成，开始写 Rust</code></p>
-      <p class="hint">也可：<code>跳过测验，直接写代码</code></p>
+      <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
+      <div class="approach-grid">
+        <details class="approach" open>
+          <summary>A. 暴力 / 基线</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">时间 ?</span>
+              <span class="chip good">空间 ?</span>
+            </div>
+            <p>（描述）</p>
+            <p><strong>何时够用：</strong></p>
+          </div>
+        </details>
+        <details class="approach" open>
+          <summary>B. 主推解法</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">时间 ?</span>
+              <span class="chip">空间 ?</span>
+            </div>
+            <p>（描述不变量）</p>
+            <p><strong>在优化什么：</strong></p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>C. 其他路径</summary>
+          <div class="body">
+            <p>（排序双指针 / 递归 / 数学…）</p>
+          </div>
+        </details>
+      </div>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A</td><td></td><td></td></tr>
+          <tr><td>B</td><td></td><td></td></tr>
+        </tbody>
+      </table>
     </section>
-  </main>
 
-  <div class="scorebar">
-    <span id="score">已答对 0 / 可检查题</span>
-    <button type="button" class="secondary" id="reset">重置作答</button>
+    <section class="card">
+      <h2>主推路径动画 <span class="badge">交互</span></h2>
+      <div data-stepper data-period="1500">
+        <div class="stepper">
+          <div class="step"><span class="n">1</span>步骤一</div>
+          <div class="step"><span class="n">2</span>步骤二</div>
+          <div class="step"><span class="n">3</span>步骤三</div>
+        </div>
+        <button type="button" class="secondary" data-step-next>手动下一步</button>
+      </div>
+      <pre class="walk">（手推样例）</pre>
+      <!-- <img class="asset" src="assets/01-....png" alt="" /> -->
+    </section>
+
+    <section class="card">
+      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>（约束变化 → 解法如何变）</li>
+      </ul>
+    </section>
+
+    <section class="card" id="quiz-section">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">全部完成后点「提交测验」。提交前不显示对错。</p>
+
+      <div class="q" data-answer="A">
+        <p class="q-title">Q1. （题意）</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. </label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. </label>
+        <div class="explain"><strong>解析：</strong></div>
+      </div>
+
+      <div class="q" data-answer="todo">
+        <p class="q-title">Q2. （手推填空）</p>
+        <input type="text" placeholder="" />
+        <div class="explain"><strong>解析：</strong></div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+      </div>
+    </section>
   </div>
 
-  <script>
-    (function () {
-      const norm = (s) => String(s).trim().toLowerCase().replace(/\s+/g, "");
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0</span>
+    </div>
+  </div>
 
-      function updateScore() {
-        const fbs = [...document.querySelectorAll(".feedback.ok")];
-        const total = document.querySelectorAll(".q[data-answer]").length;
-        document.getElementById("score").textContent =
-          "已答对 " + fbs.length + " / " + total;
-      }
-
-      document.querySelectorAll(".q").forEach((q) => {
-        const answer = q.dataset.answer;
-        const fb = q.querySelector("[data-fb]");
-        if (!answer || answer === "todo") return;
-
-        // single choice radios
-        q.querySelectorAll('input[type="radio"]').forEach((input) => {
-          input.addEventListener("change", () => {
-            const labels = q.querySelectorAll("label.opt");
-            labels.forEach((l) => l.classList.remove("correct", "wrong"));
-            const lab = input.closest("label");
-            if (input.value === answer) {
-              lab.classList.add("correct");
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-            } else {
-              lab.classList.add("wrong");
-              fb.textContent = "再想想。可以回看 analysis 的结论表。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        });
-
-        // text check
-        const checkBtn = q.querySelector("[data-check]");
-        if (checkBtn) {
-          checkBtn.addEventListener("click", () => {
-            const val = q.querySelector("[data-input]").value;
-            if (norm(val) === norm(answer)) {
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-            } else {
-              fb.textContent = "还不对。提示：对照样例手推一步。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        }
-
-        // multi check
-        const multiBtn = q.querySelector("[data-check-multi]");
-        if (multiBtn) {
-          multiBtn.addEventListener("click", () => {
-            const want = answer.split(",").map((s) => s.trim()).sort().join(",");
-            const got = [...q.querySelectorAll('input[type="checkbox"]:checked')]
-              .map((c) => c.value)
-              .sort()
-              .join(",");
-            q.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
-            if (got === want) {
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-              want.split(",").forEach((v) => {
-                const inp = q.querySelector('input[value="' + v + '"]');
-                if (inp) inp.closest("label").classList.add("correct");
-              });
-            } else {
-              fb.textContent = "组合不完整或不对。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        }
-      });
-
-      document.getElementById("reset").addEventListener("click", () => {
-        document.querySelectorAll("input[type=radio], input[type=checkbox]").forEach((i) => {
-          i.checked = false;
-        });
-        document.querySelectorAll("input[type=text]").forEach((i) => (i.value = ""));
-        document.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
-        document.querySelectorAll(".feedback").forEach((f) => {
-          f.textContent = "";
-          f.className = "feedback";
-        });
-        updateScore();
-      });
-
-      updateScore();
-    })();
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": {{ID}},
+    "slug": "{{SLUG}}"
+  }
   </script>
+  <script src="../../assets/lab.js"></script>
 </body>
 </html>

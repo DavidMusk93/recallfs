@@ -3,349 +3,244 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>1. 两数之和 · 理解测</title>
-  <style>
-    :root {
-      --bg: #fafafa;
-      --card: #fff;
-      --ink: #1a1a1a;
-      --muted: #666;
-      --line: #e5e5e5;
-      --ok: #0a7a3e;
-      --bad: #b00020;
-      --accent: #c45c26;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.55;
-    }
-    header {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 0.5rem;
-    }
-    header h1 { font-size: 1.4rem; margin: 0 0 0.35rem; }
-    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
-    main { max-width: 720px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 1.1rem 1.2rem;
-      margin: 1rem 0;
-    }
-    .card h2 {
-      font-size: 1.05rem;
-      margin: 0 0 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .badge {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      background: #f0f0f0;
-      color: var(--muted);
-    }
-    .q { margin: 0.75rem 0; }
-    .q p { margin: 0 0 0.5rem; }
-    label.opt {
-      display: block;
-      padding: 0.45rem 0.6rem;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      margin: 0.35rem 0;
-      cursor: pointer;
-    }
-    label.opt:hover { border-color: #bbb; }
-    label.opt.correct { border-color: var(--ok); background: #eefaf2; }
-    label.opt.wrong { border-color: var(--bad); background: #fdecee; }
-    input[type="text"] {
-      width: 100%;
-      padding: 0.5rem 0.65rem;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font: inherit;
-    }
-    button {
-      appearance: none;
-      border: 0;
-      background: var(--ink);
-      color: #fff;
-      padding: 0.55rem 1rem;
-      border-radius: 8px;
-      font: inherit;
-      cursor: pointer;
-      margin-top: 0.5rem;
-    }
-    button.secondary { background: #eee; color: var(--ink); margin-left: 0.4rem; }
-    .feedback { margin-top: 0.6rem; font-size: 0.92rem; min-height: 1.2em; }
-    .feedback.ok { color: var(--ok); }
-    .feedback.bad { color: var(--bad); }
-    .hint { color: var(--muted); font-size: 0.88rem; }
-    .scorebar {
-      position: sticky;
-      bottom: 0;
-      background: rgba(255,255,255,0.95);
-      border-top: 1px solid var(--line);
-      padding: 0.75rem 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-    img.asset {
-      max-width: 100%;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      margin: 0.5rem 0;
-      background: #fff;
-    }
-    .note {
-      border-left: 3px solid var(--accent);
-      padding-left: 0.75rem;
-      color: var(--muted);
-    }
-    pre.walk {
-      background: #f6f6f6;
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      overflow-x: auto;
-      font-size: 0.88rem;
-    }
-  </style>
+  <title>1. 两数之和 · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
 </head>
 <body>
-  <header>
-    <h1>1. 两数之和</h1>
-    <p>
-      交互理解测 · Easy ·
-      <a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">题面</a>
-      · 分析见同目录 <code>analysis.md</code>
-    </p>
-  </header>
-
-  <main>
-    <section class="card">
-      <h2>0. 学习约定 <span class="badge">必读</span></h2>
-      <p class="note">
-        本页是教学闸门。做完（或自觉掌握）后，回到对话告诉 agent：
-        <strong>「理解测完成，开始写 Rust」</strong>。
-        在此之前 agent 不会贴完整 AC 代码。
+  <div class="wrap">
+    <header class="hero">
+      <h1>1. 两数之和</h1>
+      <p class="meta">
+        <span class="pill hot">Easy</span>
+        <span class="pill">Array · Hash Table</span>
+        <a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
       </p>
+    </header>
+
+    <section class="card">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        本页不是「背最优模板」，而是先搞清楚：
+        <strong>真实问题长什么样 → 有哪些解法、各自代价 → 为何主推某一解 → 再测理解</strong>。
+        测验<strong>全部作答后统一提交</strong>；作答过程中<strong>不公布对错</strong>。
+        全对会把下一步提示复制到剪贴板；有错则展开解析，可「再来一次」。
+      </p>
+      <ul class="scene-list">
+        <li><strong>自学</strong>：先读场景与多解法，再做题测，再回对话写 Rust。</li>
+        <li><strong>复习</strong>：只展开「应用场景 / 多解对比」卡片，口头复述即可。</li>
+        <li><strong>卡关</strong>：看发散区「约束变了怎么办」，不要死磕一种技巧。</li>
+      </ul>
     </section>
 
     <section class="card">
-      <h2>配图 · 认知锚点</h2>
-      <p class="hint">小黑图：补数查询 &amp; 暴力 vs 哈希（若图片尚未生成会暂时空白）</p>
-      <p><strong>1）我缺 need，柜里有没有？</strong></p>
-      <img class="asset" src="assets/01-complement-lookup.png" alt="补数哈希：小黑查柜" />
-      <p><strong>2）双环硬找 vs 走过记一笔</strong></p>
-      <img class="asset" src="assets/02-brute-vs-hash.png" alt="暴力与哈希对比" />
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <p>抽象：在一堆「可索引的记录」里，找<strong>两条</strong>记录，使它们的某个数值指标满足二元关系（这里是求和）。</p>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="biz">业务直觉</button>
+          <button type="button" class="tab-btn" data-tab="sys">系统/工程</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="biz">
+          <ul class="scene-list">
+            <li>订单列表里找两笔金额刚好凑满优惠门槛。</li>
+            <li>选两门课，学分之和等于毕业要求的某一档。</li>
+            <li>库存 SKU 两两配对：体积/重量之和接近装箱上限（同构于「配对」）。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="sys">
+          <ul class="scene-list">
+            <li>日志/事件流里找两个事件 id，使 latency 之和等于超时阈值。</li>
+            <li>调试时：已知 sum，在数组快照里定位两个贡献者下标。</li>
+            <li>编译器/分析：常量折叠前的「两操作数引用」粗匹配（教学类比）。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">
+            哈希不是为了「显得高级」。当你需要<strong>反复查询「有没有出现过某个值」</strong>，
+            且查询次数与 n 同阶时，用哈希是在付 O(n) 空间，换「少扫很多遍」的时间。
+            若 n 极小、或内存极紧、或不允许额外空间，暴力可能更合适——这是工程取舍，不是输赢。
+          </p>
+        </div>
+      </div>
     </section>
 
     <section class="card">
-      <h2>手推草稿（可对着做 Q2）</h2>
-      <pre class="walk">nums = [2, 7, 11, 15], target = 9
+      <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
+      <p class="hint">先理解每条路在优化什么，再选主推。主推 ≠ 唯一正确。</p>
+      <div class="approach-grid">
+        <details class="approach" open>
+          <summary>A. 暴力双循环</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">时间 O(n²)</span>
+              <span class="chip good">空间 O(1)</span>
+              <span class="chip">易写易证</span>
+            </div>
+            <p>对每个 <code>i</code>，向后扫 <code>j</code>，检查和是否为 target。</p>
+            <p><strong>何时够用：</strong>n 很小（如 &lt; 100）、原型验证、面试先写对再优化。</p>
+            <p><strong>思维：</strong>直接翻译题意，建立正确性基线。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>B. 排序 + 双指针（变体）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip">时间 O(n log n)</span>
+              <span class="chip warn">下标需额外记录</span>
+            </div>
+            <p>若只关心「两个值」而非原下标，可排序后两头夹。本题要下标，需带着原 index 排序。</p>
+            <p><strong>何时想：</strong>后续 3Sum/最接近三数等「有序空间上的配对」一族。</p>
+            <p><strong>代价：</strong>排序改变了扫描顺序；实现比哈希啰嗦一点。</p>
+          </div>
+        </details>
+        <details class="approach" open>
+          <summary>C. 一遍哈希（主推）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">时间 O(n)</span>
+              <span class="chip">空间 O(n)</span>
+              <span class="chip good">贴合题设</span>
+            </div>
+            <p>扫到 <code>x</code> 时查 <code>need = target - x</code> 是否已出现；<strong>先查后写</strong>。</p>
+            <p><strong>在优化什么：</strong>把「在已见集合里找补数」从线性扫变成均摊 O(1) 查询。</p>
+            <p><strong>应用迁移：</strong>任何「当前元素 + 历史集合」的配对问题。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>D. 两遍哈希</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">时间 O(n)</span>
+              <span class="chip">空间 O(n)</span>
+              <span class="chip warn">同值需小心</span>
+            </div>
+            <p>先全部入库再查。同值两次（如 <code>[3,3]</code>）时，表要能区分两个下标或存列表。</p>
+            <p><strong>教学价值：</strong>理解「索引结构先建后查」；实现上通常不如一遍干净。</p>
+          </div>
+        </details>
+      </div>
 
-i=0, x=2,  need=7  → 表空，记 2→0
-i=1, x=7,  need=2  → 表里有 2@0 → 答案 [0,1]</pre>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>暴力</td><td>零额外结构、思路直白</td><td>时间</td></tr>
+          <tr><td>排序+双指针</td><td>有序域上的线性扫</td><td>原序；实现带索引时变重</td></tr>
+          <tr><td>哈希</td><td>查询速度</td><td>额外内存；哈希常数</td></tr>
+        </tbody>
+      </table>
     </section>
 
-    <section class="card" data-quiz="concept">
-      <h2>1. 概念 <span class="badge">单选</span></h2>
+    <section class="card">
+      <h2>主推路径动画 <span class="badge">交互</span></h2>
+      <div data-stepper data-period="1600">
+        <div class="stepper">
+          <div class="step"><span class="n">1</span>取当前 x</div>
+          <div class="step"><span class="n">2</span>need = target − x</div>
+          <div class="step"><span class="n">3</span>表里有 need？</div>
+          <div class="step"><span class="n">4</span>命中返回下标 / 未命中写入 x</div>
+        </div>
+        <button type="button" class="secondary" data-step-next>手动下一步</button>
+      </div>
+      <pre class="walk">样例: nums=[2,7,11,15], target=9
+i=0 x=2 need=7 → 空表，记 2→0
+i=1 x=7 need=2 → 命中 0 → [0,1]</pre>
+      <p><strong>配图</strong></p>
+      <img class="asset" src="assets/01-complement-lookup.png" alt="补数哈希" />
+      <img class="asset" src="assets/02-brute-vs-hash.png" alt="暴力 vs 哈希" />
+    </section>
+
+    <section class="card">
+      <h2>发散：约束一变，解法怎么变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>若要<strong>所有</strong>数对 → 不能早停；可能 O(n²) 输出规模。</li>
+        <li>若数组<strong>有序</strong>且只要值 → 双指针更自然。</li>
+        <li>若内存极紧 → 暴力或外部排序思路。</li>
+        <li>若流式、只能看一遍且内存有限 → 需要近似/采样，不是原题哈希。</li>
+      </ul>
+      <p class="hint">技巧服务于约束；先问「数据从哪来、有多大、要下标还是值、能否改数组」。 </p>
+    </section>
+
+    <section class="card" id="quiz-section">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">请完成全部题目后点底部「提交测验」。提交前选项可以改，但不会显示对错。</p>
+
       <div class="q" data-answer="B">
-        <p><strong>Q1.</strong> 本题要求返回的是什么？</p>
-        <label class="opt"><input type="radio" name="q1" value="A" /> A. 两个加数的值本身</label>
-        <label class="opt"><input type="radio" name="q1" value="B" /> B. 两个加数在数组中的下标</label>
-        <label class="opt"><input type="radio" name="q1" value="C" /> C. 所有满足条件的数对（可能多组）</label>
-        <div class="feedback" data-fb></div>
+        <p class="q-title">Q1. 本题要求返回的是？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. 两个加数的值</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 两个加数的下标</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 所有满足条件的数对</label>
+        <div class="explain"><strong>解析：</strong>返回 indices；题设恰好一解。</div>
       </div>
-    </section>
 
-    <section class="card" data-quiz="trace">
-      <h2>2. 手推样例 <span class="badge">填空</span></h2>
-      <div class="q" data-answer="1,2">
-        <p><strong>Q2.</strong> <code>nums = [3,2,4], target = 6</code>，合法输出是？（写成 <code>i,j</code> 升序下标）</p>
-        <p class="hint">提示：不是 3+3，因为只有一个 3。</p>
-        <input type="text" data-input placeholder="例如 0,1" />
-        <button type="button" data-check>检查</button>
-        <div class="feedback" data-fb></div>
+      <div class="q" data-answer="1,2" data-orderless>
+        <p class="q-title">Q2. <code>nums=[3,2,4], target=6</code> 的合法下标？（写成 <code>i,j</code>）</p>
+        <input type="text" placeholder="两个下标，逗号分隔" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>2+4=6 → 下标 1 与 2。不是两个 3。</div>
       </div>
-    </section>
 
-    <section class="card" data-quiz="complexity">
-      <h2>3. 复杂度 <span class="badge">单选</span></h2>
       <div class="q" data-answer="A">
-        <p><strong>Q3.</strong> 一遍哈希主推解法的时间复杂度是？</p>
+        <p class="q-title">Q3. 一遍哈希主推解法时间复杂度？</p>
         <label class="opt"><input type="radio" name="q3" value="A" /> A. O(n)</label>
         <label class="opt"><input type="radio" name="q3" value="B" /> B. O(n²)</label>
-        <label class="opt"><input type="radio" name="q3" value="C" /> C. O(n log n)（必须排序）</label>
-        <div class="feedback" data-fb></div>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. 必须 O(n log n) 排序</label>
+        <div class="explain"><strong>解析：</strong>均摊 O(1) 查表 × n 次扫描。</div>
       </div>
-    </section>
 
-    <section class="card" data-quiz="trap">
-      <h2>4. 陷阱 <span class="badge">多选</span></h2>
       <div class="q" data-answer="A,C" data-multi>
-        <p><strong>Q4.</strong> 哪些说法正确？（多选）</p>
-        <label class="opt"><input type="checkbox" value="A" /> A. 不能使用同一个下标两次</label>
-        <label class="opt"><input type="checkbox" value="B" /> B. 题目保证有多组解，要全部返回</label>
-        <label class="opt"><input type="checkbox" value="C" /> C. 两个相同数值可以出现在不同下标（如 [3,3]）</label>
-        <button type="button" data-check-multi>检查多选</button>
-        <div class="feedback" data-fb></div>
+        <p class="q-title">Q4. 哪些说法正确？（多选）</p>
+        <label class="opt"><input type="checkbox" value="A" /> A. 不能使用同一下标两次</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. 题目保证有多组解</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. 同值可出现在不同下标（如 [3,3]）</label>
+        <div class="explain"><strong>解析：</strong>恰好一解；同一下标禁用；不同下标同值合法。</div>
       </div>
-    </section>
 
-    <section class="card" data-quiz="code">
-      <h2>5. 关键结构 <span class="badge">填空</span></h2>
-      <div class="q" data-answer="need">
-        <p><strong>Q5.</strong> 扫到当前值 <code>x</code> 时，我们在哈希表里查的那个关键量常叫「补数」。它等于？（填英文小写词 <code>need</code> 或写出表达式含义的一个词：我们查的是 ______）</p>
-        <p class="hint">标准答：填 <code>need</code>（表示 target−x）。也接受 <code>complement</code>。</p>
-        <input type="text" data-input placeholder="need 或 complement" />
-        <button type="button" data-check data-alt="complement">检查</button>
-        <div class="feedback" data-fb></div>
+      <div class="q" data-answer="need" data-alts="complement|target-x|target−x">
+        <p class="q-title">Q5. 扫到 x 时，在表里查的关键量常叫？（填 need / complement）</p>
+        <input type="text" placeholder="一个英文词" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>补数 need = target − x，问「以前见过吗」。</div>
       </div>
-    </section>
 
-    <section class="card" data-quiz="order">
-      <h2>6. 顺序 <span class="badge">单选</span></h2>
       <div class="q" data-answer="B">
-        <p><strong>Q6.</strong> 一遍哈希时，对当前 <code>x</code> 更稳妥的顺序是？</p>
-        <label class="opt"><input type="radio" name="q6" value="A" /> A. 先把 x 写入表，再查 target−x</label>
-        <label class="opt"><input type="radio" name="q6" value="B" /> B. 先查 target−x，再把 x 写入表</label>
-        <label class="opt"><input type="radio" name="q6" value="C" /> C. 顺序无所谓，永远不会用到自己</label>
-        <div class="feedback" data-fb></div>
+        <p class="q-title">Q6. 一遍哈希对当前 x 更稳妥的顺序？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 先写入 x，再查 target−x</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 先查 target−x，再写入 x</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 顺序无所谓</label>
+        <div class="explain"><strong>解析：</strong>先查后写，避免把当前元素当自己的配对着。</div>
+      </div>
+
+      <div class="q" data-answer="B">
+        <p class="q-title">Q7. 为什么本题值得学哈希，而不是「永远暴力就好」？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. 哈希永远比暴力正确</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. 当 n 变大且需要反复「查是否出现过」时，用空间换查询时间，是贴合场景的取舍</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. 题目禁止暴力</label>
+        <div class="explain"><strong>解析：</strong>正确性暴力也有；选哈希是因为约束下查询模式匹配，不是为了炫技。</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
       </div>
     </section>
-
-    <section class="card">
-      <h2>7. 自检通过？</h2>
-      <p>你应能不看答案口述：</p>
-      <ul>
-        <li>返回的是下标；</li>
-        <li>补数 = target − x；</li>
-        <li>先查后写；O(n) 时间 O(n) 空间。</li>
-      </ul>
-      <p>然后回复 agent：</p>
-      <p><code>理解测完成，开始写 Rust</code></p>
-      <p class="hint">或：<code>跳过测验，直接写代码</code></p>
-    </section>
-  </main>
-
-  <div class="scorebar">
-    <span id="score">已答对 0 / 可检查题</span>
-    <button type="button" class="secondary" id="reset">重置作答</button>
   </div>
 
-  <script>
-    (function () {
-      const norm = (s) => String(s).trim().toLowerCase().replace(/\s+/g, "");
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0 / 7</span>
+    </div>
+  </div>
 
-      function updateScore() {
-        const fbs = [...document.querySelectorAll(".feedback.ok")];
-        const total = document.querySelectorAll(".q[data-answer]").length;
-        document.getElementById("score").textContent =
-          "已答对 " + fbs.length + " / " + total;
-      }
-
-      document.querySelectorAll(".q").forEach((q) => {
-        const answer = q.dataset.answer;
-        const fb = q.querySelector("[data-fb]");
-        if (!answer) return;
-
-        q.querySelectorAll('input[type="radio"]').forEach((input) => {
-          input.addEventListener("change", () => {
-            const labels = q.querySelectorAll("label.opt");
-            labels.forEach((l) => l.classList.remove("correct", "wrong"));
-            const lab = input.closest("label");
-            if (input.value === answer) {
-              lab.classList.add("correct");
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-            } else {
-              lab.classList.add("wrong");
-              fb.textContent = "再想想。可回看 analysis 结论表与手推草稿。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        });
-
-        const checkBtn = q.querySelector("[data-check]");
-        if (checkBtn && !q.querySelector("[data-check-multi]")) {
-          checkBtn.addEventListener("click", () => {
-            const val = q.querySelector("[data-input]").value;
-            const alts = [answer];
-            if (checkBtn.dataset.alt) alts.push(checkBtn.dataset.alt);
-            // allow 1,2 or [1,2] or 1 2
-            const n = norm(val).replace(/[\[\]]/g, "").replace(/;/g, ",");
-            const ok = alts.some((a) => {
-              const an = norm(a).replace(/[\[\]]/g, "");
-              return n === an || n === an.split("").reverse().join("");
-            }) || (answer.includes(",") && (n === norm(answer) || n === norm(answer.split(",").reverse().join(","))));
-            // special: need/complement
-            const wordOk = alts.some((a) => n === norm(a));
-            if (ok || wordOk) {
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-            } else {
-              fb.textContent = "还不对。对照手推或 analysis 再试一次。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        }
-
-        const multiBtn = q.querySelector("[data-check-multi]");
-        if (multiBtn) {
-          multiBtn.addEventListener("click", () => {
-            const want = answer.split(",").map((s) => s.trim()).sort().join(",");
-            const got = [...q.querySelectorAll('input[type="checkbox"]:checked')]
-              .map((c) => c.value)
-              .sort()
-              .join(",");
-            q.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
-            if (got === want) {
-              fb.textContent = "正确。";
-              fb.className = "feedback ok";
-              want.split(",").forEach((v) => {
-                const inp = q.querySelector('input[value="' + v + '"]');
-                if (inp) inp.closest("label").classList.add("correct");
-              });
-            } else {
-              fb.textContent = "组合不完整或不对。";
-              fb.className = "feedback bad";
-            }
-            updateScore();
-          });
-        }
-      });
-
-      document.getElementById("reset").addEventListener("click", () => {
-        document.querySelectorAll("input[type=radio], input[type=checkbox]").forEach((i) => {
-          i.checked = false;
-        });
-        document.querySelectorAll("input[type=text]").forEach((i) => (i.value = ""));
-        document.querySelectorAll("label.opt").forEach((l) => l.classList.remove("correct", "wrong"));
-        document.querySelectorAll(".feedback").forEach((f) => {
-          f.textContent = "";
-          f.className = "feedback";
-        });
-        updateScore();
-      });
-
-      updateScore();
-    })();
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": 1,
+    "slug": "two-sum"
+  }
   </script>
+  <script src="../../assets/lab.js"></script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+[package]
+name = "p0002_add_two_numbers"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "LeetCode 2. 两数相加 (add-two-numbers)"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

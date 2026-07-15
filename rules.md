@@ -9,8 +9,9 @@
 - 测试驱动 & 追溯日志驱动
 - 对于优化问题，切换到bench 模式，以结果来决定优化方向。如果你觉得没有思路，我可以为你提供素材。
 - 根据plan，依次实现功能。一步一个提交。
+- **改动及时提交并推送**：完成一个可独立描述的单元后立即 `git commit`，并尽快 `git push`。详见根目录 `AGENTS.md`。
 - commit message format: short message & long details
-- docs 中的文件不必提交到git 仓库。
+- 远端业务仓同步的噪音 docs 可不进 git；本仓库主动沉淀的 learning / skill / design / algorithms **要提交**。
 - 算法模块的 progress / patterns / 单题 notes 属于长期能力沉淀，应纳入版本管理；`target/` 与临时产物忽略。
 
 # 行为态度

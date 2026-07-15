@@ -10,7 +10,8 @@
 | 题库范围 | **仅免费题**；从编号 **1** 起顺序推进（可跳过已掌握，但需写 `skip` 原因） |
 | 实现语言 | **Rust only**（agent-friendly，亦为你的主语言） |
 | 触发方式 | `workflow @leetcode <题号>` / `/leetcode <题号>` / 「做第 N 题」 |
-| 学习形态 | 分析 → 社区灵感 → **HTML 交互理解测** → 小黑流程图 → Rust 实现 → 心得沉淀 |
+| 学习形态 | 分析 → 场景/多解法 HTML → **统一提交理解测** → 小黑图 → Rust → 心得 |
+| HTML 服务 | `cd learning/algorithms && python3 -m http.server 8000`（Tailscale 可访问） |
 | 执行 | 本地 `cargo test` 闭环后，再协助你在 leetcode.cn 提交 |
 
 ## 2. 目录地图
@@ -34,8 +35,9 @@ learning/algorithms/
 │       ├── Cargo.toml
 │       └── src/lib.rs        # LeetCode 解法 + 本地测试
 ├── scripts/                  # 脚手架与辅助脚本
-└── assets/                   # 模块级公共资产
+└── assets/                   # lab.css / lab.js 与公共资产
 ```
+
 
 ## 3. 快速开始
 

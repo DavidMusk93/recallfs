@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>2. 两数相加 · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>2. 两数相加</h1>
+      <p class="meta">
+        <span class="pill hot">Medium</span>
+        <span class="pill">Linked List · Math</span>
+        <a href="https://leetcode.cn/problems/add-two-numbers/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
+      </p>
+    </header>
+
+    <section class="card">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        目标：理解<strong>大整数按位运算</strong>在链表结构上如何落地，而不是背「dummy head 模板」。
+        先看应用场景与多解法取舍，再做统一提交的理解测。
+        作答过程<strong>不公布对错</strong>；全对复制下一步提示；有错展示解析并可重试。
+      </p>
+      <ul class="scene-list">
+        <li><strong>概念课</strong>：进位、不等长对齐、低位优先——和竖式加法同一套。</li>
+        <li><strong>工程课</strong>：为何不转成原生整数；100 位意味着什么。</li>
+        <li><strong>编码课</strong>：链表遍历 + 边界（最终 carry）如何写成循环不变量。</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="math">算术</button>
+          <button type="button" class="tab-btn" data-tab="sys">系统</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="math">
+          <ul class="scene-list">
+            <li>竖式加法：从个位往高位加，满十进一——链表只是「数字序列」的载体。</li>
+            <li>任意精度整数（bigint）的加法内核：按 limb/digit 进位。</li>
+            <li> monoid 折叠：把「当前和 + 进位状态」沿序列推演。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="sys">
+          <ul class="scene-list">
+            <li>协议里变长小端整数序列的合并/校验。</li>
+            <li>传感器计数器溢出（模 10 的简化版是模 2^w）。</li>
+            <li>流式按块累加：块长度不同，靠 carry 衔接。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">
+            Dummy head、递归写法都是<strong>表达工具</strong>。核心始终是：
+            状态 <code>(指针1, 指针2, carry)</code> 的转移。
+            选迭代还是递归，看语言习惯与栈深度，不是高低之分。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
+      <div class="approach-grid">
+        <details class="approach" open>
+          <summary>A. 按位迭代 + carry（主推）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">时间 O(max(m,n))</span>
+              <span class="chip">空间 O(max(m,n)) 输出</span>
+            </div>
+            <p>同步走两条链，缺位当 0；<code>sum%10</code> 写节点，<code>sum/10</code> 进位；循环条件含最终 carry。</p>
+            <p><strong>在优化什么：</strong>一次遍历完成加法，贴合加法定义。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>B. 递归</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">时间 O(max(m,n))</span>
+              <span class="chip warn">栈 O(max(m,n))</span>
+            </div>
+            <p><code>f(l1,l2,carry)</code> 与迭代同构。链表很长时注意栈。</p>
+            <p><strong>思维价值：</strong>看清三维状态；代码有时更短。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>C. 转成整数再加（不推荐本题）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">大数麻烦</span>
+              <span class="chip dim">偏离考点</span>
+            </div>
+            <p>长度可达 100，原生整型不够；用大数库则掩盖了链表进位训练目标。</p>
+            <p><strong>何时可以：</strong>位数极小的脚本玩具；生产 bigint 应有专门表示。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>D. 先反转成高位在前再加</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip">额外反转</span>
+              <span class="chip dim">本题多余</span>
+            </div>
+            <p>若存储是高位在前，才需要从尾部或先反转。本题已是逆序，直接从头加。</p>
+          </div>
+        </details>
+      </div>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>适合</th><th>代价</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>迭代+carry</td><td>通用主推</td><td>要仔细处理空指针与尾 carry</td></tr>
+          <tr><td>递归</td><td>状态清晰、链不太长</td><td>栈深度</td></tr>
+          <tr><td>转整数</td><td>位数极小 demo</td><td>大数与题意不符</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>主推路径动画 <span class="badge">交互</span></h2>
+      <div data-stepper data-period="1500">
+        <div class="stepper">
+          <div class="step"><span class="n">1</span>取 a、b（空则 0）</div>
+          <div class="step"><span class="n">2</span>s = a+b+carry</div>
+          <div class="step"><span class="n">3</span>写 s%10，carry=s/10</div>
+          <div class="step"><span class="n">4</span>前进指针；尾 carry 再挂节点</div>
+        </div>
+        <button type="button" class="secondary" data-step-next>手动下一步</button>
+      </div>
+      <pre class="walk">342 + 465 → 链表 2→4→3 与 5→6→4
+2+5=7；4+6=10→0 进1；3+4+1=8 → 7→0→8</pre>
+      <img class="asset" src="assets/01-reverse-digits.png" alt="逆序对齐" />
+      <img class="asset" src="assets/02-carry-cart.png" alt="进位" />
+    </section>
+
+    <section class="card">
+      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>高位在前存储 → 先反转或从栈/递归从尾处理。</li>
+        <li>二进制链表相加 → 仍是 carry，模 2。</li>
+        <li>字符串大数加法 → 同一进位模型，换随机访问数组。</li>
+        <li>要就地修改某一链 → 仍可，注意更长链与尾 carry 所有权。</li>
+      </ul>
+    </section>
+
+    <section class="card" id="quiz-section">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">全部作答后提交。前提交不显示对错；错了看解析再「再来一次」。</p>
+
+      <div class="q" data-answer="B">
+        <p class="q-title">Q1. 链表 <code>2→4→3</code> 表示的整数是？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. 243</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 342（低位在头）</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 无法确定</label>
+        <div class="explain"><strong>解析：</strong>题目约定逆序存储，头是个位。</div>
+      </div>
+
+      <div class="q" data-answer="7,0,8">
+        <p class="q-title">Q2. <code>l1=[2,4,3], l2=[5,6,4]</code> 输出节点值？（逗号分隔）</p>
+        <input type="text" placeholder="用逗号分隔，如 a,b,c" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>342+465=807 → 7→0→8。</div>
+      </div>
+
+      <div class="q" data-answer="C">
+        <p class="q-title">Q3. 迭代循环应持续到？</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. 两链都还有节点</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. 至少一链还有节点</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. 至少一链还有节点，或 carry 非 0</label>
+        <div class="explain"><strong>解析：</strong>最终进位也要变成新节点。</div>
+      </div>
+
+      <div class="q" data-answer="A,C" data-multi>
+        <p class="q-title">Q4. 常见坑？（多选）</p>
+        <label class="opt"><input type="checkbox" value="A" /> A. 漏掉最后的 carry 节点</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. 链表一定等长</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. 短链结束对应位应按 0</label>
+        <div class="explain"><strong>解析：</strong>A、C 是坑；B 错误，长度可以不同。</div>
+      </div>
+
+      <div class="q" data-answer="10">
+        <p class="q-title">Q5. 本位写 <code>sum % ?</code>，进位 <code>sum / ?</code>，问号是？</p>
+        <input type="text" placeholder="填一个整数" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>十进制下是 10。</div>
+      </div>
+
+      <div class="q" data-answer="B">
+        <p class="q-title">Q6. 为何主推按位模拟而不是转成整数？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 按位更慢所以更安全</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 位数可达 100，大数转换麻烦且掩盖「进位扫描」这一真实模型</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 题目禁止加法</label>
+        <div class="explain"><strong>解析：</strong>场景是任意精度按位加；技巧服务模型，不是禁止整数。</div>
+      </div>
+
+      <div class="q" data-answer="B">
+        <p class="q-title">Q7. Dummy head 的主要价值是？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. 让算法从 O(n) 变成 O(1)</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. 简化「结果链头部」的边界处理，是表达手段不是新算法</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. 题目强制要求</label>
+        <div class="explain"><strong>解析：</strong>复杂度不变；dummy 只是实现技巧，核心仍是 carry 扫描。</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0 / 7</span>
+    </div>
+  </div>
+
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": 2,
+    "slug": "add-two-numbers"
+  }
+  </script>
+  <script src="../../assets/lab.js"></script>
+</body>
+</html>

@@ -41,12 +41,22 @@ metadata:
 2 拉 leetcode.cn 题面 + 题解/评论灵感
 3 bash scripts/new-problem.sh ...（若目录不存在）
 4 写 analysis.md（结论先行 + ASCII）
-5 填 learn.html；用 ian-xiaohei-illustrations 生成 1–3 张图到 assets/
-6 【闸门】等用户完成理解测或明确跳过
+5 填 learn.html（场景+多解法+统一提交测验）+ 小黑图 1–3 张
+6 【闸门】等用户完成理解测（剪贴板 nextHint）或明确跳过
 7 Rust 实现 + cargo test
 8 协助 leetcode.cn 提交（open 题页 + 可粘贴代码；不假装 AC）
 9 notes.md + patterns/ + progress.md
 ```
+
+### 3.0 learn.html 内容规范（必做）
+
+- 复用 `learning/algorithms/assets/lab.css` + `lab.js`。
+- **应用场景**：真实/工程类比；写清「为何值得用某结构，而非炫技」。
+- **多种解法**：至少暴力基线 + 主推 + 1 条变体；对比表写清换到/丢掉什么。
+- **发散**：约束变化时解法如何变。
+- **测验**：只在最终提交后显示对错；全对 `clipboard.writeText(nextHint)`；失败展示解析 + 再来一次。
+- 禁止：答题过程中即时亮正确答案。
+- 禁止：`placeholder` / 题干把标准答案写出来（如填空 placeholder=`7,0,8`）；只用中性格式提示。
 
 ### 3.1 脚手架
 
