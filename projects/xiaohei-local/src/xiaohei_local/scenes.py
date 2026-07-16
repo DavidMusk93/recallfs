@@ -23,7 +23,7 @@ def scene_book_corrigendum(cv: Canvas, p: dict[str, Any]) -> None:
     cv.text((250, 340), p.get("book_body", "Partial → hash → Inter → Sink"), size=st.small_size, color=st.gray, role="annot")
     cv.label((250, 545), "固定", size=st.label_size, role="title")
 
-    draw_character(cv, 540, 320, scale=1.4, pose="idle")
+    draw_character(cv, 540, 325, scale=1.45, pose="idle")
     cv.arrow((475, 320), (405, 295), seed=40)
     cv.arrow((605, 320), (720, 275), seed=41)
 
@@ -77,7 +77,7 @@ def scene_lego_first(cv: Canvas, p: dict[str, Any]) -> None:
     last = bricks[-1][0]
     cv.rect(770, 300, 910, 390, fill=st.soft, seed=60, radius=8)
     cv.label((840, 345), last, size=st.label_size, role="title", bg=st.chip)
-    draw_character(cv, 840, 245, scale=1.25, pose="carry")
+    draw_character(cv, 840, 248, scale=1.32, pose="carry")
     cv.label((840, 190), "卡进槽位", size=st.small_size, color=st.orange, bg=st.soft_orange, border=st.orange, role="annot", tilt=True)
     cv.arrow((910, 345), (1000, y - 30), seed=61)
 
@@ -135,7 +135,7 @@ def scene_grain_vs_tumble(cv: Canvas, p: dict[str, Any]) -> None:
         role="annot",
     )
 
-    draw_character(cv, 640, 160, scale=1.3, pose="place")
+    draw_character(cv, 640, 155, scale=1.35, pose="place")
     cv.label((470, 140), "点主键", size=st.small_size, role="annot", bg=st.chip)
     cv.label((820, 140), "敲触发", size=st.small_size, color=st.orange, bg=st.soft_orange, border=st.orange, role="annot")
     cv.ellipse(860, 115, 925, 175, outline=st.orange, seed=30)
@@ -167,7 +167,7 @@ def scene_planned_not_shipped(cv: Canvas, p: dict[str, Any]) -> None:
 
     cv.label((845, 315), "非现网 API", size=st.label_size, color=st.red, bg=st.soft_red, border=st.red, role="title")
 
-    draw_character(cv, 245, 345, scale=1.5, pose="press", facing=1)
+    draw_character(cv, 245, 348, scale=1.55, pose="press", facing=1)
     cv.label((245, 475), "隔玻璃 · 按不到", size=st.small_size, color=st.blue, bg=st.soft_blue, border=st.blue, role="annot")
     cv.label((245, 525), "勿当已交付", size=st.label_size, color=st.red, bg=st.soft_red, border=st.red, role="title")
 

@@ -1,17 +1,9 @@
-"""Mascot characters: 小黄狗 (default) + 小黑 (classic)."""
+"""Mascot characters: 小黄狗 (default, cute) + 小黑 (classic)."""
 
 from __future__ import annotations
 
 from .canvas import Canvas
 from .style import Style
-
-# palette for 小黄狗
-YELLOW = (255, 205, 72)
-YELLOW_DEEP = (240, 170, 40)
-EAR = (235, 145, 55)
-MUZZLE = (255, 248, 230)
-NOSE = (40, 40, 40)
-CHEEK = (255, 170, 140)
 
 
 def draw_character(
@@ -33,6 +25,22 @@ def draw_character(
     draw_xiaohuang(cv, cx, cy, scale=scale, facing=facing, pose=pose)
 
 
+def _shadow(cv: Canvas, cx: float, cy: float, s: float) -> None:
+    """Soft ground oval under mascot."""
+    st = cv.style
+    y = cy + 38 * s
+    cv.ellipse(
+        cx - 28 * s,
+        y - 6 * s,
+        cx + 28 * s,
+        y + 8 * s,
+        fill=(230, 220, 200),
+        outline=(230, 220, 200),
+        width=1,
+        seed=3,
+    )
+
+
 def draw_xiaohuang(
     cv: Canvas,
     cx: float,
@@ -42,266 +50,374 @@ def draw_xiaohuang(
     facing: int = 1,
     pose: str = "idle",
 ) -> None:
-    """Cute yellow puppy — round body, floppy ears, doing the core action."""
+    """Cutier yellow puppy: chibi proportions, collar, sparkle eyes, ground shadow."""
     st: Style = cv.style
-    s = scale
+    s = max(0.55, scale)
     f = 1 if facing >= 0 else -1
 
-    # body
-    bw, bh = 34 * s, 36 * s
+    Y = st.dog_yellow
+    YD = st.dog_deep
+    EAR = st.dog_ear
+    MUZ = st.dog_muzzle
+    CHK = st.dog_cheek
+    COL = st.dog_collar
+    TAG = st.dog_collar_tag
+
+    _shadow(cv, cx, cy, s)
+
+    # --- body (chibi: big head later, compact torso) ---
+    bw, bh = 32 * s, 30 * s
+    body_cy = cy + 6 * s
     cv.ellipse(
         cx - bw,
-        cy - bh * 0.85,
+        body_cy - bh,
         cx + bw,
-        cy + bh * 0.55,
-        fill=YELLOW,
+        body_cy + bh * 0.7,
+        fill=Y,
         outline=st.black,
-        width=1.8,
-        seed=int(cx + cy),
+        width=1.7,
+        seed=int(cx + cy) % 97,
     )
-    # belly patch
+    # belly
     cv.ellipse(
-        cx - 14 * s,
-        cy - 2 * s,
-        cx + 14 * s,
-        cy + 22 * s,
-        fill=MUZZLE,
+        cx - 13 * s,
+        body_cy - 4 * s,
+        cx + 13 * s,
+        body_cy + 20 * s,
+        fill=MUZ,
         outline=st.black,
-        width=1.2,
-        seed=int(cx + 3),
+        width=1.15,
+        seed=11,
     )
 
-    # head
-    hx, hy = cx, cy - 28 * s
-    hr = 26 * s
+    # --- legs (short chibi stubs) ---
+    foot_y = body_cy + bh * 0.55
+    for dx in (-11 * s, 11 * s):
+        cv.ellipse(
+            cx + dx - 8 * s,
+            foot_y - 2 * s,
+            cx + dx + 8 * s,
+            foot_y + 14 * s,
+            fill=YD,
+            outline=st.black,
+            width=1.35,
+            seed=20,
+        )
+
+    # --- head (larger than body = cuter) ---
+    hx, hy = cx, cy - 26 * s
+    hr = 30 * s
+    # ears behind head
+    cv.ellipse(
+        hx - 34 * s,
+        hy - 4 * s,
+        hx - 6 * s,
+        hy + 34 * s,
+        fill=EAR,
+        outline=st.black,
+        width=1.45,
+        seed=30,
+    )
+    cv.ellipse(
+        hx + 6 * s,
+        hy - 4 * s,
+        hx + 34 * s,
+        hy + 34 * s,
+        fill=EAR,
+        outline=st.black,
+        width=1.45,
+        seed=31,
+    )
+    # inner ear
+    cv.ellipse(
+        hx - 28 * s,
+        hy + 4 * s,
+        hx - 12 * s,
+        hy + 24 * s,
+        fill=CHK,
+        outline=CHK,
+        width=1,
+        seed=32,
+    )
+    cv.ellipse(
+        hx + 12 * s,
+        hy + 4 * s,
+        hx + 28 * s,
+        hy + 24 * s,
+        fill=CHK,
+        outline=CHK,
+        width=1,
+        seed=33,
+    )
+
     cv.ellipse(
         hx - hr,
-        hy - hr * 0.95,
+        hy - hr * 0.92,
         hx + hr,
-        hy + hr * 0.85,
-        fill=YELLOW,
+        hy + hr * 0.88,
+        fill=Y,
         outline=st.black,
-        width=1.8,
-        seed=int(cy + 9),
+        width=1.75,
+        seed=40,
     )
 
-    # floppy ears
-    ear_dx = 22 * s * f
-    # left ear
+    # collar + tag (between head and body)
     cv.ellipse(
-        hx - 30 * s,
-        hy - 8 * s,
-        hx - 8 * s,
-        hy + 28 * s,
-        fill=EAR,
+        cx - 18 * s,
+        hy + hr * 0.55,
+        cx + 18 * s,
+        hy + hr * 0.55 + 10 * s,
+        fill=COL,
         outline=st.black,
-        width=1.5,
-        seed=50,
+        width=1.3,
+        seed=45,
     )
-    # right ear
+    # bone-ish tag
+    tag_x = cx + 14 * s * f
+    tag_y = hy + hr * 0.7 + 6 * s
     cv.ellipse(
-        hx + 8 * s,
-        hy - 8 * s,
-        hx + 30 * s,
-        hy + 28 * s,
-        fill=EAR,
+        tag_x - 6 * s,
+        tag_y - 5 * s,
+        tag_x + 6 * s,
+        tag_y + 5 * s,
+        fill=TAG,
         outline=st.black,
-        width=1.5,
-        seed=51,
+        width=1.2,
+        seed=46,
     )
 
-    # eyes (cute black ovals + white sparkle)
+    # eyes — bigger sparkles
     eye_y = hy - 2 * s
-    for ox in (-10 * s, 10 * s):
+    for ox in (-11 * s, 11 * s):
         cv.ellipse(
-            hx + ox - 5.5 * s,
-            eye_y - 6.5 * s,
-            hx + ox + 5.5 * s,
-            eye_y + 6.5 * s,
+            hx + ox - 6.5 * s,
+            eye_y - 7.5 * s,
+            hx + ox + 6.5 * s,
+            eye_y + 7.5 * s,
             fill=st.black,
             outline=st.black,
             width=1,
-            seed=60,
+            seed=50,
         )
+        # dual highlight
         cv.ellipse(
-            hx + ox - 2.2 * s,
-            eye_y - 4.5 * s,
-            hx + ox + 0.8 * s,
-            eye_y - 1.5 * s,
+            hx + ox - 3.2 * s,
+            eye_y - 5.5 * s,
+            hx + ox + 0.5 * s,
+            eye_y - 2.0 * s,
             fill=st.white,
             outline=st.white,
             width=1,
-            seed=61,
+            seed=51,
         )
-    # cheeks
-    for ox in (-18 * s, 12 * s):
         cv.ellipse(
-            hx + ox,
-            hy + 6 * s,
-            hx + ox + 8 * s,
-            hy + 12 * s,
-            fill=CHEEK,
-            outline=CHEEK,
+            hx + ox + 1.2 * s,
+            eye_y + 0.5 * s,
+            hx + ox + 3.0 * s,
+            eye_y + 2.5 * s,
+            fill=st.white,
+            outline=st.white,
             width=1,
-            seed=62,
+            seed=52,
         )
 
-    # muzzle + nose + smile
-    cv.ellipse(
-        hx - 12 * s,
-        hy + 4 * s,
-        hx + 12 * s,
-        hy + 20 * s,
-        fill=MUZZLE,
-        outline=st.black,
-        width=1.3,
-        seed=63,
+    # brows (tiny happy curves)
+    cv.polyline(
+        [
+            (hx - 16 * s, hy - 14 * s),
+            (hx - 10 * s, hy - 16 * s),
+            (hx - 5 * s, hy - 14 * s),
+        ],
+        color=st.black,
+        width=1.35,
+        seed=53,
     )
+    cv.polyline(
+        [
+            (hx + 5 * s, hy - 14 * s),
+            (hx + 10 * s, hy - 16 * s),
+            (hx + 16 * s, hy - 14 * s),
+        ],
+        color=st.black,
+        width=1.35,
+        seed=54,
+    )
+
+    # cheeks
+    for ox in (-20 * s, 12 * s):
+        cv.ellipse(
+            hx + ox,
+            hy + 8 * s,
+            hx + ox + 10 * s,
+            hy + 16 * s,
+            fill=CHK,
+            outline=CHK,
+            width=1,
+            seed=55,
+        )
+
+    # muzzle
     cv.ellipse(
-        hx - 4 * s,
+        hx - 13 * s,
         hy + 6 * s,
-        hx + 4 * s,
-        hy + 12 * s,
-        fill=NOSE,
+        hx + 13 * s,
+        hy + 24 * s,
+        fill=MUZ,
+        outline=st.black,
+        width=1.25,
+        seed=56,
+    )
+    # nose
+    cv.ellipse(
+        hx - 4.5 * s,
+        hy + 8 * s,
+        hx + 4.5 * s,
+        hy + 14.5 * s,
+        fill=st.black,
         outline=st.black,
         width=1,
-        seed=64,
+        seed=57,
+    )
+    # nose highlight
+    cv.ellipse(
+        hx - 2.5 * s,
+        hy + 8.5 * s,
+        hx - 0.2 * s,
+        hy + 10.5 * s,
+        fill=st.white,
+        outline=st.white,
+        width=1,
+        seed=58,
     )
     # smile
     cv.polyline(
         [
-            (hx - 7 * s, hy + 14 * s),
-            (hx, hy + 17 * s),
-            (hx + 7 * s, hy + 14 * s),
+            (hx - 8 * s, hy + 16 * s),
+            (hx, hy + 20 * s),
+            (hx + 8 * s, hy + 16 * s),
         ],
         color=st.black,
-        width=1.6,
-        seed=65,
+        width=1.7,
+        seed=59,
     )
-
-    # legs
-    foot_y = cy + bh * 0.5
-    for dx in (-12 * s, 12 * s):
+    # tongue tiny
+    if pose in {"idle", "wave", "carry"}:
         cv.ellipse(
-            cx + dx - 7 * s,
-            foot_y - 4 * s,
-            cx + dx + 7 * s,
-            foot_y + 16 * s,
-            fill=YELLOW_DEEP,
+            hx - 4 * s,
+            hy + 18 * s,
+            hx + 4 * s,
+            hy + 25 * s,
+            fill=(255, 130, 140),
             outline=st.black,
-            width=1.4,
-            seed=70,
+            width=1.1,
+            seed=60,
         )
 
-    # tail (cute curl toward facing)
-    tx = cx - 28 * s * f
+    # tail curl
+    tx0 = cx - 22 * s * f
     cv.polyline(
         [
-            (cx - 20 * s * f, cy + 4 * s),
-            (tx, cy - 6 * s),
-            (tx - 6 * s * f, cy - 18 * s),
-            (tx + 4 * s * f, cy - 22 * s),
+            (cx - 18 * s * f, body_cy + 2 * s),
+            (tx0 - 8 * s * f, body_cy - 10 * s),
+            (tx0 - 4 * s * f, body_cy - 26 * s),
+            (tx0 + 10 * s * f, body_cy - 30 * s),
+            (tx0 + 14 * s * f, body_cy - 22 * s),
         ],
-        color=YELLOW_DEEP,
-        width=3.2,
-        seed=80,
+        color=YD,
+        width=4.0 * max(1.0, s),
+        seed=70,
     )
     cv.polyline(
         [
-            (cx - 20 * s * f, cy + 4 * s),
-            (tx, cy - 6 * s),
-            (tx - 6 * s * f, cy - 18 * s),
-            (tx + 4 * s * f, cy - 22 * s),
+            (cx - 18 * s * f, body_cy + 2 * s),
+            (tx0 - 8 * s * f, body_cy - 10 * s),
+            (tx0 - 4 * s * f, body_cy - 26 * s),
+            (tx0 + 10 * s * f, body_cy - 30 * s),
+            (tx0 + 14 * s * f, body_cy - 22 * s),
         ],
         color=st.black,
-        width=1.4,
-        seed=81,
+        width=1.35,
+        seed=71,
     )
 
-    # pose limbs (simple paws)
-    ay = cy + 2 * s
+    # pose paws
+    ay = body_cy + 4 * s
     if pose == "press":
-        cv.ellipse(
-            cx + 18 * s * f,
-            ay - 6 * s,
-            cx + 40 * s * f,
-            ay + 10 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.4,
-            seed=90,
-        )
-        cv.ellipse(
-            cx + 18 * s * f,
-            ay + 8 * s,
-            cx + 40 * s * f,
-            ay + 22 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.4,
-            seed=91,
-        )
+        for dy in (-4 * s, 12 * s):
+            cv.ellipse(
+                cx + 20 * s * f,
+                ay + dy,
+                cx + 42 * s * f,
+                ay + dy + 14 * s,
+                fill=YD,
+                outline=st.black,
+                width=1.35,
+                seed=80,
+            )
     elif pose == "carry":
-        cv.ellipse(
-            cx - 22 * s,
-            ay + 10 * s,
-            cx - 4 * s,
-            ay + 26 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.4,
-            seed=92,
-        )
-        cv.ellipse(
-            cx + 4 * s,
-            ay + 10 * s,
-            cx + 22 * s,
-            ay + 26 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.4,
-            seed=93,
-        )
+        for dx in (-20 * s, 6 * s):
+            cv.ellipse(
+                cx + dx,
+                ay + 12 * s,
+                cx + dx + 16 * s,
+                ay + 28 * s,
+                fill=YD,
+                outline=st.black,
+                width=1.35,
+                seed=81,
+            )
     elif pose == "place":
         cv.ellipse(
-            cx - 36 * s,
-            ay + 14 * s,
+            cx - 38 * s,
+            ay + 16 * s,
             cx - 16 * s,
-            ay + 30 * s,
-            fill=YELLOW_DEEP,
+            ay + 32 * s,
+            fill=YD,
             outline=st.black,
-            width=1.4,
-            seed=94,
+            width=1.35,
+            seed=82,
         )
         cv.ellipse(
             cx + 14 * s,
-            ay - 10 * s,
-            cx + 32 * s,
-            ay + 6 * s,
-            fill=YELLOW_DEEP,
+            ay - 12 * s,
+            cx + 34 * s,
+            ay + 4 * s,
+            fill=YD,
             outline=st.black,
-            width=1.4,
-            seed=95,
+            width=1.35,
+            seed=83,
+        )
+    elif pose == "wave":
+        cv.ellipse(
+            cx - 28 * s * f,
+            ay + 8 * s,
+            cx - 10 * s * f,
+            ay + 22 * s,
+            fill=YD,
+            outline=st.black,
+            width=1.3,
+            seed=84,
+        )
+        # raised paw
+        cv.ellipse(
+            cx + 16 * s * f,
+            hy - 8 * s,
+            cx + 34 * s * f,
+            hy + 10 * s,
+            fill=YD,
+            outline=st.black,
+            width=1.35,
+            seed=85,
         )
     else:
-        # idle paws
-        cv.ellipse(
-            cx - 30 * s * f,
-            ay + 6 * s,
-            cx - 12 * s * f,
-            ay + 18 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.3,
-            seed=96,
-        )
-        cv.ellipse(
-            cx + 12 * s * f,
-            ay + 6 * s,
-            cx + 30 * s * f,
-            ay + 18 * s,
-            fill=YELLOW_DEEP,
-            outline=st.black,
-            width=1.3,
-            seed=97,
-        )
+        for dx in (-28 * s * f, 12 * s * f):
+            cv.ellipse(
+                cx + dx,
+                ay + 8 * s,
+                cx + dx + 16 * s,
+                ay + 20 * s,
+                fill=YD,
+                outline=st.black,
+                width=1.25,
+                seed=86,
+            )

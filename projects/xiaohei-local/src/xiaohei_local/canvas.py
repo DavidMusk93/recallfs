@@ -24,7 +24,8 @@ class Canvas:
         self._ss = max(1, int(s.ss))
         self._W = s.width * self._ss
         self._H = s.height * self._ss
-        self.img = Image.new("RGB", (self._W, self._H), s.white)
+        bg = getattr(s, "paper", None) or s.white
+        self.img = Image.new("RGB", (self._W, self._H), bg)
         self.draw = ImageDraw.Draw(self.img)
         self._label_count = 0
         self.character = (self.character or "xiaohuang").lower()

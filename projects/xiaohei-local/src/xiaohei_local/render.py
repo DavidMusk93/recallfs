@@ -8,7 +8,7 @@ from typing import Any
 from .canvas import Canvas
 from .scenes import SCENES, get_scene
 from .spec import ShotSpec
-from .style import Style
+from .style import Style, style_for_character
 
 
 def list_scenes() -> list[str]:
@@ -29,9 +29,7 @@ def render_scene(
     character: str = "xiaohuang",
     style: Style | None = None,
 ) -> Path:
-    st = style or Style(ss=ss)
-    if style is None:
-        st = Style(ss=ss)
+    st = style or style_for_character(character, ss=ss)
     cv = Canvas(style=st, seed=seed, character=character)
     fn = get_scene(scene)
     fn(cv, params or {})
@@ -39,7 +37,6 @@ def render_scene(
 
 
 def render_spec(spec: ShotSpec) -> Path:
-    st = Style(ss=spec.ss)
     return render_scene(
         spec.scene,
         spec.outfile,
@@ -47,5 +44,4 @@ def render_spec(spec: ShotSpec) -> Path:
         seed=spec.seed,
         ss=spec.ss,
         character=spec.character,
-        style=st,
     )

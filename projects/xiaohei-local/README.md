@@ -5,8 +5,8 @@
 | | |
 | --- | --- |
 | **仓库位置** | `recallfs/projects/xiaohei-local`（权威源，随 recallfs 推送） |
-| **版本** | **0.4.0** |
-| **默认角色** | **小黄狗 `xiaohuang`**（可爱黄狗）；可选 `xiaohei` |
+| **版本** | **0.5.0** |
+| **默认角色** | **小黄狗 `xiaohuang`**（Q 版可爱黄狗）；可选 `xiaohei` |
 | **依赖管理** | **uv + 项目 venv**（禁止全局 pip） |
 | **用途** | 中文标注/拓扑必须正确可复现；Imagine 503 时的默认路径 |
 
@@ -48,17 +48,18 @@ uv run xiaohei-local render-spec examples/shots-example.json
 
 | id | 说明 |
 | --- | --- |
-| **`xiaohuang`** | **默认**：圆滚黄毛小狗，垂耳、腮红、卷尾巴，可爱向 |
+| **`xiaohuang`** | **默认**：Q 版黄狗，垂耳、双高光、项圈吊牌、吐舌、地面阴影 |
 | `xiaohei` | 经典黑豆 IP（skill DNA 兼容） |
 
-## v0.4 优化要点
+## v0.5 优化要点
 
 | 项 | 说明 |
 | --- | --- |
-| 默认 mascot | 小黄狗参与核心动作（抱砖/贴玻璃/点主键） |
-| 可插拔角色 | `--character` / ShotSpec.character |
-| ss=3 + 多级 LANCZOS | 文字与描边更干净 |
-| 分角色字体 + chip | 标注胶囊、CJK tracking、双重描墨 |
+| 小黄狗 Q 版 | 头大身小、双高光眼、腮红、蓝项圈+吊牌、吐舌、地面阴影 |
+| 暖色纸底 | `style_for_character(xiaohuang)` 奶油纸 + 暖灰墨 |
+| 姿态 | idle / carry / press / place / **wave** |
+| 可插拔角色 | `--character xiaohuang\|xiaohei` |
+| 文字 | ss=3、Hiragino 分档、chip 胶囊、tracking |
 
 ## Scenes
 
