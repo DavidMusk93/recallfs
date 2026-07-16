@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+dist/
+*.egg-info/
+uv.lock
+examples/cube-anchors/
+examples/out-*.jpg
+.DS_Store

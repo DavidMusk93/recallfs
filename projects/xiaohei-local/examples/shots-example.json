@@ -1,0 +1,20 @@
+[
+  {
+    "scene": "book_corrigendum",
+    "outfile": "examples/out-book.jpg",
+    "title": "书固定 · 勘误表换版",
+    "core_idea": "DAG 模板固定；清单 edition 可换",
+    "params": {
+      "old_edition": "旧版 e16",
+      "new_edition": "新版 e17"
+    },
+    "seed": 7,
+    "ss": 2
+  },
+  {
+    "scene": "lego_first",
+    "outfile": "examples/out-lego.jpg",
+    "title": "先砖后塔",
+    "ss": 2
+  }
+]

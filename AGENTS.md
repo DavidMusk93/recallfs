@@ -26,7 +26,7 @@
 | --- | --- |
 | `rules.md` | 全局工程与学习态度 |
 | `skills/` | 通用 agent 技能 |
-| `projects/` | 业务系统文档镜像 |
+| `projects/` | 业务系统文档镜像；含可运行小工具（如 `xiaohei-local`） |
 | `designs/` | 跨项目设计 |
 | `learning/algorithms/` | LeetCode 算法训练（见该目录 `AGENTS.md`） |
 | `.grok/skills/leetcode/` | `/leetcode` workflow skill |
