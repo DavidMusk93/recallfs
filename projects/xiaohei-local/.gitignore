@@ -7,4 +7,6 @@ dist/
 uv.lock
 examples/cube-anchors/
 examples/out-*.jpg
+.showcase_tiles_*/
 .DS_Store
+

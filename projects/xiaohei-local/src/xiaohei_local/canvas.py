@@ -121,6 +121,7 @@ class Canvas:
         self._jitter_polyline(pts, fill=outline, width=w, seed=seed)
 
     def ellipse(self, x0, y0, x1, y1, *, fill=None, outline=None, width=None, seed=2):
+        """Slightly wobbly ellipse (diagram ink)."""
         outline = outline or self.style.black
         w = self.sn(width if width is not None else self.style.stroke)
         cx = (self.sx(x0) + self.sx(x1)) / 2
@@ -137,6 +138,51 @@ class Canvas:
         if fill:
             self.draw.polygon(pts[:-1], fill=fill)
         self._jitter_polyline(pts, fill=outline, width=w, seed=seed)
+
+    def smooth_ellipse(
+        self,
+        x0,
+        y0,
+        x1,
+        y1,
+        *,
+        fill=None,
+        outline=None,
+        width=None,
+    ):
+        """Clean ellipse for mascot (cute, not wobbly)."""
+        w = self.sn(width if width is not None else self.style.stroke_thin)
+        box = self.box(x0, y0, x1, y1)
+        if fill and outline:
+            self.draw.ellipse(box, fill=fill, outline=outline, width=w)
+        elif fill:
+            self.draw.ellipse(box, fill=fill)
+        else:
+            self.draw.ellipse(box, outline=outline or self.style.black, width=w)
+
+    def star(self, cx, cy, r=6, *, color=None, points=4):
+        """Tiny sparkle (for 小黄狗 ambience)."""
+        c = color or self.style.orange
+        pts = []
+        for i in range(points * 2):
+            ang = math.pi / 2 + i * math.pi / points
+            rad = r if i % 2 == 0 else r * 0.35
+            pts.append((cx + rad * math.cos(ang), cy - rad * math.sin(ang)))
+        sp = [(self.sx(x), self.sy(y)) for x, y in pts]
+        self.draw.polygon(sp, fill=c)
+
+    def ambience_warm(self, *, n: int = 12, seed: int = 99):
+        """Sparse warm sparkles — only when mascot is cute dog."""
+        if getattr(self, "character", "") not in {"xiaohuang", "huang", "dog", "小黄", "小黄狗"}:
+            return
+        rng = random.Random(self.seed + seed)
+        st = self.style
+        colors = [st.soft_orange, st.dog_yellow, st.dog_collar_tag, (255, 230, 180)]
+        for _ in range(n):
+            x = rng.uniform(st.margin, st.width - st.margin)
+            y = rng.uniform(st.margin, st.height * 0.42)
+            r = rng.uniform(2.5, 5.5)
+            self.star(x, y, r=r, color=rng.choice(colors), points=4)
 
     def arrow(self, p1, p2, *, color=None, width=2.8, head=13, seed=3):
         c = color or self.style.orange

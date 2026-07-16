@@ -59,6 +59,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_batch.set_defaults(func=cmd_cube_anchors)
 
+    p_show = sub.add_parser("showcase", help="2×2 contact sheet of all built-in scenes")
+    p_show.add_argument("-o", "--outfile", type=Path, required=True)
+    p_show.add_argument("--ss", type=int, default=2, help="Per-tile ss (default 2 for speed)")
+    p_show.add_argument("--character", default="xiaohuang", choices=list_characters())
+    p_show.set_defaults(func=cmd_showcase)
+
     args = parser.parse_args(argv)
     return int(args.func(args) or 0)
 
@@ -166,6 +172,30 @@ def cmd_cube_anchors(args: argparse.Namespace) -> int:
     for j in jobs:
         print(render_spec(j))
     print(spec_path)
+    return 0
+
+
+def cmd_showcase(args: argparse.Namespace) -> int:
+    """Render four scenes into a 2×2 contact sheet."""
+    from PIL import Image
+
+    from .style import Style
+
+    tmp = args.outfile.parent / f".showcase_tiles_{args.character}"
+    tmp.mkdir(parents=True, exist_ok=True)
+    scenes = ["book_corrigendum", "lego_first", "grain_vs_tumble", "planned_not_shipped"]
+    tiles = []
+    for i, sc in enumerate(scenes):
+        path = tmp / f"{i}-{sc}.jpg"
+        render_scene(sc, path, ss=args.ss, character=args.character, seed=7 + i)
+        tiles.append(Image.open(path).convert("RGB"))
+    w, h = tiles[0].size
+    sheet = Image.new("RGB", (w * 2, h * 2), (255, 253, 248))
+    for i, im in enumerate(tiles):
+        sheet.paste(im, ((i % 2) * w, (i // 2) * h))
+    args.outfile.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(args.outfile, quality=92, optimize=True, subsampling=0)
+    print(args.outfile)
     return 0
 
 
