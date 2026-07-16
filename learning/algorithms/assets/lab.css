@@ -557,8 +557,11 @@ button:disabled {
   width: 100%;
   height: auto;
   max-height: 420px;
+  aspect-ratio: 16 / 9;
   object-fit: contain;
   background: #fff;
+  /* empty data-src frame: keep stage height before hydrate */
+  min-height: 120px;
 }
 
 .sb-frame figcaption {

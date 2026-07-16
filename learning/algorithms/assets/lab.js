@@ -573,6 +573,20 @@
     });
   }
 
+  /**
+   * Storyboard lazy-load: only first frame uses src=; later frames use data-src.
+   * Hydrate current + next so autoplay does not flash empty frames.
+   */
+  function hydrateStoryboardImg(frame) {
+    if (!frame) return;
+    const img = frame.querySelector("img[data-src]");
+    if (!img) return;
+    const url = img.getAttribute("data-src");
+    if (!url) return;
+    img.src = url;
+    img.removeAttribute("data-src");
+  }
+
   /** Image storyboard — primary animation surface (skill-drawn frames). */
   function initStoryboard() {
     $all("[data-storyboard]").forEach((root) => {
@@ -592,6 +606,8 @@
 
       function show(n, source) {
         i = ((n % frames.length) + frames.length) % frames.length;
+        hydrateStoryboardImg(frames[i]);
+        hydrateStoryboardImg(frames[(i + 1) % frames.length]);
         frames.forEach((f, idx) => f.classList.toggle("on", idx === i));
         if (idxEl) idxEl.textContent = i + 1 + " / " + frames.length;
         telemetry.storyboard.frameHits[i] =
