@@ -21,27 +21,30 @@ pub struct Solution;
 
 impl Solution {
     /// leetcode.cn Rust 模板签名。
+    ///
+    /// 算法下界 O(max(m,n)) 次输出分配，无法靠「更聪明的公式」再降阶。
+    /// 常数：dummy 放栈上；每位一次 move 取节点，避免 as_ref + and_then 双次探访。
     pub fn add_two_numbers(
         mut l1: Option<Box<ListNode>>,
         mut l2: Option<Box<ListNode>>,
     ) -> Option<Box<ListNode>> {
-        let mut dummy = Box::new(ListNode::new(0));
-        // tail 始终指向结果链最后一个已写入节点
-        let mut tail = dummy.as_mut();
+        let mut dummy = ListNode::new(0);
+        let mut cur = &mut dummy;
         let mut carry = 0;
 
-        // 任一链还有节点，或还有进位，就必须继续
         while l1.is_some() || l2.is_some() || carry != 0 {
-            let a = l1.as_ref().map(|n| n.val).unwrap_or(0);
-            let b = l2.as_ref().map(|n| n.val).unwrap_or(0);
-            let sum = a + b + carry;
+            let mut sum = carry;
+            if let Some(node) = l1 {
+                sum += node.val;
+                l1 = node.next;
+            }
+            if let Some(node) = l2 {
+                sum += node.val;
+                l2 = node.next;
+            }
             carry = sum / 10;
-
-            tail.next = Some(Box::new(ListNode::new(sum % 10)));
-            tail = tail.next.as_mut().unwrap();
-
-            l1 = l1.and_then(|n| n.next);
-            l2 = l2.and_then(|n| n.next);
+            cur.next = Some(Box::new(ListNode::new(sum % 10)));
+            cur = cur.next.as_mut().unwrap();
         }
 
         dummy.next
