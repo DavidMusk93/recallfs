@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HTTP Port Manager</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4d;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --ok: #3dd68c;
+      --warn: #f5a524;
+      --err: #f31260;
+      --accent: #3b82f6;
+      --accent2: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f55, transparent),
+                  radial-gradient(900px 500px at 100% 0%, #134e4a33, transparent),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      background: #0f1419cc;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+    }
+    .sub { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--warn);
+    }
+    .dot.ok { background: var(--ok); box-shadow: 0 0 8px #3dd68c88; }
+    .dot.err { background: var(--err); }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 3rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      box-shadow: 0 8px 30px #0004;
+    }
+    .card h2 {
+      margin: 0 0 0.85rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    form.grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.65rem;
+      align-items: end;
+    }
+    label {
+      display: grid;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    input, select, button, textarea {
+      font: inherit;
+    }
+    input {
+      background: #0c121b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    button:hover { background: var(--accent2); }
+    button.ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    button.ghost:hover { border-color: var(--accent); color: var(--accent2); }
+    button.danger { background: #7f1d1d; }
+    button.danger:hover { background: #991b1b; }
+    button.ok { background: #166534; }
+    button.ok:hover { background: #15803d; }
+    .svc {
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .svc:last-child { border-bottom: 0; padding-bottom: 0; }
+    .svc:first-child { padding-top: 0; }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .title {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+    }
+    .name { font-weight: 650; font-size: 1.02rem; }
+    .badge {
+      font-size: 0.72rem;
+      padding: 0.18rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.healthy { color: var(--ok); border-color: #14532d; background: #052e16; }
+    .badge.running { color: var(--warn); border-color: #78350f; background: #1c1408; }
+    .badge.stopped { color: var(--muted); }
+    .badge.error { color: var(--err); border-color: #7f1d1d; background: #2a0a12; }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .meta b { color: var(--text); font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .actions a {
+      color: var(--accent2);
+      text-decoration: none;
+      font-size: 0.85rem;
+      align-self: center;
+      margin-right: 0.4rem;
+    }
+    .actions a:hover { text-decoration: underline; }
+    .empty {
+      color: var(--muted);
+      padding: 1rem 0;
+      text-align: center;
+    }
+    .msg {
+      margin-top: 0.6rem;
+      font-size: 0.82rem;
+      color: var(--err);
+      min-height: 1.1em;
+    }
+    footer {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-align: center;
+      padding: 0 1rem 2rem;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>HTTP Port Manager</h1>
+      <div class="sub">多端口静态服务 · SSE 实时指标 · launchd 常驻</div>
+    </div>
+    <div class="pill" id="connPill">
+      <span class="dot" id="connDot"></span>
+      <span id="connText">connecting…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>新建服务</h2>
+      <form class="grid" id="createForm">
+        <label>ID
+          <input name="id" placeholder="algorithms" />
+        </label>
+        <label>名称
+          <input name="name" placeholder="Algorithms Lab" />
+        </label>
+        <label>端口
+          <input name="port" type="number" min="1" max="65535" required placeholder="8000" />
+        </label>
+        <label>Bind
+          <input name="bind" value="0.0.0.0" />
+        </label>
+        <label style="grid-column: 1 / -1">目录 root
+          <input name="root" required placeholder="/path/to/dir" />
+        </label>
+        <label>自动启动
+          <input name="auto_start" type="checkbox" checked style="width:auto;justify-self:start" />
+        </label>
+        <button type="submit">创建并启动</button>
+      </form>
+      <div class="msg" id="formMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>服务列表 <span id="svcCount" style="font-weight:500;text-transform:none;letter-spacing:0"></span></h2>
+      <div id="list"><div class="empty">等待 SSE…</div></div>
+    </section>
+  </main>
+
+  <footer>
+    Manager PID <code id="mgrPid">—</code> · 更新于 <code id="updatedAt">—</code>
+  </footer>
+
+  <script>
+    const listEl = document.getElementById('list');
+    const connDot = document.getElementById('connDot');
+    const connText = document.getElementById('connText');
+    const formMsg = document.getElementById('formMsg');
+    const mgrPid = document.getElementById('mgrPid');
+    const updatedAt = document.getElementById('updatedAt');
+    const svcCount = document.getElementById('svcCount');
+
+    let lastSig = '';
+    let es = null;
+
+    function fmtBytes(n) {
+      if (n == null) return '0 B';
+      const u = ['B','KB','MB','GB'];
+      let i = 0, x = Number(n);
+      while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; }
+      return (i === 0 ? x : x.toFixed(1)) + ' ' + u[i];
+    }
+
+    function badgeClass(s) {
+      if (s.healthy) return 'healthy';
+      if (s.status === 'error') return 'error';
+      if (s.running) return 'running';
+      return 'stopped';
+    }
+
+    function badgeText(s) {
+      if (s.healthy) return 'healthy';
+      return s.status || 'unknown';
+    }
+
+    function render(services) {
+      if (!services || !services.length) {
+        listEl.innerHTML = '<div class="empty">暂无服务。在上方创建一个，或编辑 config.json。</div>';
+        svcCount.textContent = '';
+        return;
+      }
+      svcCount.textContent = `(${services.length})`;
+      listEl.innerHTML = services.map(s => {
+        const m = s.metrics || {};
+        return `
+          <div class="svc" data-id="${s.id}">
+            <div class="row">
+              <div class="title">
+                <span class="name">${escapeHtml(s.name || s.id)}</span>
+                <span class="badge ${badgeClass(s)}">${badgeText(s)}</span>
+                <span class="badge">:${s.port}</span>
+              </div>
+              <div class="actions">
+                <a href="${escapeAttr(s.url)}" target="_blank" rel="noopener">打开</a>
+                <button class="ok" data-act="start" data-id="${escapeAttr(s.id)}">Start</button>
+                <button class="ghost" data-act="stop" data-id="${escapeAttr(s.id)}">Stop</button>
+                <button class="ghost" data-act="restart" data-id="${escapeAttr(s.id)}">Restart</button>
+                <button class="ghost" data-act="sync" data-id="${escapeAttr(s.id)}">Sync</button>
+                <button class="danger" data-act="delete" data-id="${escapeAttr(s.id)}">Delete</button>
+              </div>
+            </div>
+            <div class="meta">
+              <div>id <b>${escapeHtml(s.id)}</b></div>
+              <div>bind <b>${escapeHtml(s.bind)}</b></div>
+              <div>uptime <b>${s.uptime_sec ?? 0}s</b></div>
+              <div>requests <b>${m.requests_total ?? 0}</b></div>
+              <div>bytes <b>${fmtBytes(m.bytes_sent)}</b></div>
+              <div>2xx/4xx/5xx <b>${m.status_2xx ?? 0}/${m.status_4xx ?? 0}/${m.status_5xx ?? 0}</b></div>
+              <div>last path <b>${escapeHtml(m.last_path || '—')}</b></div>
+              <div>last error <b>${escapeHtml(m.last_error || '—')}</b></div>
+              <div>note <b>${escapeHtml(m.note || '—')}</b></div>
+              <div>mirror <b>${s.mirrored ? 'yes' : 'no'}</b></div>
+              <div style="grid-column:1/-1">root <b><code>${escapeHtml(s.root)}</code></b></div>
+              <div style="grid-column:1/-1">serve <b><code>${escapeHtml(s.serve_root || m.serve_root || '—')}</code></b></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+    function escapeAttr(s) { return escapeHtml(s).replaceAll("'", '&#39;'); }
+
+    function setConn(ok, text) {
+      connDot.className = 'dot ' + (ok ? 'ok' : 'err');
+      connText.textContent = text;
+    }
+
+    function connectSSE() {
+      if (es) es.close();
+      es = new EventSource('/api/events');
+      es.addEventListener('open', () => setConn(true, 'SSE connected'));
+      es.addEventListener('update', (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          const sig = JSON.stringify(data.services);
+          if (sig !== lastSig) {
+            lastSig = sig;
+            render(data.services || []);
+          }
+          mgrPid.textContent = data.pid ?? '—';
+          updatedAt.textContent = data.time || new Date().toISOString();
+          setConn(true, 'SSE live');
+        } catch (e) {
+          console.error(e);
+        }
+      });
+      es.onerror = () => {
+        setConn(false, 'SSE reconnecting…');
+      };
+    }
+
+    listEl.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button[data-act]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      btn.disabled = true;
+      try {
+        if (act === 'delete') {
+          if (!confirm(`删除服务 ${id}？`)) return;
+          const r = await fetch(`/api/services/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (!r.ok) throw new Error(await r.text());
+        } else {
+          const r = await fetch(`/api/services/${encodeURIComponent(id)}/${act}`, { method: 'POST' });
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || r.statusText);
+          }
+        }
+      } catch (e) {
+        alert(e.message || String(e));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('createForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      formMsg.textContent = '';
+      const fd = new FormData(ev.target);
+      const body = {
+        id: (fd.get('id') || '').toString().trim() || undefined,
+        name: (fd.get('name') || '').toString().trim() || undefined,
+        port: Number(fd.get('port')),
+        bind: (fd.get('bind') || '0.0.0.0').toString(),
+        root: (fd.get('root') || '').toString(),
+        auto_start: fd.get('auto_start') === 'on',
+      };
+      try {
+        const r = await fetch('/api/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.statusText);
+        ev.target.reset();
+        ev.target.bind.value = '0.0.0.0';
+        ev.target.auto_start.checked = true;
+      } catch (e) {
+        formMsg.textContent = e.message || String(e);
+      }
+    });
+
+    connectSSE();
+  </script>
+</body>
+</html>
