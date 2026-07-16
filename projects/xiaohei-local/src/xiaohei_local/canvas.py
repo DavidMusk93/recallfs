@@ -17,6 +17,7 @@ from .style import DEFAULT_STYLE, Style
 class Canvas:
     style: Style = DEFAULT_STYLE
     seed: int = 7
+    character: str = "xiaohuang"  # default: cute yellow dog
 
     def __post_init__(self) -> None:
         s = self.style
@@ -26,6 +27,7 @@ class Canvas:
         self.img = Image.new("RGB", (self._W, self._H), s.white)
         self.draw = ImageDraw.Draw(self.img)
         self._label_count = 0
+        self.character = (self.character or "xiaohuang").lower()
 
     def sx(self, x: float) -> float:
         return x * self._ss

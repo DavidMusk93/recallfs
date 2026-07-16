@@ -1,7 +1,7 @@
 [project]
 name = "xiaohei-local"
-version = "0.3.0"
-description = "Local-first Ian 小黑 16:9 article illustrations (DNA, precise CJK, uv-managed)"
+version = "0.4.0"
+description = "Local-first 16:9 illustrations — 小黄狗 default, 小黑 optional (uv-managed)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

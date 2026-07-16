@@ -1,4 +1,4 @@
-"""Shot / scene specification — JSON-serializable, agent-friendly."""
+"""Shot / scene specification — JSON-serializable."""
 
 from __future__ import annotations
 
@@ -10,23 +10,14 @@ from typing import Any
 
 @dataclass
 class ShotSpec:
-    """One cognitive-anchor illustration.
-
-    Fields mirror the skill shot list so agents can dump JSON and render offline.
-    """
-
     scene: str
-    """Registered scene id, e.g. book_corrigendum."""
-
     outfile: str
-    """Output path (.jpg / .png)."""
-
     title: str | None = None
     core_idea: str | None = None
     params: dict[str, Any] = field(default_factory=dict)
     seed: int = 7
     ss: int = 3
-    """Supersample factor (3 = draw @3× then two-step LANCZOS)."""
+    character: str = "xiaohuang"  # xiaohuang | xiaohei
 
     def merged_params(self) -> dict[str, Any]:
         p = dict(self.params)
@@ -44,6 +35,7 @@ class ShotSpec:
             params=dict(d.get("params") or {}),
             seed=int(d.get("seed", 7)),
             ss=int(d.get("ss", 3)),
+            character=str(d.get("character", "xiaohuang")),
         )
 
     @classmethod
