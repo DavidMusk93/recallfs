@@ -15,15 +15,15 @@
         <a href="https://leetcode.cn/problems/{{SLUG}}/" target="_blank" rel="noopener">题面</a>
         <a href="analysis.md">analysis.md</a>
       </p>
+      <p class="note-en">术语优先英文：HashMap / two-pointers / DFS / BFS / DP … 叙述用中文。</p>
     </header>
 
-    <section class="card">
+    <section class="card" data-section="how-to">
       <h2>学习怎么用 <span class="badge">教育场景</span></h2>
       <p class="note">
-        本页结构：应用场景 → 多种解法与取舍 → 主推动画 → 发散 → 理解测。
-        测验<strong>统一提交</strong>，作答过程<strong>不公布对错</strong>。
-        全对：下一步提示复制到剪贴板；有错：展开解析，可再来一次。
-        算法服务于真实约束，不为技巧而技巧。
+        路径：场景 → 多解取舍 → <strong>图解 storyboard</strong>（小黑配图，不是文字当图）→ 发散 → 理解测。
+        测验<strong>统一提交</strong>；全对剪贴板含<strong>题号 + 用时</strong>。
+        右下角「AI 洞察」可复制行为摘要给 coach。
       </p>
       <ul class="scene-list">
         <li><strong>自学</strong>：先读场景与多解，再测，再回对话写 Rust。</li>
@@ -32,7 +32,7 @@
       </ul>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="scene">
       <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
       <div data-tabs>
         <div class="tabs">
@@ -50,35 +50,35 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="approaches">
       <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
       <div class="approach-grid">
         <details class="approach" open>
-          <summary>A. 暴力 / 基线</summary>
+          <summary>A. Brute force / baseline</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip warn">时间 ?</span>
-              <span class="chip good">空间 ?</span>
+              <span class="chip warn">Time ?</span>
+              <span class="chip good">Space ?</span>
             </div>
             <p>（描述）</p>
             <p><strong>何时够用：</strong></p>
           </div>
         </details>
         <details class="approach" open>
-          <summary>B. 主推解法</summary>
+          <summary>B. 主推（英文结构名）</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip good">时间 ?</span>
-              <span class="chip">空间 ?</span>
+              <span class="chip good">Time ?</span>
+              <span class="chip">Space ?</span>
             </div>
-            <p>（描述不变量）</p>
+            <p>（描述不变量；术语保持英文）</p>
             <p><strong>在优化什么：</strong></p>
           </div>
         </details>
         <details class="approach">
           <summary>C. 其他路径</summary>
           <div class="body">
-            <p>（排序双指针 / 递归 / 数学…）</p>
+            <p>（two-pointers / recursion / math …）</p>
           </div>
         </details>
       </div>
@@ -93,41 +93,51 @@
       </table>
     </section>
 
-    <section class="card">
-      <h2>主推路径动画 <span class="badge">交互</span></h2>
-      <div data-stepper data-period="1500">
-        <div class="stepper">
-          <div class="step"><span class="n">1</span>步骤一</div>
-          <div class="step"><span class="n">2</span>步骤二</div>
-          <div class="step"><span class="n">3</span>步骤三</div>
+    <section class="card" data-section="storyboard">
+      <h2>主推路径 · 图解动画 <span class="badge">skill 绘图</span></h2>
+      <p class="hint">帧图必须用 <code>ian-xiaohei-illustrations</code> 生成；禁止用纯文字 step 冒充动画。</p>
+      <div data-storyboard data-period="2200" data-autoplay="true">
+        <div class="sb-stage">
+          <figure class="sb-frame" data-frame="0">
+            <img src="assets/01-....png" alt="step 1" />
+            <figcaption>Step 1 · （英文术语 + 中文短句）</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="1">
+            <img src="assets/02-....png" alt="step 2" />
+            <figcaption>Step 2 · …</figcaption>
+          </figure>
         </div>
-        <button type="button" class="secondary" data-step-next>手动下一步</button>
+        <div class="sb-controls">
+          <button type="button" class="secondary" data-sb-prev>Prev</button>
+          <span data-sb-index>1 / 2</span>
+          <button type="button" class="secondary" data-sb-next>Next</button>
+          <button type="button" data-sb-play>Pause</button>
+        </div>
       </div>
-      <pre class="walk">（手推样例）</pre>
-      <!-- <img class="asset" src="assets/01-....png" alt="" /> -->
+      <pre class="walk">（可选：极短手推 trace，代码/数字，不是图画替代）</pre>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="variants">
       <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
       <ul class="scene-list">
         <li>（约束变化 → 解法如何变）</li>
       </ul>
     </section>
 
-    <section class="card" id="quiz-section">
+    <section class="card" id="quiz-section" data-section="quiz">
       <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
-      <p class="note">全部完成后点「提交测验」。提交前不显示对错。</p>
+      <p class="note">全部完成后点「提交测验」。提交前不显示对错。全对复制含题号与用时。</p>
 
-      <div class="q" data-answer="A">
+      <div class="q" data-answer="A" data-qid="q1">
         <p class="q-title">Q1. （题意）</p>
         <label class="opt"><input type="radio" name="q1" value="A" /> A. </label>
         <label class="opt"><input type="radio" name="q1" value="B" /> B. </label>
         <div class="explain"><strong>解析：</strong></div>
       </div>
 
-      <div class="q" data-answer="todo">
+      <div class="q" data-answer="todo" data-qid="q2">
         <p class="q-title">Q2. （手推填空）</p>
-        <input type="text" placeholder="" />
+        <input type="text" placeholder="中性格式提示" autocomplete="off" />
         <div class="explain"><strong>解析：</strong></div>
       </div>
 
@@ -149,7 +159,9 @@
   {
     "nextHint": "理解测完成，开始写 Rust",
     "problemId": {{ID}},
-    "slug": "{{SLUG}}"
+    "slug": "{{SLUG}}",
+    "titleZh": "{{TITLE_ZH}}",
+    "telemetry": true
   }
   </script>
   <script src="../../assets/lab.js"></script>

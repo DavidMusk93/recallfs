@@ -117,25 +117,38 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
 | 学习怎么用 | 自学 / 复习 / 卡关 三种用法 |
 | 应用场景 | 现实/工程类比；说明「主推结构在优化什么」 |
 | 多种解法 · 发散 | ≥2 条路径 + 取舍表（暴力基线、主推、变体） |
-| 主推动画 | stepper / 手推 / 小黑图 |
+| 主推图解动画 | **skill 绘图 storyboard**（必做）+ 可选短 hand-trace |
 | 约束一变 | 数据规模、是否有序、流式等 → 解法如何变 |
 | 理解测 | 统一提交（见下） |
+| 埋点 | `lab.js` 本地 telemetry → AI 洞察 |
 
-**测验交互（硬约束）：**
+**产品级内容规范（硬约束）：**
 
-1. 作答过程中 **不公布对错、不亮答案**。
-2. 全部作答后点 **提交测验** 才批改。
-3. **全对**：把 `lab-config.nextHint`（默认 `理解测完成，开始写 Rust`）**复制到剪贴板**，toast 提示。
-4. **有错**：展开 `.explain` 解析；用户点 **再来一次** 重置后重答。
-5. 本地 `open learn.html` 或 `python3 -m http.server`（推荐 8000，Tailscale 可访问）均可。
-6. **禁止泄题**：`placeholder`、题干示例、按钮文案不得直接写出标准答案（如 `7,0,8`）；格式提示用中性描述（「逗号分隔」）。
+1. **交互动画 = 图，不是字**  
+   - 主推路径必须用 `[data-storyboard]` + 小黑 skill 生成的帧图。  
+   - **禁止**用纯文字 `.stepper` 冒充「动画」；文字只可做 `figcaption` 或 `pre.walk` 手推。  
+2. **术语中英策略**  
+   - 专业结构/算法名保持英文：`HashMap`、`complement`、`carry`、`two-pointers`、`dummy head`、`DFS/BFS/DP`…  
+   - 叙述与教学用语用中文；不要硬译成蹩脚中文（如「哈希映射表」「补数查找器」）。  
+3. **提交剪贴板**  
+   - 全对时复制内容必须含：**题号**、**slug**、**用户用时**、时间戳、`nextHint`。  
+   - 由 `assets/lab.js` 自动生成，例如：  
+     `[Lab Pass] #1 two-sum · 两数之和 · 用时 3m12s · 2026-…`  
+4. **行为埋点 → AI 核心**  
+   - `lab.js` 记录：section 停留/回看、tab、details、storyboard 帧、答题改选、提交/重试、滚动深度。  
+   - `interest` = 高 dwell；`confusion` = 反复 reentry / answer_flip / 帧回看。  
+   - 用户点「AI 洞察」或 `LAB_TELEMETRY.copyForAi()` 把摘要贴给 agent；agent 据此调教学节奏，而不是只抛标准解。  
+5. **测验交互**  
+   - 作答过程不公布对错；统一提交；有错展开解析 + 再来一次。  
+   - **禁止泄题**：`placeholder`/题干不得写出标准答案。  
+6. **访问**  
+   - 推荐 `http-port-manager` 的 `:8000` algorithms 服务；改 HTML 后跑 `tools/http-port-manager/sync.sh`。
 
-#### 5.2 小黑流程图
+#### 5.2 小黑图解（storyboard 帧）
 
-- 使用 skill **`ian-xiaohei-illustrations`**。
-- 为关键认知锚点生成 1–3 张 16:9 配图（不是 PPT 流程图）。
-- 保存到 `problems/NNNN-slug/assets/`。
-- 在 `learn.html` / `analysis.md` 中引用。
+- 使用 skill **`ian-xiaohei-illustrations`**（`image_gen`），**每帧一张 16:9 图**。  
+- 关键认知锚点 2–4 帧；保存到 `problems/NNNN-slug/assets/`。  
+- 写入 `learn.html` 的 `[data-storyboard] .sb-frame`；分析文也可引用。
 
 ### 6 交互闸门
 

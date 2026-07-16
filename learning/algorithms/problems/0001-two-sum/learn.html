@@ -16,26 +16,26 @@
         <a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">题面</a>
         <a href="analysis.md">analysis.md</a>
       </p>
+      <p class="note-en">术语保持英文：HashMap · complement · indices · two-pointers</p>
     </header>
 
-    <section class="card">
+    <section class="card" data-section="how-to">
       <h2>学习怎么用 <span class="badge">教育场景</span></h2>
       <p class="note">
-        本页不是「背最优模板」，而是先搞清楚：
-        <strong>真实问题长什么样 → 有哪些解法、各自代价 → 为何主推某一解 → 再测理解</strong>。
-        测验<strong>全部作答后统一提交</strong>；作答过程中<strong>不公布对错</strong>。
-        全对会把下一步提示复制到剪贴板；有错则展开解析，可「再来一次」。
+        先搞清楚：真实问题 → 多解代价 → 为何主推 one-pass HashMap → 再测。
+        测验<strong>统一提交</strong>；全对剪贴板含<strong>#题号 + 用时</strong>。
+        图解用小黑 skill 帧图；右下角「AI 洞察」可把行为摘要贴给 coach。
       </p>
       <ul class="scene-list">
-        <li><strong>自学</strong>：先读场景与多解法，再做题测，再回对话写 Rust。</li>
-        <li><strong>复习</strong>：只展开「应用场景 / 多解对比」卡片，口头复述即可。</li>
-        <li><strong>卡关</strong>：看发散区「约束变了怎么办」，不要死磕一种技巧。</li>
+        <li><strong>自学</strong>：场景与多解 → 图解 → 理解测 → 对话写 Rust。</li>
+        <li><strong>复习</strong>：口头复述「何时 brute force / 何时 HashMap」。</li>
+        <li><strong>卡关</strong>：看发散区约束变化，不要死记模板。</li>
       </ul>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="scene">
       <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
-      <p>抽象：在一堆「可索引的记录」里，找<strong>两条</strong>记录，使它们的某个数值指标满足二元关系（这里是求和）。</p>
+      <p>抽象：在可索引记录里找 <strong>两条</strong>，使其数值满足二元关系（这里是求和）。</p>
       <div data-tabs>
         <div class="tabs">
           <button type="button" class="tab-btn active" data-tab="biz">业务直觉</button>
@@ -46,78 +46,71 @@
           <ul class="scene-list">
             <li>订单列表里找两笔金额刚好凑满优惠门槛。</li>
             <li>选两门课，学分之和等于毕业要求的某一档。</li>
-            <li>库存 SKU 两两配对：体积/重量之和接近装箱上限（同构于「配对」）。</li>
+            <li>库存 SKU 两两配对：体积/重量之和接近装箱上限。</li>
           </ul>
         </div>
         <div class="tab-panel" data-panel="sys">
           <ul class="scene-list">
-            <li>日志/事件流里找两个事件 id，使 latency 之和等于超时阈值。</li>
-            <li>调试时：已知 sum，在数组快照里定位两个贡献者下标。</li>
-            <li>编译器/分析：常量折叠前的「两操作数引用」粗匹配（教学类比）。</li>
+            <li>日志流里找两个 event id，使 latency 之和等于超时阈值。</li>
+            <li>调试：已知 sum，在数组快照里定位两个贡献者的 indices。</li>
+            <li>分析：常量折叠前的「两操作数引用」粗匹配（教学类比）。</li>
           </ul>
         </div>
         <div class="tab-panel" data-panel="not">
           <p class="hint">
-            哈希不是为了「显得高级」。当你需要<strong>反复查询「有没有出现过某个值」</strong>，
-            且查询次数与 n 同阶时，用哈希是在付 O(n) 空间，换「少扫很多遍」的时间。
-            若 n 极小、或内存极紧、或不允许额外空间，暴力可能更合适——这是工程取舍，不是输赢。
+            HashMap 不是为了「显得高级」。当需要反复查询「值是否出现过」，
+            且查询次数与 n 同阶时，用 O(n) 空间换查询时间。
+            n 极小或内存极紧时，brute force 可能更合适——工程取舍，不是输赢。
           </p>
         </div>
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="approaches">
       <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
       <p class="hint">先理解每条路在优化什么，再选主推。主推 ≠ 唯一正确。</p>
       <div class="approach-grid">
         <details class="approach" open>
-          <summary>A. 暴力双循环</summary>
+          <summary>A. Brute force 双循环</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip warn">时间 O(n²)</span>
-              <span class="chip good">空间 O(1)</span>
-              <span class="chip">易写易证</span>
+              <span class="chip warn">Time O(n²)</span>
+              <span class="chip good">Space O(1)</span>
             </div>
             <p>对每个 <code>i</code>，向后扫 <code>j</code>，检查和是否为 target。</p>
-            <p><strong>何时够用：</strong>n 很小（如 &lt; 100）、原型验证、面试先写对再优化。</p>
-            <p><strong>思维：</strong>直接翻译题意，建立正确性基线。</p>
+            <p><strong>何时够用：</strong>n 很小、原型验证、面试先写对再优化。</p>
           </div>
         </details>
         <details class="approach">
-          <summary>B. 排序 + 双指针（变体）</summary>
+          <summary>B. Sort + two-pointers（变体）</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip">时间 O(n log n)</span>
-              <span class="chip warn">下标需额外记录</span>
+              <span class="chip">Time O(n log n)</span>
+              <span class="chip warn">indices 需额外记录</span>
             </div>
-            <p>若只关心「两个值」而非原下标，可排序后两头夹。本题要下标，需带着原 index 排序。</p>
-            <p><strong>何时想：</strong>后续 3Sum/最接近三数等「有序空间上的配对」一族。</p>
-            <p><strong>代价：</strong>排序改变了扫描顺序；实现比哈希啰嗦一点。</p>
+            <p>若只要值不要 indices，可排序后两头夹。本题要 indices，需带着原 index 排序。</p>
+            <p><strong>何时想：</strong>3Sum 等有序域配对一族。</p>
           </div>
         </details>
         <details class="approach" open>
-          <summary>C. 一遍哈希（主推）</summary>
+          <summary>C. One-pass HashMap（主推）</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip good">时间 O(n)</span>
-              <span class="chip">空间 O(n)</span>
-              <span class="chip good">贴合题设</span>
+              <span class="chip good">Time O(n)</span>
+              <span class="chip">Space O(n)</span>
             </div>
-            <p>扫到 <code>x</code> 时查 <code>need = target - x</code> 是否已出现；<strong>先查后写</strong>。</p>
-            <p><strong>在优化什么：</strong>把「在已见集合里找补数」从线性扫变成均摊 O(1) 查询。</p>
-            <p><strong>应用迁移：</strong>任何「当前元素 + 历史集合」的配对问题。</p>
+            <p>扫到 <code>x</code> 时查 <code>complement = target - x</code> 是否已出现；<strong>先查后写</strong>。</p>
+            <p><strong>在优化什么：</strong>「在 seen 集合找 complement」从线性扫变成均摊 O(1)。</p>
           </div>
         </details>
         <details class="approach">
-          <summary>D. 两遍哈希</summary>
+          <summary>D. Two-pass HashMap</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip good">时间 O(n)</span>
-              <span class="chip">空间 O(n)</span>
-              <span class="chip warn">同值需小心</span>
+              <span class="chip good">Time O(n)</span>
+              <span class="chip">Space O(n)</span>
             </div>
-            <p>先全部入库再查。同值两次（如 <code>[3,3]</code>）时，表要能区分两个下标或存列表。</p>
-            <p><strong>教学价值：</strong>理解「索引结构先建后查」；实现上通常不如一遍干净。</p>
+            <p>先全部入库再查。同值两次（如 <code>[3,3]</code>）时，表要能区分两个 indices。</p>
           </div>
         </details>
       </div>
@@ -127,97 +120,104 @@
           <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
         </thead>
         <tbody>
-          <tr><td>暴力</td><td>零额外结构、思路直白</td><td>时间</td></tr>
-          <tr><td>排序+双指针</td><td>有序域上的线性扫</td><td>原序；实现带索引时变重</td></tr>
-          <tr><td>哈希</td><td>查询速度</td><td>额外内存；哈希常数</td></tr>
+          <tr><td>Brute force</td><td>零额外结构、思路直白</td><td>时间</td></tr>
+          <tr><td>Sort + two-pointers</td><td>有序域上的线性扫</td><td>原序；带 indices 时变重</td></tr>
+          <tr><td>HashMap</td><td>查询速度</td><td>额外内存；哈希常数</td></tr>
         </tbody>
       </table>
     </section>
 
-    <section class="card">
-      <h2>主推路径动画 <span class="badge">交互</span></h2>
-      <div data-stepper data-period="1600">
-        <div class="stepper">
-          <div class="step"><span class="n">1</span>取当前 x</div>
-          <div class="step"><span class="n">2</span>need = target − x</div>
-          <div class="step"><span class="n">3</span>表里有 need？</div>
-          <div class="step"><span class="n">4</span>命中返回下标 / 未命中写入 x</div>
+    <section class="card" data-section="storyboard">
+      <h2>主推路径 · 图解动画 <span class="badge">skill 绘图</span></h2>
+      <p class="hint">帧图由小黑 skill 绘制；文字只做 figcaption，不当「动画本体」。</p>
+      <div data-storyboard data-period="2400" data-autoplay="true">
+        <div class="sb-stage">
+          <figure class="sb-frame" data-frame="0">
+            <img src="assets/01-complement-lookup.png" alt="complement lookup in HashMap" />
+            <figcaption>Step 1 · 查 <code>complement = target − x</code> 是否已在 HashMap</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="1">
+            <img src="assets/02-brute-vs-hash.png" alt="brute force vs HashMap" />
+            <figcaption>Step 2 · Brute force O(n²) vs HashMap 均摊 O(1) 查询</figcaption>
+          </figure>
         </div>
-        <button type="button" class="secondary" data-step-next>手动下一步</button>
+        <div class="sb-controls">
+          <button type="button" class="secondary" data-sb-prev>Prev</button>
+          <span data-sb-index>1 / 2</span>
+          <button type="button" class="secondary" data-sb-next>Next</button>
+          <button type="button" data-sb-play>Pause</button>
+        </div>
       </div>
-      <pre class="walk">样例: nums=[2,7,11,15], target=9
-i=0 x=2 need=7 → 空表，记 2→0
-i=1 x=7 need=2 → 命中 0 → [0,1]</pre>
-      <p><strong>配图</strong></p>
-      <img class="asset" src="assets/01-complement-lookup.png" alt="补数哈希" />
-      <img class="asset" src="assets/02-brute-vs-hash.png" alt="暴力 vs 哈希" />
+      <pre class="walk">样例 nums=[2,7,11,15], target=9
+i=0 x=2 complement=7 → 空表，write 2→0
+i=1 x=7 complement=2 → hit 0 → return [0,1]</pre>
     </section>
 
-    <section class="card">
+    <section class="card" data-section="variants">
       <h2>发散：约束一变，解法怎么变 <span class="badge blue">思维</span></h2>
       <ul class="scene-list">
         <li>若要<strong>所有</strong>数对 → 不能早停；可能 O(n²) 输出规模。</li>
-        <li>若数组<strong>有序</strong>且只要值 → 双指针更自然。</li>
-        <li>若内存极紧 → 暴力或外部排序思路。</li>
-        <li>若流式、只能看一遍且内存有限 → 需要近似/采样，不是原题哈希。</li>
+        <li>若数组<strong>有序</strong>且只要值 → two-pointers 更自然。</li>
+        <li>若内存极紧 → brute force 或外部排序思路。</li>
+        <li>若流式、只能看一遍且内存有限 → 需要近似/采样，不是原题 HashMap。</li>
       </ul>
-      <p class="hint">技巧服务于约束；先问「数据从哪来、有多大、要下标还是值、能否改数组」。 </p>
+      <p class="hint">技巧服务于约束；先问数据从哪来、有多大、要 indices 还是值。</p>
     </section>
 
-    <section class="card" id="quiz-section">
+    <section class="card" id="quiz-section" data-section="quiz">
       <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
-      <p class="note">请完成全部题目后点底部「提交测验」。提交前选项可以改，但不会显示对错。</p>
+      <p class="note">全部完成后点「提交测验」。全对复制：#题号 · slug · 用时 · 下一步。</p>
 
-      <div class="q" data-answer="B">
+      <div class="q" data-answer="B" data-qid="q1">
         <p class="q-title">Q1. 本题要求返回的是？</p>
         <label class="opt"><input type="radio" name="q1" value="A" /> A. 两个加数的值</label>
-        <label class="opt"><input type="radio" name="q1" value="B" /> B. 两个加数的下标</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 两个加数的 indices</label>
         <label class="opt"><input type="radio" name="q1" value="C" /> C. 所有满足条件的数对</label>
         <div class="explain"><strong>解析：</strong>返回 indices；题设恰好一解。</div>
       </div>
 
-      <div class="q" data-answer="1,2" data-orderless>
-        <p class="q-title">Q2. <code>nums=[3,2,4], target=6</code> 的合法下标？（写成 <code>i,j</code>）</p>
+      <div class="q" data-answer="1,2" data-orderless data-qid="q2">
+        <p class="q-title">Q2. <code>nums=[3,2,4], target=6</code> 的合法 indices？（写成 <code>i,j</code>）</p>
         <input type="text" placeholder="两个下标，逗号分隔" autocomplete="off" />
-        <div class="explain"><strong>解析：</strong>2+4=6 → 下标 1 与 2。不是两个 3。</div>
+        <div class="explain"><strong>解析：</strong>2+4=6 → indices 1 与 2。不是两个 3。</div>
       </div>
 
-      <div class="q" data-answer="A">
-        <p class="q-title">Q3. 一遍哈希主推解法时间复杂度？</p>
+      <div class="q" data-answer="A" data-qid="q3">
+        <p class="q-title">Q3. One-pass HashMap 主推解法时间复杂度？</p>
         <label class="opt"><input type="radio" name="q3" value="A" /> A. O(n)</label>
         <label class="opt"><input type="radio" name="q3" value="B" /> B. O(n²)</label>
         <label class="opt"><input type="radio" name="q3" value="C" /> C. 必须 O(n log n) 排序</label>
         <div class="explain"><strong>解析：</strong>均摊 O(1) 查表 × n 次扫描。</div>
       </div>
 
-      <div class="q" data-answer="A,C" data-multi>
+      <div class="q" data-answer="A,C" data-multi data-qid="q4">
         <p class="q-title">Q4. 哪些说法正确？（多选）</p>
-        <label class="opt"><input type="checkbox" value="A" /> A. 不能使用同一下标两次</label>
+        <label class="opt"><input type="checkbox" value="A" /> A. 不能使用同一 index 两次</label>
         <label class="opt"><input type="checkbox" value="B" /> B. 题目保证有多组解</label>
-        <label class="opt"><input type="checkbox" value="C" /> C. 同值可出现在不同下标（如 [3,3]）</label>
-        <div class="explain"><strong>解析：</strong>恰好一解；同一下标禁用；不同下标同值合法。</div>
+        <label class="opt"><input type="checkbox" value="C" /> C. 同值可出现在不同 indices（如 [3,3]）</label>
+        <div class="explain"><strong>解析：</strong>恰好一解；同一 index 禁用；不同 index 同值合法。</div>
       </div>
 
-      <div class="q" data-answer="need" data-alts="complement|target-x|target−x">
-        <p class="q-title">Q5. 扫到 x 时，在表里查的关键量常叫？（填 need / complement）</p>
+      <div class="q" data-answer="complement" data-alts="need|target-x|target−x" data-qid="q5">
+        <p class="q-title">Q5. 扫到 x 时，在 HashMap 里查的关键量英文名？（complement / need）</p>
         <input type="text" placeholder="一个英文词" autocomplete="off" />
-        <div class="explain"><strong>解析：</strong>补数 need = target − x，问「以前见过吗」。</div>
+        <div class="explain"><strong>解析：</strong><code>complement = target − x</code>，问「以前见过吗」。</div>
       </div>
 
-      <div class="q" data-answer="B">
-        <p class="q-title">Q6. 一遍哈希对当前 x 更稳妥的顺序？</p>
-        <label class="opt"><input type="radio" name="q6" value="A" /> A. 先写入 x，再查 target−x</label>
-        <label class="opt"><input type="radio" name="q6" value="B" /> B. 先查 target−x，再写入 x</label>
+      <div class="q" data-answer="B" data-qid="q6">
+        <p class="q-title">Q6. One-pass 对当前 x 更稳妥的顺序？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 先 write x，再查 complement</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 先查 complement，再 write x</label>
         <label class="opt"><input type="radio" name="q6" value="C" /> C. 顺序无所谓</label>
-        <div class="explain"><strong>解析：</strong>先查后写，避免把当前元素当自己的配对着。</div>
+        <div class="explain"><strong>解析：</strong>先查后写，避免把当前元素当自己的 pair。</div>
       </div>
 
-      <div class="q" data-answer="B">
-        <p class="q-title">Q7. 为什么本题值得学哈希，而不是「永远暴力就好」？</p>
-        <label class="opt"><input type="radio" name="q7" value="A" /> A. 哈希永远比暴力正确</label>
+      <div class="q" data-answer="B" data-qid="q7">
+        <p class="q-title">Q7. 为什么本题值得学 HashMap，而不是「永远 brute force」？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. HashMap 永远比暴力正确</label>
         <label class="opt"><input type="radio" name="q7" value="B" /> B. 当 n 变大且需要反复「查是否出现过」时，用空间换查询时间，是贴合场景的取舍</label>
         <label class="opt"><input type="radio" name="q7" value="C" /> C. 题目禁止暴力</label>
-        <div class="explain"><strong>解析：</strong>正确性暴力也有；选哈希是因为约束下查询模式匹配，不是为了炫技。</div>
+        <div class="explain"><strong>解析：</strong>正确性暴力也有；选 HashMap 是因为查询模式匹配约束。</div>
       </div>
 
       <div class="actions">
@@ -238,7 +238,9 @@ i=1 x=7 need=2 → 命中 0 → [0,1]</pre>
   {
     "nextHint": "理解测完成，开始写 Rust",
     "problemId": 1,
-    "slug": "two-sum"
+    "slug": "two-sum",
+    "titleZh": "两数之和",
+    "telemetry": true
   }
   </script>
   <script src="../../assets/lab.js"></script>

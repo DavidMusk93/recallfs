@@ -527,12 +527,74 @@ button:disabled {
 .toast.ok { background: var(--ok); }
 .toast.bad { background: var(--bad); }
 
-/* Mini step animator */
+/* Image storyboard (primary animation — skill-drawn frames) */
+[data-storyboard] {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.sb-stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  min-height: 180px;
+}
+
+.sb-frame {
+  display: none;
+  margin: 0;
+  cursor: pointer;
+  animation: rise 0.45s var(--ease) both;
+}
+
+.sb-frame.on {
+  display: block;
+}
+
+.sb-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.sb-frame figcaption {
+  padding: 0.55rem 0.75rem 0.7rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: #fffcf7;
+}
+
+.sb-frame figcaption code {
+  font-size: 0.85em;
+}
+
+.sb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.55rem;
+}
+
+.sb-controls [data-sb-index] {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+/* Legacy text stepper (secondary only; not a substitute for drawings) */
 .stepper {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
   margin: 0.65rem 0;
+  opacity: 0.92;
 }
 
 .step {
@@ -562,6 +624,58 @@ button:disabled {
   color: var(--accent);
   font-weight: 700;
   margin-bottom: 0.15rem;
+}
+
+/* Session chrome */
+.lab-elapsed {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 40;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: rgba(255, 253, 249, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  box-shadow: var(--shadow);
+  max-width: min(48vw, 220px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lab-coach-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 5.2rem;
+  z-index: 45;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 0.95rem;
+  font-weight: 650;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #1a5fb4, #c45c26);
+  box-shadow: 0 10px 24px rgba(28, 27, 25, 0.18);
+}
+
+.lab-coach-fab:hover {
+  filter: brightness(1.05);
+}
+
+.term {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: #f3efe8;
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+}
+
+.note-en {
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 table.cmp {
