@@ -22,7 +22,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | two-sum | 两数之和 | Easy | hashmap-complement | todo |
 | 2 | add-two-numbers | 两数相加 | Medium | linked-list | todo |
-| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | sliding-window | todo |
+| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | sliding-window-unique | teaching |
 | 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | binary-search | todo |
 | 5 | longest-palindromic-substring | 最长回文子串 | Medium | expand-center / dp | todo |
 | 6 | zigzag-conversion | Z 字形变换 | Medium | simulation | todo |
