@@ -58,8 +58,8 @@ metadata:
 - **术语**：专业名保持英文（HashMap / complement / carry / two-pointers …）；叙述用中文。
 - **发散**：约束变化时解法如何变。
 - **测验**：只在最终提交后显示对错；全对剪贴板 = **题号 + slug + 用时 + nextHint**；失败展示解析 + 再来一次。
-- **埋点**：默认开 telemetry；用户「AI 洞察」/ `LAB_TELEMETRY.summary()` 供 coach 判断 interest vs confusion。
-- **AI 核心**：过闸门后实现代码前，若有 telemetry，先读兴趣/卡点再讲，而不是无差别贴模板。
+- **埋点**：默认开 telemetry；用户侧是「学习路径」面板（人话）；机器侧 `LAB_TELEMETRY.summary()` / coach API。
+- **AI 核心**：写代码前 `curl .../api/lab/coach?problemId=N`，先 confusion 后人 interest；禁止无差别贴模板。
 - 禁止：答题过程中即时亮正确答案。
 - 禁止：`placeholder` / 题干把标准答案写出来；只用中性格式提示。
 

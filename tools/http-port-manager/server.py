@@ -785,17 +785,27 @@ class LabTelemetryStore:
             ]
 
         talking_points = []
+        human = summary.get("humanInsights") or []
+        if human:
+            talking_points.append("人话路径：" + "；".join(str(h) for h in human[:4]))
         if confusion:
             talking_points.append(
                 "优先澄清卡点："
                 + ", ".join(
-                    str(c.get("section") or c.get("signal") or c) for c in confusion[:4]
+                    str(
+                        c.get("label")
+                        or c.get("section")
+                        or c.get("signal")
+                        or c
+                    )
+                    for c in confusion[:4]
                 )
             )
         if interest:
             top = interest[0]
             talking_points.append(
-                f"用户停留最多：{top.get('section')}（约 {int((top.get('dwellMs') or 0)/1000)}s）"
+                f"用户停留最多：{top.get('label') or top.get('section')}"
+                f"（约 {int((top.get('dwellMs') or 0)/1000)}s）"
             )
         if quiz.get("passed"):
             talking_points.append(
