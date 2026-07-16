@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3. 无重复字符的最长子串 · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>3. 无重复字符的最长子串</h1>
+      <p class="meta">
+        <span class="pill hot">Medium</span>
+        <span class="pill">Hash Table · String · Sliding Window</span>
+        <a href="https://leetcode.cn/problems/longest-substring-without-repeating-characters/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
+      </p>
+      <p class="note-en">术语保持英文：sliding window · substring · last index · HashMap</p>
+    </header>
+
+    <section class="card" data-section="how-to">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        先分清 <strong>substring（连续）</strong> 与 subsequence，再理解窗口如何「右扩、左跳」。
+        测验<strong>统一提交</strong>；全对剪贴板含<strong>#题号 · slug · 用时</strong>。
+        行为埋点静默上报（页面不展示分析 UI）。
+      </p>
+      <ul class="scene-list">
+        <li><strong>自学</strong>：场景 → 多解 → 图解 → 理解测 → 对话写 Rust。</li>
+        <li><strong>复习</strong>：口头复述 left 为何用 <code>max(left, last[c]+1)</code>。</li>
+        <li><strong>卡关</strong>：看「pwke 为什么不算」与发散区。</li>
+      </ul>
+    </section>
+
+    <section class="card" data-section="scene">
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="biz">场景</button>
+          <button type="button" class="tab-btn" data-tab="sys">系统/工程</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="biz">
+          <ul class="scene-list">
+            <li>最长「没有重复商品」的连续下单片段（促销规则）。</li>
+            <li>阅读进度条：最长不重复章节浏览区间。</li>
+            <li>键盘连击检测：最长不重复按键序列的长度。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="sys">
+          <ul class="scene-list">
+            <li>日志流上最长无重复 token 的窗口统计。</li>
+            <li>协议解析：连续字段中 unique key 的最大跨度。</li>
+            <li>流式去重窗口的长度上界（教学类比）。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">
+            Sliding window 不是为了「看起来高级」。当答案是<strong>连续区间</strong>、
+            且区间合法性可用两端指针单调维护时，用窗口把 O(n²) 检查压到 O(n)。
+            若要的是 subsequence，模型就完全不同。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-section="approaches">
+      <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
+      <div class="approach-grid">
+        <details class="approach" open>
+          <summary>A. Brute force</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">Time O(n²)~O(n³)</span>
+              <span class="chip good">Space O(Σ)</span>
+            </div>
+            <p>枚举所有 substring，用 set 判重。建立「合法」定义，n 大时不可用。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>B. Sliding window + set</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time O(n)</span>
+              <span class="chip">Space O(Σ)</span>
+            </div>
+            <p>right 扩张；窗口内重复则 left 一步步右移并删除字符。正确，但 left 可能多次挪。</p>
+          </div>
+        </details>
+        <details class="approach" open>
+          <summary>C. Sliding window + last index（主推）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time O(n)</span>
+              <span class="chip">Space O(Σ)</span>
+            </div>
+            <p>
+              HashMap 记 <code>char → last index</code>。
+              若 <code>last[c] ≥ left</code>，则 <code>left = last[c] + 1</code>；
+              再更新 <code>last[c]=right</code> 与 max 长度。
+            </p>
+            <p><strong>在优化什么：</strong>重复时 left <strong>一次跳到</strong>安全位置，而不是一步步挪。</p>
+          </div>
+        </details>
+      </div>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Brute</td><td>定义清晰</td><td>时间</td></tr>
+          <tr><td>Window + set</td><td>线性均摊</td><td>left 逐步移动</td></tr>
+          <tr><td>last index</td><td>left 一次跳到位</td><td>要正确用 max(left, …)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" data-section="storyboard">
+      <h2>主推路径 · 图解动画 <span class="badge">skill 绘图</span></h2>
+      <p class="hint">scroll-snap 图解；术语：sliding window / last index。</p>
+      <div data-storyboard data-period="2600" data-autoplay="true">
+        <div class="sb-stage">
+          <figure class="sb-frame" data-frame="0">
+            <img src="assets/01-window-expand.png" alt="window expands right" />
+            <figcaption>Step 1 · right 扩张 sliding window，尝试更长 substring</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="1">
+            <img src="assets/02-left-jump.png" alt="left jumps past duplicate" />
+            <figcaption>Step 2 · 出现重复 → left 跳到 last[c]+1（不回退）</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="2">
+            <img src="assets/03-last-index-map.png" alt="HashMap last index and max len" />
+            <figcaption>Step 3 · HashMap 记 last index，维护 max 长度</figcaption>
+          </figure>
+        </div>
+        <div class="sb-controls">
+          <button type="button" class="secondary" data-sb-prev>Prev</button>
+          <span data-sb-index>1 / 3</span>
+          <button type="button" class="secondary" data-sb-next>Next</button>
+          <button type="button" data-sb-play>Pause</button>
+        </div>
+      </div>
+      <pre class="walk">s = "abcabcbb"
+right=0..2 → window "abc" ans=3
+right=3 'a' 重复 → left=1 → "bca" …
+right=5 'c' → left=3 → "abc" …
+最终 ans=3</pre>
+    </section>
+
+    <section class="card" data-section="variants">
+      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>要的是 subsequence → 不是本题；模型变。</li>
+        <li>至多 K 个不同字符 → 窗口 + 计数，家族题。</li>
+        <li>最小覆盖子串 → 窗口收缩条件变「覆盖」而非「唯一」。</li>
+        <li>字符集极小（如只有小写）→ 可用数组代替 HashMap。</li>
+      </ul>
+    </section>
+
+    <section class="card" id="quiz-section" data-section="quiz">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">全部完成后提交。全对复制：#题号 · slug · 用时 · 下一步。</p>
+
+      <div class="q" data-answer="B" data-qid="q1">
+        <p class="q-title">Q1. 本题要求的是？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. 最长无重复 subsequence 的长度</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 最长无重复 substring 的长度</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 所有无重复子串的个数</label>
+        <div class="explain"><strong>解析：</strong>必须是连续 substring。</div>
+      </div>
+
+      <div class="q" data-answer="3" data-qid="q2">
+        <p class="q-title">Q2. <code>s = "pwwkew"</code> 的答案是？</p>
+        <input type="text" placeholder="填一个整数" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>最长为 <code>wke</code>（或 <code>kew</code>）长度 3；<code>pwke</code> 不连续。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q3">
+        <p class="q-title">Q3. 主推 last-index 写法，遇到重复字符 c 时 left 如何更新？</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. left 永远 +1</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. left = max(left, last[c] + 1)</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. left 重置为 0</label>
+        <div class="explain"><strong>解析：</strong>跳到上次 c 的右侧，且 left 单调不减。</div>
+      </div>
+
+      <div class="q" data-answer="A,C" data-multi data-qid="q4">
+        <p class="q-title">Q4. 哪些说法正确？（多选）</p>
+        <label class="opt"><input type="checkbox" value="A" /> A. 右指针扫一遍即可做到 O(n)</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. 答案可以是不连续的字符序列</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. 空串答案为 0</label>
+        <div class="explain"><strong>解析：</strong>A、C 对；B 是 subsequence，错。</div>
+      </div>
+
+      <div class="q" data-answer="1" data-qid="q5">
+        <p class="q-title">Q5. <code>s = "bbbbb"</code> 的答案是？</p>
+        <input type="text" placeholder="填一个整数" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>全相同，最长无重复 substring 长度 1。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q6">
+        <p class="q-title">Q6. 为何 left 不能随便往左移？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 题目禁止</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 左边界必须单调右移，才能保证每个 right 只处理一次、总时间 O(n)</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 往左移答案会变大</label>
+        <div class="explain"><strong>解析：</strong>单调 left 是滑动窗口均摊线性的关键。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q7">
+        <p class="q-title">Q7. last index 写法相对「set + 逐步 left++」主要优化了？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. 把复杂度从 O(n) 降到 O(log n)</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. 重复时 left 一次跳到位，减少窗口内逐步删除</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. 不再需要记录任何字符信息</label>
+        <div class="explain"><strong>解析：</strong>仍是 O(n)；优化的是 left 移动方式与实现常数/简洁性。</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0 / 7</span>
+    </div>
+  </div>
+
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": 3,
+    "slug": "longest-substring-without-repeating-characters",
+    "titleZh": "无重复字符的最长子串",
+    "telemetry": true
+  }
+  </script>
+  <script src="../../assets/lab.js"></script>
+</body>
+</html>
