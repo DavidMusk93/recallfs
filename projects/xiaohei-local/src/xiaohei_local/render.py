@@ -1,4 +1,4 @@
-"""Render entrypoints."""
+"""Render entrypoints — default mascot: 小黑."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def list_scenes() -> list[str]:
 
 
 def list_characters() -> list[str]:
-    return ["snoopy", "xiaohuang", "xiaohei"]
+    return ["xiaohei", "snoopy", "xiaohuang"]
 
 
 def render_scene(
@@ -26,14 +26,14 @@ def render_scene(
     params: dict[str, Any] | None = None,
     seed: int = 7,
     ss: int = 3,
-    character: str = "snoopy",
+    character: str = "xiaohei",
     style: Style | None = None,
 ) -> Path:
     st = style or style_for_character(character, ss=ss)
     cv = Canvas(style=st, seed=seed, character=character)
-    # warm fluff only for legacy yellow dog
+    # no fluff ambience for 小黑 — clean
     if (character or "").lower() in {"xiaohuang", "huang", "yellow", "小黄", "小黄狗"}:
-        cv.ambience_warm(n=10, seed=seed + 3)
+        cv.ambience_warm(n=8, seed=seed + 3)
     fn = get_scene(scene)
     fn(cv, params or {})
     return cv.save(outfile)

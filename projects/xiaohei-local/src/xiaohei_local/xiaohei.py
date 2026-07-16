@@ -1,4 +1,4 @@
-"""小黑 IP drawing — must do the core action, not decorate."""
+"""小黑 IP — 简简单单：黑豆身体、白点眼、细腿，认真干活。"""
 
 from __future__ import annotations
 
@@ -15,34 +15,42 @@ def draw_xiaohei(
     facing: int = 1,
     pose: str = "idle",
 ) -> None:
-    """Draw 小黑 centered at (cx, cy) in logical coordinates.
-
-    pose:
-      idle — standing
-      carry — slightly leaned, as if carrying
-      press — arms forward (glass / wall)
-      place — reach down-left (placing dots)
-    """
+    """Minimal 小黑: solid black body, two white eyes, stick legs + pose arms."""
     st: Style = cv.style
-    s = scale
-    # body (slightly irregular black bean)
-    bw, bh = 30 * s, 38 * s
-    cv.ellipse(
+    s = max(0.7, scale)
+    f = 1 if facing >= 0 else -1
+    se = cv.smooth_ellipse  # clean blob, not messy wobble
+
+    # soft ground dash (very light, optional presence)
+    gy = cy + 34 * s
+    se(
+        cx - 16 * s,
+        gy - 2 * s,
+        cx + 16 * s,
+        gy + 3 * s,
+        fill=(240, 240, 240),
+        outline=(240, 240, 240),
+        width=1,
+    )
+
+    # body — black bean
+    bw, bh = 28 * s, 36 * s
+    se(
         cx - bw,
         cy - bh,
         cx + bw,
-        cy + bh * 0.5,
+        cy + bh * 0.45,
         fill=st.black,
         outline=st.black,
-        width=1.5,
-        seed=int(cx + cy * 3),
+        width=1.2,
     )
-    # white dot eyes
-    r = 4.8 * s
-    eye_y = cy - 8 * s
-    span = 9 * s
+
+    # eyes — plain white dots
+    r = 5.0 * s
+    eye_y = cy - 7 * s
+    span = 8.5 * s
     for ox in (-span, span):
-        cv.ellipse(
+        se(
             cx + ox - r,
             eye_y - r,
             cx + ox + r,
@@ -50,24 +58,28 @@ def draw_xiaohei(
             fill=st.white,
             outline=st.white,
             width=1,
-            seed=11,
         )
-    # thin legs
-    foot = cy + bh * 0.48
-    cv.line((cx - 9 * s, foot), (cx - 11 * s, foot + 24 * s), width=2.2, seed=20)
-    cv.line((cx + 9 * s, foot), (cx + 11 * s, foot + 24 * s), width=2.2, seed=21)
-    # arms by pose
-    ay = cy + 4 * s
-    f = 1 if facing >= 0 else -1
+
+    # stick legs
+    foot = cy + bh * 0.42
+    cv.line((cx - 8 * s, foot), (cx - 9 * s, foot + 22 * s), width=2.3, seed=20)
+    cv.line((cx + 8 * s, foot), (cx + 9 * s, foot + 22 * s), width=2.3, seed=21)
+
+    # stick arms by pose
+    ay = cy + 3 * s
     if pose == "press":
-        cv.line((cx + 18 * s * f, ay), (cx + 42 * s * f, ay - 2 * s), width=2.2, seed=30)
-        cv.line((cx + 18 * s * f, ay + 10 * s), (cx + 42 * s * f, ay + 12 * s), width=2.2, seed=31)
+        cv.line((cx + 16 * s * f, ay), (cx + 40 * s * f, ay - 1 * s), width=2.2, seed=30)
+        cv.line((cx + 16 * s * f, ay + 10 * s), (cx + 40 * s * f, ay + 12 * s), width=2.2, seed=31)
     elif pose == "carry":
-        cv.line((cx - 20 * s, ay), (cx - 8 * s, ay + 22 * s), width=2.2, seed=32)
-        cv.line((cx + 20 * s, ay), (cx + 8 * s, ay + 22 * s), width=2.2, seed=33)
+        cv.line((cx - 18 * s, ay), (cx - 6 * s, ay + 20 * s), width=2.2, seed=32)
+        cv.line((cx + 18 * s, ay), (cx + 6 * s, ay + 20 * s), width=2.2, seed=33)
     elif pose == "place":
-        cv.line((cx - 18 * s, ay), (cx - 36 * s, ay + 28 * s), width=2.2, seed=34)
-        cv.line((cx + 16 * s, ay), (cx + 28 * s, ay - 8 * s), width=2.2, seed=35)
+        cv.line((cx - 16 * s, ay), (cx - 34 * s, ay + 26 * s), width=2.2, seed=34)
+        cv.line((cx + 14 * s, ay), (cx + 26 * s, ay - 6 * s), width=2.2, seed=35)
+    elif pose == "wave":
+        cv.line((cx - 18 * s * f, ay + 6 * s), (cx - 30 * s * f, ay + 14 * s), width=2.0, seed=36)
+        cv.line((cx + 16 * s * f, ay), (cx + 28 * s * f, ay - 18 * s), width=2.2, seed=37)
     else:
-        cv.line((cx - 22 * s * f, ay), (cx - 34 * s * f, ay + 10 * s), width=2.0, seed=36)
-        cv.line((cx + 22 * s * f, ay), (cx + 34 * s * f, ay + 8 * s), width=2.0, seed=37)
+        # idle / love → calm arms
+        cv.line((cx - 20 * s * f, ay), (cx - 30 * s * f, ay + 8 * s), width=2.0, seed=38)
+        cv.line((cx + 20 * s * f, ay), (cx + 30 * s * f, ay + 6 * s), width=2.0, seed=39)

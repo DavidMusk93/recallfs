@@ -17,7 +17,7 @@ from .style import DEFAULT_STYLE, Style
 class Canvas:
     style: Style = DEFAULT_STYLE
     seed: int = 7
-    character: str = "snoopy"  # default: comic beagle (Snoopy-inspired)
+    character: str = "xiaohei"  # default: simple 小黑
 
     def __post_init__(self) -> None:
         s = self.style
@@ -28,7 +28,7 @@ class Canvas:
         self.img = Image.new("RGB", (self._W, self._H), bg)
         self.draw = ImageDraw.Draw(self.img)
         self._label_count = 0
-        self.character = (self.character or "xiaohuang").lower()
+        self.character = (self.character or "xiaohei").lower()
 
     def sx(self, x: float) -> float:
         return x * self._ss

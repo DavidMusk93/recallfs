@@ -4,7 +4,7 @@ from .canvas import Canvas
 from .render import list_scenes, render_scene
 from .spec import ShotSpec
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 __all__ = [
     "Canvas",
     "Style",

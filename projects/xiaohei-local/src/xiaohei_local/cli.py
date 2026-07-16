@@ -16,7 +16,7 @@ from .spec import ShotSpec
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="xiaohei-local",
-        description="Local-first 16:9 illustrations (小黄狗 default / 小黑 optional)",
+        description="Local-first 16:9 illustrations — simple 小黑 default",
     )
     parser.add_argument("--version", action="version", version=f"xiaohei-local {__version__}")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -38,9 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     p_render.add_argument("--ss", type=int, default=3, help="Supersample factor (default 3)")
     p_render.add_argument(
         "--character",
-        default="snoopy",
+        default="xiaohei",
         choices=list_characters(),
-        help="Mascot: snoopy (comic beagle, default) | xiaohei",
+        help="Mascot: xiaohei (default) | snoopy | xiaohuang",
     )
     p_render.set_defaults(func=cmd_render)
 
@@ -53,16 +53,16 @@ def main(argv: list[str] | None = None) -> int:
     p_batch.add_argument("--ss", type=int, default=3)
     p_batch.add_argument(
         "--character",
-        default="snoopy",
+        default="xiaohei",
         choices=list_characters(),
-        help="Mascot (default snoopy)",
+        help="Mascot (default xiaohei)",
     )
     p_batch.set_defaults(func=cmd_cube_anchors)
 
     p_show = sub.add_parser("showcase", help="2×2 contact sheet of all built-in scenes")
     p_show.add_argument("-o", "--outfile", type=Path, required=True)
     p_show.add_argument("--ss", type=int, default=2, help="Per-tile ss (default 2 for speed)")
-    p_show.add_argument("--character", default="snoopy", choices=list_characters())
+    p_show.add_argument("--character", default="xiaohei", choices=list_characters())
     p_show.set_defaults(func=cmd_showcase)
 
     args = parser.parse_args(argv)
@@ -89,7 +89,7 @@ def cmd_info(_: argparse.Namespace) -> int:
     for role, path in font_report().items():
         print(f"  font[{role}]: {path}")
     print(f"scenes: {', '.join(list_scenes())}")
-    print(f"characters: {', '.join(list_characters())} (default=snoopy)")
+    print(f"characters: {', '.join(list_characters())} (default=xiaohei)")
     print("home: recallfs/projects/xiaohei-local")
     return 0
 
