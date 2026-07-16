@@ -17,7 +17,7 @@ class ShotSpec:
     params: dict[str, Any] = field(default_factory=dict)
     seed: int = 7
     ss: int = 3
-    character: str = "xiaohuang"  # xiaohuang | xiaohei
+    character: str = "snoopy"  # snoopy | xiaohuang | xiaohei
 
     def merged_params(self) -> dict[str, Any]:
         p = dict(self.params)
@@ -35,7 +35,7 @@ class ShotSpec:
             params=dict(d.get("params") or {}),
             seed=int(d.get("seed", 7)),
             ss=int(d.get("ss", 3)),
-            character=str(d.get("character", "xiaohuang")),
+            character=str(d.get("character", "snoopy")),
         )
 
     @classmethod

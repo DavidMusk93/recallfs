@@ -38,9 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     p_render.add_argument("--ss", type=int, default=3, help="Supersample factor (default 3)")
     p_render.add_argument(
         "--character",
-        default="xiaohuang",
+        default="snoopy",
         choices=list_characters(),
-        help="Mascot: xiaohuang (cute yellow dog, default) | xiaohei",
+        help="Mascot: snoopy (comic beagle, default) | xiaohei",
     )
     p_render.set_defaults(func=cmd_render)
 
@@ -53,16 +53,16 @@ def main(argv: list[str] | None = None) -> int:
     p_batch.add_argument("--ss", type=int, default=3)
     p_batch.add_argument(
         "--character",
-        default="xiaohuang",
+        default="snoopy",
         choices=list_characters(),
-        help="Mascot (default xiaohuang)",
+        help="Mascot (default snoopy)",
     )
     p_batch.set_defaults(func=cmd_cube_anchors)
 
     p_show = sub.add_parser("showcase", help="2×2 contact sheet of all built-in scenes")
     p_show.add_argument("-o", "--outfile", type=Path, required=True)
     p_show.add_argument("--ss", type=int, default=2, help="Per-tile ss (default 2 for speed)")
-    p_show.add_argument("--character", default="xiaohuang", choices=list_characters())
+    p_show.add_argument("--character", default="snoopy", choices=list_characters())
     p_show.set_defaults(func=cmd_showcase)
 
     args = parser.parse_args(argv)
@@ -89,7 +89,7 @@ def cmd_info(_: argparse.Namespace) -> int:
     for role, path in font_report().items():
         print(f"  font[{role}]: {path}")
     print(f"scenes: {', '.join(list_scenes())}")
-    print(f"characters: {', '.join(list_characters())} (default=xiaohuang)")
+    print(f"characters: {', '.join(list_characters())} (default=snoopy)")
     print("home: recallfs/projects/xiaohei-local")
     return 0
 

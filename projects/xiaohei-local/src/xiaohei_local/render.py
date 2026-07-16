@@ -16,7 +16,7 @@ def list_scenes() -> list[str]:
 
 
 def list_characters() -> list[str]:
-    return ["xiaohuang", "xiaohei"]
+    return ["snoopy", "xiaohuang", "xiaohei"]
 
 
 def render_scene(
@@ -26,14 +26,14 @@ def render_scene(
     params: dict[str, Any] | None = None,
     seed: int = 7,
     ss: int = 3,
-    character: str = "xiaohuang",
+    character: str = "snoopy",
     style: Style | None = None,
 ) -> Path:
     st = style or style_for_character(character, ss=ss)
     cv = Canvas(style=st, seed=seed, character=character)
-    # ambience first so mascot/labels sit on top
-    if (character or "xiaohuang").lower() in {"xiaohuang", "huang", "dog", "小黄", "小黄狗"}:
-        cv.ambience_warm(n=14, seed=seed + 3)
+    # warm fluff only for legacy yellow dog
+    if (character or "").lower() in {"xiaohuang", "huang", "yellow", "小黄", "小黄狗"}:
+        cv.ambience_warm(n=10, seed=seed + 3)
     fn = get_scene(scene)
     fn(cv, params or {})
     return cv.save(outfile)

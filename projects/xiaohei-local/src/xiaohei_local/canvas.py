@@ -17,7 +17,7 @@ from .style import DEFAULT_STYLE, Style
 class Canvas:
     style: Style = DEFAULT_STYLE
     seed: int = 7
-    character: str = "xiaohuang"  # default: cute yellow dog
+    character: str = "snoopy"  # default: comic beagle (Snoopy-inspired)
 
     def __post_init__(self) -> None:
         s = self.style
