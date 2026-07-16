@@ -247,10 +247,10 @@
     </section>
 
     <section class="card">
-      <h2>Algorithms Lab · 学习会话</h2>
+      <h2>Algorithms Lab · 后台会话（AI only）</h2>
       <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.85rem">
-        learn.html 埋点上报到 <code>/api/lab/events</code>；coach 读
-        <code>/api/lab/coach?problemId=N</code>
+        静默埋点 → <code>/api/lab/events</code>。学习者页面不展示分析 UI；
+        助手读 <code>/api/lab/coach?problemId=N</code> 评估理解程度。
       </p>
       <div class="actions" style="margin-bottom:0.75rem">
         <button type="button" class="ghost" id="labRefresh">刷新会话</button>

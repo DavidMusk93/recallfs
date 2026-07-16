@@ -120,7 +120,7 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
 | 主推图解动画 | **skill 绘图 storyboard**（必做）+ 可选短 hand-trace |
 | 约束一变 | 数据规模、是否有序、流式等 → 解法如何变 |
 | 理解测 | 统一提交（见下） |
-| 埋点 | `lab.js` 行为追溯 →「学习路径」面板 + coach API |
+| 埋点 | 静默后台 → `:9090/api/lab/*`，供 AI 评估理解程度（**不对用户展示**） |
 
 **产品级内容规范（硬约束）：**
 
@@ -136,11 +136,11 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
    - 全对时复制内容必须含：**题号**、**slug**、**用户用时**、时间戳、`nextHint`。  
    - 由 `assets/lab.js` 自动生成，例如：  
      `[Lab Pass] #1 two-sum · 两数之和 · 用时 3m12s · 2026-…`  
-4. **行为埋点 → 学习路径（给用户）+ coach（给助手）**  
-   - **用户侧**：底部「学习路径」面板 = 停留热力、回看、改答案、浏览轨迹；人话解读，不是「AI 洞察」黑盒。  
-   - **机器侧**：`lab.js` 记 section dwell/reentry、path、题级 dwell、answer history、storyboard 帧停留、前台/后台时间；beacon 到 `:9090/api/lab/events`。  
-   - Agent 写代码前：`curl .../api/lab/coach?problemId=N`，优先 `humanInsights` / `confusion`。  
-   - 禁止用营销式「AI xxx」按钮糊弄用户。  
+4. **行为埋点 = 后台分析，不是用户产品面**  
+   - **不对学习者展示**热力/轨迹/「洞察」面板（那是分析后台的事）。  
+   - `lab.js` 静默采集：section dwell/reentry、path、题级 dwell、answer history、storyboard、quiz、前台时间 → `POST :9090/api/lab/events`。  
+   - Summary 含 `understanding.level/score` + `confusion` + `quiz`，供 AI 评估「算法理解到什么程度」。  
+   - Agent 写代码前：`curl -fsS "http://127.0.0.1:9090/api/lab/coach?problemId=N"`，按 `understanding` / `confusion` 调教学；`quiz.passed=false` 禁止完整 AC。  
 5. **测验交互**  
    - 作答过程不公布对错；统一提交；有错展开解析 + 再来一次。  
    - **禁止泄题**：`placeholder`/题干不得写出标准答案。  

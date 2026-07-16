@@ -305,151 +305,6 @@
     return ms;
   }
 
-  /** 人话解读：给学习者看，不是黑盒「AI 洞察」 */
-  function buildHumanInsights() {
-    const items = [];
-    const active = activeElapsedMs();
-    items.push({
-      kind: "meta",
-      severity: "info",
-      text:
-        "本页已读 " +
-        formatDuration(elapsedMs()) +
-        "（其中前台专注约 " +
-        formatDuration(active) +
-        "）",
-    });
-
-    const dwellRank = rankEntries(telemetry.sectionDwell, 3);
-    if (dwellRank.length) {
-      items.push({
-        kind: "interest",
-        severity: "info",
-        text:
-          "停留最久：" +
-          dwellRank
-            .map(
-              (x) =>
-                sectionLabel(x.id) + " " + formatDuration(x.value)
-            )
-            .join(" · "),
-      });
-    }
-
-    Object.keys(telemetry.sectionReentries).forEach((id) => {
-      const n = telemetry.sectionReentries[id] || 0;
-      if (n >= 2) {
-        items.push({
-          kind: "revisit",
-          severity: n >= 3 ? "stuck" : "watch",
-          text:
-            "你回看过「" +
-            sectionLabel(id) +
-            "」" +
-            n +
-            " 次——通常表示这里还没吃透，或在和别处对照",
-        });
-      }
-    });
-
-    Object.keys(telemetry.answerFlips).forEach((qid) => {
-      const n = telemetry.answerFlips[qid] || 0;
-      if (n >= 2) {
-        const hist = (telemetry.answerHistory[qid] || []).slice(-4).join(" → ");
-        items.push({
-          kind: "answer_flip",
-          severity: n >= 3 ? "stuck" : "watch",
-          text:
-            "理解测 " +
-            qid +
-            " 改过 " +
-            n +
-            " 次" +
-            (hist ? "（" + hist + "）" : "") +
-            "——选项摇摆，适合回头对照图解/解法表",
-        });
-      }
-    });
-
-    const frameDwell = rankEntries(telemetry.storyboard.frameDwell, 2);
-    if (frameDwell.length && frameDwell[0].value >= 4000) {
-      items.push({
-        kind: "storyboard",
-        severity: "info",
-        text:
-          "图解帧 " +
-          (Number(frameDwell[0].id) + 1) +
-          " 看了约 " +
-          formatDuration(frameDwell[0].value) +
-          (telemetry.storyboard.manual
-            ? "；你手动切过 " + telemetry.storyboard.manual + " 次"
-            : ""),
-      });
-    }
-
-    Object.keys(telemetry.storyboard.frameHits).forEach((f) => {
-      if ((telemetry.storyboard.frameHits[f] || 0) >= 4) {
-        items.push({
-          kind: "frame_loop",
-          severity: "watch",
-          text:
-            "图解帧 " +
-            (Number(f) + 1) +
-            " 被反复看到 " +
-            telemetry.storyboard.frameHits[f] +
-            " 次——可能是关键步骤",
-        });
-      }
-    });
-
-    if (telemetry.quiz.submits > 0) {
-      items.push({
-        kind: "quiz",
-        severity: telemetry.quiz.passed ? "info" : "watch",
-        text: telemetry.quiz.passed
-          ? "理解测已通过 " +
-            (telemetry.quiz.lastScore || "") +
-            (telemetry.quiz.retries
-              ? "（重试 " + telemetry.quiz.retries + " 次）"
-              : "")
-          : "理解测 " +
-            (telemetry.quiz.lastScore || "") +
-            "，已提交 " +
-            telemetry.quiz.submits +
-            " 次" +
-            (telemetry.quiz.wrongQids && telemetry.quiz.wrongQids.length
-              ? "；错题 " + telemetry.quiz.wrongQids.join(", ")
-              : ""),
-      });
-    } else if ((telemetry.sectionVisits.quiz || 0) > 0) {
-      items.push({
-        kind: "quiz",
-        severity: "info",
-        text: "已进入理解测，尚未提交",
-      });
-    }
-
-    // path digest
-    if (telemetry.path.length >= 2) {
-      const recent = telemetry.path.slice(-6).map((p) => sectionLabel(p.section));
-      items.push({
-        kind: "path",
-        severity: "info",
-        text: "最近浏览顺序：" + recent.join(" → "),
-      });
-    }
-
-    if (items.length <= 1) {
-      items.push({
-        kind: "hint",
-        severity: "info",
-        text: "继续往下读：滚动、展开解法、切换图解帧，路径会自动记在这里",
-      });
-    }
-
-    return items;
-  }
-
   function summarizeForAi() {
     accountVisibility();
     const interest = rankEntries(telemetry.sectionDwell, 6).map((x) => ({
@@ -499,9 +354,10 @@
     });
     confusion.sort((a, b) => (b.weight || 0) - (a.weight || 0));
 
-    const human = buildHumanInsights();
+    const understanding = assessUnderstanding();
     return {
-      schema: "lab.telemetry.summary.v2",
+      schema: "lab.telemetry.summary.v3",
+      audience: "backend_ai_only",
       sessionId: sessionId,
       problemId: problemId,
       slug: slug,
@@ -515,8 +371,7 @@
       path: telemetry.path.slice(-40),
       interest: interest,
       confusion: confusion,
-      humanInsights: human.map((h) => h.text),
-      humanInsightItems: human,
+      understanding: understanding,
       storyboard: {
         frames: telemetry.storyboard.frames,
         plays: telemetry.storyboard.plays,
@@ -527,12 +382,14 @@
       quiz: Object.assign({}, telemetry.quiz, {
         dwellByQ: Object.assign({}, telemetry.quizDwell),
         flipsByQ: Object.assign({}, telemetry.answerFlips),
+        answerHistory: Object.assign({}, telemetry.answerHistory),
       }),
       eventCount: telemetry.events.length,
       hintForCoach:
-        "先读 humanInsights（人话）。confusion 按 weight 优先讲透；" +
-        "interest 是停留久的区块。术语保持英文。" +
-        "quiz.passed=false 时禁止贴完整 AC 代码。",
+        "This payload is for AI evaluation of algorithm understanding, not UI. " +
+        "Read understanding.level/score first; use confusion (weight) and wrongQids; " +
+        "interest = dwell focus. Keep CS terms in English. " +
+        "If quiz.passed=false, do not paste full AC code.",
     };
   }
 
@@ -556,59 +413,77 @@
     }
   }
 
-  function formatSessionPlain() {
-    const s = summarizeForAi();
-    const lines = [
-      "【学习路径摘要】" + problemTag() + (titleZh ? " " + titleZh : ""),
-      "用时 " + s.elapsedHuman + " · 前台 " + formatDuration(s.activeSec * 1000),
-      "",
-      "—— 人话 ——",
-    ];
-    (s.humanInsightItems || []).forEach((h) => {
-      lines.push("· " + h.text);
+  /**
+   * AI-facing understanding estimate (not shown in UI).
+   * Heuristic only — coach should combine with quiz correctness + dialogue.
+   */
+  function assessUnderstanding() {
+    const s = {
+      quizPassed: !!telemetry.quiz.passed,
+      quizScore: telemetry.quiz.lastScore || telemetry.quiz.firstScore || null,
+      submits: telemetry.quiz.submits || 0,
+      retries: telemetry.quiz.retries || 0,
+      flipTotal: 0,
+      revisitTotal: 0,
+      wrongQids: telemetry.quiz.wrongQids || [],
+    };
+    Object.keys(telemetry.answerFlips).forEach((k) => {
+      s.flipTotal += telemetry.answerFlips[k] || 0;
     });
-    if (s.confusion && s.confusion.length) {
-      lines.push("", "—— 建议优先搞清 ——");
-      s.confusion.slice(0, 5).forEach((c) => {
-        lines.push(
-          "· " +
-            (c.label || c.section) +
-            " (" +
-            c.signal +
-            (c.answerFlips ? ", flips=" + c.answerFlips : "") +
-            (c.reentries ? ", reentries=" + c.reentries : "") +
-            ")"
-        );
-      });
+    Object.keys(telemetry.sectionReentries).forEach((k) => {
+      s.revisitTotal += telemetry.sectionReentries[k] || 0;
+    });
+
+    let score = 50; // 0–100 rough prior
+    if (s.quizPassed) score += 35;
+    else if (s.submits > 0) score += 5;
+    if (s.quizScore) {
+      const parts = String(s.quizScore).split("/");
+      const a = Number(parts[0]);
+      const b = Number(parts[1]) || 1;
+      if (!isNaN(a)) score += Math.round((a / b) * 20) - 10;
     }
-    lines.push(
-      "",
-      "—— 给对话助手（可选）——",
-      "题号 " + problemTag() + "；请按卡点讲解，术语保持英文；未过理解测勿贴完整 AC。"
-    );
-    return lines.join("\n");
+    score -= Math.min(20, s.flipTotal * 3);
+    score -= Math.min(15, s.revisitTotal * 2);
+    score -= Math.min(10, s.retries * 4);
+    if (s.submits === 0 && activeElapsedMs() < 20000) score -= 10;
+    score = Math.max(0, Math.min(100, score));
+
+    let level = "unknown";
+    if (s.submits === 0 && activeElapsedMs() < 30000) level = "insufficient_data";
+    else if (score >= 75 && s.quizPassed) level = "strong";
+    else if (score >= 55) level = "partial";
+    else level = "weak";
+
+    return {
+      score: score,
+      level: level,
+      signals: s,
+      coachHint:
+        level === "strong"
+          ? "理解测通过且行为稳定，可进入 Rust 实现；少讲基础，抓边界。"
+          : level === "partial"
+            ? "部分掌握：先澄清 confusion/wrongQids，再写代码；勿贴完整 AC。"
+            : level === "weak"
+              ? "掌握偏弱：回到图解与主推不变量，禁止完整 AC。"
+              : "数据不足：引导完成阅读与理解测。",
+    };
   }
 
+  // Internal API for agents/devtools only — no learner UI surface.
   window.LAB_TELEMETRY = {
     track: track,
     summary: summarizeForAi,
-    humanInsights: buildHumanInsights,
+    understanding: assessUnderstanding,
     flush: flushTelemetry,
     exportJson: function () {
-      return JSON.stringify(summarizeForAi(), null, 2);
-    },
-    /** 复制可读会话摘要（给自己复盘 / 贴进对话），不是神秘「AI 洞察」 */
-    copySessionSummary: async function () {
-      await flushTelemetry("export");
-      const text = formatSessionPlain();
-      const ok = await copyText(text);
-      toast(ok ? "已复制学习路径摘要" : "复制失败", ok ? "ok" : "bad");
-      track("session_summary_copy", { ok: ok });
-      return ok;
-    },
-    // backward alias
-    copyForAi: async function () {
-      return window.LAB_TELEMETRY.copySessionSummary();
+      return JSON.stringify(
+        Object.assign({}, summarizeForAi(), {
+          understanding: assessUnderstanding(),
+        }),
+        null,
+        2
+      );
     },
     raw: telemetry,
     sessionId: sessionId,
@@ -1252,9 +1127,6 @@
           }
         }
         track("quiz_change", { qid: qid, ans: ans });
-        if (window.LAB_TELEMETRY && window.LAB_TELEMETRY._refreshPanel) {
-          window.LAB_TELEMETRY._refreshPanel();
-        }
       }
     };
 
@@ -1397,164 +1269,6 @@
     }
   }
 
-  function initLearningPathPanel() {
-    if ($("#lab-path-panel")) return;
-
-    // scorebar entry — 明确是「你的学习路径」，不是营销式 AI 按钮
-    const bar = $(".scorebar-inner");
-    if (bar && !$("#lab-path-open")) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.id = "lab-path-open";
-      btn.className = "lab-path-open";
-      btn.textContent = "学习路径";
-      btn.title = "查看本页停留、回看、改答案等行为摘要";
-      btn.addEventListener("click", () => openPanel(true));
-      bar.appendChild(btn);
-    }
-
-    const backdrop = document.createElement("div");
-    backdrop.id = "lab-path-backdrop";
-    backdrop.className = "lab-path-backdrop";
-    backdrop.hidden = true;
-
-    const panel = document.createElement("aside");
-    panel.id = "lab-path-panel";
-    panel.className = "lab-path-panel";
-    panel.hidden = true;
-    panel.innerHTML =
-      '<div class="lab-path-head">' +
-      "<div><strong>本页学习路径</strong>" +
-      '<p class="lab-path-sub">记录你在这一页怎么读、哪里反复、哪里改答案——用来复盘，不是黑盒打分。</p></div>' +
-      '<button type="button" class="secondary lab-path-close" aria-label="关闭">关闭</button>' +
-      "</div>" +
-      '<div class="lab-path-body" id="lab-path-body"></div>' +
-      '<div class="lab-path-foot">' +
-      '<button type="button" id="lab-path-copy" class="secondary">复制摘要</button>' +
-      '<span class="lab-path-hint">可贴进对话；助手按卡点讲，不替你炫技</span>' +
-      "</div>";
-
-    document.body.appendChild(backdrop);
-    document.body.appendChild(panel);
-
-    function openPanel(open) {
-      backdrop.hidden = !open;
-      panel.hidden = !open;
-      if (open) {
-        renderPanel();
-        track("path_panel_open", {});
-      }
-    }
-
-    function renderPanel() {
-      const body = $("#lab-path-body");
-      if (!body) return;
-      const s = summarizeForAi();
-      const insights = s.humanInsightItems || buildHumanInsights();
-      const dwell = rankEntries(telemetry.sectionDwell, 6);
-      const maxD = dwell.length ? dwell[0].value : 1;
-
-      let heat =
-        '<div class="lab-heat"><h3>停留分布</h3>';
-      if (!dwell.length) {
-        heat += '<p class="lab-muted">还没有足够滚动数据，继续读页面即可。</p>';
-      } else {
-        dwell.forEach((x) => {
-          const pct = Math.max(6, Math.round((x.value / maxD) * 100));
-          heat +=
-            '<div class="lab-heat-row">' +
-            '<span class="lab-heat-label">' +
-            escapeHtml(sectionLabel(x.id)) +
-            "</span>" +
-            '<span class="lab-heat-bar"><i style="width:' +
-            pct +
-            '%"></i></span>' +
-            '<span class="lab-heat-val">' +
-            formatDuration(x.value) +
-            "</span></div>";
-        });
-      }
-      heat += "</div>";
-
-      let list = '<div class="lab-insight-list"><h3>解读</h3><ul>';
-      insights.forEach((h) => {
-        list +=
-          '<li class="sev-' +
-          (h.severity || "info") +
-          '">' +
-          escapeHtml(h.text) +
-          "</li>";
-      });
-      list += "</ul></div>";
-
-      let pathHtml = "";
-      if (telemetry.path.length) {
-        pathHtml =
-          '<div class="lab-path-trail"><h3>浏览轨迹</h3><p class="lab-trail">' +
-          telemetry.path
-            .slice(-10)
-            .map((p) => escapeHtml(sectionLabel(p.section)))
-            .join(' <span class="arr">→</span> ') +
-          "</p></div>";
-      }
-
-      body.innerHTML =
-        '<p class="lab-meta-line">' +
-        escapeHtml(problemTag()) +
-        " · 用时 " +
-        formatDuration(elapsedMs()) +
-        " · 事件 " +
-        telemetry.events.length +
-        "</p>" +
-        heat +
-        list +
-        pathHtml;
-    }
-
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;");
-    }
-
-    backdrop.addEventListener("click", () => openPanel(false));
-    panel.querySelector(".lab-path-close").addEventListener("click", () => openPanel(false));
-    $("#lab-path-copy").addEventListener("click", () => {
-      window.LAB_TELEMETRY.copySessionSummary();
-    });
-
-    window.LAB_TELEMETRY._refreshPanel = function () {
-      if (!panel.hidden) renderPanel();
-    };
-    window.LAB_TELEMETRY.openPathPanel = function () {
-      openPanel(true);
-    };
-
-    // soft refresh while open
-    setInterval(() => {
-      if (!panel.hidden) renderPanel();
-    }, 2500);
-  }
-
-  function initElapsedTicker() {
-    const el = document.createElement("button");
-    el.type = "button";
-    el.id = "lab-elapsed";
-    el.className = "lab-elapsed";
-    el.title = "打开学习路径";
-    el.textContent = "用时 0s · " + problemTag();
-    el.addEventListener("click", () => {
-      if (window.LAB_TELEMETRY.openPathPanel) window.LAB_TELEMETRY.openPathPanel();
-    });
-    document.body.appendChild(el);
-    setInterval(() => {
-      el.textContent =
-        "用时 " + formatDuration(elapsedMs()) + " · " + problemTag();
-    }, 1000);
-  }
-
   document.addEventListener("DOMContentLoaded", () => {
     loadTelemetrySoft();
     track("page_view", {
@@ -1569,8 +1283,7 @@
     initQuiz();
     initSectionTelemetry();
     initScrollTelemetry();
-    initLearningPathPanel();
-    initElapsedTicker();
+    // Telemetry is silent backend analytics for AI coach — no learner-facing panel.
     persistTelemetry();
     flushTelemetry("page_view");
     setInterval(() => flushTelemetry("heartbeat"), 15000);

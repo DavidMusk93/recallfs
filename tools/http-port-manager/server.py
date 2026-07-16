@@ -785,9 +785,16 @@ class LabTelemetryStore:
             ]
 
         talking_points = []
-        human = summary.get("humanInsights") or []
-        if human:
-            talking_points.append("人话路径：" + "；".join(str(h) for h in human[:4]))
+        understanding = summary.get("understanding") or {}
+        if understanding:
+            talking_points.append(
+                "理解评估："
+                + str(understanding.get("level"))
+                + " score="
+                + str(understanding.get("score"))
+                + " — "
+                + str(understanding.get("coachHint") or "")
+            )
         if confusion:
             talking_points.append(
                 "优先澄清卡点："
