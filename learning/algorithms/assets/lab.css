@@ -527,49 +527,104 @@ button:disabled {
 .toast.ok { background: var(--ok); }
 .toast.bad { background: var(--bad); }
 
-/* Image storyboard (primary animation — skill-drawn frames) */
+/*
+ * Storyboard — SOTA mobile carousel pattern
+ * ----------------------------------------
+ * Why other sites don't "repaint the page":
+ *  - They scroll a fixed-size viewport (transform/scroll), never display:none
+ *    frames (which forces layout + paint of the whole block every tick).
+ *  - Motion stays on the compositor: overflow scroll / scroll-snap / opacity.
+ *  - Stage height is reserved (aspect-ratio), so nothing reflows the article.
+ *  - Autoplay only while in view; respects prefers-reduced-motion.
+ *
+ * Pattern: CSS scroll-snap strip (same family as Apple product carousels,
+ * MDN examples, modern marketing sites). JS only syncs index + optional
+ * autoplay via scrollTo — no setInterval DOM surgery.
+ */
 [data-storyboard] {
   margin: 0.5rem 0 0.75rem;
+  /* isolate paint to this component */
+  contain: layout paint style;
 }
 
 .sb-stage {
+  /* viewport */
   position: relative;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
-  overflow: hidden;
-  min-height: 180px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  /* hide scrollbar but keep gesture */
+  scrollbar-width: none;
+  /* compositor-friendly fixed box — caption lives inside each slide */
+  /* 16:9 image + ~2.6rem caption */
+  aspect-ratio: 16 / 10.5;
+  max-height: min(72vh, 480px);
+  /* promote layer once; avoid thrashing main thread on mobile chrome */
+  transform: translateZ(0);
+  will-change: scroll-position;
+  touch-action: pan-x;
+}
+
+.sb-stage::-webkit-scrollbar {
+  display: none;
 }
 
 .sb-frame {
-  display: none;
+  /* every frame stays in the tree — no display:none layout thrash */
+  flex: 0 0 100%;
+  width: 100%;
+  max-width: 100%;
   margin: 0;
-  cursor: pointer;
-  animation: rise 0.45s var(--ease) both;
+  box-sizing: border-box;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* no entrance animation per slide — that re-triggers paint every autoplay tick */
+  cursor: grab;
 }
 
-.sb-frame.on {
-  display: block;
+.sb-frame:active {
+  cursor: grabbing;
+}
+
+.sb-frame.is-active {
+  /* optional marker for a11y/telemetry only — no layout change */
 }
 
 .sb-frame img {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 420px;
+  flex: 1 1 auto;
+  min-height: 0;
   aspect-ratio: 16 / 9;
   object-fit: contain;
   background: #fff;
-  /* empty data-src frame: keep stage height before hydrate */
-  min-height: 120px;
+  /* async decode off main where supported */
+  content-visibility: auto;
+  contain-intrinsic-size: 800px 450px;
 }
 
 .sb-frame figcaption {
-  padding: 0.55rem 0.75rem 0.7rem;
-  font-size: 0.9rem;
+  flex: 0 0 auto;
+  padding: 0.5rem 0.75rem 0.65rem;
+  font-size: 0.88rem;
   color: var(--muted);
   border-top: 1px solid var(--line);
   background: #fffcf7;
+  line-height: 1.4;
 }
 
 .sb-frame figcaption code {
@@ -589,6 +644,38 @@ button:disabled {
   color: var(--muted);
   min-width: 3.5rem;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-dots {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-left: 0.25rem;
+}
+
+.sb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: #d9d0c3;
+  cursor: pointer;
+}
+
+.sb-dot[aria-current="true"] {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-stage {
+    scroll-behavior: auto;
+  }
+  .sb-dot[aria-current="true"] {
+    transform: none;
+  }
 }
 
 /* Legacy text stepper (secondary only; not a substitute for drawings) */

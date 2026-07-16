@@ -888,141 +888,326 @@
   }
 
   /**
-   * Storyboard lazy-load: only first frame uses src=; later frames use data-src.
-   * Hydrate current + next so autoplay does not flash empty frames.
+   * Storyboard — SOTA scroll-snap carousel (not display:none slideshow).
+   *
+   * Why: mobile "page refresh" feel came from main-thread layout thrash
+   * (display toggle + CSS entrance animation every 2s). Production carousels
+   * keep slides in a fixed viewport and scroll; GPU/compositor owns motion.
    */
-  function hydrateStoryboardImg(frame) {
+  function hydrateStoryboardImg(frame, priority) {
     if (!frame) return;
-    const img = frame.querySelector("img[data-src]");
+    const img =
+      frame.querySelector("img[data-src]") || frame.querySelector("img");
     if (!img) return;
-    const url = img.getAttribute("data-src");
-    if (!url) return;
-    img.src = url;
-    img.removeAttribute("data-src");
+    if (img.dataset.src) {
+      img.src = img.dataset.src;
+      img.removeAttribute("data-src");
+      delete img.dataset.src;
+    }
+    img.decoding = "async";
+    img.loading = priority === "high" ? "eager" : img.loading || "lazy";
+    if (priority === "high") img.fetchPriority = "high";
+    if (img.decode) {
+      img.decode().catch(function () {});
+    }
   }
 
-  /** Image storyboard — primary animation surface (skill-drawn frames). */
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function initStoryboard() {
     $all("[data-storyboard]").forEach((root) => {
+      const stage = root.querySelector(".sb-stage");
       const frames = $all(".sb-frame", root);
-      if (!frames.length) return;
+      if (!stage || !frames.length) return;
+
       telemetry.storyboard.frames = Math.max(
         telemetry.storyboard.frames,
         frames.length
       );
 
+      // A11y: region
+      stage.setAttribute("role", "region");
+      stage.setAttribute("aria-roledescription", "carousel");
+      stage.setAttribute("tabindex", "0");
+      frames.forEach((f, idx) => {
+        f.setAttribute("role", "group");
+        f.setAttribute("aria-roledescription", "slide");
+        f.setAttribute("aria-label", idx + 1 + " / " + frames.length);
+      });
+
+      // dots (native index affordance)
+      let dotsHost = root.querySelector(".sb-dots");
+      if (!dotsHost) {
+        const controls = root.querySelector(".sb-controls");
+        dotsHost = document.createElement("div");
+        dotsHost.className = "sb-dots";
+        dotsHost.setAttribute("role", "tablist");
+        dotsHost.setAttribute("aria-label", "图解帧");
+        if (controls) controls.appendChild(dotsHost);
+      }
+      dotsHost.innerHTML = "";
+      const dots = frames.map((_, idx) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "sb-dot";
+        b.setAttribute("aria-label", "第 " + (idx + 1) + " 帧");
+        b.addEventListener("click", () => {
+          userIntent = true;
+          wantPlay = false;
+          syncPlayUi();
+          goTo(idx, "smooth", "dot");
+        });
+        dotsHost.appendChild(b);
+        return b;
+      });
+
       let i = 0;
-      let playing = root.dataset.autoplay !== "false";
+      let wantPlay =
+        root.dataset.autoplay !== "false" && !prefersReducedMotion();
+      let inView = false;
+      let docVisible = document.visibilityState !== "hidden";
       let timer = null;
-      const period = Number(root.dataset.period) || 2200;
+      let userIntent = false; // after manual nav, don't fight the user
+      let scrollSettle = null;
+      const period = Math.max(1800, Number(root.dataset.period) || 2800);
       const idxEl = root.querySelector("[data-sb-index]");
       const playBtn = root.querySelector("[data-sb-play]");
 
-      function show(n, source) {
+      function behavior(mode) {
+        if (prefersReducedMotion()) return "auto";
+        return mode || "smooth";
+      }
+
+      function recordActive(next, source) {
         const now = Date.now();
         const sb = telemetry.storyboard;
-        if (sb.lastFrame != null && sb.lastFrameAt != null) {
+        if (sb.lastFrame != null && sb.lastFrameAt != null && sb.lastFrame !== next) {
           const d = now - sb.lastFrameAt;
           sb.frameDwell[sb.lastFrame] = (sb.frameDwell[sb.lastFrame] || 0) + d;
         }
-        i = ((n % frames.length) + frames.length) % frames.length;
-        hydrateStoryboardImg(frames[i]);
-        hydrateStoryboardImg(frames[(i + 1) % frames.length]);
-        frames.forEach((f, idx) => f.classList.toggle("on", idx === i));
+        if (sb.lastFrame === next && source !== "init") return;
+        i = next;
+        frames.forEach((f, idx) => {
+          f.classList.toggle("is-active", idx === i);
+          f.setAttribute("aria-hidden", idx === i ? "false" : "true");
+        });
+        dots.forEach((d, idx) => {
+          if (idx === i) d.setAttribute("aria-current", "true");
+          else d.removeAttribute("aria-current");
+        });
         if (idxEl) idxEl.textContent = i + 1 + " / " + frames.length;
         sb.frameHits[i] = (sb.frameHits[i] || 0) + 1;
         sb.lastFrame = i;
         sb.lastFrameAt = now;
+        // warm current + neighbors (no layout cost)
+        hydrateStoryboardImg(frames[i], "high");
+        hydrateStoryboardImg(frames[(i + 1) % frames.length]);
+        hydrateStoryboardImg(frames[(i - 1 + frames.length) % frames.length]);
         track("storyboard_frame", {
           index: i,
-          source: source || "auto",
+          source: source || "scroll",
           caption:
             (frames[i].querySelector("figcaption") || {}).textContent || "",
           hits: sb.frameHits[i],
         });
-        if (window.LAB_TELEMETRY && window.LAB_TELEMETRY._refreshPanel) {
-          window.LAB_TELEMETRY._refreshPanel();
+      }
+
+      function goTo(n, mode, source) {
+        const next = ((n % frames.length) + frames.length) % frames.length;
+        const left = Math.round(next * stage.clientWidth);
+        stage.scrollTo({ left: left, behavior: behavior(mode) });
+        // optimistic index; scroll observer confirms
+        recordActive(next, source || "goto");
+        if (source === "auto") {
+          /* keep playing */
+        } else if (source && source !== "init") {
+          telemetry.storyboard.manual += 1;
         }
       }
 
-      function stop() {
-        playing = false;
-        if (timer) clearInterval(timer);
-        timer = null;
-        if (playBtn) playBtn.textContent = "Play";
+      function indexFromScroll() {
+        const w = stage.clientWidth || 1;
+        return Math.max(
+          0,
+          Math.min(frames.length - 1, Math.round(stage.scrollLeft / w))
+        );
       }
 
-      function start() {
-        playing = true;
-        if (playBtn) playBtn.textContent = "Pause";
-        if (timer) clearInterval(timer);
-        timer = setInterval(() => show(i + 1, "auto"), period);
-        telemetry.storyboard.plays += 1;
-        track("storyboard_play", {});
+      function onScroll() {
+        if (scrollSettle) clearTimeout(scrollSettle);
+        scrollSettle = setTimeout(() => {
+          recordActive(indexFromScroll(), "scroll");
+          armAutoplay();
+        }, 80);
       }
 
-      show(0, "init");
-      if (playing) start();
+      function syncPlayUi() {
+        if (!playBtn) return;
+        playBtn.textContent = wantPlay && inView && docVisible ? "Pause" : "Play";
+      }
+
+      function clearTimer() {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+
+      function armAutoplay() {
+        clearTimer();
+        if (!wantPlay || !inView || !docVisible || prefersReducedMotion()) {
+          syncPlayUi();
+          return;
+        }
+        syncPlayUi();
+        timer = setTimeout(() => {
+          // scroll-snap advance — compositor path, not DOM rebuild
+          goTo(i + 1, "smooth", "auto");
+          armAutoplay();
+        }, period);
+      }
+
+      function setWantPlay(on, reason) {
+        wantPlay = !!on;
+        if (wantPlay) {
+          telemetry.storyboard.plays += 1;
+          track("storyboard_play", { reason: reason || "user" });
+        } else {
+          track("storyboard_pause", { reason: reason || "user" });
+        }
+        armAutoplay();
+      }
+
+      // IntersectionObserver: which slide is visible (root = stage)
+      if ("IntersectionObserver" in window) {
+        const slideIo = new IntersectionObserver(
+          (entries) => {
+            let best = null;
+            entries.forEach((en) => {
+              if (!en.isIntersecting) return;
+              if (!best || en.intersectionRatio > best.intersectionRatio) {
+                best = en;
+              }
+            });
+            if (!best) return;
+            const idx = frames.indexOf(best.target);
+            if (idx >= 0) recordActive(idx, "io");
+          },
+          { root: stage, threshold: [0.55, 0.75, 0.9] }
+        );
+        frames.forEach((f) => slideIo.observe(f));
+
+        // pause when carousel leaves the viewport (critical on mobile)
+        const viewIo = new IntersectionObserver(
+          (entries) => {
+            const en = entries[0];
+            inView = !!(en && en.isIntersecting && en.intersectionRatio > 0.2);
+            armAutoplay();
+          },
+          { threshold: [0, 0.2, 0.5] }
+        );
+        viewIo.observe(root);
+      } else {
+        inView = true;
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        docVisible = document.visibilityState !== "hidden";
+        armAutoplay();
+      });
+
+      stage.addEventListener("scroll", onScroll, { passive: true });
+      // native scrollend when available
+      stage.addEventListener("scrollend", () => {
+        recordActive(indexFromScroll(), "scrollend");
+      });
+
+      // user gesture: stop fighting autoplay
+      ["pointerdown", "touchstart", "wheel"].forEach((ev) => {
+        stage.addEventListener(
+          ev,
+          () => {
+            userIntent = true;
+            if (wantPlay) setWantPlay(false, "gesture");
+          },
+          { passive: true }
+        );
+      });
 
       const prev = root.querySelector("[data-sb-prev]");
       const next = root.querySelector("[data-sb-next]");
       if (prev) {
         prev.addEventListener("click", () => {
-          stop();
-          telemetry.storyboard.manual += 1;
-          show(i - 1, "prev");
+          userIntent = true;
+          setWantPlay(false, "prev");
+          goTo(i - 1, "smooth", "prev");
         });
       }
       if (next) {
         next.addEventListener("click", () => {
-          stop();
-          telemetry.storyboard.manual += 1;
-          show(i + 1, "next");
+          userIntent = true;
+          setWantPlay(false, "next");
+          goTo(i + 1, "smooth", "next");
         });
       }
       if (playBtn) {
         playBtn.addEventListener("click", () => {
-          if (playing) stop();
-          else start();
+          userIntent = true;
+          setWantPlay(!wantPlay, "button");
         });
       }
 
-      frames.forEach((f, idx) => {
-        f.addEventListener("click", () => {
-          stop();
-          telemetry.storyboard.manual += 1;
-          show(idx, "click");
-        });
+      stage.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowRight") {
+          ev.preventDefault();
+          setWantPlay(false, "key");
+          goTo(i + 1, "smooth", "key");
+        } else if (ev.key === "ArrowLeft") {
+          ev.preventDefault();
+          setWantPlay(false, "key");
+          goTo(i - 1, "smooth", "key");
+        }
       });
+
+      // initial: no smooth jump, hydrate first frames
+      hydrateStoryboardImg(frames[0], "high");
+      hydrateStoryboardImg(frames[1]);
+      stage.scrollTo({ left: 0, behavior: "auto" });
+      recordActive(0, "init");
+      // start autoplay only if allowed
+      if (wantPlay) {
+        // inView may still be false until IO fires; arm when ready
+        armAutoplay();
+      } else {
+        syncPlayUi();
+      }
     });
   }
 
-  /** Legacy text stepper — kept as secondary caption track only. */
+  /** Legacy text stepper: manual only — no setInterval class thrash. */
   function initStepper() {
     $all("[data-stepper]").forEach((root) => {
-      // Prefer sibling/parent storyboard when present
       if (root.closest("[data-storyboard]") || root.querySelector(".sb-frame")) {
         return;
       }
       const steps = $all(".step", root);
       if (!steps.length) return;
       let i = 0;
-      const tick = () => {
+      const paint = () => {
         steps.forEach((s, idx) => s.classList.toggle("on", idx <= i));
-        i = (i + 1) % steps.length;
       };
-      tick();
-      const period = Number(root.dataset.period) || 1400;
-      setInterval(tick, period);
+      paint();
       const btn = root.querySelector("[data-step-next]");
       if (btn) {
         btn.addEventListener("click", () => {
-          steps.forEach((s, idx) => s.classList.toggle("on", idx <= i));
-          i = (i + 1) % (steps.length + 1);
-          if (i >= steps.length) {
-            i = 0;
-            steps.forEach((s) => s.classList.remove("on"));
-          }
+          i = (i + 1) % steps.length;
+          paint();
           track("legacy_stepper", { index: i });
         });
       }

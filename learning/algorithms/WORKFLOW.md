@@ -124,9 +124,11 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
 
 **产品级内容规范（硬约束）：**
 
-1. **交互动画 = 图，不是字**  
-   - 主推路径必须用 `[data-storyboard]` + 小黑 skill 生成的帧图。  
-   - **禁止**用纯文字 `.stepper` 冒充「动画」；文字只可做 `figcaption` 或 `pre.walk` 手推。  
+1. **交互动画 = 图，不是字；实现必须 SOTA（scroll-snap）**  
+   - 主推路径必须用 `[data-storyboard]` + 小黑 skill 帧图。  
+   - **禁止** `display:none` 轮播 / 每帧 CSS entrance / `setInterval` 改布局（手机像整页重绘）。  
+   - 正确模型：固定视口 + **CSS scroll-snap** + `scrollTo`；手势原生；离屏/后台/reduced-motion 停 autoplay。  
+   - **禁止**用纯文字 `.stepper` 冒充「动画」；文字只可做 `figcaption` 或 `pre.walk`。  
 2. **术语中英策略**  
    - 专业结构/算法名保持英文：`HashMap`、`complement`、`carry`、`two-pointers`、`dummy head`、`DFS/BFS/DP`…  
    - 叙述与教学用语用中文；不要硬译成蹩脚中文（如「哈希映射表」「补数查找器」）。  
