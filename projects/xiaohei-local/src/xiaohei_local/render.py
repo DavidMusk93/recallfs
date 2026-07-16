@@ -33,7 +33,7 @@ def render_scene(
     cv = Canvas(style=st, seed=seed, character=character)
     # ambience first so mascot/labels sit on top
     if (character or "xiaohuang").lower() in {"xiaohuang", "huang", "dog", "小黄", "小黄狗"}:
-        cv.ambience_warm(n=10, seed=seed + 3)
+        cv.ambience_warm(n=14, seed=seed + 3)
     fn = get_scene(scene)
     fn(cv, params or {})
     return cv.save(outfile)

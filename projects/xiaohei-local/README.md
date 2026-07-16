@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | **仓库位置** | `recallfs/projects/xiaohei-local`（权威源，随 recallfs 推送） |
-| **版本** | **0.6.0** |
+| **版本** | **0.7.0** |
 | **默认角色** | **小黄狗 `xiaohuang`**（Q 版可爱黄狗）；可选 `xiaohei` |
 | **依赖管理** | **uv + 项目 venv**（禁止全局 pip） |
 | **用途** | 中文标注/拓扑必须正确可复现；Imagine 503 时的默认路径 |
@@ -51,16 +51,14 @@ uv run xiaohei-local render-spec examples/shots-example.json
 | **`xiaohuang`** | **默认**：Q 版黄狗，垂耳、双高光、项圈吊牌、吐舌、地面阴影 |
 | `xiaohei` | 经典黑豆 IP（skill DNA 兼容） |
 
-## v0.6 优化要点
+## v0.7 优化要点（honey edition）
 
 | 项 | 说明 |
 | --- | --- |
-| **smooth 小狗** | 身体用干净椭圆，不再手抖线（更萌） |
-| 高光/鼻光/脚掌 | 脸部 rim light、鼻尖高光、爪垫 |
-| 项圈+星光 | 蓝项圈高光、吊牌；头顶小 sparkle |
-| 暖氛围 | 场景稀疏暖色星点 `ambience_warm` |
-| **showcase** | `uv run xiaohei-local showcase -o sheet.jpg` 2×2 总览 |
-| 姿态 | idle / carry / press / place / wave |
+| **氛围** | 暖色 bokeh 光斑 + 星 + **小爱心** |
+| **小狗** | 分层毛色、更湿润眼睛、吊牌高光、爪印轨迹 |
+| **姿态** | + **love**（头顶三颗心） |
+| smooth + showcase | 仍保留 v0.6 能力 |
 
 ## Scenes
 

@@ -171,18 +171,65 @@ class Canvas:
         sp = [(self.sx(x), self.sy(y)) for x, y in pts]
         self.draw.polygon(sp, fill=c)
 
-    def ambience_warm(self, *, n: int = 12, seed: int = 99):
-        """Sparse warm sparkles — only when mascot is cute dog."""
+    def heart(self, cx, cy, r=8, *, color=None):
+        """Tiny filled heart (cute accent)."""
+        c = color or (255, 140, 160)
+        # two circles + triangle via polygon
+        se = self.smooth_ellipse
+        se(cx - r * 0.7, cy - r * 0.55, cx + r * 0.05, cy + r * 0.35, fill=c, outline=c, width=1)
+        se(cx - r * 0.05, cy - r * 0.55, cx + r * 0.7, cy + r * 0.35, fill=c, outline=c, width=1)
+        pts = [
+            (self.sx(cx - r * 0.72), self.sy(cy + r * 0.05)),
+            (self.sx(cx + r * 0.72), self.sy(cy + r * 0.05)),
+            (self.sx(cx), self.sy(cy + r * 0.95)),
+        ]
+        self.draw.polygon(pts, fill=c)
+
+    def soft_orb(self, cx, cy, r=20, *, color=None, alpha: int = 40):
+        """Soft bokeh blob via temporary RGBA layer."""
+        c = color or (255, 220, 160)
+        R = self.sn(r)
+        layer = Image.new("RGBA", (R * 2 + 4, R * 2 + 4), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        ld.ellipse((2, 2, R * 2, R * 2), fill=c + (alpha,))
+        layer = layer.filter(ImageFilter.GaussianBlur(radius=max(1.5, R * 0.22)))
+        self.img.paste(
+            layer,
+            (int(self.sx(cx) - R - 2), int(self.sy(cy) - R - 2)),
+            layer,
+        )
+
+    def ambience_warm(self, *, n: int = 14, seed: int = 99):
+        """Warm bokeh + stars + occasional hearts — cute-dog scenes only."""
         if getattr(self, "character", "") not in {"xiaohuang", "huang", "dog", "小黄", "小黄狗"}:
             return
         rng = random.Random(self.seed + seed)
         st = self.style
-        colors = [st.soft_orange, st.dog_yellow, st.dog_collar_tag, (255, 230, 180)]
+        # soft bokeh first (behind everything drawn later if called early)
+        for _ in range(max(4, n // 2)):
+            x = rng.uniform(st.margin, st.width - st.margin)
+            y = rng.uniform(st.margin * 0.5, st.height * 0.55)
+            self.soft_orb(
+                x,
+                y,
+                r=rng.uniform(14, 36),
+                color=rng.choice([(255, 236, 190), (255, 220, 170), (255, 210, 200)]),
+                alpha=rng.randint(22, 42),
+            )
+        colors = [st.dog_yellow, st.dog_collar_tag, (255, 230, 180), st.dog_collar]
         for _ in range(n):
             x = rng.uniform(st.margin, st.width - st.margin)
-            y = rng.uniform(st.margin, st.height * 0.42)
-            r = rng.uniform(2.5, 5.5)
+            y = rng.uniform(st.margin, st.height * 0.45)
+            r = rng.uniform(2.2, 5.2)
             self.star(x, y, r=r, color=rng.choice(colors), points=4)
+        # 2–3 floating hearts
+        for _ in range(rng.randint(2, 3)):
+            self.heart(
+                rng.uniform(st.margin + 40, st.width - st.margin - 40),
+                rng.uniform(st.margin + 20, st.height * 0.38),
+                r=rng.uniform(5, 8),
+                color=rng.choice([(255, 150, 170), (255, 170, 185)]),
+            )
 
     def arrow(self, p1, p2, *, color=None, width=2.8, head=13, seed=3):
         c = color or self.style.orange

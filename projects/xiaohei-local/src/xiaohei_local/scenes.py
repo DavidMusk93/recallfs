@@ -23,7 +23,7 @@ def scene_book_corrigendum(cv: Canvas, p: dict[str, Any]) -> None:
     cv.text((250, 340), p.get("book_body", "Partial → hash → Inter → Sink"), size=st.small_size, color=st.gray, role="annot")
     cv.label((250, 545), "固定", size=st.label_size, role="title")
 
-    draw_character(cv, 540, 325, scale=1.45, pose="idle")
+    draw_character(cv, 540, 325, scale=1.5, pose="love")
     cv.arrow((475, 320), (405, 295), seed=40)
     cv.arrow((605, 320), (720, 275), seed=41)
 
