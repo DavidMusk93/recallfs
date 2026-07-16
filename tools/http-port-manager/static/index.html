@@ -245,6 +245,21 @@
       <h2>服务列表 <span id="svcCount" style="font-weight:500;text-transform:none;letter-spacing:0"></span></h2>
       <div id="list"><div class="empty">等待 SSE…</div></div>
     </section>
+
+    <section class="card">
+      <h2>Algorithms Lab · 学习会话</h2>
+      <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.85rem">
+        learn.html 埋点上报到 <code>/api/lab/events</code>；coach 读
+        <code>/api/lab/coach?problemId=N</code>
+      </p>
+      <div class="actions" style="margin-bottom:0.75rem">
+        <button type="button" class="ghost" id="labRefresh">刷新会话</button>
+        <button type="button" class="ghost" id="labCoach1">Coach #1</button>
+        <button type="button" class="ghost" id="labCoach2">Coach #2</button>
+      </div>
+      <div id="labSessions" class="empty">加载中…</div>
+      <pre id="labCoach" style="margin-top:0.75rem;padding:0.75rem;background:#0c121b;border-radius:8px;border:1px solid var(--border);font-size:0.78rem;white-space:pre-wrap;color:var(--muted);max-height:280px;overflow:auto"></pre>
+    </section>
   </main>
 
   <footer>
@@ -419,6 +434,63 @@
     });
 
     connectSSE();
+
+    async function loadLabSessions() {
+      const el = document.getElementById('labSessions');
+      try {
+        const r = await fetch('/api/lab/sessions?limit=12');
+        const j = await r.json();
+        const rows = j.sessions || [];
+        if (!rows.length) {
+          el.innerHTML = '<div class="empty">暂无学习会话。打开 learn.html 后自动上报。</div>';
+          return;
+        }
+        el.innerHTML = rows.map(s => `
+          <div class="svc">
+            <div class="row">
+              <div class="title">
+                <span class="name">#${escapeHtml(s.problemId ?? '?')} ${escapeHtml(s.slug || '')}</span>
+                <span class="badge ${s.passed ? 'healthy' : 'running'}">${s.passed ? 'pass' : 'learning'}</span>
+              </div>
+              <div class="actions">
+                <button class="ghost" data-coach-sid="${escapeAttr(s.sessionId)}">Coach</button>
+              </div>
+            </div>
+            <div class="meta">
+              <div>session <b><code>${escapeHtml(s.sessionId || '')}</code></b></div>
+              <div>events <b>${s.eventCount ?? 0}</b></div>
+              <div>elapsed <b>${escapeHtml(s.elapsedHuman || '—')}</b></div>
+              <div>updated <b>${escapeHtml(s.updatedAt || '—')}</b></div>
+            </div>
+          </div>`).join('');
+      } catch (e) {
+        el.innerHTML = '<div class="empty">无法加载 lab sessions</div>';
+      }
+    }
+
+    async function loadCoach(params) {
+      const pre = document.getElementById('labCoach');
+      pre.textContent = 'loading…';
+      try {
+        const qs = new URLSearchParams(params).toString();
+        const r = await fetch('/api/lab/coach?' + qs);
+        const j = await r.json();
+        pre.textContent = j.coachPrompt || JSON.stringify(j, null, 2);
+      } catch (e) {
+        pre.textContent = String(e);
+      }
+    }
+
+    document.getElementById('labRefresh').addEventListener('click', loadLabSessions);
+    document.getElementById('labCoach1').addEventListener('click', () => loadCoach({ problemId: 1 }));
+    document.getElementById('labCoach2').addEventListener('click', () => loadCoach({ problemId: 2 }));
+    document.getElementById('labSessions').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-coach-sid]');
+      if (!btn) return;
+      loadCoach({ sessionId: btn.dataset.coachSid });
+    });
+    loadLabSessions();
+    setInterval(loadLabSessions, 10000);
   </script>
 </body>
 </html>

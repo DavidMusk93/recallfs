@@ -32,10 +32,15 @@
     cfg.nextHint || "理解测完成，开始写 Rust";
   const passScore = cfg.passScore == null ? 1 : Number(cfg.passScore);
   const telemetryEnabled = cfg.telemetry !== false;
+  const telemetryEndpoint =
+    cfg.telemetryEndpoint ||
+    cfg.telemetryUrl ||
+    "http://127.0.0.1:9090/api/lab/events";
   const startedAt = Date.now();
   const sessionId =
     cfg.sessionId ||
     "s_" + startedAt.toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  let eventCursor = 0; // unsent events index
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -163,12 +168,66 @@
     };
     telemetry.events.push(ev);
     // keep memory bounded
-    if (telemetry.events.length > 800) telemetry.events.splice(0, 200);
+    if (telemetry.events.length > 800) {
+      const drop = telemetry.events.length - 600;
+      telemetry.events.splice(0, drop);
+      eventCursor = Math.max(0, eventCursor - drop);
+    }
     try {
       document.dispatchEvent(
         new CustomEvent("lab:track", { detail: ev })
       );
     } catch (_) {}
+  }
+
+  function flushTelemetry(kind) {
+    if (!telemetryEnabled || !telemetryEndpoint) return Promise.resolve(false);
+    const batch = telemetry.events.slice(eventCursor);
+    if (!batch.length && kind !== "summary" && kind !== "pass") {
+      return Promise.resolve(false);
+    }
+    const body = {
+      kind: kind || "batch",
+      sessionId: sessionId,
+      problemId: problemId,
+      slug: slug,
+      titleZh: titleZh,
+      startedAt: telemetry.startedAt,
+      events: batch,
+      summary: summarizeForAi(),
+    };
+    const sentUpTo = telemetry.events.length;
+    const doFetch = () =>
+      fetch(telemetryEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        keepalive: true,
+        mode: "cors",
+      })
+        .then((r) => {
+          if (r.ok || r.status === 202) {
+            eventCursor = sentUpTo;
+            return true;
+          }
+          return false;
+        })
+        .catch(() => false);
+
+    // prefer sendBeacon for unload
+    if (kind === "unload" && navigator.sendBeacon) {
+      try {
+        const blob = new Blob([JSON.stringify(body)], {
+          type: "application/json",
+        });
+        const ok = navigator.sendBeacon(telemetryEndpoint, blob);
+        if (ok) eventCursor = sentUpTo;
+        return Promise.resolve(ok);
+      } catch (_) {
+        return doFetch();
+      }
+    }
+    return doFetch();
   }
 
   function rankEntries(map, limit) {
@@ -264,18 +323,39 @@
   window.LAB_TELEMETRY = {
     track: track,
     summary: summarizeForAi,
+    flush: flushTelemetry,
     exportJson: function () {
       return JSON.stringify(summarizeForAi(), null, 2);
     },
     copyForAi: async function () {
+      await flushTelemetry("export");
+      let remote = null;
+      try {
+        const u =
+          "http://127.0.0.1:9090/api/lab/coach?problemId=" +
+          encodeURIComponent(problemId != null ? problemId : "");
+        const r = await fetch(u, { mode: "cors" });
+        if (r.ok) remote = await r.json();
+      } catch (_) {}
+      const payload = {
+        local: summarizeForAi(),
+        coach: remote,
+      };
       const text =
-        "[Lab Telemetry for AI]\n" + JSON.stringify(summarizeForAi(), null, 2);
+        "[Lab Telemetry for AI]\n" + JSON.stringify(payload, null, 2);
       const ok = await copyText(text);
-      toast(ok ? "学习洞察已复制，可贴给 AI" : "复制失败，请看控制台", ok ? "ok" : "bad");
-      track("telemetry_export", { ok: ok });
+      toast(
+        ok
+          ? "学习洞察已复制（含 coach brief）"
+          : "复制失败，请看控制台",
+        ok ? "ok" : "bad"
+      );
+      track("telemetry_export", { ok: ok, hasRemote: !!remote });
       return ok;
     },
     raw: telemetry,
+    sessionId: sessionId,
+    endpoint: telemetryEndpoint,
   };
 
   // ── Quiz helpers ───────────────────────────────────────────
@@ -438,6 +518,7 @@
         telemetry.sectionDwell[id] = (telemetry.sectionDwell[id] || 0) + d;
       });
       persistTelemetry();
+      flushTelemetry("unload");
     });
   }
 
@@ -712,6 +793,11 @@
               (telemetry.lifetime.passCount || 0) + 1;
           } catch (_) {}
           persistTelemetry();
+          track("quiz_pass", {
+            elapsedMs: elapsedMs(),
+            clipboard: clip,
+          });
+          flushTelemetry("pass");
           section.dispatchEvent(
             new CustomEvent("lab:pass", {
               detail: {
@@ -725,14 +811,12 @@
               },
             })
           );
-          track("quiz_pass", {
-            elapsedMs: elapsedMs(),
-            clipboard: clip,
-          });
         } else {
           toast("未全对：已展开解析，请阅读后点「再来一次」", "bad");
           if (retryBtn) retryBtn.hidden = false;
           persistTelemetry();
+          track("quiz_fail", { correct: correct, total: total });
+          flushTelemetry("fail");
           section.dispatchEvent(
             new CustomEvent("lab:fail", {
               detail: {
@@ -742,7 +826,6 @@
               },
             })
           );
-          track("quiz_fail", { correct: correct, total: total });
         }
       });
     }
@@ -815,5 +898,8 @@
     initCoachFab();
     initElapsedTicker();
     persistTelemetry();
+    flushTelemetry("page_view");
+    // heartbeat flush every 15s while page open
+    setInterval(() => flushTelemetry("heartbeat"), 15000);
   });
 })();

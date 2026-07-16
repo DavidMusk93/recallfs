@@ -59,6 +59,12 @@ tools/http-port-manager/sync.sh
 | PATCH | `/api/services/{id}` | 更新配置 |
 | DELETE | `/api/services/{id}` | 删除 |
 | GET | `/api/events` | SSE：`event: update` / `: heartbeat` |
+| POST | `/api/lab/events` | Algorithms Lab 埋点上报（CORS） |
+| GET | `/api/lab/sessions` | 最近学习会话列表 |
+| GET | `/api/lab/session?sessionId=` | 单会话详情 |
+| GET | `/api/lab/coach?problemId=` | AI coach brief（interest/confusion/quiz） |
+
+Lab 数据目录：`$INSTALL_DIR/lab_telemetry/`
 
 ## 运维
 

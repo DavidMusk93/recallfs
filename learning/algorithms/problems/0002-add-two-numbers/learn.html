@@ -134,10 +134,18 @@
             <img src="assets/02-carry-cart.png" alt="carry propagation" />
             <figcaption>Step 2 · <code>s = a + b + carry</code> → write <code>s%10</code>，carry = <code>s/10</code></figcaption>
           </figure>
+          <figure class="sb-frame" data-frame="2">
+            <img src="assets/03-unequal-length.png" alt="unequal list lengths" />
+            <figcaption>Step 3 · 不等长：缺位按 0，继续与 carry 同行</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="3">
+            <img src="assets/04-final-carry.png" alt="final carry node" />
+            <figcaption>Step 4 · 两链耗尽仍可能有尾 carry → 再挂一节点</figcaption>
+          </figure>
         </div>
         <div class="sb-controls">
           <button type="button" class="secondary" data-sb-prev>Prev</button>
-          <span data-sb-index>1 / 2</span>
+          <span data-sb-index>1 / 4</span>
           <button type="button" class="secondary" data-sb-next>Next</button>
           <button type="button" data-sb-play>Pause</button>
         </div>

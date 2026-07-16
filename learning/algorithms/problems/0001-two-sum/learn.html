@@ -137,13 +137,21 @@
             <figcaption>Step 1 · 查 <code>complement = target − x</code> 是否已在 HashMap</figcaption>
           </figure>
           <figure class="sb-frame" data-frame="1">
+            <img src="assets/03-lookup-before-write.png" alt="lookup before write" />
+            <figcaption>Step 2 · 先查 complement，再 write 当前 x（避免自配对）</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="2">
+            <img src="assets/04-hit-return.png" alt="hit and return indices" />
+            <figcaption>Step 3 · 命中 → 返回 indices <code>[i, j]</code></figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="3">
             <img src="assets/02-brute-vs-hash.png" alt="brute force vs HashMap" />
-            <figcaption>Step 2 · Brute force O(n²) vs HashMap 均摊 O(1) 查询</figcaption>
+            <figcaption>Step 4 · Brute force O(n²) vs HashMap 均摊 O(1) 查询</figcaption>
           </figure>
         </div>
         <div class="sb-controls">
           <button type="button" class="secondary" data-sb-prev>Prev</button>
-          <span data-sb-index>1 / 2</span>
+          <span data-sb-index>1 / 4</span>
           <button type="button" class="secondary" data-sb-next>Next</button>
           <button type="button" data-sb-play>Pause</button>
         </div>

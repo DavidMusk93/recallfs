@@ -136,8 +136,10 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
      `[Lab Pass] #1 two-sum · 两数之和 · 用时 3m12s · 2026-…`  
 4. **行为埋点 → AI 核心**  
    - `lab.js` 记录：section 停留/回看、tab、details、storyboard 帧、答题改选、提交/重试、滚动深度。  
+   - 默认 **beacon** 到 `http://127.0.0.1:9090/api/lab/events`（port-manager）。  
    - `interest` = 高 dwell；`confusion` = 反复 reentry / answer_flip / 帧回看。  
-   - 用户点「AI 洞察」或 `LAB_TELEMETRY.copyForAi()` 把摘要贴给 agent；agent 据此调教学节奏，而不是只抛标准解。  
+   - Agent 写代码前：`curl http://127.0.0.1:9090/api/lab/coach?problemId=N` 读 `coachPrompt`。  
+   - 用户也可点「AI 洞察」复制本地 + remote brief。  
 5. **测验交互**  
    - 作答过程不公布对错；统一提交；有错展开解析 + 再来一次。  
    - **禁止泄题**：`placeholder`/题干不得写出标准答案。  

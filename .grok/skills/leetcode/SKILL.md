@@ -43,7 +43,7 @@ metadata:
 4 写 analysis.md（结论先行 + ASCII）
 5 填 learn.html（场景+多解+storyboard 小黑帧+测验+埋点）
 6 【闸门】等用户完成理解测（剪贴板含题号/用时）或明确跳过
-6b 若有 telemetry 摘要，先据此讲解卡点再写代码
+6b 拉取 coach brief 再讲解/写代码（见 3.7）
 7 Rust 实现 + cargo test
 8 协助 leetcode.cn 提交（open 题页 + 可粘贴代码；不假装 AC）
 9 notes.md + patterns/ + progress.md
@@ -102,6 +102,29 @@ open "https://leetcode.cn/problems/<slug>/"
 ### 3.6 会员题
 
 `meta.status=premium-skip` → 更新 progress → 自动尝试下一免费题（告知用户）。
+
+### 3.7 AI Coach（产品核心）
+
+用户做过 `learn.html` 后，**写代码前**优先拉取行为 brief：
+
+```bash
+curl -fsS "http://127.0.0.1:9090/api/lab/coach?problemId=<N>"
+```
+
+| 字段 | 用途 |
+| --- | --- |
+| `interest` | 高停留 section → 用户感兴趣 |
+| `confusion` | reentry / answer_flip / 帧回看 → 卡点 |
+| `quiz` | 是否通过、分数、提交次数 |
+| `talkingPoints` / `coachPrompt` | 直接可作 system 提示 |
+
+规则：
+
+1. 先处理 `confusion`，再强化 `interest` 概念。  
+2. `quiz.passed=false` 时继续教学闸门，**禁止**完整 AC 代码。  
+3. 术语保持英文（HashMap / complement / carry …）。  
+4. 管理台 http://127.0.0.1:9090/ 可看「学习会话」并复制 coach brief。  
+5. 前端默认 `POST http://127.0.0.1:9090/api/lab/events`（可在 lab-config 改 `telemetryEndpoint`）。
 
 ## 4. 单题完成定义
 

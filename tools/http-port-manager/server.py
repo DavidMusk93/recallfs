@@ -27,12 +27,13 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG = APP_DIR / "config.json"
 STATIC_DIR = APP_DIR / "static"
 MIRRORS_DIR = APP_DIR / "mirrors"
+LAB_TELEMETRY_DIR = APP_DIR / "lab_telemetry"
 ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
 RSYNC_EXCLUDES = [".git", "target", ".tmp", "__pycache__", ".DS_Store", "*.pyc"]
 
@@ -593,12 +594,271 @@ class ServiceRegistry:
         return json.dumps(slim, sort_keys=True, separators=(",", ":"))
 
 
+class LabTelemetryStore:
+    """Persist Algorithms Lab learning events for AI coach.
+
+    Layout:
+      lab_telemetry/events.jsonl
+      lab_telemetry/sessions/<sessionId>.json
+      lab_telemetry/latest_by_problem/<problemId>.json
+    """
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.sessions_dir = root / "sessions"
+        self.by_problem_dir = root / "latest_by_problem"
+        self.events_path = root / "events.jsonl"
+        self._lock = threading.Lock()
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.by_problem_dir.mkdir(parents=True, exist_ok=True)
+
+    def ingest(self, body: dict[str, Any]) -> dict[str, Any]:
+        session_id = str(body.get("sessionId") or body.get("session_id") or "").strip()
+        if not session_id:
+            session_id = "s_" + uuid.uuid4().hex[:12]
+        problem_id = body.get("problemId", body.get("problem_id"))
+        slug = body.get("slug") or ""
+        summary = body.get("summary") if isinstance(body.get("summary"), dict) else None
+        events = body.get("events") if isinstance(body.get("events"), list) else []
+        # cap batch size
+        if len(events) > 200:
+            events = events[-200:]
+
+        rec = {
+            "sessionId": session_id,
+            "problemId": problem_id,
+            "slug": slug,
+            "titleZh": body.get("titleZh") or body.get("title_zh") or "",
+            "receivedAt": utc_now_iso(),
+            "clientStartedAt": body.get("startedAt"),
+            "eventCount": len(events),
+            "events": events,
+            "summary": summary,
+            "kind": body.get("kind") or "batch",
+        }
+
+        with self._lock:
+            with self.events_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+            sess_path = self.sessions_dir / f"{session_id}.json"
+            prev: dict[str, Any] = {}
+            if sess_path.exists():
+                try:
+                    prev = json.loads(sess_path.read_text(encoding="utf-8"))
+                except Exception:
+                    prev = {}
+            merged_events = (prev.get("events") or []) + events
+            if len(merged_events) > 2000:
+                merged_events = merged_events[-2000:]
+            session_doc = {
+                "sessionId": session_id,
+                "problemId": problem_id if problem_id is not None else prev.get("problemId"),
+                "slug": slug or prev.get("slug") or "",
+                "titleZh": rec["titleZh"] or prev.get("titleZh") or "",
+                "updatedAt": utc_now_iso(),
+                "startedAt": prev.get("startedAt") or body.get("startedAt") or utc_now_iso(),
+                "events": merged_events,
+                "summary": summary or prev.get("summary"),
+                "batches": int(prev.get("batches") or 0) + 1,
+            }
+            sess_path.write_text(
+                json.dumps(session_doc, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+
+            if problem_id is not None and str(problem_id) != "":
+                safe = re.sub(r"[^0-9A-Za-z._-]", "_", str(problem_id))
+                (self.by_problem_dir / f"{safe}.json").write_text(
+                    json.dumps(session_doc, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+
+        return {
+            "ok": True,
+            "sessionId": session_id,
+            "storedEvents": len(events),
+            "totalEvents": len(session_doc["events"]),
+        }
+
+    def list_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        with self._lock:
+            paths = sorted(
+                self.sessions_dir.glob("*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for p in paths[: max(1, min(limit, 100))]:
+                try:
+                    d = json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                rows.append(
+                    {
+                        "sessionId": d.get("sessionId"),
+                        "problemId": d.get("problemId"),
+                        "slug": d.get("slug"),
+                        "titleZh": d.get("titleZh"),
+                        "updatedAt": d.get("updatedAt"),
+                        "eventCount": len(d.get("events") or []),
+                        "passed": bool((d.get("summary") or {}).get("quiz", {}).get("passed")),
+                        "elapsedHuman": (d.get("summary") or {}).get("elapsedHuman"),
+                    }
+                )
+        return rows
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        path = self.sessions_dir / f"{session_id}.json"
+        if not path.is_file():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def latest_for_problem(self, problem_id: str | int) -> dict[str, Any] | None:
+        safe = re.sub(r"[^0-9A-Za-z._-]", "_", str(problem_id))
+        path = self.by_problem_dir / f"{safe}.json"
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                return None
+        # fallback scan
+        with self._lock:
+            best = None
+            best_m = 0.0
+            for p in self.sessions_dir.glob("*.json"):
+                try:
+                    d = json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                if str(d.get("problemId")) != str(problem_id):
+                    continue
+                m = p.stat().st_mtime
+                if m >= best_m:
+                    best_m = m
+                    best = d
+            return best
+
+    def coach_brief(
+        self,
+        problem_id: str | int | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        doc = None
+        if session_id:
+            doc = self.get_session(session_id)
+        elif problem_id is not None:
+            doc = self.latest_for_problem(problem_id)
+        else:
+            sessions = self.list_sessions(limit=1)
+            if sessions:
+                doc = self.get_session(sessions[0]["sessionId"])
+
+        if not doc:
+            return {
+                "ok": False,
+                "error": "no session",
+                "hint": "User has not opened learn.html with telemetry yet.",
+            }
+
+        summary = doc.get("summary") or {}
+        interest = summary.get("interest") or []
+        confusion = summary.get("confusion") or []
+        quiz = summary.get("quiz") or {}
+
+        # Derive coach talking points if summary thin
+        if not interest and doc.get("events"):
+            dwell: dict[str, int] = {}
+            for ev in doc["events"]:
+                if ev.get("type") == "section_leave":
+                    sec = (ev.get("payload") or {}).get("section") or "unknown"
+                    dwell[sec] = dwell.get(sec, 0) + int(
+                        (ev.get("payload") or {}).get("dwellMs") or 0
+                    )
+            interest = [
+                {"section": k, "dwellMs": v}
+                for k, v in sorted(dwell.items(), key=lambda x: -x[1])[:5]
+            ]
+
+        talking_points = []
+        if confusion:
+            talking_points.append(
+                "优先澄清卡点："
+                + ", ".join(
+                    str(c.get("section") or c.get("signal") or c) for c in confusion[:4]
+                )
+            )
+        if interest:
+            top = interest[0]
+            talking_points.append(
+                f"用户停留最多：{top.get('section')}（约 {int((top.get('dwellMs') or 0)/1000)}s）"
+            )
+        if quiz.get("passed"):
+            talking_points.append(
+                f"理解测已通过 {quiz.get('lastScore') or quiz.get('firstScore')}，可进入 Rust"
+            )
+        elif quiz.get("submits"):
+            talking_points.append(
+                f"理解测未过：{quiz.get('lastScore')}，已提交 {quiz.get('submits')} 次"
+            )
+        else:
+            talking_points.append("尚未提交理解测：先引导读图解/场景，勿贴完整 AC 代码")
+
+        talking_points.append(
+            "术语保持英文：HashMap / complement / carry / two-pointers / dummy head"
+        )
+
+        return {
+            "ok": True,
+            "schema": "lab.coach_brief.v1",
+            "sessionId": doc.get("sessionId"),
+            "problemId": doc.get("problemId"),
+            "slug": doc.get("slug"),
+            "titleZh": doc.get("titleZh"),
+            "updatedAt": doc.get("updatedAt"),
+            "elapsedHuman": summary.get("elapsedHuman"),
+            "interest": interest,
+            "confusion": confusion,
+            "quiz": quiz,
+            "talkingPoints": talking_points,
+            "summary": summary,
+            "eventCount": len(doc.get("events") or []),
+            "coachPrompt": (
+                "你是 Algorithms Lab coach。根据下列学习行为摘要调整讲解："
+                "先处理 confusion，再强化 interest 区概念；"
+                "闸门未过禁止贴完整 AC 代码；专业术语保持英文。\n\n"
+                + json.dumps(
+                    {
+                        "problemId": doc.get("problemId"),
+                        "slug": doc.get("slug"),
+                        "interest": interest,
+                        "confusion": confusion,
+                        "quiz": quiz,
+                        "talkingPoints": talking_points,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            ),
+        }
+
+
 class ControlHandler(SimpleHTTPRequestHandler):
     registry: ServiceRegistry
     static_dir: Path
+    lab_store: LabTelemetryStore
 
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+    def _cors(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _send_json(self, code: int, obj: Any) -> None:
         raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -606,6 +866,7 @@ class ControlHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-cache")
+        self._cors()
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(raw)
@@ -621,14 +882,13 @@ class ControlHandler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self._cors()
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path
+        q = parse_qs(parsed.query)
 
         if path == "/api/healthz":
             self._send_json(200, {"ok": True, "pid": os.getpid(), "time": utc_now_iso()})
@@ -645,6 +905,29 @@ class ControlHandler(SimpleHTTPRequestHandler):
                 self._send_json(404, {"error": "not found"})
                 return
             self._send_json(200, w.status_dict())
+            return
+
+        if path == "/api/lab/sessions":
+            limit = int((q.get("limit") or ["20"])[0] or 20)
+            self._send_json(200, {"sessions": self.lab_store.list_sessions(limit=limit)})
+            return
+
+        if path == "/api/lab/session":
+            sid = (q.get("sessionId") or q.get("id") or [""])[0]
+            doc = self.lab_store.get_session(sid) if sid else None
+            if not doc:
+                self._send_json(404, {"error": "not found"})
+                return
+            self._send_json(200, doc)
+            return
+
+        if path == "/api/lab/coach":
+            pid = (q.get("problemId") or q.get("id") or [None])[0]
+            sid = (q.get("sessionId") or [None])[0]
+            self._send_json(
+                200,
+                self.lab_store.coach_brief(problem_id=pid, session_id=sid),
+            )
             return
 
         if path == "/api/events":
@@ -684,6 +967,11 @@ class ControlHandler(SimpleHTTPRequestHandler):
             return
 
         try:
+            if path == "/api/lab/events":
+                result = self.lab_store.ingest(body)
+                self._send_json(202, result)
+                return
+
             if path == "/api/services":
                 st = self.registry.create(body)
                 self._send_json(201, st)
@@ -813,12 +1101,15 @@ class ControlHandler(SimpleHTTPRequestHandler):
             return
 
 
-def make_control_handler(registry: ServiceRegistry) -> type[ControlHandler]:
+def make_control_handler(
+    registry: ServiceRegistry, lab_store: LabTelemetryStore
+) -> type[ControlHandler]:
     class Bound(ControlHandler):
         pass
 
     Bound.registry = registry
     Bound.static_dir = STATIC_DIR
+    Bound.lab_store = lab_store
     return Bound
 
 
@@ -831,7 +1122,9 @@ def main(argv: list[str] | None = None) -> int:
 
     config_path = Path(args.config).expanduser().resolve()
     MIRRORS_DIR.mkdir(parents=True, exist_ok=True)
+    LAB_TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
     registry = ServiceRegistry(config_path)
+    lab_store = LabTelemetryStore(LAB_TELEMETRY_DIR)
     if args.host:
         registry.control["host"] = args.host
     if args.port is not None:
@@ -842,7 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
 
     host = registry.control.get("host") or "0.0.0.0"
     port = int(registry.control.get("port") or 9090)
-    handler = make_control_handler(registry)
+    handler = make_control_handler(registry, lab_store)
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
 
