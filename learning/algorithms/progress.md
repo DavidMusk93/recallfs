@@ -9,7 +9,7 @@
 | next_id | 3 |
 | next_slug | longest-substring-without-repeating-characters |
 | next_title | 无重复字符的最长子串 |
-| phase | teaching |
+| phase | local-pass |
 | language | rust |
 | free_only | true |
 | platform | https://leetcode.cn |
@@ -19,7 +19,7 @@
 | 指标 | 值 |
 | --- | ---: |
 | accepted | 2 |
-| local-pass only | 0 |
+| local-pass only | 1 |
 | premium-skip | 0 |
 | skip | 0 |
 | in_progress | 1 |
@@ -30,14 +30,14 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | two-sum | 两数之和 | Easy | accepted | hashmap-complement | 2026-07-15 |
 | 2 | add-two-numbers | 两数相加 | Medium | accepted | linked-list-carry | 2026-07-16 |
-| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | teaching | sliding-window-unique | 2026-07-17 |
+| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | local-pass | sliding-window-unique | 2026-07-17 |
 
 ## 4. 最近会话备忘
 
 - 2026-07-15：Algorithms Lab 骨架落地。
 - 2026-07-15：题 1 two-sum 理解测 + Rust 一遍哈希 + 本地测通过；leetcode.cn **AC**。
 - 2026-07-16：题 2 Lab Pass → 按位+carry → **AC** 1569/1569 · 5ms(~4%) · 2.25MB(~70%)。
-- 2026-07-17：题 3 teaching：analysis + learn.html + storyboard；等理解测 Lab Pass。
+- 2026-07-17：题 3 Lab Pass（18m39s）；补 max(left,last[c]+1) 说明；Rust 本地测通过；待 leetcode 提交。
 
 ## 5. 更新规则
 

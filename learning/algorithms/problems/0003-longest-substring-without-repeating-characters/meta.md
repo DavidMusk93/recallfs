@@ -10,7 +10,7 @@
 | url | https://leetcode.cn/problems/longest-substring-without-repeating-characters/ |
 | free | true |
 | language | rust |
-| status | teaching |
+| status | local-pass |
 | patterns | sliding-window-unique |
 | crate | p0003_longest_substring_without_repeating_characters |
 | started | 2026-07-17 |
@@ -20,10 +20,10 @@
 ## Checklist
 
 - [x] analysis.md
-- [x] learn.html（待理解测）
+- [x] learn.html 理解测（Lab Pass 2026-07-17 · 18m39s）+ max(left,…) 卡点说明
 - [x] assets/ 小黑图解
-- [ ] cargo test 通过
+- [x] cargo test 通过
 - [ ] leetcode 提交记录
-- [ ] notes.md
-- [ ] patterns/ 回写
-- [x] progress.md 更新（teaching）
+- [x] notes.md
+- [x] patterns/ 回写
+- [x] progress.md 更新
