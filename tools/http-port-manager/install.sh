@@ -15,9 +15,12 @@ PYTHON_BIN="${HTTP_PORT_MANAGER_PYTHON:-/usr/bin/python3}"
 
 mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR" "$INSTALL_DIR/static" "$INSTALL_DIR/launchd"
 
-# Sync code (preserve existing config.json if present)
+# Sync code. Preserve runtime state (config + lab_telemetry sessions).
+# NEVER rsync-delete lab_telemetry — coach history lives there.
 rsync -a --delete \
   --exclude 'config.json' \
+  --exclude 'lab_telemetry/' \
+  --exclude 'mirrors/' \
   --exclude '__pycache__' \
   --exclude '*.pyc' \
   --exclude '.DS_Store' \
