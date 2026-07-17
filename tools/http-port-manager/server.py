@@ -719,17 +719,13 @@ class LabTelemetryStore:
             return None
 
     def latest_for_problem(self, problem_id: str | int) -> dict[str, Any] | None:
-        safe = re.sub(r"[^0-9A-Za-z._-]", "_", str(problem_id))
-        path = self.by_problem_dir / f"{safe}.json"
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except Exception:
-                return None
-        # fallback scan
+        """Prefer longest passed session for this problem (coach accuracy).
+
+        latest_by_problem alone can be a short re-open after Lab Pass and
+        mislead the agent (empty quiz / weak understanding).
+        """
+        candidates: list[dict[str, Any]] = []
         with self._lock:
-            best = None
-            best_m = 0.0
             for p in self.sessions_dir.glob("*.json"):
                 try:
                     d = json.loads(p.read_text(encoding="utf-8"))
@@ -737,11 +733,32 @@ class LabTelemetryStore:
                     continue
                 if str(d.get("problemId")) != str(problem_id):
                     continue
-                m = p.stat().st_mtime
-                if m >= best_m:
-                    best_m = m
-                    best = d
-            return best
+                d["_mtime"] = p.stat().st_mtime
+                candidates.append(d)
+
+        if not candidates:
+            safe = re.sub(r"[^0-9A-Za-z._-]", "_", str(problem_id))
+            path = self.by_problem_dir / f"{safe}.json"
+            if path.is_file():
+                try:
+                    return json.loads(path.read_text(encoding="utf-8"))
+                except Exception:
+                    return None
+            return None
+
+        def rank(d: dict[str, Any]) -> tuple:
+            summary = d.get("summary") or {}
+            quiz = summary.get("quiz") or {}
+            passed = 1 if quiz.get("passed") else 0
+            n_ev = len(d.get("events") or [])
+            elapsed = int(summary.get("elapsedSec") or 0)
+            mtime = float(d.get("_mtime") or 0)
+            # higher is better
+            return (passed, n_ev, elapsed, mtime)
+
+        best = max(candidates, key=rank)
+        best.pop("_mtime", None)
+        return best
 
     def coach_brief(
         self,
@@ -794,6 +811,36 @@ class LabTelemetryStore:
                 + str(understanding.get("score"))
                 + " — "
                 + str(understanding.get("coachHint") or "")
+            )
+        # High revisit despite pass → still teach the sticky concept first
+        sticky = [
+            c
+            for c in confusion
+            if (c.get("reentries") or 0) >= 5
+            or (c.get("hits") or 0) >= 5
+            or (c.get("weight") or 0) >= 7
+        ]
+        if sticky and (summary.get("quiz") or {}).get("passed"):
+            talking_points.append(
+                "虽已通过理解测，但高回看/高帧停留表明概念未稳："
+                + ", ".join(
+                    str(c.get("label") or c.get("section")) for c in sticky[:4]
+                )
+                + " — Lab Pass 后仍应先讲清卡点再贴完整代码"
+            )
+        quiz = summary.get("quiz") or {}
+        dwell_q = quiz.get("dwellByQ") or {}
+        if dwell_q:
+            top_q = max(dwell_q.items(), key=lambda kv: kv[1])
+            if top_q[1] >= 60000:  # ≥60s on one question
+                talking_points.append(
+                    f"测验停留最长：{top_q[0]} ≈ {int(top_q[1]/1000)}s（对照 learn.html 该题考点）"
+                )
+        flips = quiz.get("flipsByQ") or {}
+        if flips:
+            talking_points.append(
+                "答案摇摆："
+                + ", ".join(f"{k}×{v}" for k, v in sorted(flips.items()))
             )
         if confusion:
             talking_points.append(

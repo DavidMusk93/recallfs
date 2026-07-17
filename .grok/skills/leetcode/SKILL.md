@@ -43,8 +43,8 @@ metadata:
 4 写 analysis.md（结论先行 + ASCII）
 5 填 learn.html（场景+多解+storyboard 小黑帧+测验+埋点）
 6 【闸门】等用户完成理解测（剪贴板含题号/用时）或明确跳过
-6b 拉取 coach brief 再讲解/写代码（见 3.7）
-7 Rust 实现 + cargo test
+6b 【硬】Lab Pass / 跳过闸门后：先 curl coach brief，再写代码（见 3.7）
+7 先按 confusion 讲解卡点（可补 HTML/小黑图），再 Rust + cargo test
 8 协助 leetcode.cn 提交（open 题页 + 可粘贴代码；不假装 AC）
 9 notes.md + patterns/ + progress.md
 ```
@@ -103,28 +103,46 @@ open "https://leetcode.cn/problems/<slug>/"
 
 `meta.status=premium-skip` → 更新 progress → 自动尝试下一免费题（告知用户）。
 
-### 3.7 AI Coach（产品核心）
+### 3.7 AI Coach（产品核心 · 硬约束）
 
-用户做过 `learn.html` 后，**写代码前**优先拉取行为 brief：
+埋点是**后台分析**，不是给用户看的 UI。Agent 在以下时刻 **必须** 拉 metrics，并**主动**用它发现困惑——不要等用户说「我没懂」：
+
+| 触发 | 动作 |
+| --- | --- |
+| 用户贴 `[Lab Pass]` /「理解测完成」 | **第一步** `curl` coach；回复**先报卡点解读**，再贴/写 Rust |
+| 用户说「跳过测验」 | 仍 `curl`；无数据则说明「无 brief，按 analysis 默认讲解」 |
+| 写代码前任意时刻 | 若尚未读过本 session brief，先读 |
 
 ```bash
+# 优先：最新会话（含 passed）
 curl -fsS "http://127.0.0.1:9090/api/lab/coach?problemId=<N>"
+# 或指定 session
+curl -fsS "http://127.0.0.1:9090/api/lab/session?sessionId=<id>"
 ```
 
 | 字段 | 用途 |
 | --- | --- |
-| `interest` | 高停留 section → 用户感兴趣 |
-| `confusion` | reentry / answer_flip / 帧回看 → 卡点 |
-| `quiz` | 是否通过、分数、提交次数 |
-| `talkingPoints` / `coachPrompt` | 直接可作 system 提示 |
+| `interest` | 高 dwell section → 深读/感兴趣 |
+| `confusion` | reentry / answer_flip / frame_revisit → **优先澄清** |
+| `quiz.flipsByQ` / `wrongQids` | 哪一题摇摆/错了 → 映射到概念（如 q3→max(left,…)） |
+| `understanding` | level/score/coachHint |
+| `talkingPoints` | 开场直接用 |
+
+**回复模板（Lab Pass 后）：**
+
+```text
+1. 埋点结论：卡点 = …（section / 题号 / 帧）
+2. 针对卡点的讲解（例子 / 小黑图 / 补 HTML）
+3. 再给 Rust 实现与测试
+```
 
 规则：
 
-1. 先处理 `confusion`，再强化 `interest` 概念。  
-2. `quiz.passed=false` 时继续教学闸门，**禁止**完整 AC 代码。  
-3. 术语保持英文（HashMap / complement / carry …）。  
-4. 管理台 http://127.0.0.1:9090/ 可看「学习会话」并复制 coach brief。  
-5. 前端默认 `POST http://127.0.0.1:9090/api/lab/events`（可在 lab-config 改 `telemetryEndpoint`）。
+1. **禁止** Lab Pass 后直接甩完整代码、跳过 metrics。  
+2. `confusion` 权重高时：先讲透再实现；必要时补 learn.html 图解（如 max-left）。  
+3. `quiz.passed=false` 且非跳过：继续闸门，禁止完整 AC。  
+4. 术语保持英文（HashMap / sliding window / last index …）。  
+5. 前端静默 `POST :9090/api/lab/events`；learner 页不展示分析 UI。
 
 ## 4. 单题完成定义
 

@@ -123,6 +123,7 @@
     scene: "应用场景",
     approaches: "多种解法",
     storyboard: "图解动画",
+    "max-left": "max(left, last[c]+1) 卡点",
     variants: "发散 · 约束一变",
     quiz: "理解测",
   };

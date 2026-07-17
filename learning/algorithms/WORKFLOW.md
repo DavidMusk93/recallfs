@@ -137,10 +137,11 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
    - 由 `assets/lab.js` 自动生成，例如：  
      `[Lab Pass] #1 two-sum · 两数之和 · 用时 3m12s · 2026-…`  
 4. **行为埋点 = 后台分析，不是用户产品面**  
-   - **不对学习者展示**热力/轨迹/「洞察」面板（那是分析后台的事）。  
-   - `lab.js` 静默采集：section dwell/reentry、path、题级 dwell、answer history、storyboard、quiz、前台时间 → `POST :9090/api/lab/events`。  
-   - Summary 含 `understanding.level/score` + `confusion` + `quiz`，供 AI 评估「算法理解到什么程度」。  
-   - Agent 写代码前：`curl -fsS "http://127.0.0.1:9090/api/lab/coach?problemId=N"`，按 `understanding` / `confusion` 调教学；`quiz.passed=false` 禁止完整 AC。  
+   - **不对学习者展示**热力/轨迹/「洞察」面板。  
+   - `lab.js` 静默采集 → `POST :9090/api/lab/events`。  
+   - **Agent 硬约束**：收到 `[Lab Pass]` 后 **先** `curl .../api/lab/coach?problemId=N`，用 `confusion` / `quiz.flipsByQ` **主动点名卡点**，再写代码；禁止「用户没说不懂就当全懂」。  
+   - 卡点→动作：高 reentry 的 section / 摇摆的 qid → 讲解 + 必要时补小黑图进 HTML。  
+   - `quiz.passed=false` 且非跳过：禁止完整 AC。  
 5. **测验交互**  
    - 作答过程不公布对错；统一提交；有错展开解析 + 再来一次。  
    - **禁止泄题**：`placeholder`/题干不得写出标准答案。  
