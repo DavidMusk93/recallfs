@@ -6,10 +6,10 @@
 
 | 字段 | 值 |
 | --- | --- |
-| next_id | 3 |
-| next_slug | longest-substring-without-repeating-characters |
-| next_title | 无重复字符的最长子串 |
-| phase | local-pass |
+| next_id | 4 |
+| next_slug | median-of-two-sorted-arrays |
+| next_title | 寻找两个正序数组的中位数 |
+| phase | teaching |
 | language | rust |
 | free_only | true |
 | platform | https://leetcode.cn |
@@ -31,13 +31,13 @@
 | 1 | two-sum | 两数之和 | Easy | accepted | hashmap-complement | 2026-07-15 |
 | 2 | add-two-numbers | 两数相加 | Medium | accepted | linked-list-carry | 2026-07-16 |
 | 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | local-pass | sliding-window-unique | 2026-07-17 |
+| 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | teaching | binary-partition-median | 2026-07-17 |
 
 ## 4. 最近会话备忘
 
-- 2026-07-15：Algorithms Lab 骨架落地。
-- 2026-07-15：题 1 two-sum 理解测 + Rust 一遍哈希 + 本地测通过；leetcode.cn **AC**。
-- 2026-07-16：题 2 Lab Pass → 按位+carry → **AC** 1569/1569 · 5ms(~4%) · 2.25MB(~70%)。
-- 2026-07-17：题 3 Lab Pass（18m39s）；补 max(left,last[c]+1) 说明；Rust 本地测通过；待 leetcode 提交。
+- 2026-07-15：题 1 two-sum **AC**。
+- 2026-07-16：题 2 add-two-numbers **AC**。
+- 2026-07-17：题 3 滑动窗口 local-pass（待 leetcode 提交）；题 4 Hard teaching 启动。
 
 ## 5. 更新规则
 

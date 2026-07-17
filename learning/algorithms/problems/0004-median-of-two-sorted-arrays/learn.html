@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>4. 寻找两个正序数组的中位数 · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>4. 寻找两个正序数组的中位数</h1>
+      <p class="meta">
+        <span class="pill hot">Hard</span>
+        <span class="pill">Array · Binary Search</span>
+        <a href="https://leetcode.cn/problems/median-of-two-sorted-arrays/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
+      </p>
+      <p class="note-en">术语：median · partition · binary search · maxLeft / minRight</p>
+    </header>
+
+    <section class="card" data-section="how-to">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        Hard 题：先建立「中位数 = 划分成两半」的图景，再上 binary search。
+        测验<strong>统一提交</strong>；全对剪贴板含 <strong>#题号 · slug · 用时</strong>。
+        埋点静默上报，供助手评估理解程度（页面不展示分析 UI）。
+      </p>
+      <ul class="scene-list">
+        <li><strong>自学</strong>：场景 → 为何不能只 merge → 划分条件 → 图解 → 测。</li>
+        <li><strong>复习</strong>：口头复述 <code>j = half - i</code> 与交叉比较。</li>
+        <li><strong>卡关</strong>：看「端点 ±∞」与奇偶返回值。</li>
+      </ul>
+    </section>
+
+    <section class="card" data-section="scene">
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="biz">场景</button>
+          <button type="button" class="tab-btn" data-tab="sys">系统</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="biz">
+          <ul class="scene-list">
+            <li>两所学校已排序的成绩表，快速求全体中位数（不合并大表）。</li>
+            <li>两条有序价位带，求合并后的中位成交价。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="sys">
+          <ul class="scene-list">
+            <li>分布式两路有序流的中位估计（教学类比 partition）。</li>
+            <li>数据库两段有序索引上的 order-statistic 查询。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">
+            二分不是炫技：题目<strong>明确要 log 级</strong>。Merge 正确但 O(m+n)。
+            划分法用「中位数切一半」的统计定义，把问题变成「找合法切分点」。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-section="approaches">
+      <h2>多种解法 · 发散思维 <span class="badge accent">对比</span></h2>
+      <div class="approach-grid">
+        <details class="approach" open>
+          <summary>A. Merge 双指针（基线）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">Time O(m+n)</span>
+              <span class="chip good">Space O(1)</span>
+            </div>
+            <p>像归并，只推进到中位下标。好写、好测，但<strong>不满足</strong> log 要求。</p>
+          </div>
+        </details>
+        <details class="approach" open>
+          <summary>B. Binary partition（主推）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time O(log min(m,n))</span>
+              <span class="chip good">Space O(1)</span>
+            </div>
+            <p>
+              在<strong>较短</strong>数组上二分左半个数 <code>i</code>，
+              <code>j = (m+n+1)/2 - i</code>。
+              合法当且仅当 <code>Aleft ≤ Bright</code> 且 <code>Bleft ≤ Aright</code>。
+            </p>
+            <p><strong>在优化什么：</strong>不合并，只定位「第 k 小边界」。</p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>C. 通用「第 k 小」二分</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time O(log(m+n))</span>
+              <span class="chip">Space O(1)</span>
+            </div>
+            <p>找第 <code>k=(m+n+1)/2</code> 与（偶数时）下一个。与划分同族，写法更「选 k」。</p>
+          </div>
+        </details>
+      </div>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Merge</td><td>直观</td><td>log 复杂度</td></tr>
+          <tr><td>Partition 二分</td><td>log、贴题意</td><td>边界要小心</td></tr>
+          <tr><td>第 k 小</td><td>可推广</td><td>实现略绕</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" data-section="storyboard">
+      <h2>主推路径 · 图解动画 <span class="badge">skill 绘图</span></h2>
+      <div data-storyboard data-period="2800" data-autoplay="true">
+        <div class="sb-stage">
+          <figure class="sb-frame" data-frame="0">
+            <img src="assets/01-partition-halves.png" alt="partition into equal halves" />
+            <figcaption>Step 1 · 中位数 = 把全体划成左右两半，左半个数固定</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="1">
+            <img src="assets/02-binary-on-i.png" alt="binary search partition i" />
+            <figcaption>Step 2 · 在短数组上 binary search 切分点 <code>i</code>，<code>j = half - i</code></figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="2">
+            <img src="assets/03-maxleft-minright.png" alt="maxLeft vs minRight cross check" />
+            <figcaption>Step 3 · 交叉比较 <code>maxLeft ≤ minRight</code>；不对则调整 <code>i</code></figcaption>
+          </figure>
+        </div>
+        <div class="sb-controls">
+          <button type="button" class="secondary" data-sb-prev>Prev</button>
+          <span data-sb-index>1 / 3</span>
+          <button type="button" class="secondary" data-sb-next>Next</button>
+          <button type="button" data-sb-play>Pause</button>
+        </div>
+      </div>
+      <pre class="walk">例：A=[1,3] B=[2]  m=2,n=1 → 先保证短的在前：可交换
+half = (2+1+1)/2 = 2
+试 i=1 → j=1：左 {1 | 2} 右 {3 | …}
+maxLeft=max(1,2)=2，minRight=3 → 2≤3 合法
+奇数总长 → median = 2.0</pre>
+    </section>
+
+    <section class="card" data-section="partition-core">
+      <h2>划分条件怎么记 <span class="badge accent">核心</span></h2>
+      <ul class="scene-list">
+        <li><strong>数量</strong>：左半共 <code>(m+n+1)/2</code> 个（奇数时多一个落左半）。</li>
+        <li><strong>顺序</strong>：左半最大值 ≤ 右半最小值 → 拆成交叉两条：
+          <code>A[i-1] ≤ B[j]</code> 且 <code>B[j-1] ≤ A[i]</code>。</li>
+        <li><strong>哨兵</strong>：<code>i=0</code> 时 A 左边当 −∞；<code>i=m</code> 时 A 右边当 +∞（B 同理）。</li>
+        <li><strong>返回</strong>：奇数 <code>maxLeft</code>；偶数 <code>(maxLeft+minRight)/2.0</code>。</li>
+      </ul>
+      <pre class="walk">若 A[i-1] &gt; B[j]  → i 太大，右边界左移
+若 B[j-1] &gt; A[i]  → i 太小，左边界右移
+否则              → 找到划分</pre>
+    </section>
+
+    <section class="card" data-section="variants">
+      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>不要求 log → Merge 足够，面试先写对再优化。</li>
+        <li>求第 k 小（任意 k）→ 同一套「排除一半」思想。</li>
+        <li>三个有序数组中位数 → 更难，需多路划分或换模型。</li>
+        <li>数组未排序 → 先排序 O((m+n)log) 或 selection 算法。</li>
+      </ul>
+    </section>
+
+    <section class="card" id="quiz-section" data-section="quiz">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">全部完成后提交。全对复制：#题号 · slug · 用时 · 下一步。</p>
+
+      <div class="q" data-answer="B" data-qid="q1">
+        <p class="q-title">Q1. 题目对时间复杂度的核心要求是？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. O(m+n) 即可</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 达到 log 级（如 O(log(m+n)) / O(log min(m,n))）</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 必须 O(1)</label>
+        <div class="explain"><strong>解析：</strong>题面要求 log 级；merge 不达标。</div>
+      </div>
+
+      <div class="q" data-answer="2.5" data-alts="2.50|5/2" data-qid="q2">
+        <p class="q-title">Q2. <code>nums1=[1,2], nums2=[3,4]</code> 的 median 是？</p>
+        <input type="text" placeholder="一个数字，如小数" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>合并 1,2,3,4 → 偶数 → (2+3)/2 = 2.5。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q3">
+        <p class="q-title">Q3. 划分法中，若在 A 上取左半 <code>i</code> 个，B 左半个数 j 应？</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. j = i</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. j = (m+n+1)/2 - i</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. j = m + n - i</label>
+        <div class="explain"><strong>解析：</strong>左半总数固定为 half=(m+n+1)/2。</div>
+      </div>
+
+      <div class="q" data-answer="A,C" data-multi data-qid="q4">
+        <p class="q-title">Q4. 合法划分需要满足？（多选）</p>
+        <label class="opt"><input type="checkbox" value="A" /> A. A 左半最大 ≤ B 右半最小</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. 必须 m == n</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. B 左半最大 ≤ A 右半最小</label>
+        <div class="explain"><strong>解析：</strong>交叉比较两条；长度可以不同。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q5">
+        <p class="q-title">Q5. 为什么常在<strong>较短</strong>数组上二分 i？</p>
+        <label class="opt"><input type="radio" name="q5" value="A" /> A. 题目规定</label>
+        <label class="opt"><input type="radio" name="q5" value="B" /> B. 保证 j 落在合法范围，且 log 底数更小</label>
+        <label class="opt"><input type="radio" name="q5" value="C" /> C. 短数组不能二分</label>
+        <div class="explain"><strong>解析：</strong>短数组二分更稳、更快。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q6">
+        <p class="q-title">Q6. 总长为奇数时，median 通常取？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. minRight</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. maxLeft（左半最大值）</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 必须两个边界平均</label>
+        <div class="explain"><strong>解析：</strong>half 定义让中位数落在左半边界 maxLeft。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q7">
+        <p class="q-title">Q7. <code>i=0</code>（A 左半空）时，Aleft 应视为？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. 0</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. −∞（比较时永不「太大」）</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. A[0]</label>
+        <div class="explain"><strong>解析：</strong>哨兵 −∞ / +∞ 处理端点划分。</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0 / 7</span>
+    </div>
+  </div>
+
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": 4,
+    "slug": "median-of-two-sorted-arrays",
+    "titleZh": "寻找两个正序数组的中位数",
+    "telemetry": true
+  }
+  </script>
+  <script src="../../assets/lab.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[package]
+name = "p0004_median_of_two_sorted_arrays"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "LeetCode 4. 寻找两个正序数组的中位数 (median-of-two-sorted-arrays)"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
