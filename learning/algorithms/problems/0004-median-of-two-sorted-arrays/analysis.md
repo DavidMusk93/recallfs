@@ -4,18 +4,20 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 一句话题意 | 两个**已排序**数组 `nums1`、`nums2`，求合并后的 **median**（中位数）。 |
-| 主推思路 | **划分（partition）+ 二分**：在较短数组上二分左半切分点 `i`，使左半总元素数 = `(m+n+1)/2`，且 `maxLeft ≤ minRight`。 |
-| 时间 / 空间 | **O(log(min(m,n)))** / O(1)（题目要求 log 级，不能只 merge） |
+| 一句话题意 | 两个**已排序**数组求合并后的 **median**；不必真合并。 |
+| 主推思路 | **定位不变量 + binary search**：在短数组上二分左半个数 `i`，用数量/顺序不变量判定与调向；边界用 ±∞ 哨兵统一。 |
+| 时间 / 空间 | **O(log(min(m,n)))** / O(1) |
 | 关联 pattern | `binary-partition-median` |
 | 难度 | **Hard** · 免费 |
 | 链接 | https://leetcode.cn/problems/median-of-two-sorted-arrays/ |
 
 ```text
-合并后中位数 = 把全体元素分成左右两半
-  左半个数 = (m+n+1)/2   （奇数时中位数在左半 max）
-  左半所有 ≤ 右半所有
-找合法划分即可，不必真合并
+中位数 = 合法 partition 的切缝
+  数量不变量：|L| = half = (m+n+1)//2 ， j = half - i
+  顺序不变量：A[i-1] ≤ B[j]  ∧  B[j-1] ≤ A[i]
+  边界：缺侧 −∞ / +∞，公式不变
+  奇数 → max(A[i-1], B[j-1])
+  偶数 → avg( maxLeft , min(A[i], B[j]) )
 ```
 
 ## 2. 题面形式化
@@ -27,8 +29,7 @@
 | 输入 | `nums1` 长度 m，`nums2` 长度 n，均非降序 |
 | 输出 | `f64` 中位数 |
 | 规模 | `0 ≤ m,n ≤ 1000`，`1 ≤ m+n ≤ 2000`（以 leetcode.cn 为准） |
-| 值域 | 常见 `[-10^6, 10^6]` |
-| 复杂度 | 目标 **O(log(m+n))** 级（官方主推 log(min(m,n))） |
+| 复杂度 | 目标 **log** 级（官方主推 O(log min(m,n))） |
 | Rust | `find_median_sorted_arrays(nums1: Vec<i32>, nums2: Vec<i32>) -> f64` |
 
 样例：
@@ -40,56 +41,66 @@
 
 ### 2.2 边界
 
-- 一数组为空 → 退化为单数组中位数。  
-- 总长奇数 / 偶数：奇数取左半 max；偶数取 `(maxLeft+minRight)/2`。  
-- 划分落在数组端点：用 ±∞ 哨兵处理 `i=0` 或 `i=m`。
+- 一数组为空 → 单数组中位数。  
+- 划分落在端点：`i=0/m` 或 `j=0/n` → 哨兵 ±∞。  
+- 奇偶只影响**返回值**，不改搜索与不变量。
 
 ## 3. 思路演进
 
 ### 3.1 Merge 双指针 O(m+n)
 
-归并到中位位置即停。正确但**不满足** log 要求；作基线。
+归并到中位即停。正确但**不满足** log；作基线。
 
-### 3.2 主推：二分划分
+### 3.2 主推：不变量 + 二分划分
 
 ```text
 保证 m ≤ n（对短数组二分）
-half = (m + n + 1) / 2
+half = (m + n + 1) // 2
 
-二分 i ∈ [0, m]：nums1 左半取 i 个
-  j = half - i      ：nums2 左半取 j 个
+二分 i ∈ [0, m]：
+  j = half - i
 
-Aleft = nums1[i-1] 或 -∞
-Aright = nums1[i]   或 +∞
-Bleft = nums2[j-1] 或 -∞
-Bright = nums2[j]   或 +∞
+  Aleft  = i==0 ? -∞ : A[i-1]
+  Aright = i==m ? +∞ : A[i]
+  Bleft  = j==0 ? -∞ : B[j-1]
+  Bright = j==n ? +∞ : B[j]
 
-若 Aleft ≤ Bright 且 Bleft ≤ Aright → 合法划分
-  maxLeft = max(Aleft, Bleft)
-  minRight = min(Aright, Bright)
-  奇数 → maxLeft
-  偶数 → (maxLeft + minRight) / 2
-若 Aleft > Bright → i 太大，缩小
-否则 → i 太小，增大
+  if Aleft > Bright  → i 太大，缩小
+  else if Bleft > Aright → i 太小，增大
+  else → 合法
+       maxLeft  = max(Aleft, Bleft)
+       minRight = min(Aright, Bright)
+       奇数 → maxLeft
+       偶数 → (maxLeft + minRight) / 2
 ```
 
 | 对比 | Merge | 二分划分 |
 | --- | --- | --- |
 | 时间 | O(m+n) | O(log min(m,n)) |
 | 是否合并 | 是 | 否 |
-| 难点 | 低 | 边界 + 交叉比较 |
+| 难点 | 低 | 不变量理解 + 哨兵 |
+
+### 3.3 为何只需交叉两条
+
+A、B 各自有序 ⇒ 数组内部左 ≤ 右已保证。  
+全局 max(L) ≤ min(R) 只可能在跨数组边界破 → 交叉两条。
+
+### 3.4 为何 half 带 +1
+
+把「下中位数」固定在左半：奇数 median = maxLeft；偶数再与 minRight 平均。搜索过程统一。
 
 ## 4. 社区灵感
 
 | 来源 | 吸收点 |
 | --- | --- |
 | 官方「划分数组」 | 中位数 = 均匀分组后的边界 |
-| 高频写法 | 短数组二分；±∞ 哨兵 |
+| 高频写法 | 短数组二分；±∞ 哨兵消特判 |
 | 标签 | Array · Binary Search · Divide and Conquer |
 
 ## 5. 卡点预期
 
-- 为什么 `j = half - i`  
-- 为什么比较 **交叉**：`Aleft≤Bright` 与 `Bleft≤Aright`  
-- 端点 `i=0/m` 的 ±∞  
-- 奇偶总长时返回值不同  
+- 数量不变量：`j = half - i`（j 不算二分）  
+- 顺序不变量：为何只需交叉两条  
+- 违规方向：`Aleft > Bright` ⇒ i 太大  
+- 端点哨兵 ±∞  
+- 奇偶只改返回  
