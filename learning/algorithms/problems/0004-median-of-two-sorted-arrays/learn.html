@@ -6,7 +6,7 @@
   <title>4. 寻找两个正序数组的中位数 · 学习页</title>
   <link rel="stylesheet" href="../../assets/lab.css" />
   <style>
-    /* 本题专用：partition 示意图（不进全局 lab.css） */
+    /* 本题专用：partition 示意图 */
     .essence-box {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -19,20 +19,6 @@
       font-size: 0.95rem;
       letter-spacing: -0.01em;
     }
-    .formula {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.9rem;
-      line-height: 1.65;
-      background: #f7f3ec;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 0.85rem 1rem;
-      overflow-x: auto;
-      margin: 0.55rem 0;
-    }
-    .formula .cmt { color: var(--muted); }
-    .formula .hi { color: var(--accent); font-weight: 650; }
-    .formula .ok { color: var(--ok); font-weight: 650; }
     .two-col {
       display: grid;
       gap: 0.75rem;
@@ -99,7 +85,6 @@
       font-size: 0.86rem;
       color: var(--muted);
     }
-    .part-meta code { color: var(--ink); }
     .step-num {
       display: inline-flex;
       align-items: center;
@@ -141,10 +126,25 @@
     }
     .mini-table th, .mini-table td {
       border: 1px solid var(--line);
-      padding: 0.4rem 0.55rem;
+      padding: 0.45rem 0.55rem;
       text-align: left;
+      vertical-align: middle;
     }
     .mini-table th { background: #f7f3ec; font-weight: 650; }
+    .walk-block {
+      background: #f7f3ec;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin: 0.55rem 0;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .walk-block h4 {
+      margin: 0.7rem 0 0.35rem;
+      font-size: 0.88rem;
+    }
+    .walk-block h4:first-child { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -157,20 +157,20 @@
         <a href="https://leetcode.cn/problems/median-of-two-sorted-arrays/" target="_blank" rel="noopener">题面</a>
         <a href="analysis.md">analysis.md</a>
       </p>
-      <p class="note-en">术语：median · partition · binary search · sentinel (−∞ / +∞)</p>
+      <p class="note-en">术语：median · partition · binary search · sentinel \((-\infty,+\infty)\)</p>
     </header>
 
     <section class="card" data-section="how-to">
       <h2>学习怎么用 <span class="badge">教育场景</span></h2>
       <p class="note">
         本题核心只有两样：<strong>定位不变量</strong> + <strong>边界用哨兵统一</strong>。
-        先把不变量说清楚，再谈 binary search；公式只记一组。
+        先把不变量说清楚，再谈 binary search；公式只记一组（下方 KaTeX）。
         测验<strong>统一提交</strong>；全对剪贴板含 <strong>#题号 · slug · 用时</strong>。
       </p>
       <ul class="scene-list">
         <li><strong>自学</strong>：本质 → 不变量 → 二分方向 → 边界 → 手推 → 测。</li>
-        <li><strong>复习</strong>：口头复述「数量钉死 j + 交叉两条」与「±∞ 消特判」。</li>
-        <li><strong>卡关</strong>：先看「为什么只需交叉比较」和「i=0 怎么写」。</li>
+        <li><strong>复习</strong>：口头复述「数量钉死 \(j\) + 交叉两条」与「\(\pm\infty\) 消特判」。</li>
+        <li><strong>卡关</strong>：先看「为什么只需交叉比较」和「\(i=0\) 怎么写」。</li>
       </ul>
     </section>
 
@@ -179,34 +179,51 @@
       <h2>本质：中位数 = 找合法 partition <span class="badge accent">先立靶</span></h2>
       <p>
         不要先想「怎么 merge」。已排序的两数组，中位数只要求：
-        把全体切成<strong>左半 L</strong> 与<strong>右半 R</strong>，使 L 里所有数 ≤ R 里所有数，
-        且 |L| 正确。切点找到了，median 就在切缝两侧。
+        把全体切成左半 \(L\) 与右半 \(R\)，使 \(L\) 中每个元素 \(\le R\) 中每个元素，
+        且 \(|L|\) 正确。切点找到了，median 就在切缝两侧。
       </p>
 
       <div class="essence-box">
-        <h3>只记这一组公式</h3>
-        <div class="formula">
-<span class="cmt">// 1) 数量不变量：左半装几个（奇数时中位数落在左半）</span>
-half = (m + n + 1) // 2
-j    = half − i          <span class="cmt">// A 左取 i 个 ⇒ B 左必须取 j 个</span>
-
-<span class="cmt">// 2) 顺序不变量（交叉两条即可，见下节）</span>
-<span class="hi">A[i−1] ≤ B[j]</span>  ∧  <span class="hi">B[j−1] ≤ A[i]</span>
-
-<span class="cmt">// 3) 答案</span>
-odd  →  max(A[i−1], B[j−1])
-even →  avg( max(A[i−1], B[j−1]) , min(A[i], B[j]) )
-
-<span class="cmt">// 4) 边界：缺的一边用哨兵，公式不变</span>
-i=0 → A[i−1] = −∞    i=m → A[i] = +∞
-j=0 → B[j−1] = −∞    j=n → B[j] = +∞
+        <h3>只记这一组</h3>
+        <div class="math-block">
+          <p class="math-caption">数量不变量（左半装几个；奇数时中位数落在左半）</p>
+          \[
+            h=\left\lfloor\frac{m+n+1}{2}\right\rfloor,\qquad
+            j=h-i
+          \]
+          <p class="math-caption">顺序不变量（交叉两条即可）</p>
+          \[
+            A_{i-1}\le B_{j}
+            \;\land\;
+            B_{j-1}\le A_{i}
+          \]
+          <p class="math-caption">答案</p>
+          \[
+            \mathrm{median}=
+            \begin{cases}
+              \max(A_{i-1},\,B_{j-1}) &amp; m+n\text{ 为奇数} \\[0.35em]
+              \dfrac{\max(A_{i-1},\,B_{j-1})+\min(A_{i},\,B_{j})}{2} &amp; m+n\text{ 为偶数}
+            \end{cases}
+          \]
+          <p class="math-caption">边界：缺的一边用哨兵，公式不变</p>
+          \[
+            A_{i-1}=\begin{cases}-\infty&amp;i=0\\A[i-1]&amp;i&gt;0\end{cases}
+            \quad
+            A_{i}=\begin{cases}+\infty&amp;i=m\\A[i]&amp;i&lt;m\end{cases}
+          \]
+          \[
+            B_{j-1}=\begin{cases}-\infty&amp;j=0\\B[j-1]&amp;j&gt;0\end{cases}
+            \quad
+            B_{j}=\begin{cases}+\infty&amp;j=n\\B[j]&amp;j&lt;n\end{cases}
+          \]
         </div>
       </div>
 
       <div class="callout">
-        <strong>为什么 half 要 +1？</strong>
-        统一「下中位数」落在左半：总长奇数时 |L| = |R|+1，median = max(L)；
-        偶数时 |L|=|R|，median = avg(max(L), min(R))。搜索过程奇偶相同，只返回值不同。
+        <strong>为什么 \(h\) 里有 \(+1\)？</strong>
+        把「下中位数」固定在左半：总长奇数时 \(|L|=|R|+1\)，\(\mathrm{median}=\max(L)\)；
+        偶数时 \(|L|=|R|\)，\(\mathrm{median}=\frac{\max(L)+\min(R)}{2}\)。
+        搜索过程奇偶相同，只返回值不同。
       </div>
     </section>
 
@@ -226,13 +243,13 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
         </div>
         <div class="tab-panel" data-panel="sys">
           <ul class="scene-list">
-            <li>两路有序索引上的 order-statistic（第 k 小 / 中位数）。</li>
+            <li>两路有序索引上的 order-statistic（第 \(k\) 小 / 中位数）。</li>
             <li>分布式两段有序数据的中位估计（partition 思想）。</li>
           </ul>
         </div>
         <div class="tab-panel" data-panel="not">
           <p class="hint">
-            二分不是炫技：题面要求 <strong>log 级</strong>。Merge 正确但 O(m+n)。
+            二分不是炫技：题面要求 <strong>log 级</strong>。Merge 正确但 \(O(m+n)\)。
             划分法用的是中位数的<strong>统计定义</strong>（均匀切半），把问题变成「找合法切分点」。
           </p>
         </div>
@@ -246,8 +263,8 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
           <summary>A. Merge 双指针（基线）</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip warn">Time O(m+n)</span>
-              <span class="chip good">Space O(1)</span>
+              <span class="chip warn">Time \(O(m+n)\)</span>
+              <span class="chip good">Space \(O(1)\)</span>
             </div>
             <p>归并推进到中位下标。好写、好测，<strong>不满足</strong> log 要求。</p>
           </div>
@@ -256,25 +273,25 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
           <summary>B. Binary partition（主推）</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip good">Time O(log min(m,n))</span>
-              <span class="chip good">Space O(1)</span>
+              <span class="chip good">Time \(O(\log\min(m,n))\)</span>
+              <span class="chip good">Space \(O(1)\)</span>
             </div>
             <p>
-              在<strong>较短</strong>数组上二分左半个数 <code>i</code>；
-              数量不变量钉死 <code>j = half − i</code>；
+              在<strong>较短</strong>数组上二分左半个数 \(i\)；
+              数量不变量钉死 \(j=h-i\)；
               用顺序不变量判合法 / 调方向。
             </p>
             <p><strong>在优化什么：</strong>不合并，只定位切缝。</p>
           </div>
         </details>
         <details class="approach">
-          <summary>C. 通用「第 k 小」二分</summary>
+          <summary>C. 通用「第 \(k\) 小」二分</summary>
           <div class="body">
             <div class="metrics">
-              <span class="chip good">Time O(log(m+n))</span>
-              <span class="chip">Space O(1)</span>
+              <span class="chip good">Time \(O(\log(m+n))\)</span>
+              <span class="chip">Space \(O(1)\)</span>
             </div>
-            <p>找第 <code>k=(m+n+1)/2</code> 与（偶数时）下一个。与划分同族，写法更「淘汰一半」。</p>
+            <p>找第 \(k=\lfloor(m+n+1)/2\rfloor\) 与（偶数时）下一个。与划分同族，写法更「淘汰一半」。</p>
           </div>
         </details>
       </div>
@@ -285,7 +302,7 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
         <tbody>
           <tr><td>Merge</td><td>直观正确</td><td>log 复杂度</td></tr>
           <tr><td>Partition 二分</td><td>log、贴定义</td><td>不变量 + 边界要记准</td></tr>
-          <tr><td>第 k 小</td><td>可推广任意 k</td><td>实现略绕</td></tr>
+          <tr><td>第 \(k\) 小</td><td>可推广任意 \(k\)</td><td>实现略绕</td></tr>
         </tbody>
       </table>
     </section>
@@ -299,9 +316,9 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
         <div>
           <p><strong>数量不变量</strong>——你只有一个自由度</p>
           <p class="hint">
-            左半总共要 <code>half</code> 个。在 A 上取 <code>i</code> 个，B 上就必须取
-            <code>j = half − i</code> 个。<strong>j 不是搜出来的，是算出来的。</strong>
-            所以 binary search 的搜索空间只有 <code>i ∈ [0, m]</code>（并保证 m ≤ n，使 j 合法）。
+            左半总共要 \(h\) 个。在 \(A\) 上取 \(i\) 个，\(B\) 上就必须取 \(j=h-i\) 个。
+            <strong>\(j\) 不是搜出来的，是算出来的。</strong>
+            所以 binary search 的搜索空间只有 \(i\in[0,m]\)（并保证 \(m\le n\)，使 \(j\) 合法）。
           </p>
         </div>
       </div>
@@ -309,27 +326,33 @@ j=0 → B[j−1] = −∞    j=n → B[j] = +∞
       <div class="step-line">
         <span class="step-num">2</span>
         <div>
-          <p><strong>顺序不变量</strong>——max(L) ≤ min(R)</p>
+          <p><strong>顺序不变量</strong>——\(\max(L)\le\min(R)\)</p>
           <p class="hint">
             合并后要整体有序，切缝两侧必须「左不大于右」。
-            因为 A、B <strong>各自已排序</strong>，A 内部、B 内部天然满足；
+            因为 \(A,B\) <strong>各自已排序</strong>，数组内部天然满足；
             唯一可能破的是<strong>跨数组</strong>：
           </p>
-          <div class="formula">
-A 的左半最大  ≤  B 的右半最小    →  A[i−1] ≤ B[j]
-B 的左半最大  ≤  A 的右半最小    →  B[j−1] ≤ A[i]
-
-<span class="cmt">// 等价写法</span>
-maxLeft  = max(A[i−1], B[j−1])
-minRight = min(A[i],   B[j])
-valid    ⇔  maxLeft ≤ minRight
+          <div class="math-block">
+            \[
+              A_{i-1}\le B_{j}
+              \qquad\text{且}\qquad
+              B_{j-1}\le A_{i}
+            \]
+            <p class="math-caption">等价写法（实现时常用）</p>
+            \[
+              L_{\max}=\max(A_{i-1},\,B_{j-1}),\quad
+              R_{\min}=\min(A_{i},\,B_{j})
+            \]
+            \[
+              \text{valid}\iff L_{\max}\le R_{\min}
+            \]
           </div>
-          <p class="hint">交叉两条 ⇔ 一个 maxLeft ≤ minRight。记交叉更利于写 if 分支。</p>
+          <p class="hint">交叉两条 \(\Leftrightarrow\) 一个 \(L_{\max}\le R_{\min}\)。记交叉更利于写分支。</p>
         </div>
       </div>
 
       <div class="part-demo" data-section="demo-valid">
-        <div class="lbl">合法切分示意 · A=[1,3] B=[2] · half=2 · i=1 → j=1</div>
+        <div class="lbl">合法切分 · \(A=[1,3],\;B=[2]\) · \(h=2,\;i=1\Rightarrow j=1\)</div>
         <div class="row-arr">
           <span class="tag">A</span>
           <span class="cell L">1</span>
@@ -340,35 +363,35 @@ valid    ⇔  maxLeft ≤ minRight
           <span class="tag">B</span>
           <span class="cell L">2</span>
           <span class="cut" title="cut j=1"></span>
-          <span class="cell sent">+∞</span>
+          <span class="cell sent">+\(\infty\)</span>
         </div>
         <div class="part-meta">
-          L = {1, 2}，R = {3}<br />
-          交叉：<code>A[0]=1 ≤ B[1]=+∞</code> 且 <code>B[0]=2 ≤ A[1]=3</code> ✓<br />
-          奇数 → median = maxLeft = max(1,2) = <strong>2.0</strong>
+          \(L=\{1,2\},\;R=\{3\}\)<br />
+          交叉：\(A_{0}=1\le B_{1}=+\infty\) 且 \(B_{0}=2\le A_{1}=3\) ✓<br />
+          奇数 \(\Rightarrow\) \(\mathrm{median}=L_{\max}=\max(1,2)=\mathbf{2.0}\)
         </div>
       </div>
 
       <div class="part-demo">
-        <div class="lbl">偶数总长 · A=[1,2] B=[3,4] · half=2 · i=2 → j=0</div>
+        <div class="lbl">偶数总长 · \(A=[1,2],\;B=[3,4]\) · \(h=2,\;i=2\Rightarrow j=0\)</div>
         <div class="row-arr">
           <span class="tag">A</span>
           <span class="cell L">1</span>
           <span class="cell L">2</span>
           <span class="cut"></span>
-          <span class="cell sent">+∞</span>
+          <span class="cell sent">+\(\infty\)</span>
         </div>
         <div class="row-arr">
           <span class="tag">B</span>
-          <span class="cell sent">−∞</span>
+          <span class="cell sent">−\(\infty\)</span>
           <span class="cut"></span>
           <span class="cell R">3</span>
           <span class="cell R">4</span>
         </div>
         <div class="part-meta">
-          L = {1,2}，R = {3,4}<br />
-          交叉：<code>2 ≤ 3</code> 且 <code>−∞ ≤ +∞</code> ✓<br />
-          偶数 → median = (maxLeft + minRight)/2 = (2+3)/2 = <strong>2.5</strong>
+          \(L=\{1,2\},\;R=\{3,4\}\)<br />
+          交叉：\(2\le 3\) 且 \(-\infty\le+\infty\) ✓<br />
+          偶数 \(\Rightarrow\) \(\mathrm{median}=\dfrac{L_{\max}+R_{\min}}{2}=\dfrac{2+3}{2}=\mathbf{2.5}\)
         </div>
       </div>
     </section>
@@ -377,7 +400,7 @@ valid    ⇔  maxLeft ≤ minRight
     <section class="card" data-section="binary-dir">
       <h2>Binary search 方向：两条违规各自单调 <span class="badge">怎么搜</span></h2>
       <p class="hint">
-        合法条件是「且」：任一交叉失败就说明 <code>i</code> 偏了，且方向<strong>确定</strong>：
+        合法条件是「且」：任一交叉失败就说明 \(i\) 偏了，且方向<strong>确定</strong>：
       </p>
       <table class="mini-table">
         <thead>
@@ -385,25 +408,25 @@ valid    ⇔  maxLeft ≤ minRight
         </thead>
         <tbody>
           <tr>
-            <td><code>A[i−1] &gt; B[j]</code></td>
-            <td>A 左半太大 → <code>i</code> 太大</td>
-            <td>缩小 i（right = i−1）</td>
+            <td>\(A_{i-1}&gt;B_{j}\)</td>
+            <td>\(A\) 左半太大 \(\Rightarrow\) \(i\) 太大</td>
+            <td>缩小 \(i\)（\(\mathrm{hi}=i-1\)）</td>
           </tr>
           <tr>
-            <td><code>B[j−1] &gt; A[i]</code></td>
-            <td>A 左半太小 → <code>i</code> 太小</td>
-            <td>增大 i（left = i+1）</td>
+            <td>\(B_{j-1}&gt;A_{i}\)</td>
+            <td>\(A\) 左半太小 \(\Rightarrow\) \(i\) 太小</td>
+            <td>增大 \(i\)（\(\mathrm{lo}=i+1\)）</td>
           </tr>
           <tr>
-            <td>两条都 ≤</td>
+            <td>两条都 \(\le\)</td>
             <td>合法 partition</td>
             <td>停，算 median</td>
           </tr>
         </tbody>
       </table>
       <div class="callout warn">
-        不要同时乱调。实现里通常先判「i 太大」，再判「i 太小」，else 即命中。
-        在较短数组上二分，保证 <code>j</code> 始终落在 <code>[0, n]</code>。
+        不要同时乱调。实现里通常先判「\(i\) 太大」，再判「\(i\) 太小」，else 即命中。
+        在较短数组上二分，保证 \(j\) 始终落在 \([0,n]\)。
       </div>
     </section>
 
@@ -411,50 +434,55 @@ valid    ⇔  maxLeft ≤ minRight
     <section class="card" data-section="boundary">
       <h2>边界 case：哨兵统一，不是一堆 if <span class="badge accent">边界</span></h2>
       <p>
-        Hard 点常卡在「A 左半为空 / 取光 / B 同理」。
-        正确姿势：<strong>缺的一侧当成 −∞ 或 +∞</strong>，交叉公式一字不改。
+        Hard 点常卡在「\(A\) 左半为空 / 取光 / \(B\) 同理」。
+        正确姿势：<strong>缺的一侧当成 \(-\infty\) 或 \(+\infty\)</strong>，交叉公式一字不改。
       </p>
-      <div class="formula">
-Aleft  = (i == 0) ? −∞ : A[i−1]
-Aright = (i == m) ? +∞ : A[i]
-Bleft  = (j == 0) ? −∞ : B[j−1]
-Bright = (j == n) ? +∞ : B[j]
-
-<span class="ok">// 比较与返回值仍用同一套</span>
+      <div class="math-block">
+        \[
+          A_{i-1}=\begin{cases}-\infty&amp;i=0\\A[i-1]&amp;\text{否则}\end{cases}
+          \qquad
+          A_{i}=\begin{cases}+\infty&amp;i=m\\A[i]&amp;\text{否则}\end{cases}
+        \]
+        \[
+          B_{j-1}=\begin{cases}-\infty&amp;j=0\\B[j-1]&amp;\text{否则}\end{cases}
+          \qquad
+          B_{j}=\begin{cases}+\infty&amp;j=n\\B[j]&amp;\text{否则}\end{cases}
+        \]
+        <p class="math-caption">比较与返回值仍用同一套 \(A_{i-1},A_{i},B_{j-1},B_{j}\)</p>
       </div>
 
       <div class="two-col">
         <div class="part-demo">
-          <div class="lbl">i = 0 · A 不贡献左半</div>
+          <div class="lbl">\(i=0\) · \(A\) 不贡献左半</div>
           <div class="row-arr">
             <span class="tag">A</span>
-            <span class="cell sent">−∞</span>
+            <span class="cell sent">−\(\infty\)</span>
             <span class="cut"></span>
             <span class="cell R">…</span>
           </div>
           <div class="part-meta">
-            <code>Aleft=−∞</code> → <code>Aleft ≤ Bright</code> 永真；
-            只靠 B 侧约束 <code>i</code>。
+            \(A_{i-1}=-\infty\Rightarrow A_{i-1}\le B_{j}\) 永真；
+            只靠 \(B\) 侧约束 \(i\)。
           </div>
         </div>
         <div class="part-demo">
-          <div class="lbl">i = m · A 全部进左半</div>
+          <div class="lbl">\(i=m\) · \(A\) 全部进左半</div>
           <div class="row-arr">
             <span class="tag">A</span>
             <span class="cell L">…</span>
             <span class="cut"></span>
-            <span class="cell sent">+∞</span>
+            <span class="cell sent">+\(\infty\)</span>
           </div>
           <div class="part-meta">
-            <code>Aright=+∞</code> → <code>Bleft ≤ Aright</code> 永真；
+            \(A_{i}=+\infty\Rightarrow B_{j-1}\le A_{i}\) 永真；
             另一侧同理。
           </div>
         </div>
       </div>
 
       <ul class="scene-list">
-        <li>一数组为空 → 退化为单数组中位数（另一侧 i 或 j 走满/走空）。</li>
-        <li>短数组二分：先 <code>if m &gt; n { swap }</code>，避免 j 越界。</li>
+        <li>一数组为空 \(\Rightarrow\) 退化为单数组中位数。</li>
+        <li>短数组二分：先 \(m&gt;n\) 则 swap，避免 \(j\) 越界。</li>
         <li>奇偶只改<strong>返回</strong>，不改搜索与哨兵。</li>
       </ul>
     </section>
@@ -462,43 +490,49 @@ Bright = (j == n) ? +∞ : B[j]
     <!-- ========== 手推 ========== -->
     <section class="card" data-section="walkthrough">
       <h2>手推一遍（对着不变量） <span class="badge blue">巩固</span></h2>
-      <pre class="walk">例 1 · 奇数  A=[1,3]  B=[2]   m=2 n=1 → 可先保证短的在前
-  half = (2+1+1)//2 = 2
-  试 i=1 → j=1
-    Aleft=1, Aright=3, Bleft=2, Bright=+∞
-    1≤+∞ 且 2≤3  → 合法
-    maxLeft=max(1,2)=2  → median=2.0
 
-例 2 · 偶数  A=[1,2]  B=[3,4]
-  half=2；短数组 A 上二分 i∈[0,2]
-  试 i=1 → j=1
-    Aleft=1, Aright=2, Bleft=3, Bright=4
-    1≤4 但 3≤2? 否 → Bleft > Aright → i 太小
-  试 i=2 → j=0
-    Aleft=2, Aright=+∞, Bleft=−∞, Bright=3
-    2≤3 且 −∞≤+∞ → 合法
-    (maxLeft,minRight)=(2,3) → median=2.5
+      <div class="walk-block">
+        <h4>例 1 · 奇数 \(A=[1,3],\;B=[2]\)</h4>
+        <p>
+          \(h=\lfloor(2+1+1)/2\rfloor=2\)。试 \(i=1\Rightarrow j=1\)：
+        </p>
+        \[
+          A_{0}=1,\;A_{1}=3,\;B_{0}=2,\;B_{1}=+\infty
+        \]
+        <p>
+          \(1\le+\infty\) 且 \(2\le 3\) → 合法。
+          \(\mathrm{median}=L_{\max}=\max(1,2)=2.0\)
+        </p>
 
-例 3 · 边界  A=[]  B=[1]  → 单数组中位数 1.0
-  （实现时 m=0，i 只能 0，j=half）</pre>
+        <h4>例 2 · 偶数 \(A=[1,2],\;B=[3,4]\)</h4>
+        <p>\(h=2\)；在短数组 \(A\) 上 \(i\in[0,2]\)。</p>
+        <p>试 \(i=1\Rightarrow j=1\)：\(A_{0}=1,\,A_{1}=2,\,B_{0}=3,\,B_{1}=4\)</p>
+        <p>\(1\le 4\) 但 \(3\not\le 2\) → \(B_{j-1}&gt;A_{i}\) → \(i\) 太小</p>
+        <p>试 \(i=2\Rightarrow j=0\)：\(A_{1}=2,\,A_{2}=+\infty,\,B_{-1}=-\infty,\,B_{0}=3\)</p>
+        <p>\(2\le 3\) 且 \(-\infty\le+\infty\) → 合法。
+          \(\mathrm{median}=\frac{2+3}{2}=2.5\)</p>
+
+        <h4>例 3 · 边界 \(A=[\,],\;B=[1]\)</h4>
+        <p>单数组中位数 \(1.0\)（\(m=0\)，\(i\) 只能 \(0\)，\(j=h\)）。</p>
+      </div>
     </section>
 
     <section class="card" data-section="storyboard">
       <h2>主推路径 · 图解 <span class="badge">skill 绘图</span></h2>
-      <p class="hint">三帧对应：切半图景 → 只搜 i → 交叉 / 调切分。</p>
+      <p class="hint">三帧对应：切半图景 → 只搜 \(i\) → 交叉 / 调切分。</p>
       <div data-storyboard data-period="3000" data-autoplay="true">
         <div class="sb-stage">
           <figure class="sb-frame" data-frame="0">
             <img src="assets/01-partition-halves.png" alt="partition into left and right halves" />
-            <figcaption>Step 1 · 目标：一条 partition 切开左半 / 右半，不必真 merge</figcaption>
+            <figcaption>Step 1 · 目标：一条 partition 切开 \(L/R\)，不必真 merge</figcaption>
           </figure>
           <figure class="sb-frame" data-frame="1">
             <img src="assets/02-binary-on-i.png" alt="binary search on partition i" />
-            <figcaption>Step 2 · 数量不变量钉死 j；在短数组上 binary search <code>i</code></figcaption>
+            <figcaption>Step 2 · 数量不变量钉死 \(j=h-i\)；在短数组上 binary search \(i\)</figcaption>
           </figure>
           <figure class="sb-frame" data-frame="2">
-            <img src="assets/03-maxleft-minright.png" alt="cross check maxLeft and minRight" />
-            <figcaption>Step 3 · 顺序不变量：交叉比较；违规则按单调性调 <code>i</code></figcaption>
+            <img src="assets/03-maxleft-minright.png" alt="cross check Lmax and Rmin" />
+            <figcaption>Step 3 · 顺序不变量：\(A_{i-1}\le B_{j}\) 与 \(B_{j-1}\le A_{i}\)</figcaption>
           </figure>
         </div>
         <div class="sb-controls">
@@ -514,9 +548,9 @@ Bright = (j == n) ? +∞ : B[j]
       <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
       <ul class="scene-list">
         <li>不要求 log → Merge 足够，面试可先写对再优化。</li>
-        <li>求第 k 小（任意 k）→ 同一「数量 + 淘汰」思想，half 换成 k。</li>
+        <li>求第 \(k\) 小 → 同一思想，\(h\) 换成 \(k\)。</li>
         <li>三个有序数组中位数 → 多路划分更难，或换 selection 模型。</li>
-        <li>数组未排序 → 先排序 O((m+n)log) 或线性选择（期望 / 最坏）。</li>
+        <li>数组未排序 → 先排序 \(O((m+n)\log(m+n))\) 或线性选择。</li>
       </ul>
     </section>
 
@@ -527,55 +561,55 @@ Bright = (j == n) ? +∞ : B[j]
       <div class="q" data-answer="B" data-qid="q1">
         <p class="q-title">Q1. 本题最优路径的「定位目标」是？</p>
         <label class="opt"><input type="radio" name="q1" value="A" /> A. 把两数组 merge 成第三数组再取中</label>
-        <label class="opt"><input type="radio" name="q1" value="B" /> B. 找合法 partition：数量对 + 左半最大值 ≤ 右半最小值</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. 找合法 partition：数量对 + \(\max(L)\le\min(R)\)</label>
         <label class="opt"><input type="radio" name="q1" value="C" /> C. 分别算两数组中位数再平均</label>
         <div class="explain"><strong>解析：</strong>中位数 = 均匀切半后的切缝；不合并也能定位。</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q2">
-        <p class="q-title">Q2. 在 A 上取左半 <code>i</code> 个后，B 的左半个数 j 由什么决定？</p>
-        <label class="opt"><input type="radio" name="q2" value="A" /> A. j = i（两边均分）</label>
-        <label class="opt"><input type="radio" name="q2" value="B" /> B. j = half − i，half = (m+n+1)//2（数量不变量）</label>
-        <label class="opt"><input type="radio" name="q2" value="C" /> C. j 也要再二分一次</label>
-        <div class="explain"><strong>解析：</strong>左半总数固定；j 被 i 钉死，搜索自由度只有 1。</div>
+        <p class="q-title">Q2. 在 \(A\) 上取左半 \(i\) 个后，\(B\) 的左半个数 \(j\) 由什么决定？</p>
+        <label class="opt"><input type="radio" name="q2" value="A" /> A. \(j=i\)（两边均分）</label>
+        <label class="opt"><input type="radio" name="q2" value="B" /> B. \(j=h-i\)，其中 \(h=\lfloor(m+n+1)/2\rfloor\)（数量不变量）</label>
+        <label class="opt"><input type="radio" name="q2" value="C" /> C. \(j\) 也要再二分一次</label>
+        <div class="explain"><strong>解析：</strong>左半总数固定；\(j\) 被 \(i\) 钉死，搜索自由度只有 1。</div>
       </div>
 
       <div class="q" data-answer="A,C" data-multi data-qid="q3">
         <p class="q-title">Q3. 顺序不变量「交叉两条」是？（多选）</p>
-        <label class="opt"><input type="checkbox" value="A" /> A. A[i−1] ≤ B[j]</label>
-        <label class="opt"><input type="checkbox" value="B" /> B. A[i−1] ≤ A[i]（必须再写一遍）</label>
-        <label class="opt"><input type="checkbox" value="C" /> C. B[j−1] ≤ A[i]</label>
-        <div class="explain"><strong>解析：</strong>A、B 各自有序，内部不用再判；只判跨数组交叉。</div>
+        <label class="opt"><input type="checkbox" value="A" /> A. \(A_{i-1}\le B_{j}\)</label>
+        <label class="opt"><input type="checkbox" value="B" /> B. \(A_{i-1}\le A_{i}\)（必须再写一遍）</label>
+        <label class="opt"><input type="checkbox" value="C" /> C. \(B_{j-1}\le A_{i}\)</label>
+        <div class="explain"><strong>解析：</strong>\(A,B\) 各自有序，内部不用再判；只判跨数组交叉。</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q4">
-        <p class="q-title">Q4. 若 <code>A[i−1] &gt; B[j]</code>，应如何调？</p>
-        <label class="opt"><input type="radio" name="q4" value="A" /> A. i 太小，增大 i</label>
-        <label class="opt"><input type="radio" name="q4" value="B" /> B. i 太大，缩小 i</label>
-        <label class="opt"><input type="radio" name="q4" value="C" /> C. 交换 A、B 再重来</label>
-        <div class="explain"><strong>解析：</strong>A 左半偏大，说明从 A 拿多了，减小 i。</div>
+        <p class="q-title">Q4. 若 \(A_{i-1}&gt;B_{j}\)，应如何调？</p>
+        <label class="opt"><input type="radio" name="q4" value="A" /> A. \(i\) 太小，增大 \(i\)</label>
+        <label class="opt"><input type="radio" name="q4" value="B" /> B. \(i\) 太大，缩小 \(i\)</label>
+        <label class="opt"><input type="radio" name="q4" value="C" /> C. 交换 \(A,B\) 再重来</label>
+        <div class="explain"><strong>解析：</strong>\(A\) 左半偏大，说明从 \(A\) 拿多了，减小 \(i\)。</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q5">
-        <p class="q-title">Q5. <code>i=0</code>（A 左半空）时，Aleft 应视为？</p>
-        <label class="opt"><input type="radio" name="q5" value="A" /> A. 0</label>
-        <label class="opt"><input type="radio" name="q5" value="B" /> B. −∞（哨兵，公式不变）</label>
-        <label class="opt"><input type="radio" name="q5" value="C" /> C. A[0]</label>
-        <div class="explain"><strong>解析：</strong>端点用 ±∞ 哨兵，交叉比较无需额外分支语义。</div>
+        <p class="q-title">Q5. \(i=0\)（\(A\) 左半空）时，\(A_{i-1}\) 应视为？</p>
+        <label class="opt"><input type="radio" name="q5" value="A" /> A. \(0\)</label>
+        <label class="opt"><input type="radio" name="q5" value="B" /> B. \(-\infty\)（哨兵，公式不变）</label>
+        <label class="opt"><input type="radio" name="q5" value="C" /> C. \(A[0]\)</label>
+        <div class="explain"><strong>解析：</strong>端点用 \(\pm\infty\) 哨兵，交叉比较无需额外分支语义。</div>
       </div>
 
       <div class="q" data-answer="2.5" data-alts="2.50|5/2" data-qid="q6">
-        <p class="q-title">Q6. <code>nums1=[1,2], nums2=[3,4]</code> 的 median 是？</p>
+        <p class="q-title">Q6. \(\mathrm{nums1}=[1,2],\;\mathrm{nums2}=[3,4]\) 的 median 是？</p>
         <input type="text" placeholder="数字" autocomplete="off" />
-        <div class="explain"><strong>解析：</strong>合并 1,2,3,4 偶数 → (2+3)/2 = 2.5；合法划分 maxLeft=2, minRight=3。</div>
+        <div class="explain"><strong>解析：</strong>合并 \(1,2,3,4\) 偶数 \(\Rightarrow\frac{2+3}{2}=2.5\)；合法划分 \(L_{\max}=2,\,R_{\min}=3\)。</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q7">
         <p class="q-title">Q7. 总长为奇数时，median 取？</p>
-        <label class="opt"><input type="radio" name="q7" value="A" /> A. minRight</label>
-        <label class="opt"><input type="radio" name="q7" value="B" /> B. maxLeft（因 half 定义让中位数落在左半边界）</label>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. \(R_{\min}\)</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. \(L_{\max}\)（因 \(h\) 的定义让中位数落在左半边界）</label>
         <label class="opt"><input type="radio" name="q7" value="C" /> C. 必须两个边界平均</label>
-        <div class="explain"><strong>解析：</strong>half=(m+n+1)//2 把下中位数放进左半 → 奇数答案即 maxLeft。</div>
+        <div class="explain"><strong>解析：</strong>\(h=\lfloor(m+n+1)/2\rfloor\) 把下中位数放进左半 \(\Rightarrow\) 奇数答案即 \(L_{\max}\)。</div>
       </div>
 
       <div class="actions">

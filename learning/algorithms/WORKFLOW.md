@@ -132,6 +132,10 @@ bash learning/algorithms/scripts/new-problem.sh <id> <slug> "<中文标题>" <Ea
 2. **术语中英策略**  
    - 专业结构/算法名保持英文：`HashMap`、`complement`、`carry`、`two-pointers`、`dummy head`、`DFS/BFS/DP`…  
    - 叙述与教学用语用中文；不要硬译成蹩脚中文（如「哈希映射表」「补数查找器」）。  
+2b. **公式用 KaTeX，禁止伪代码变量名糊墙**  
+   - `lab.js` 自动加载 `assets/vendor/katex/`，支持 `\(...\)` 行内、`\[...\]` / `$$...$$` 块级。  
+   - 数学对象用正规下标：\(A_{i-1}\)、\(L_{\max}\)、\(\lfloor(m+n+1)/2\rfloor\)；**禁止** `Aleft` / `maxLeft` 这类 ASCII 胶水名当主表达。  
+   - 需要对照代码时，可在旁注写「实现里可记 `max_left`」，但正文公式以数学记法为准。  
 3. **提交剪贴板**  
    - 全对时复制内容必须含：**题号**、**slug**、**用户用时**、时间戳、`nextHint`。  
    - 由 `assets/lab.js` 自动生成，例如：  

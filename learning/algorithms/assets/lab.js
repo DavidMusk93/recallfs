@@ -1270,6 +1270,81 @@
     }
   }
 
+  /**
+   * KaTeX math: \( … \) inline, \[ … \] or $$ … $$ display.
+   * Assets: assets/vendor/katex/ (local, offline-safe).
+   * Skip if cfg.math === false.
+   */
+  function labAssetUrl(rel) {
+    const scripts = document.getElementsByTagName("script");
+    let base = "";
+    for (let i = scripts.length - 1; i >= 0; i--) {
+      const src = scripts[i].src || "";
+      if (src.indexOf("lab.js") !== -1) {
+        base = src.replace(/lab\.js(?:\?.*)?$/, "");
+        break;
+      }
+    }
+    return base + rel;
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("load fail: " + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadCss(href) {
+    if (document.querySelector('link[data-lab-katex="1"]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.setAttribute("data-lab-katex", "1");
+    document.head.appendChild(link);
+  }
+
+  function renderMath(root) {
+    if (typeof window.renderMathInElement !== "function") return;
+    try {
+      window.renderMathInElement(root || document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "\\[", right: "\\]", display: true },
+          { left: "\\(", right: "\\)", display: false },
+        ],
+        throwOnError: false,
+        strict: "ignore",
+      });
+    } catch (e) {
+      console.warn("lab math render", e);
+    }
+  }
+
+  function initMath() {
+    if (cfg.math === false) return Promise.resolve();
+    if (typeof window.renderMathInElement === "function") {
+      renderMath(document.body);
+      return Promise.resolve();
+    }
+    const base = labAssetUrl("vendor/katex/");
+    loadCss(base + "katex.min.css");
+    return loadScript(base + "katex.min.js")
+      .then(() => loadScript(base + "auto-render.min.js"))
+      .then(() => {
+        renderMath(document.body);
+      })
+      .catch((e) => {
+        console.warn("KaTeX unavailable", e);
+      });
+  }
+
+  // Re-export for pages that inject math after load (e.g. dynamic explain).
+  window.LAB_RENDER_MATH = renderMath;
+
   document.addEventListener("DOMContentLoaded", () => {
     loadTelemetrySoft();
     track("page_view", {
@@ -1284,6 +1359,7 @@
     initQuiz();
     initSectionTelemetry();
     initScrollTelemetry();
+    initMath();
     // Telemetry is silent backend analytics for AI coach — no learner-facing panel.
     persistTelemetry();
     flushTelemetry("page_view");

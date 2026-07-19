@@ -749,3 +749,27 @@ table.cmp th { background: #f7f3ec; }
   header.hero h1 { font-size: 1.3rem; }
   .card { padding: 1rem; }
 }
+
+/* KaTeX math blocks (loaded by lab.js from assets/vendor/katex) */
+.math-block {
+  background: #f7f3ec;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem 0.35rem;
+  margin: 0.65rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.math-block .katex-display {
+  margin: 0.45rem 0 0.55rem;
+}
+.math-block .katex { font-size: 1.05em; }
+.math-caption {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.15rem 0 0.45rem;
+  line-height: 1.45;
+}
+p .katex, li .katex, td .katex, .hint .katex, .note .katex, .part-meta .katex {
+  font-size: 1.02em;
+}
