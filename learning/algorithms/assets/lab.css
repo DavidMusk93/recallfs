@@ -206,9 +206,10 @@ img.asset:hover {
   cursor: pointer;
   padding: 0.85rem 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  /* 勿用 space-between：KaTeX 会把 \(k\) 拆成独立 flex 子项，中间被撑出大片留白 */
+  gap: 0.2rem 0.35rem;
   font-weight: 600;
   user-select: none;
 }
@@ -217,6 +218,8 @@ img.asset:hover {
 
 .approach summary::after {
   content: "展开";
+  margin-left: auto; /* 仅「展开」贴右，正文与行内公式紧挨 */
+  flex-shrink: 0;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
@@ -224,6 +227,11 @@ img.asset:hover {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   transition: transform 0.25s var(--ease);
+}
+
+/* 行内公式在 flex 标题里不要被拉伸 */
+.approach summary .katex {
+  flex: 0 0 auto;
 }
 
 .approach[open] summary::after { content: "收起"; }
@@ -772,4 +780,14 @@ table.cmp th { background: #f7f3ec; }
 }
 p .katex, li .katex, td .katex, .hint .katex, .note .katex, .part-meta .katex {
   font-size: 1.02em;
+}
+
+/* 行内公式：在 flex/grid 里保持紧凑，避免被当成可伸缩子项 */
+.chip .katex,
+.pill .katex,
+label.opt .katex,
+.q-title .katex,
+.badge + .katex,
+h2 .katex {
+  flex: 0 0 auto;
 }
