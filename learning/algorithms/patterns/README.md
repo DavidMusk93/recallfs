@@ -15,6 +15,9 @@
 | pattern | 一句话 | 例题 | 文件 |
 | --- | --- | --- | --- |
 | hashmap-complement | 扫 x 时查补数 need，先查后写 | 1 two-sum | [hashmap-complement.md](./hashmap-complement.md) |
+| linked-list-carry | 同位相加 + carry，dummy head | 2 add-two-numbers | [linked-list-carry.md](./linked-list-carry.md) |
+| sliding-window-unique | 窗口 + last index，left 只增 | 3 longest-substring… | [sliding-window-unique.md](./sliding-window-unique.md) |
+| binary-partition-median | 短侧二分 cut，数量+交叉不变量 | 4 median-of-two-sorted-arrays | [binary-partition-median.md](./binary-partition-median.md) |
 
 ## 3. 模板（新文件）
 
