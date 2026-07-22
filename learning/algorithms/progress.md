@@ -9,7 +9,7 @@
 | next_id | 4 |
 | next_slug | median-of-two-sorted-arrays |
 | next_title | 寻找两个正序数组的中位数 |
-| phase | teaching |
+| phase | submit |
 | language | rust |
 | free_only | true |
 | platform | https://leetcode.cn |
@@ -19,7 +19,7 @@
 | 指标 | 值 |
 | --- | ---: |
 | accepted | 2 |
-| local-pass only | 1 |
+| local-pass only | 2 |
 | premium-skip | 0 |
 | skip | 0 |
 | in_progress | 1 |
@@ -31,13 +31,14 @@
 | 1 | two-sum | 两数之和 | Easy | accepted | hashmap-complement | 2026-07-15 |
 | 2 | add-two-numbers | 两数相加 | Medium | accepted | linked-list-carry | 2026-07-16 |
 | 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | local-pass | sliding-window-unique | 2026-07-17 |
-| 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | teaching | binary-partition-median | 2026-07-17 |
+| 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | local-pass | binary-partition-median | 2026-07-23 |
 
 ## 4. 最近会话备忘
 
 - 2026-07-15：题 1 two-sum **AC**。
 - 2026-07-16：题 2 add-two-numbers **AC**。
 - 2026-07-17：题 3 滑动窗口 local-pass（待 leetcode 提交）；题 4 Hard teaching 启动。
+- 2026-07-23：题 4 Lab Pass + cargo test local-pass；待 leetcode.cn 提交。
 
 ## 5. 更新规则
 
