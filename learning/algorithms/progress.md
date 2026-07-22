@@ -6,10 +6,10 @@
 
 | 字段 | 值 |
 | --- | --- |
-| next_id | 4 |
-| next_slug | median-of-two-sorted-arrays |
-| next_title | 寻找两个正序数组的中位数 |
-| phase | submit |
+| next_id | 5 |
+| next_slug | longest-palindromic-substring |
+| next_title | 最长回文子串 |
+| phase | teaching |
 | language | rust |
 | free_only | true |
 | platform | https://leetcode.cn |
@@ -32,13 +32,14 @@
 | 2 | add-two-numbers | 两数相加 | Medium | accepted | linked-list-carry | 2026-07-16 |
 | 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | local-pass | sliding-window-unique | 2026-07-17 |
 | 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | local-pass | binary-partition-median | 2026-07-23 |
+| 5 | longest-palindromic-substring | 最长回文子串 | Medium | teaching | expand-around-centers | 2026-07-23 |
 
 ## 4. 最近会话备忘
 
 - 2026-07-15：题 1 two-sum **AC**。
 - 2026-07-16：题 2 add-two-numbers **AC**。
-- 2026-07-17：题 3 滑动窗口 local-pass（待 leetcode 提交）；题 4 Hard teaching 启动。
-- 2026-07-23：题 4 Lab Pass + cargo test local-pass；待 leetcode.cn 提交。
+- 2026-07-17：题 3 滑动窗口 local-pass（待 leetcode 提交）。
+- 2026-07-23：题 4 local-pass（待 leetcode 提交）；题 5 teaching 启动（中心扩展）。
 
 ## 5. 更新规则
 

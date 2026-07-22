@@ -1,0 +1,12 @@
+[package]
+name = "p0005_longest_palindromic_substring"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "LeetCode 5. 最长回文子串 (longest-palindromic-substring)"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true

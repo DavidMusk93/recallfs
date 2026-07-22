@@ -7,7 +7,7 @@
 
 | next_id | slug | title | note |
 | --- | --- | --- | --- |
-| 1 | two-sum | 两数之和 | 热身：哈希表「补数」 |
+| 5 | longest-palindromic-substring | 最长回文子串 | 中心扩展 · teaching |
 
 ## 2. 计划推进原则
 
@@ -22,9 +22,9 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | two-sum | 两数之和 | Easy | hashmap-complement | todo |
 | 2 | add-two-numbers | 两数相加 | Medium | linked-list | todo |
-| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | sliding-window-unique | teaching |
-| 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | binary-partition-median | teaching |
-| 5 | longest-palindromic-substring | 最长回文子串 | Medium | expand-center / dp | todo |
+| 3 | longest-substring-without-repeating-characters | 无重复字符的最长子串 | Medium | sliding-window-unique | local-pass |
+| 4 | median-of-two-sorted-arrays | 寻找两个正序数组的中位数 | Hard | binary-partition-median | local-pass |
+| 5 | longest-palindromic-substring | 最长回文子串 | Medium | expand-around-centers | teaching |
 | 6 | zigzag-conversion | Z 字形变换 | Medium | simulation | todo |
 | 7 | reverse-integer | 整数反转 | Medium | math-overflow | todo |
 | 8 | string-to-integer-atoi | 字符串转换整数 | Medium | parse-fsm | todo |

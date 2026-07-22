@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>5. 最长回文子串 · 学习页</title>
+  <link rel="stylesheet" href="../../assets/lab.css" />
+  <style>
+    .essence-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.95rem 1rem;
+      margin: 0.75rem 0;
+    }
+    .essence-box h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+    }
+    .callout {
+      border-left: 3px solid var(--blue);
+      background: var(--blue-soft);
+      border-radius: 0 10px 10px 0;
+      padding: 0.65rem 0.85rem;
+      margin: 0.75rem 0;
+      font-size: 0.92rem;
+    }
+    .callout.warn {
+      border-left-color: var(--accent);
+      background: #fff4ec;
+    }
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 0.5rem 0;
+    }
+    .mini-table th, .mini-table td {
+      border: 1px solid var(--line);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .mini-table th { background: #f7f3ec; font-weight: 650; }
+    .walk-block {
+      background: #f7f3ec;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin: 0.55rem 0;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .walk-block h4 {
+      margin: 0.7rem 0 0.35rem;
+      font-size: 0.88rem;
+    }
+    .walk-block h4:first-child { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>5. 最长回文子串</h1>
+      <p class="meta">
+        <span class="pill hot">Medium</span>
+        <span class="pill">String · Two Pointers · DP</span>
+        <a href="https://leetcode.cn/problems/longest-palindromic-substring/" target="_blank" rel="noopener">题面</a>
+        <a href="analysis.md">analysis.md</a>
+      </p>
+      <p class="note-en">术语：palindrome · substring · expand around centers · DP</p>
+    </header>
+
+    <section class="card" data-section="how-to">
+      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <p class="note">
+        先分清 <strong>substring（连续）</strong> 与 subsequence，再抓住：
+        <strong>回文 = 从中心对称扩展</strong>。
+        测验<strong>统一提交</strong>；全对剪贴板含 <strong>#题号 · slug · 用时</strong>。
+      </p>
+      <ul class="scene-list">
+        <li><strong>自学</strong>：本质 → 奇偶中心 → 扩展维护 best → 图解 → 测。</li>
+        <li><strong>复习</strong>：口头复述「\(2n-1\) 个中心」与「退出后区间是 \([L+1,R-1]\)」。</li>
+        <li><strong>卡关</strong>：偶数长度（如 <code>cbbd</code>）必须有「缝心」。</li>
+      </ul>
+    </section>
+
+    <section class="card" data-section="essence">
+      <h2>本质：回文由中心决定 <span class="badge accent">先立靶</span></h2>
+      <p>
+        不要先枚举所有 \([i,j]\)。一个回文 substring 一旦中心定了，两侧能扩多远就定了。
+        问题变成：枚举所有可能的<strong>中心</strong>，向两侧 expand，记下最长的那一段。
+      </p>
+      <div class="essence-box">
+        <h3>只记这一组</h3>
+        <div class="math-block">
+          <p class="math-caption">两种中心（共 \(2n-1\) 个）</p>
+          \[
+            \text{奇数长：中心在字符 }i\quad
+            (L,R)\leftarrow(i,i)
+          \]
+          \[
+            \text{偶数长：中心在缝 }i|i{+}1\quad
+            (L,R)\leftarrow(i,i+1)
+          \]
+          <p class="math-caption">扩展不变量</p>
+          \[
+            \text{while } L\ge 0 \land R&lt;n \land s[L]=s[R]:
+            \quad L\leftarrow L-1,\; R\leftarrow R+1
+          \]
+          <p class="math-caption">循环退出后，合法闭区间为</p>
+          \[
+            [L+1,\, R-1]
+          \]
+          维护全局最长的 \((\mathrm{start},\,\mathrm{len})\)。
+        </div>
+      </div>
+      <div class="callout">
+        <strong>与题 3 的差别：</strong>
+        题 3 用 sliding window 维护「无重复」；本题约束是<strong>左右对称</strong>，
+        模型是 expand around centers，不是 last-index 窗口。
+      </div>
+    </section>
+
+    <section class="card" data-section="scene">
+      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <div data-tabs>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="biz">场景</button>
+          <button type="button" class="tab-btn" data-tab="sys">系统</button>
+          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+        </div>
+        <div class="tab-panel active" data-panel="biz">
+          <ul class="scene-list">
+            <li>DNA / 文本里找最长「左右对称」片段（教学类比）。</li>
+            <li>产品 ID、口令生成里检测对称结构。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="sys">
+          <ul class="scene-list">
+            <li>字符串算法入门：中心扩展 → Manacher 的直觉底座。</li>
+            <li>与「最长回文 subsequence」对比：连续 vs 可跳，模型完全不同。</li>
+          </ul>
+        </div>
+        <div class="tab-panel" data-panel="not">
+          <p class="hint">
+            中心扩展不是炫技：回文的定义就是对称。
+            用中心参数化，把「所有子串」压成「所有中心」，空间常数、实现短。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-section="approaches">
+      <h2>多种解法 · 对比 <span class="badge">先选武器</span></h2>
+      <div class="approach-grid">
+        <details class="approach">
+          <summary>A. Brute force</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip warn">Time \(O(n^3)\)</span>
+              <span class="chip good">Space \(O(1)\)</span>
+            </div>
+            <p>枚举所有 substring，再线性判回文。定义清晰，\(n=1000\) 偏紧。</p>
+          </div>
+        </details>
+        <details class="approach" open>
+          <summary>B. Expand around centers（主推）</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time \(O(n^2)\)</span>
+              <span class="chip good">Space \(O(1)\)</span>
+            </div>
+            <p>
+              \(2n-1\) 个中心，每个向两侧扩展；维护最长区间。
+              <strong>在优化什么：</strong>不枚举端点对，只枚举「对称轴」。
+            </p>
+          </div>
+        </details>
+        <details class="approach">
+          <summary>C. DP 区间表</summary>
+          <div class="body">
+            <div class="metrics">
+              <span class="chip good">Time \(O(n^2)\)</span>
+              <span class="chip warn">Space \(O(n^2)\)</span>
+            </div>
+            <p>
+              \(\mathrm{dp}[i][j]=(s[i]=s[j])\land(\mathrm{短区间或}\,dp[i+1][j-1])\)。
+              正确但更重；中心扩展更贴定义。
+            </p>
+          </div>
+        </details>
+      </div>
+      <table class="cmp">
+        <thead>
+          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Brute</td><td>定义直观</td><td>时间</td></tr>
+          <tr><td>中心扩展</td><td>\(O(n^2)\)、\(O(1)\) 空间、好写</td><td>要记得奇偶两种中心</td></tr>
+          <tr><td>DP</td><td>转移清晰、可推广</td><td>额外 \(O(n^2)\) 空间</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" data-section="centers">
+      <h2>为何要两种中心？ <span class="badge accent">核心</span></h2>
+      <p class="hint">
+        只扩「字符心」会漏掉 <code>bb</code>、<code>abba</code> 这类<strong>偶数长</strong>回文——它们的对称轴在两个字符<strong>中间的缝</strong>。
+      </p>
+      <table class="mini-table">
+        <thead>
+          <tr><th>类型</th><th>初值</th><th>例子</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>奇数心</td>
+            <td>\(L=R=i\)</td>
+            <td><code>aba</code> 中心在 <code>b</code></td>
+          </tr>
+          <tr>
+            <td>偶数心</td>
+            <td>\(L=i,\;R=i+1\)</td>
+            <td><code>abba</code> 中心在两 <code>b</code> 之间</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        实现上通常写一个 <code>expand(l, r)</code>：奇调用 <code>expand(i,i)</code>，偶调用 <code>expand(i,i+1)</code>。
+      </div>
+    </section>
+
+    <section class="card" data-section="storyboard">
+      <h2>主推路径 · 图解 <span class="badge">skill 绘图</span></h2>
+      <div data-storyboard data-period="3000" data-autoplay="true">
+        <div class="sb-stage">
+          <figure class="sb-frame" data-frame="0">
+            <img src="assets/01-center-mirror.png" alt="palindrome expands symmetrically from center" />
+            <figcaption>Step 1 · 回文 = 以中心为轴左右对称；向两侧 expand</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="1">
+            <img src="assets/02-odd-even-centers.png" alt="odd and even length centers" />
+            <figcaption>Step 2 · 奇数心在字符上，偶数心在缝上；共约 \(2n-1\) 个中心</figcaption>
+          </figure>
+          <figure class="sb-frame" data-frame="2">
+            <img src="assets/03-expand-track-best.png" alt="expand L R and keep best" />
+            <figcaption>Step 3 · \(s[L]=s[R]\) 则继续扩；退出后更新全局 best</figcaption>
+          </figure>
+        </div>
+        <div class="sb-controls">
+          <button type="button" class="secondary" data-sb-prev>Prev</button>
+          <span data-sb-index>1 / 3</span>
+          <button type="button" class="secondary" data-sb-next>Next</button>
+          <button type="button" data-sb-play>Pause</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-section="walkthrough">
+      <h2>手推两例 <span class="badge blue">巩固</span></h2>
+      <div class="walk-block">
+        <h4>例 1 · <code>babad</code>（奇数长）</h4>
+        <p>中心在 index 1 的 <code>a</code>：扩得 <code>bab</code>（或中心在 2 得 <code>aba</code>）。最长长度 3。</p>
+        <h4>例 2 · <code>cbbd</code>（必须偶数心）</h4>
+        <p>字符心最多单字符。缝心在两个 <code>b</code> 之间：\(L=1,R=2\) 扩得 <code>bb</code>。答案 <code>bb</code>。</p>
+        <h4>退出后的下标</h4>
+        <p>
+          循环在「越界或不相等」时停下，此时 \(L,R\) 已各多走一步，
+          合法段是 \([L+1, R-1]\)，长度 \(R-L-1\)。
+        </p>
+      </div>
+    </section>
+
+    <section class="card" data-section="variants">
+      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <ul class="scene-list">
+        <li>只要长度 → 同样扩展，只返回 \(\mathrm{len}\)。</li>
+        <li>最长回文 <strong>subsequence</strong> → 不连续，改 DP（与本题不同）。</li>
+        <li>\(n\) 到 \(10^5\) 且要严格线性 → Manacher。</li>
+        <li>统计所有回文个数 → 每个中心的半径可累加。</li>
+      </ul>
+    </section>
+
+    <section class="card" id="quiz-section" data-section="quiz">
+      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
+      <p class="note">围绕<strong>中心扩展 + 奇偶中心</strong>。全对复制：#题号 · slug · 用时 · 下一步。</p>
+
+      <div class="q" data-answer="B" data-qid="q1">
+        <p class="q-title">Q1. 本题要求的「回文子串」是？</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. subsequence：字符可跳着取</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. substring：必须连续一段</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. 整串必须是回文否则无解</label>
+        <div class="explain"><strong>解析：</strong>substring = 连续；多解任返一个最长。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q2">
+        <p class="q-title">Q2. 中心扩展主推的核心建模是？</p>
+        <label class="opt"><input type="radio" name="q2" value="A" /> A. 像题 3 一样维护无重复 sliding window</label>
+        <label class="opt"><input type="radio" name="q2" value="B" /> B. 枚举对称中心，向两侧 expand 并维护最长</label>
+        <label class="opt"><input type="radio" name="q2" value="C" /> C. 先排序再双指针</label>
+        <div class="explain"><strong>解析：</strong>回文 = 对称；中心参数化后两侧扩展。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q3">
+        <p class="q-title">Q3. 为何除了「字符心」还要「缝心」？</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. 题目强制写两种</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. 偶数长回文（如 <code>bb</code>）的对称轴在两字符之间</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. 缝心用于处理空串</label>
+        <div class="explain"><strong>解析：</strong>只做字符心会漏掉偶数长度回文。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q4">
+        <p class="q-title">Q4. 扩展循环在不相等时停下，合法区间是？</p>
+        <label class="opt"><input type="radio" name="q4" value="A" /> A. \([L, R]\)</label>
+        <label class="opt"><input type="radio" name="q4" value="B" /> B. \([L+1, R-1]\)（\(L,R\) 已各越界/失配一步）</label>
+        <label class="opt"><input type="radio" name="q4" value="C" /> C. \([L-1, R+1]\)</label>
+        <div class="explain"><strong>解析：</strong>while 条件失败前 \(L,R\) 多走了一步，要缩回。</div>
+      </div>
+
+      <div class="q" data-answer="bb" data-alts="BB" data-qid="q5">
+        <p class="q-title">Q5. \(s=\) <code>cbbd</code> 的一个最长回文 substring 是？（小写填写）</p>
+        <input type="text" placeholder="连续子串" autocomplete="off" />
+        <div class="explain"><strong>解析：</strong>偶数心扩出 <code>bb</code>；单字符更短。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q6">
+        <p class="q-title">Q6. 中心扩展相对暴力，主要省在？</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. 变成 \(O(n)\)</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. 从「所有子串 \(O(n^2)\) 再各查一遍」压到「每中心线性扩展」，总 \(O(n^2)\)</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. 空间变成 \(O(n^2)\)</label>
+        <div class="explain"><strong>解析：</strong>暴力常 \(O(n^3)\)；中心扩展 \(O(n^2)/O(1)\)。</div>
+      </div>
+
+      <div class="q" data-answer="B" data-qid="q7">
+        <p class="q-title">Q7. 若改成「最长回文 subsequence」，主推是否仍是中心扩展？</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. 是，完全一样</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. 否；可跳字符，通常改 DP 等模型</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. 否；改成二分查找</label>
+        <div class="explain"><strong>解析：</strong>subsequence 不连续，中心扩展前提不成立。</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="quiz-submit">提交测验</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="scorebar">
+    <div class="scorebar-inner">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-text">已作答 0 / 7</span>
+    </div>
+  </div>
+
+  <script type="application/json" id="lab-config">
+  {
+    "nextHint": "理解测完成，开始写 Rust",
+    "problemId": 5,
+    "slug": "longest-palindromic-substring",
+    "titleZh": "最长回文子串",
+    "telemetry": true
+  }
+  </script>
+  <script src="../../assets/lab.js"></script>
+</body>
+</html>
