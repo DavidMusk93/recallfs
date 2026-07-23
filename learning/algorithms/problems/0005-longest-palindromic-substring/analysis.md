@@ -5,18 +5,18 @@
 | 项 | 内容 |
 | --- | --- |
 | 一句话题意 | 给定字符串 \(s\)，返回其中**最长的回文 substring**（连续子串；多解任返一个）。 |
-| 主推思路 | **Expand around centers**：回文由中心完全决定；对每个中心向两侧扩展，维护最长区间。 |
+| 主推思路 | **Expand around centers**：a palindrome is fixed by its center; expand left/right; keep the longest span. |
 | 时间 / 空间 | **\(O(n^2)\)** / \(O(1)\)（中心扩展）；DP 同时间但空间 \(O(n^2)\) |
 | 关联 pattern | `expand-around-centers` |
 | 难度 | **Medium** · 免费 |
 | 链接 | https://leetcode.cn/problems/longest-palindromic-substring/ |
 
 ```text
-回文 ⇔ 从中心向两侧对称
-  奇数长：中心在字符上    … a b a …
-  偶数长：中心在缝隙上    … a b b a …
-中心共 2n−1 个；每个 O(n) 扩展 → O(n²)
-不必枚举所有端点对
+palindrome ⇔ mirror around a center
+  odd:  center on a character   … a b a …
+  even: center in the gap       … a b b a …
+~2n−1 centers; each expands O(n) → O(n²)
+no need to enumerate all endpoint pairs
 ```
 
 ## 2. 题面形式化
@@ -51,24 +51,24 @@
 
 枚举所有 \([L,R]\)，再 \(O(n)\) 判回文。建立定义，n=1000 偏紧。
 
-### 3.2 主推：中心扩展 \(O(n^2)/O(1)\)
+### 3.2 Recommended: expand around centers \(O(n^2)/O(1)\)
 
 ```text
-对每个中心 c（字符心 / 缝心）：
-  L, R 从中心出发
+for each center (odd on char / even in gap):
+  seed L, R
   while L≥0 && R<n && s[L]==s[R]:
     L--; R++
-  记录更长的 [L+1, R-1]
+  record longer span [L+1, R-1]
 
-字符心：初值 L=R=i
-缝心：  初值 L=i, R=i+1
+odd:  seed L=R=i
+even: seed L=i, R=i+1
 ```
 
-| 对比 | 暴力 | 中心扩展 | DP |
+| 对比 | brute | expand | DP |
 | --- | --- | --- | --- |
-| 时间 | \(O(n^3)\) | \(O(n^2)\) | \(O(n^2)\) |
-| 空间 | \(O(1)\) | \(O(1)\) | \(O(n^2)\) |
-| 难点 | 低 | 奇偶两种中心 | 转移顺序 |
+| time | \(O(n^3)\) | \(O(n^2)\) | \(O(n^2)\) |
+| space | \(O(1)\) | \(O(1)\) | \(O(n^2)\) |
+| hard part | low | odd + even centers | fill order |
 
 ### 3.3 变体：DP
 
@@ -93,6 +93,6 @@
 ## 5. 卡点预期
 
 - substring vs subsequence  
-- 为何要两种中心（奇/偶）  
-- 扩展循环退出后区间是 \([L+1, R-1]\)  
-- 同长多解任选  
+- why both odd centers (on char) and even centers (in gap)  
+- after expand stops, span is \([L+1, R-1]\)  
+- ties: any max-length answer is OK  

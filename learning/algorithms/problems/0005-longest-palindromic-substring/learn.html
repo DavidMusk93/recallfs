@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>5. 最长回文子串 · 学习页</title>
+  <title>5. Longest Palindromic Substring · Lab</title>
   <link rel="stylesheet" href="../../assets/lab.css" />
   <style>
     .essence-box {
@@ -61,98 +61,103 @@
 <body>
   <div class="wrap">
     <header class="hero">
-      <h1>5. 最长回文子串</h1>
+      <h1>5. Longest Palindromic Substring</h1>
       <p class="meta">
         <span class="pill hot">Medium</span>
         <span class="pill">String · Two Pointers · DP</span>
-        <a href="https://leetcode.cn/problems/longest-palindromic-substring/" target="_blank" rel="noopener">题面</a>
+        <a href="https://leetcode.cn/problems/longest-palindromic-substring/" target="_blank" rel="noopener">Problem</a>
         <a href="analysis.md">analysis.md</a>
       </p>
-      <p class="note-en">术语：palindrome · substring · expand around centers · DP</p>
+      <p class="note-en">Vocabulary: palindrome · substring · expand around centers · odd / even center · DP</p>
     </header>
 
     <section class="card" data-section="how-to">
-      <h2>学习怎么用 <span class="badge">教育场景</span></h2>
+      <h2>How to use this lab <span class="badge">path</span></h2>
       <p class="note">
-        先分清 <strong>substring（连续）</strong> 与 subsequence，再抓住：
-        <strong>回文 = 从中心对称扩展</strong>。
-        测验<strong>统一提交</strong>；全对剪贴板含 <strong>#题号 · slug · 用时</strong>。
+        First: <strong>substring</strong> (contiguous) ≠ subsequence (can skip).
+        Then the whole game is one idea: a palindrome is a <strong>mirror</strong> —
+        pick a center, walk left and right while the mirrors match, keep the longest run.
+        Quiz grades only on <strong>final submit</strong>. Pass clipboard includes
+        <strong>#id · slug · time</strong>.
       </p>
       <ul class="scene-list">
-        <li><strong>自学</strong>：本质 → 奇偶中心 → 扩展维护 best → 图解 → 测。</li>
-        <li><strong>复习</strong>：口头复述「\(2n-1\) 个中心」与「退出后区间是 \([L+1,R-1]\)」。</li>
-        <li><strong>卡关</strong>：偶数长度（如 <code>cbbd</code>）必须有「缝心」。</li>
+        <li><strong>Learn</strong>: essence → odd &amp; even centers → expand + best → storyboard → quiz.</li>
+        <li><strong>Review</strong>: say out loud “\(2n-1\) centers” and “answer span is \([L+1,R-1]\)”.</li>
+        <li><strong>Stuck?</strong> Even length (e.g. <code>cbbd</code>) needs a center <em>between</em> two chars.</li>
       </ul>
     </section>
 
     <section class="card" data-section="essence">
-      <h2>本质：回文由中心决定 <span class="badge accent">先立靶</span></h2>
+      <h2>The punchline: a palindrome is a center <span class="badge accent">core</span></h2>
       <p>
-        不要先枚举所有 \([i,j]\)。一个回文 substring 一旦中心定了，两侧能扩多远就定了。
-        问题变成：枚举所有可能的<strong>中心</strong>，向两侧 expand，记下最长的那一段。
+        Don’t open with “try every pair of endpoints.” Once you name the
+        <strong>center</strong>, the longest palindrome around it is unique:
+        keep expanding while the two sides agree. So we enumerate centers, not substrings.
       </p>
       <div class="essence-box">
-        <h3>只记这一组</h3>
+        <h3>One cheat sheet</h3>
         <div class="math-block">
-          <p class="math-caption">两种中心（共 \(2n-1\) 个）</p>
+          <p class="math-caption">Two kinds of centers (about \(2n-1\) of them)</p>
           \[
-            \text{奇数长：中心在字符 }i\quad
-            (L,R)\leftarrow(i,i)
+            \text{odd length: center on char }i
+            \quad(L,R)\leftarrow(i,i)
           \]
           \[
-            \text{偶数长：中心在缝 }i|i{+}1\quad
-            (L,R)\leftarrow(i,i+1)
+            \text{even length: center in the gap }i\,|\,i{+}1
+            \quad(L,R)\leftarrow(i,i+1)
           \]
-          <p class="math-caption">扩展不变量</p>
+          <p class="math-caption">Expand while the mirrors match</p>
           \[
             \text{while } L\ge 0 \land R&lt;n \land s[L]=s[R]:
             \quad L\leftarrow L-1,\; R\leftarrow R+1
           \]
-          <p class="math-caption">循环退出后，合法闭区间为</p>
+          <p class="math-caption">When the loop stops, \(L\) and \(R\) overshot — the real span is</p>
           \[
             [L+1,\, R-1]
           \]
-          维护全局最长的 \((\mathrm{start},\,\mathrm{len})\)。
+          Track the global best \((\mathrm{start},\,\mathrm{len})\).
         </div>
       </div>
       <div class="callout">
-        <strong>与题 3 的差别：</strong>
-        题 3 用 sliding window 维护「无重复」；本题约束是<strong>左右对称</strong>，
-        模型是 expand around centers，不是 last-index 窗口。
+        <strong>Not problem 3.</strong>
+        Problem 3’s sliding window chases “no duplicate chars.”
+        Here the constraint is <strong>left–right symmetry</strong> —
+        expand around centers, not last-index windows.
       </div>
     </section>
 
     <section class="card" data-section="scene">
-      <h2>这题在现实里像什么 <span class="badge blue">应用场景</span></h2>
+      <h2>Where this shows up <span class="badge blue">why care</span></h2>
       <div data-tabs>
         <div class="tabs">
-          <button type="button" class="tab-btn active" data-tab="biz">场景</button>
-          <button type="button" class="tab-btn" data-tab="sys">系统</button>
-          <button type="button" class="tab-btn" data-tab="not">不是技巧秀</button>
+          <button type="button" class="tab-btn active" data-tab="biz">Life</button>
+          <button type="button" class="tab-btn" data-tab="sys">Systems</button>
+          <button type="button" class="tab-btn" data-tab="not">Not a flex</button>
         </div>
         <div class="tab-panel active" data-panel="biz">
           <ul class="scene-list">
-            <li>DNA / 文本里找最长「左右对称」片段（教学类比）。</li>
-            <li>产品 ID、口令生成里检测对称结构。</li>
+            <li>Spotting mirrored phrases in text / DNA teaching demos.</li>
+            <li>Catching symmetric patterns in IDs or toy password generators.</li>
           </ul>
         </div>
         <div class="tab-panel" data-panel="sys">
           <ul class="scene-list">
-            <li>字符串算法入门：中心扩展 → Manacher 的直觉底座。</li>
-            <li>与「最长回文 subsequence」对比：连续 vs 可跳，模型完全不同。</li>
+            <li>String algorithms 101: expand is the intuition under Manacher.</li>
+            <li>Contrast with longest palindromic <em>subsequence</em> — skip allowed → different model.</li>
           </ul>
         </div>
         <div class="tab-panel" data-panel="not">
           <p class="hint">
-            中心扩展不是炫技：回文的定义就是对称。
-            用中心参数化，把「所有子串」压成「所有中心」，空间常数、实现短。
+            Expand around centers is not fancy for fancy’s sake.
+            Palindrome <em>means</em> symmetry. Parameterize by the axis,
+            and “all substrings” collapses to “all axes” — constant space, short code.
           </p>
         </div>
       </div>
     </section>
 
     <section class="card" data-section="approaches">
-      <h2>多种解法 · 对比 <span class="badge">先选武器</span></h2>
+      <h2>Approaches · pick your weapon <span class="badge">compare</span></h2>
       <div class="approach-grid">
         <details class="approach">
           <summary>A. Brute force</summary>
@@ -161,90 +166,95 @@
               <span class="chip warn">Time \(O(n^3)\)</span>
               <span class="chip good">Space \(O(1)\)</span>
             </div>
-            <p>枚举所有 substring，再线性判回文。定义清晰，\(n=1000\) 偏紧。</p>
+            <p>Every substring, then a linear palindrome check. Crystal clear; \(n=1000\) is already sweaty.</p>
           </div>
         </details>
         <details class="approach" open>
-          <summary>B. Expand around centers（主推）</summary>
+          <summary>B. Expand around centers (recommended)</summary>
           <div class="body">
             <div class="metrics">
               <span class="chip good">Time \(O(n^2)\)</span>
               <span class="chip good">Space \(O(1)\)</span>
             </div>
             <p>
-              \(2n-1\) 个中心，每个向两侧扩展；维护最长区间。
-              <strong>在优化什么：</strong>不枚举端点对，只枚举「对称轴」。
+              ~\(2n-1\) centers, expand each, keep the longest span.
+              <strong>What you buy:</strong> you stop enumerating endpoint pairs —
+              you only walk symmetry axes.
             </p>
           </div>
         </details>
         <details class="approach">
-          <summary>C. DP 区间表</summary>
+          <summary>C. Interval DP</summary>
           <div class="body">
             <div class="metrics">
               <span class="chip good">Time \(O(n^2)\)</span>
               <span class="chip warn">Space \(O(n^2)\)</span>
             </div>
             <p>
-              \(\mathrm{dp}[i][j]=(s[i]=s[j])\land(\mathrm{短区间或}\,dp[i+1][j-1])\)。
-              正确但更重；中心扩展更贴定义。
+              \(\mathrm{dp}[i][j]=(s[i]=s[j])\land(\text{short or }dp[i+1][j-1])\).
+              Correct, heavier. Expand is closer to the definition.
             </p>
           </div>
         </details>
       </div>
       <table class="cmp">
         <thead>
-          <tr><th>解法</th><th>换到了什么</th><th>丢掉了什么</th></tr>
+          <tr><th>Approach</th><th>You gain</th><th>You pay</th></tr>
         </thead>
         <tbody>
-          <tr><td>Brute</td><td>定义直观</td><td>时间</td></tr>
-          <tr><td>中心扩展</td><td>\(O(n^2)\)、\(O(1)\) 空间、好写</td><td>要记得奇偶两种中心</td></tr>
-          <tr><td>DP</td><td>转移清晰、可推广</td><td>额外 \(O(n^2)\) 空间</td></tr>
+          <tr><td>Brute</td><td>Obvious definition</td><td>Time</td></tr>
+          <tr><td>Expand</td><td>\(O(n^2)\), \(O(1)\) space, fun to write</td><td>Must cover odd + even centers</td></tr>
+          <tr><td>DP</td><td>Clean transitions, extensible</td><td>Extra \(O(n^2)\) memory</td></tr>
         </tbody>
       </table>
     </section>
 
     <section class="card" data-section="centers">
-      <h2>为何要两种中心？ <span class="badge accent">核心</span></h2>
+      <h2>Why two center types? <span class="badge accent">gotcha</span></h2>
       <p class="hint">
-        只扩「字符心」会漏掉 <code>bb</code>、<code>abba</code> 这类<strong>偶数长</strong>回文——它们的对称轴在两个字符<strong>中间的缝</strong>。
+        If you only expand from a <strong>character</strong>, you miss even-length pals like
+        <code>bb</code> and <code>abba</code> — their mirror axis sits in the
+        <strong>gap between</strong> two characters.
       </p>
       <table class="mini-table">
         <thead>
-          <tr><th>类型</th><th>初值</th><th>例子</th></tr>
+          <tr><th>Type</th><th>Seed</th><th>Picture</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td>奇数心</td>
+            <td>Odd center</td>
             <td>\(L=R=i\)</td>
-            <td><code>aba</code> 中心在 <code>b</code></td>
+            <td><code>aba</code> — axis on <code>b</code></td>
           </tr>
           <tr>
-            <td>偶数心</td>
+            <td>Even center</td>
             <td>\(L=i,\;R=i+1\)</td>
-            <td><code>abba</code> 中心在两 <code>b</code> 之间</td>
+            <td><code>abba</code> — axis between the two <code>b</code>s</td>
           </tr>
         </tbody>
       </table>
       <div class="callout warn">
-        实现上通常写一个 <code>expand(l, r)</code>：奇调用 <code>expand(i,i)</code>，偶调用 <code>expand(i,i+1)</code>。
+        One helper does both: <code>expand(l, r)</code>.
+        Odd → <code>expand(i, i)</code>. Even → <code>expand(i, i+1)</code>.
+        Same loop, two seeds. No drama.
       </div>
     </section>
 
     <section class="card" data-section="storyboard">
-      <h2>主推路径 · 图解 <span class="badge">skill 绘图</span></h2>
+      <h2>Recommended path · storyboard <span class="badge">frames</span></h2>
       <div data-storyboard data-period="3000" data-autoplay="true">
         <div class="sb-stage">
           <figure class="sb-frame" data-frame="0">
             <img src="assets/01-center-mirror.png" alt="palindrome expands symmetrically from center" />
-            <figcaption>Step 1 · 回文 = 以中心为轴左右对称；向两侧 expand</figcaption>
+            <figcaption>Step 1 · Palindrome = mirror around a center; expand both ways</figcaption>
           </figure>
           <figure class="sb-frame" data-frame="1">
             <img src="assets/02-odd-even-centers.png" alt="odd and even length centers" />
-            <figcaption>Step 2 · 奇数心在字符上，偶数心在缝上；共约 \(2n-1\) 个中心</figcaption>
+            <figcaption>Step 2 · Odd center on a char; even center in a gap; ~\(2n-1\) axes total</figcaption>
           </figure>
           <figure class="sb-frame" data-frame="2">
             <img src="assets/03-expand-track-best.png" alt="expand L R and keep best" />
-            <figcaption>Step 3 · \(s[L]=s[R]\) 则继续扩；退出后更新全局 best</figcaption>
+            <figcaption>Step 3 · Keep growing while \(s[L]=s[R]\); then update global best</figcaption>
           </figure>
         </div>
         <div class="sb-controls">
@@ -257,91 +267,98 @@
     </section>
 
     <section class="card" data-section="walkthrough">
-      <h2>手推两例 <span class="badge blue">巩固</span></h2>
+      <h2>Walk two examples <span class="badge blue">trace</span></h2>
       <div class="walk-block">
-        <h4>例 1 · <code>babad</code>（奇数长）</h4>
-        <p>中心在 index 1 的 <code>a</code>：扩得 <code>bab</code>（或中心在 2 得 <code>aba</code>）。最长长度 3。</p>
-        <h4>例 2 · <code>cbbd</code>（必须偶数心）</h4>
-        <p>字符心最多单字符。缝心在两个 <code>b</code> 之间：\(L=1,R=2\) 扩得 <code>bb</code>。答案 <code>bb</code>。</p>
-        <h4>退出后的下标</h4>
+        <h4>Ex 1 · <code>babad</code> (odd wins)</h4>
         <p>
-          循环在「越界或不相等」时停下，此时 \(L,R\) 已各多走一步，
-          合法段是 \([L+1, R-1]\)，长度 \(R-L-1\)。
+          Center on index-1 <code>a</code> expands to <code>bab</code>
+          (or center on index-2 → <code>aba</code>). Best length 3 — pick either.
+        </p>
+        <h4>Ex 2 · <code>cbbd</code> (even is mandatory)</h4>
+        <p>
+          Character centers top out at length 1. Seed the gap between the two
+          <code>b</code>s: \(L=1, R=2\) → <code>bb</code>. That’s the answer.
+        </p>
+        <h4>Off-by-one after expand</h4>
+        <p>
+          The while loop dies when it hits a mismatch or the border —
+          so \(L\) and \(R\) have already stepped one too far.
+          The true palindrome is \([L+1, R-1]\), length \(R-L-1\).
         </p>
       </div>
     </section>
 
     <section class="card" data-section="variants">
-      <h2>发散：约束一变 <span class="badge blue">思维</span></h2>
+      <h2>What if the rules change? <span class="badge blue">riffs</span></h2>
       <ul class="scene-list">
-        <li>只要长度 → 同样扩展，只返回 \(\mathrm{len}\)。</li>
-        <li>最长回文 <strong>subsequence</strong> → 不连续，改 DP（与本题不同）。</li>
-        <li>\(n\) 到 \(10^5\) 且要严格线性 → Manacher。</li>
-        <li>统计所有回文个数 → 每个中心的半径可累加。</li>
+        <li>Only need the length → same expand, return \(\mathrm{len}\) only.</li>
+        <li>Longest palindromic <strong>subsequence</strong> → skips allowed → DP territory.</li>
+        <li>\(n\) up to \(10^5\) and strict linear → Manacher.</li>
+        <li>Count all palindromes → sum the radius from each center.</li>
       </ul>
     </section>
 
     <section class="card" id="quiz-section" data-section="quiz">
-      <h2>理解测 <span class="badge">统一提交 · 作答中不公布答案</span></h2>
-      <p class="note">围绕<strong>中心扩展 + 奇偶中心</strong>。全对复制：#题号 · slug · 用时 · 下一步。</p>
+      <h2>Understanding check <span class="badge">submit once · no live spoilers</span></h2>
+      <p class="note">Focus: expand + odd/even centers. Pass clipboard: #id · slug · time · next step.</p>
 
       <div class="q" data-answer="B" data-qid="q1">
-        <p class="q-title">Q1. 本题要求的「回文子串」是？</p>
-        <label class="opt"><input type="radio" name="q1" value="A" /> A. subsequence：字符可跳着取</label>
-        <label class="opt"><input type="radio" name="q1" value="B" /> B. substring：必须连续一段</label>
-        <label class="opt"><input type="radio" name="q1" value="C" /> C. 整串必须是回文否则无解</label>
-        <div class="explain"><strong>解析：</strong>substring = 连续；多解任返一个最长。</div>
+        <p class="q-title">Q1. “Palindromic substring” means…</p>
+        <label class="opt"><input type="radio" name="q1" value="A" /> A. subsequence — chars may skip</label>
+        <label class="opt"><input type="radio" name="q1" value="B" /> B. substring — must be one contiguous slice</label>
+        <label class="opt"><input type="radio" name="q1" value="C" /> C. the whole string must be a palindrome or no answer</label>
+        <div class="explain"><strong>Why:</strong> contiguous only; if several max-length answers, any one is fine.</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q2">
-        <p class="q-title">Q2. 中心扩展主推的核心建模是？</p>
-        <label class="opt"><input type="radio" name="q2" value="A" /> A. 像题 3 一样维护无重复 sliding window</label>
-        <label class="opt"><input type="radio" name="q2" value="B" /> B. 枚举对称中心，向两侧 expand 并维护最长</label>
-        <label class="opt"><input type="radio" name="q2" value="C" /> C. 先排序再双指针</label>
-        <div class="explain"><strong>解析：</strong>回文 = 对称；中心参数化后两侧扩展。</div>
+        <p class="q-title">Q2. The recommended model is…</p>
+        <label class="opt"><input type="radio" name="q2" value="A" /> A. same sliding window as “no-repeat substring”</label>
+        <label class="opt"><input type="radio" name="q2" value="B" /> B. enumerate centers, expand both sides, keep the longest</label>
+        <label class="opt"><input type="radio" name="q2" value="C" /> C. sort the string, then two-pointers</label>
+        <div class="explain"><strong>Why:</strong> palindrome = symmetry; centers parameterize the axis.</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q3">
-        <p class="q-title">Q3. 为何除了「字符心」还要「缝心」？</p>
-        <label class="opt"><input type="radio" name="q3" value="A" /> A. 题目强制写两种</label>
-        <label class="opt"><input type="radio" name="q3" value="B" /> B. 偶数长回文（如 <code>bb</code>）的对称轴在两字符之间</label>
-        <label class="opt"><input type="radio" name="q3" value="C" /> C. 缝心用于处理空串</label>
-        <div class="explain"><strong>解析：</strong>只做字符心会漏掉偶数长度回文。</div>
+        <p class="q-title">Q3. Why bother with even centers (gap between chars)?</p>
+        <label class="opt"><input type="radio" name="q3" value="A" /> A. the problem statement forces two loops</label>
+        <label class="opt"><input type="radio" name="q3" value="B" /> B. even-length pals (e.g. <code>bb</code>) have their axis between two characters</label>
+        <label class="opt"><input type="radio" name="q3" value="C" /> C. gaps are only for empty strings</label>
+        <div class="explain"><strong>Why:</strong> char-only centers miss every even-length palindrome.</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q4">
-        <p class="q-title">Q4. 扩展循环在不相等时停下，合法区间是？</p>
+        <p class="q-title">Q4. After expand stops on mismatch, the valid span is…</p>
         <label class="opt"><input type="radio" name="q4" value="A" /> A. \([L, R]\)</label>
-        <label class="opt"><input type="radio" name="q4" value="B" /> B. \([L+1, R-1]\)（\(L,R\) 已各越界/失配一步）</label>
+        <label class="opt"><input type="radio" name="q4" value="B" /> B. \([L+1, R-1]\) — \(L\) and \(R\) already stepped one past the palindrome</label>
         <label class="opt"><input type="radio" name="q4" value="C" /> C. \([L-1, R+1]\)</label>
-        <div class="explain"><strong>解析：</strong>while 条件失败前 \(L,R\) 多走了一步，要缩回。</div>
+        <div class="explain"><strong>Why:</strong> the failing check happens after the bad step; shrink back.</div>
       </div>
 
       <div class="q" data-answer="bb" data-alts="BB" data-qid="q5">
-        <p class="q-title">Q5. \(s=\) <code>cbbd</code> 的一个最长回文 substring 是？（小写填写）</p>
-        <input type="text" placeholder="连续子串" autocomplete="off" />
-        <div class="explain"><strong>解析：</strong>偶数心扩出 <code>bb</code>；单字符更短。</div>
+        <p class="q-title">Q5. One longest palindromic substring of <code>cbbd</code>? (lowercase)</p>
+        <input type="text" placeholder="substring" autocomplete="off" />
+        <div class="explain"><strong>Why:</strong> even center between the two <code>b</code>s → <code>bb</code>.</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q6">
-        <p class="q-title">Q6. 中心扩展相对暴力，主要省在？</p>
-        <label class="opt"><input type="radio" name="q6" value="A" /> A. 变成 \(O(n)\)</label>
-        <label class="opt"><input type="radio" name="q6" value="B" /> B. 从「所有子串 \(O(n^2)\) 再各查一遍」压到「每中心线性扩展」，总 \(O(n^2)\)</label>
-        <label class="opt"><input type="radio" name="q6" value="C" /> C. 空间变成 \(O(n^2)\)</label>
-        <div class="explain"><strong>解析：</strong>暴力常 \(O(n^3)\)；中心扩展 \(O(n^2)/O(1)\)。</div>
+        <p class="q-title">Q6. Expand vs brute — the big win is…</p>
+        <label class="opt"><input type="radio" name="q6" value="A" /> A. becomes linear \(O(n)\)</label>
+        <label class="opt"><input type="radio" name="q6" value="B" /> B. from “all substrings × scan each” (~\(O(n^3)\)) to “per-center linear expand” (\(O(n^2)\))</label>
+        <label class="opt"><input type="radio" name="q6" value="C" /> C. space becomes \(O(n^2)\)</label>
+        <div class="explain"><strong>Why:</strong> brute often \(O(n^3)\); expand is \(O(n^2)/O(1)\).</div>
       </div>
 
       <div class="q" data-answer="B" data-qid="q7">
-        <p class="q-title">Q7. 若改成「最长回文 subsequence」，主推是否仍是中心扩展？</p>
-        <label class="opt"><input type="radio" name="q7" value="A" /> A. 是，完全一样</label>
-        <label class="opt"><input type="radio" name="q7" value="B" /> B. 否；可跳字符，通常改 DP 等模型</label>
-        <label class="opt"><input type="radio" name="q7" value="C" /> C. 否；改成二分查找</label>
-        <div class="explain"><strong>解析：</strong>subsequence 不连续，中心扩展前提不成立。</div>
+        <p class="q-title">Q7. Longest palindromic <em>subsequence</em> — still expand around centers?</p>
+        <label class="opt"><input type="radio" name="q7" value="A" /> A. yes, identical</label>
+        <label class="opt"><input type="radio" name="q7" value="B" /> B. no — skips allowed, usually a different DP model</label>
+        <label class="opt"><input type="radio" name="q7" value="C" /> C. no — binary search</label>
+        <div class="explain"><strong>Why:</strong> non-contiguous → expand’s contiguous mirror assumption breaks.</div>
       </div>
 
       <div class="actions">
-        <button type="button" id="quiz-submit">提交测验</button>
-        <button type="button" id="quiz-retry" class="secondary" hidden>再来一次</button>
+        <button type="button" id="quiz-submit">Submit quiz</button>
+        <button type="button" id="quiz-retry" class="secondary" hidden>Try again</button>
       </div>
     </section>
   </div>
@@ -349,13 +366,13 @@
   <div class="scorebar">
     <div class="scorebar-inner">
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-      <span id="status-text">已作答 0 / 7</span>
+      <span id="status-text">Answered 0 / 7</span>
     </div>
   </div>
 
   <script type="application/json" id="lab-config">
   {
-    "nextHint": "理解测完成，开始写 Rust",
+    "nextHint": "Quiz passed — time to write Rust",
     "problemId": 5,
     "slug": "longest-palindromic-substring",
     "titleZh": "最长回文子串",
