@@ -298,12 +298,24 @@ function renderKpiSkeleton() {
   ).join("");
 }
 
-function niceMax(raw) {
-  if (!(raw > 0)) return 1;
-  const exp = Math.pow(10, Math.floor(Math.log10(raw)));
-  const n = raw / exp;
-  const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
-  return nice * exp;
+/** 贴数据的 Y 轴上限：只留 ~12% 余量，避免 5.4k→10k 那种半屏留白。 */
+function yScaleMax(dataMax) {
+  if (!(dataMax > 0) || !Number.isFinite(dataMax)) return 1;
+  // 余量压到 ~8%：峰值 5.4s → 6s 档，而不是 10s
+  const target = dataMax * 1.08;
+  const exp = Math.pow(10, Math.floor(Math.log10(target)));
+  // 更密的 nice 档：含 1.2/1.5/2.5/3/4/6/8，避免 5→10 跳档
+  const mults = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const cands = [];
+  for (const decade of [exp / 10, exp, exp * 10]) {
+    if (!(decade > 0)) continue;
+    for (const m of mults) cands.push(m * decade);
+  }
+  cands.sort((a, b) => a - b);
+  for (const c of cands) {
+    if (c >= target) return c;
+  }
+  return target;
 }
 
 function renderChart(latency) {
@@ -323,16 +335,18 @@ function renderChart(latency) {
   }
   empty?.classList.add("hidden");
 
+  const n = series.length;
   const W = 720;
-  const H = 220;
-  const pad = { t: 16, r: 16, b: 36, l: 48 };
+  // 点少时压矮，少占竖向空白
+  const H = n <= 2 ? 160 : n <= 6 ? 190 : 220;
+  const pad = { t: 14, r: 16, b: 34, l: 48 };
   const plotW = W - pad.l - pad.r;
   const plotH = H - pad.t - pad.b;
 
   const avgs = series.map((r) => Number(r.avg_ms) || 0);
   const p95s = series.map((r) => Number(r.p95_ms) || 0);
-  const yMax = niceMax(Math.max(...avgs, ...p95s, 0.001) * 1.08);
-  const n = series.length;
+  const peak = Math.max(...avgs, ...p95s, 0.001);
+  const yMax = yScaleMax(peak);
   const xAt = (i) => {
     if (n <= 1) return pad.l + plotW / 2;
     return pad.l + (i / (n - 1)) * plotW;
@@ -352,19 +366,28 @@ function renderChart(latency) {
       .join(" ");
   };
 
+  // ≤2 点不画面积，避免对角色块 + 大留白
   const areaPath =
-    n <= 1
+    n <= 2
       ? ""
       : poly(avgs) +
         ` L${xAt(n - 1).toFixed(1)},${(pad.t + plotH).toFixed(1)}` +
         ` L${xAt(0).toFixed(1)},${(pad.t + plotH).toFixed(1)} Z`;
 
-  // Y grid + labels (4 ticks)
-  const yTicks = 4;
+  // Y grid：按 nice 步长，约 3–5 条
+  const roughStep = yMax / 4;
+  const stepExp = Math.pow(10, Math.floor(Math.log10(Math.max(roughStep, 1e-9))));
+  let yStep = stepExp;
+  for (const m of [1, 1.5, 2, 2.5, 5, 10]) {
+    if (m * stepExp >= roughStep * 0.85) {
+      yStep = m * stepExp;
+      break;
+    }
+  }
   let grid = "";
   let yLabels = "";
-  for (let i = 0; i <= yTicks; i++) {
-    const v = (yMax * i) / yTicks;
+  for (let v = 0; v <= yMax + yStep * 1e-9; v += yStep) {
+    if (v > yMax * 1.001) break;
     const y = yAt(v);
     grid += `<line class="grid-line" x1="${pad.l}" y1="${y.toFixed(1)}" x2="${(pad.l + plotW).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
     const label = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
@@ -397,6 +420,7 @@ function renderChart(latency) {
   }
 
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.aspectRatio = `${W} / ${H}`;
   svg.innerHTML = `
     <defs>
       <linearGradient id="gradAvg" x1="0" y1="0" x2="0" y2="1">

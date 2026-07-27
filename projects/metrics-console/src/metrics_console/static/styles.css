@@ -554,7 +554,9 @@ select {
 /* —— Chart —— */
 .chart-wrap {
   position: relative;
-  height: 240px;
+  /* 高度跟 SVG viewBox 走，避免固定 240 在少点时撑出大空白 */
+  height: auto;
+  min-height: 140px;
   border-radius: var(--radius-sm);
   background: rgba(120, 120, 128, 0.04);
   border: 0.5px solid var(--separator);
@@ -564,7 +566,8 @@ select {
 
 .linechart {
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 240px;
   display: block;
 }
 
