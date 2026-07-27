@@ -9,7 +9,7 @@
       "name": "Algorithms Lab",
       "port": 8000,
       "bind": "0.0.0.0",
-      "root": "/Users/david/Documents/recallfs/learning/algorithms",
+      "root": "/Users/bytedance/Documents/trae_projects/recallfs/learning/algorithms",
       "auto_start": true,
       "force_mirror": true,
       "sync_interval_sec": 5
