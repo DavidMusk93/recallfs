@@ -582,10 +582,11 @@ select {
 
 .chart-plot {
   position: relative;
-  /* 与卡片一体：无 border、无第二层圆角底 */
+  /* 与卡片一体：无 border、无第二层圆角底；水平拉满 */
   background: transparent;
-  padding: 0 8px 10px 4px;
+  padding: 0 6px 8px 2px;
   min-height: 0;
+  width: 100%;
 }
 
 .linechart {

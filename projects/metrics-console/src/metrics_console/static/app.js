@@ -353,7 +353,8 @@ function renderChart(latency) {
   const W = 720;
   // 点少时压矮，少占竖向空白
   const H = n <= 2 ? 160 : n <= 6 ? 190 : 220;
-  const pad = { t: 14, r: 16, b: 34, l: 48 };
+  // 左右只留轴标签，绘图区尽量拉满；点按索引等距水平平铺（非时间比例）
+  const pad = { t: 12, r: 14, b: n <= 8 ? 40 : 34, l: 46 };
   const plotW = W - pad.l - pad.r;
   const plotH = H - pad.t - pad.b;
 
@@ -361,6 +362,7 @@ function renderChart(latency) {
   const p95s = series.map((r) => Number(r.p95_ms) || 0);
   const peak = Math.max(...avgs, ...p95s, 0.001);
   const yMax = yScaleMax(peak);
+  /** 水平平铺：第 i 个点均分 plot 宽度，与时间间隔无关 */
   const xAt = (i) => {
     if (n <= 1) return pad.l + plotW / 2;
     return pad.l + (i / (n - 1)) * plotW;
@@ -405,20 +407,24 @@ function renderChart(latency) {
     yLabels += `<text class="tick-label" x="${pad.l - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${label}</text>`;
   }
 
-  // X labels: first / mid / last (more if many points)
-  const xIdx = new Set([0, n - 1]);
-  if (n >= 3) xIdx.add(Math.floor((n - 1) / 2));
-  if (n >= 8) {
-    xIdx.add(Math.floor((n - 1) / 4));
-    xIdx.add(Math.floor((3 * (n - 1)) / 4));
+  // X 轴：少点时每个点都标（与平铺点位一一对应）；多点时均匀抽样
+  let xIdx = [];
+  if (n <= 12) {
+    xIdx = Array.from({ length: n }, (_, i) => i);
+  } else {
+    const slots = 8;
+    const set = new Set([0, n - 1]);
+    for (let s = 1; s < slots - 1; s++) {
+      set.add(Math.round((s * (n - 1)) / (slots - 1)));
+    }
+    xIdx = [...set].sort((a, b) => a - b);
   }
   let xLabels = "";
-  [...xIdx]
-    .sort((a, b) => a - b)
-    .forEach((i) => {
-      const label = fmtAxisTime(series[i].bucket || series[i].minute);
-      xLabels += `<text class="tick-label" x="${xAt(i).toFixed(1)}" y="${(H - 12).toFixed(1)}" text-anchor="middle">${escapeHtml(label)}</text>`;
-    });
+  xIdx.forEach((i) => {
+    const label = fmtAxisTime(series[i].bucket || series[i].minute);
+    const anchor = i === 0 ? "start" : i === n - 1 ? "end" : "middle";
+    xLabels += `<text class="tick-label" x="${xAt(i).toFixed(1)}" y="${(H - 10).toFixed(1)}" text-anchor="${anchor}">${escapeHtml(label)}</text>`;
+  });
 
   // dots only when sparse (readable)
   let dots = "";
