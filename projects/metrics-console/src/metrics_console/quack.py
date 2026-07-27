@@ -1,11 +1,15 @@
-"""DuckDB Quack client for metrics master on d2."""
+"""DuckDB Quack client for metrics master on d2.
+
+Thread-local connections enable parallel quack_query round-trips.
+"""
 
 from __future__ import annotations
 
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterable, TypeVar
 
 import duckdb
 
@@ -17,20 +21,25 @@ DEFAULT_TOKEN_FILE = os.path.expanduser(
     )
 )
 
+T = TypeVar("T")
+
 
 class QuackClient:
-    """Thread-safe thin wrapper around quack_query (ATTACH multi-catalog is flaky)."""
+    """Thread-safe Quack access via thread-local DuckDB connections."""
 
     def __init__(
         self,
         uri: str = DEFAULT_URI,
         token_file: str | Path = DEFAULT_TOKEN_FILE,
         token: str | None = None,
+        max_workers: int = 8,
     ) -> None:
         self.uri = uri
         self._token = (token or "").strip() or self._load_token(token_file)
-        self._lock = threading.Lock()
-        self._con = self._open()
+        self._local = threading.local()
+        self._max_workers = max(1, int(max_workers))
+        self._pool_lock = threading.Lock()
+        self._pool: ThreadPoolExecutor | None = None
 
     @staticmethod
     def _load_token(path: str | Path) -> str:
@@ -47,8 +56,6 @@ class QuackClient:
 
     def _open(self) -> duckdb.DuckDBPyConnection:
         con = duckdb.connect()
-        ext = Path.home() / ".duckdb/extensions/v1.5.5"
-        # Prefer LOAD after INSTALL; tolerate offline install miss if already present.
         try:
             con.execute("INSTALL quack FROM core")
         except Exception:
@@ -57,25 +64,64 @@ class QuackClient:
             except Exception:
                 pass
         con.execute("LOAD quack")
-        # force plain HTTP for LAN
         return con
 
+    def _conn(self) -> duckdb.DuckDBPyConnection:
+        con = getattr(self._local, "con", None)
+        if con is None:
+            con = self._open()
+            self._local.con = con
+        return con
+
+    def _executor(self) -> ThreadPoolExecutor:
+        with self._pool_lock:
+            if self._pool is None:
+                self._pool = ThreadPoolExecutor(
+                    max_workers=self._max_workers,
+                    thread_name_prefix="quack",
+                )
+            return self._pool
+
     def query(self, sql: str) -> list[tuple[Any, ...]]:
-        with self._lock:
-            return self._con.execute(
-                "FROM quack_query(?, ?, token := ?, disable_ssl := true)",
-                [self.uri, sql, self._token],
-            ).fetchall()
+        rel = self._conn().execute(
+            "FROM quack_query(?, ?, token := ?, disable_ssl := true)",
+            [self.uri, sql, self._token],
+        )
+        return rel.fetchall()
 
     def query_dicts(self, sql: str) -> list[dict[str, Any]]:
-        with self._lock:
-            rel = self._con.execute(
-                "FROM quack_query(?, ?, token := ?, disable_ssl := true)",
-                [self.uri, sql, self._token],
-            )
-            cols = [d[0] for d in rel.description]
-            rows = rel.fetchall()
+        rel = self._conn().execute(
+            "FROM quack_query(?, ?, token := ?, disable_ssl := true)",
+            [self.uri, sql, self._token],
+        )
+        cols = [d[0] for d in rel.description]
+        rows = rel.fetchall()
         return [dict(zip(cols, row, strict=False)) for row in rows]
+
+    def map(
+        self,
+        items: Iterable[tuple[str, Callable[[], T]]],
+    ) -> dict[str, T | dict[str, str]]:
+        """Run callables in parallel; return {key: result_or_{error}}."""
+        jobs = list(items)
+        if not jobs:
+            return {}
+        if len(jobs) == 1:
+            key, fn = jobs[0]
+            try:
+                return {key: fn()}
+            except Exception as exc:  # noqa: BLE001
+                return {key: {"error": str(exc)}}
+
+        out: dict[str, T | dict[str, str]] = {}
+        futs = {self._executor().submit(fn): key for key, fn in jobs}
+        for fut in as_completed(futs):
+            key = futs[fut]
+            try:
+                out[key] = fut.result()
+            except Exception as exc:  # noqa: BLE001
+                out[key] = {"error": str(exc)}
+        return out
 
     def health(self) -> dict[str, Any]:
         import time

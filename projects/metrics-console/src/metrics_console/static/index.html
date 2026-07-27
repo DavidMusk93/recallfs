@@ -2,136 +2,164 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Metrics Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Metrics · 分析台</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <div class="shell">
-      <aside class="sidebar glass">
+      <aside class="sidebar glass" aria-label="导航">
         <div class="brand">
-          <h1>Metrics</h1>
-          <p>DuckDB Quack · e2ed / orchestrator</p>
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div>
+            <h1>Metrics</h1>
+            <p>Quack · e2ed / orchestrator</p>
+          </div>
         </div>
         <nav class="nav" id="nav">
-          <button type="button" data-view="overview" class="active">Overview</button>
-          <button type="button" data-view="api">API latency</button>
-          <button type="button" data-view="lifecycle">Lifecycle</button>
-          <button type="button" data-view="explore">Tables</button>
+          <button type="button" data-view="overview" class="active">概览</button>
+          <button type="button" data-view="api">API 延迟</button>
+          <button type="button" data-view="lifecycle">生命周期</button>
+          <button type="button" data-view="components">组件</button>
+          <button type="button" data-view="explore">表浏览</button>
           <button type="button" data-view="sql">SQL</button>
         </nav>
-        <div class="status-pill" id="healthPill">
+        <div class="status-pill" id="healthPill" title="Quack 连通性">
           <span class="dot" id="healthDot"></span>
-          <span id="healthText">Connecting…</span>
+          <div class="status-copy">
+            <span class="status-title" id="healthText">连接中…</span>
+            <span class="status-sub" id="pollMeta">—</span>
+          </div>
         </div>
       </aside>
 
-      <main class="main">
-        <!-- Overview -->
-        <section id="view-overview">
-          <div class="topbar">
-            <div>
-              <h2>Overview</h2>
-              <p class="sub">Live counts from the Quack metrics master on d2.</p>
-            </div>
-            <div class="actions">
-              <button class="btn secondary" id="btnRefresh" type="button">Refresh</button>
-            </div>
+      <div class="content">
+        <header class="chrome glass">
+          <div class="chrome-left">
+            <h2 id="pageTitle">概览</h2>
+            <p class="sub" id="pageSub">时间窗内的窗口计数与差分刷新</p>
           </div>
-          <div class="grid" id="kpiGrid"></div>
-          <div class="panel">
-            <div class="panel-head">
-              <h3>API latency (6h)</h3>
-              <span class="muted" id="latencyCaption"></span>
+          <div class="chrome-right">
+            <div class="seg" id="rangeSeg" role="tablist" aria-label="时间范围">
+              <button type="button" data-range="15m" role="tab">15m</button>
+              <button type="button" data-range="1h" role="tab" class="active">1h</button>
+              <button type="button" data-range="6h" role="tab">6h</button>
+              <button type="button" data-range="24h" role="tab">24h</button>
+              <button type="button" data-range="7d" role="tab">7d</button>
             </div>
-            <div class="chart" id="latencyChart" aria-label="latency chart"></div>
+            <button class="btn ghost" id="btnLive" type="button" aria-pressed="true" title="差分轮询">
+              <span class="live-dot"></span> Live
+            </button>
+            <button class="btn secondary" id="btnRefresh" type="button">刷新</button>
           </div>
-          <div class="panel">
-            <h3>Recent API requests</h3>
-            <div class="table-wrap" id="recentApi"></div>
-          </div>
-        </section>
+        </header>
 
-        <!-- API -->
-        <section id="view-api" class="hidden">
-          <div class="topbar">
-            <div>
-              <h2>API latency</h2>
-              <p class="sub">Path aggregates and raw request samples.</p>
-            </div>
-          </div>
-          <div class="panel">
-            <h3>Top paths (24h)</h3>
-            <div class="table-wrap" id="pathTable"></div>
-          </div>
-          <div class="panel">
-            <h3>Latest requests</h3>
-            <div class="table-wrap" id="apiTable"></div>
-          </div>
-        </section>
+        <main class="main">
+          <!-- Overview -->
+          <section id="view-overview">
+            <div class="grid kpi" id="kpiGrid" aria-live="off"></div>
 
-        <!-- Lifecycle -->
-        <section id="view-lifecycle" class="hidden">
-          <div class="topbar">
-            <div>
-              <h2>Lifecycle</h2>
-              <p class="sub">e2ed service start/stop/roll and daemon ticks.</p>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>API 延迟</h3>
+                  <p class="panel-sub" id="latencyCaption">avg / p95</p>
+                </div>
+                <span class="chip" id="latencyChip">—</span>
+              </div>
+              <div class="chart-wrap">
+                <svg class="spark" id="latencyChart" viewBox="0 0 640 160" preserveAspectRatio="none" aria-label="latency chart"></svg>
+                <div class="chart-empty muted hidden" id="latencyEmpty">暂无延迟序列</div>
+              </div>
             </div>
-          </div>
-          <div class="panel">
-            <h3>Service lifecycle</h3>
-            <div class="table-wrap" id="lifeTable"></div>
-          </div>
-          <div class="panel">
-            <h3>Daemon ticks</h3>
-            <div class="table-wrap" id="tickTable"></div>
-          </div>
-        </section>
 
-        <!-- Explore -->
-        <section id="view-explore" class="hidden">
-          <div class="topbar">
-            <div>
-              <h2>Tables</h2>
-              <p class="sub">Browse category databases attached on the master.</p>
+            <div class="split">
+              <div class="panel">
+                <div class="panel-head">
+                  <h3>最近 API</h3>
+                  <span class="chip soft" id="apiCountChip">0</span>
+                </div>
+                <div class="table-wrap" id="recentApi"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-head">
+                  <h3>Top paths</h3>
+                  <span class="chip soft" id="pathCountChip">0</span>
+                </div>
+                <div class="table-wrap" id="pathTable"></div>
+              </div>
             </div>
-          </div>
-          <div class="panel">
-            <div class="toolbar-row">
-              <select class="field" id="tableSelect"></select>
-              <button class="btn secondary" type="button" id="btnLoadTable">Load</button>
-            </div>
-            <div class="table-wrap" id="exploreTable"></div>
-          </div>
-        </section>
+          </section>
 
-        <!-- SQL -->
-        <section id="view-sql" class="hidden">
-          <div class="topbar">
-            <div>
-              <h2>SQL</h2>
-              <p class="sub">Read-only Quack queries against the metrics master.</p>
+          <!-- API -->
+          <section id="view-api" class="hidden">
+            <div class="panel">
+              <div class="panel-head"><h3>路径聚合</h3></div>
+              <div class="table-wrap" id="pathTableFull"></div>
             </div>
-          </div>
-          <div class="panel">
-            <textarea
-              class="sql-box"
-              id="sqlInput"
-              spellcheck="false"
-              placeholder="SELECT path, avg(duration_ms) FROM cat_orchestrator.api_requests GROUP BY 1 ORDER BY 2 DESC LIMIT 20"
-            ></textarea>
-            <div class="toolbar-row">
-              <button class="btn" type="button" id="btnRunSql">Run</button>
-              <button class="btn secondary" type="button" id="btnSqlApi">Sample: API p95</button>
-              <button class="btn secondary" type="button" id="btnSqlLife">Sample: lifecycle</button>
-              <span class="muted" id="sqlMeta"></span>
+            <div class="panel">
+              <div class="panel-head"><h3>请求样本</h3></div>
+              <div class="table-wrap" id="apiTable"></div>
             </div>
-            <div class="error hidden" id="sqlError"></div>
-            <div class="table-wrap" id="sqlTable"></div>
-          </div>
-        </section>
-      </main>
+          </section>
+
+          <!-- Lifecycle -->
+          <section id="view-lifecycle" class="hidden">
+            <div class="panel">
+              <div class="panel-head"><h3>服务生命周期</h3></div>
+              <div class="table-wrap" id="lifeTable"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Daemon ticks</h3></div>
+              <div class="table-wrap" id="tickTable"></div>
+            </div>
+          </section>
+
+          <!-- Components -->
+          <section id="view-components" class="hidden">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>component_ops</h3>
+                <span class="muted">窗口内组件操作</span>
+              </div>
+              <div class="table-wrap" id="compTable"></div>
+            </div>
+          </section>
+
+          <!-- Explore -->
+          <section id="view-explore" class="hidden">
+            <div class="panel">
+              <div class="toolbar-row">
+                <select class="field" id="tableSelect" aria-label="选择表"></select>
+                <button class="btn secondary" type="button" id="btnLoadTable">加载</button>
+              </div>
+              <div class="table-wrap" id="exploreTable"></div>
+            </div>
+          </section>
+
+          <!-- SQL -->
+          <section id="view-sql" class="hidden">
+            <div class="panel">
+              <textarea
+                class="sql-box"
+                id="sqlInput"
+                spellcheck="false"
+                placeholder="SELECT path, avg(duration_ms) FROM cat_orchestrator.api_requests GROUP BY 1 ORDER BY 2 DESC LIMIT 20"
+              ></textarea>
+              <div class="toolbar-row">
+                <button class="btn" type="button" id="btnRunSql">运行</button>
+                <button class="btn secondary" type="button" id="btnSqlApi">样例: API p95</button>
+                <button class="btn secondary" type="button" id="btnSqlLife">样例: lifecycle</button>
+                <span class="muted" id="sqlMeta"></span>
+              </div>
+              <div class="error hidden" id="sqlError"></div>
+              <div class="table-wrap" id="sqlTable"></div>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
+    <div class="toast" id="toast" hidden></div>
     <script src="/static/app.js" type="module"></script>
   </body>
 </html>

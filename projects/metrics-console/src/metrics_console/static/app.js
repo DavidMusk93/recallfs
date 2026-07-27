@@ -1,27 +1,89 @@
+/* Metrics Console client: time range + differential updates */
+
 const $ = (sel) => document.querySelector(sel);
 
-const state = {
-  overview: null,
-  tables: [],
-  view: "overview",
+const TITLES = {
+  overview: ["概览", "窗口计数 · 差分轮询 · Quack 只读"],
+  api: ["API 延迟", "路径聚合与请求样本"],
+  lifecycle: ["生命周期", "e2ed 启停与 daemon ticks"],
+  components: ["组件", "component_ops 窗口事件"],
+  explore: ["表浏览", "category 库只读采样"],
+  sql: ["SQL", "只读查询 · ⌘/Ctrl+Enter 运行"],
 };
 
-async function api(path, opts) {
+const KPI_DEF = [
+  ["API 请求", "orch_api", "blue", "api_requests"],
+  ["Orch 事件", "orch_events", "indigo", "events"],
+  ["组件操作", "orch_components", "purple", "component_ops"],
+  ["场景步骤", "orch_scenarios", "pink", "scenario_steps"],
+  ["生命周期", "e2ed_lifecycle", "green", "service_lifecycle"],
+  ["Daemon ticks", "e2ed_ticks", "orange", "daemon_ticks"],
+  ["e2ed 事件", "e2ed_events", "blue", "e2ed.events"],
+  ["ops 事件", "ops_events", "indigo", "ops.events"],
+];
+
+const state = {
+  view: "overview",
+  range: "1h",
+  live: true,
+  cursor: null,
+  feeds: {
+    api: [],
+    lifecycle: [],
+    ticks: [],
+    components: [],
+  },
+  tables: {},
+  latency: [],
+  paths: [],
+  loading: false,
+  abort: null,
+  pollTimer: null,
+  healthTimer: null,
+  lastQueryMs: null,
+  lastMode: null,
+};
+
+const FEED_LIMIT = 60;
+
+async function api(path, opts = {}) {
+  const ctrl = opts.signal;
   const res = await fetch(path, {
     headers: { "content-type": "application/json" },
     ...opts,
+    signal: ctrl,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.detail || res.statusText || "request failed");
+    const detail = data.detail;
+    const msg =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d) => d.msg || d).join("; ")
+          : res.statusText || "request failed";
+    throw new Error(msg);
   }
   return data;
+}
+
+function toast(msg, err) {
+  const el = $("#toast");
+  if (!el) return;
+  el.hidden = false;
+  el.textContent = msg;
+  el.classList.toggle("err", !!err);
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    el.classList.remove("show");
+  }, 2200);
 }
 
 function fmtNum(n) {
   if (n == null || typeof n === "object") return "—";
   if (typeof n === "number") {
-    return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2);
+    return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
   }
   return String(n);
 }
@@ -31,7 +93,14 @@ function fmtTs(v) {
   try {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return String(v);
-    return d.toLocaleString();
+    return d.toLocaleString(undefined, {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
   } catch {
     return String(v);
   }
@@ -41,40 +110,6 @@ function cell(v) {
   if (v == null) return "—";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
-}
-
-function renderTable(el, rows, columns) {
-  if (!el) return;
-  if (!rows || rows.error) {
-    el.innerHTML = `<div class="error" style="padding:12px">${rows?.error || "no data"}</div>`;
-    return;
-  }
-  if (!rows.length) {
-    el.innerHTML = `<div class="muted" style="padding:12px">No rows</div>`;
-    return;
-  }
-  const cols = columns || Object.keys(rows[0]);
-  const thead = cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
-  const body = rows
-    .map((r) => {
-      const tds = cols
-        .map((c) => {
-          let val = r[c];
-          if (c === "ts" || String(c).endsWith("_at")) val = fmtTs(val);
-          if (c === "ok" && typeof val === "boolean") {
-            return `<td><span class="badge ${val ? "ok" : "err"}">${val ? "ok" : "fail"}</span></td>`;
-          }
-          if (c === "status" && typeof val === "number") {
-            const cls = val >= 400 ? "err" : "ok";
-            return `<td><span class="badge ${cls}">${val}</span></td>`;
-          }
-          return `<td title="${escapeAttr(cell(val))}">${escapeHtml(cell(val))}</td>`;
-        })
-        .join("");
-      return `<tr>${tds}</tr>`;
-    })
-    .join("");
-  el.innerHTML = `<table class="data"><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function escapeHtml(s) {
@@ -89,44 +124,262 @@ function escapeAttr(s) {
   return escapeHtml(s).replaceAll("'", "&#39;");
 }
 
+function rowKey(r, cols) {
+  if (r.ts) return String(r.ts) + "|" + (r.path || r.service || r.action || "");
+  return cols.map((c) => String(r[c] ?? "")).join("|");
+}
+
+function mergeFeed(oldRows, added, limit) {
+  if (!Array.isArray(added) || !added.length) return { rows: oldRows || [], newKeys: new Set() };
+  const cols = Object.keys(added[0] || {});
+  const seen = new Set((oldRows || []).map((r) => rowKey(r, cols)));
+  const newKeys = new Set();
+  const prepend = [];
+  // API returns newest first
+  for (const r of added) {
+    const k = rowKey(r, cols);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    newKeys.add(k);
+    prepend.push(r);
+  }
+  const merged = prepend.concat(oldRows || []).slice(0, limit);
+  return { rows: merged, newKeys };
+}
+
+function renderTable(el, rows, columns, opts = {}) {
+  if (!el) return;
+  if (!rows || rows.error) {
+    el.innerHTML = `<div class="error" style="padding:12px">${escapeHtml(rows?.error || "no data")}</div>`;
+    return;
+  }
+  if (!rows.length) {
+    el.innerHTML = `<div class="muted" style="padding:12px">暂无数据</div>`;
+    return;
+  }
+  const cols = columns || Object.keys(rows[0]);
+  const newKeys = opts.newKeys || new Set();
+  const thead = cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
+  const body = rows
+    .map((r) => {
+      const k = rowKey(r, cols);
+      const isNew = newKeys.has(k);
+      const tds = cols
+        .map((c) => {
+          let val = r[c];
+          if (c === "ts" || c === "bucket" || String(c).endsWith("_at")) val = fmtTs(val);
+          if (c === "ok" && typeof val === "boolean") {
+            return `<td><span class="badge ${val ? "ok" : "err"}">${val ? "ok" : "fail"}</span></td>`;
+          }
+          if (c === "status" && typeof val === "number") {
+            const cls = val >= 400 ? "err" : "ok";
+            return `<td><span class="badge ${cls}">${val}</span></td>`;
+          }
+          return `<td title="${escapeAttr(cell(val))}">${escapeHtml(cell(val))}</td>`;
+        })
+        .join("");
+      return `<tr class="${isNew ? "is-new" : ""}" data-k="${escapeAttr(k)}">${tds}</tr>`;
+    })
+    .join("");
+  el.innerHTML = `<table class="data"><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table>`;
+  if (opts.flash) {
+    el.classList.remove("flash");
+    // reflow
+    void el.offsetWidth;
+    el.classList.add("flash");
+  }
+}
+
 function renderKpis(tables) {
-  const items = [
-    ["API requests", tables.orch_api, "cat_orchestrator.api_requests"],
-    ["Orch events", tables.orch_events, "cat_orchestrator.events"],
-    ["Lifecycle", tables.e2ed_lifecycle, "cat_e2ed.service_lifecycle"],
-    ["Daemon ticks", tables.e2ed_ticks, "cat_e2ed.daemon_ticks"],
-  ];
-  $("#kpiGrid").innerHTML = items
-    .map(
-      ([label, value, hint]) => `
-      <div class="card">
+  const root = $("#kpiGrid");
+  if (!root) return;
+  root.innerHTML = KPI_DEF.map(([label, key, tone, hint]) => {
+    const value = tables?.[key];
+    return `
+      <div class="card" data-tone="${tone}">
         <div class="label">${label}</div>
         <div class="value">${fmtNum(value)}</div>
-        <div class="hint">${hint}</div>
-      </div>`
-    )
-    .join("");
+        <div class="hint">${hint} · ${state.range}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderKpiSkeleton() {
+  const root = $("#kpiGrid");
+  if (!root || root.children.length) return;
+  root.innerHTML = KPI_DEF.map(
+    ([label, , tone]) => `
+    <div class="card skeleton" data-tone="${tone}">
+      <div class="label">${label}</div>
+      <div class="value">0000</div>
+      <div class="hint">loading</div>
+    </div>`
+  ).join("");
 }
 
 function renderChart(latency) {
-  const el = $("#latencyChart");
+  const svg = $("#latencyChart");
+  const empty = $("#latencyEmpty");
   const cap = $("#latencyCaption");
-  if (!latency || latency.error || !latency.length) {
-    el.innerHTML = `<div class="muted">No latency series yet</div>`;
-    cap.textContent = "";
+  const chip = $("#latencyChip");
+  if (!svg) return;
+
+  const series = Array.isArray(latency) ? latency : [];
+  if (!series.length || series.error) {
+    svg.innerHTML = "";
+    empty?.classList.remove("hidden");
+    if (cap) cap.textContent = series.error || "avg / p95";
+    if (chip) chip.textContent = "—";
     return;
   }
-  const vals = latency.map((r) => Number(r.avg_ms) || 0);
-  const max = Math.max(...vals, 1);
-  el.innerHTML = latency
-    .map((r) => {
-      const h = Math.max(4, Math.round(((Number(r.avg_ms) || 0) / max) * 140));
-      const title = `${fmtTs(r.minute)} · avg ${fmtNum(r.avg_ms)}ms · p95 ${fmtNum(r.p95_ms)}ms · n=${fmtNum(r.n)}`;
-      return `<div class="bar" style="height:${h}px" title="${escapeAttr(title)}"></div>`;
-    })
-    .join("");
-  const last = latency[latency.length - 1];
-  cap.textContent = `last avg ${fmtNum(last.avg_ms)} ms · p95 ${fmtNum(last.p95_ms)} ms`;
+  empty?.classList.add("hidden");
+
+  const W = 640;
+  const H = 160;
+  const pad = { t: 12, r: 8, b: 16, l: 8 };
+  const avgs = series.map((r) => Number(r.avg_ms) || 0);
+  const p95s = series.map((r) => Number(r.p95_ms) || 0);
+  const max = Math.max(...avgs, ...p95s, 1);
+
+  const x = (i) =>
+    pad.l + (i / Math.max(series.length - 1, 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
+
+  const line = (vals) =>
+    vals
+      .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+      .join(" ");
+
+  const area =
+    line(avgs) +
+    ` L${x(series.length - 1).toFixed(1)},${(H - pad.b).toFixed(1)}` +
+    ` L${x(0).toFixed(1)},${(H - pad.b).toFixed(1)} Z`;
+
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="gradAvg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    <path class="area" d="${area}"></path>
+    <path class="line-p95" d="${line(p95s)}"></path>
+    <path class="line-avg" d="${line(avgs)}"></path>
+  `;
+
+  const last = series[series.length - 1];
+  if (cap) {
+    cap.textContent = `avg ${fmtNum(last.avg_ms)} ms · p95 ${fmtNum(last.p95_ms)} ms · n=${fmtNum(last.n)}`;
+  }
+  if (chip) chip.textContent = `${series.length} pts`;
+}
+
+function applySnapshot(data) {
+  state.tables = data.tables || {};
+  state.latency = data.latency || [];
+  state.paths = data.paths || [];
+  state.cursor = data.cursor || null;
+  state.lastQueryMs = data.query_ms;
+  state.lastMode = data.mode || "snapshot";
+
+  const recent = data.recent || {};
+  state.feeds.api = Array.isArray(recent.api) ? recent.api : [];
+  state.feeds.lifecycle = Array.isArray(recent.lifecycle) ? recent.lifecycle : [];
+  state.feeds.ticks = Array.isArray(recent.ticks) ? recent.ticks : [];
+  state.feeds.components = Array.isArray(recent.components) ? recent.components : [];
+
+  renderKpis(state.tables);
+  renderChart(state.latency);
+  paintFeeds({ flash: false });
+  updateMeta();
+}
+
+function applyDelta(data) {
+  state.lastQueryMs = data.query_ms;
+  state.lastMode = "delta";
+  if (data.cursor) state.cursor = data.cursor;
+
+  // merge window KPIs that came back
+  if (data.tables && typeof data.tables === "object") {
+    state.tables = { ...state.tables, ...data.tables };
+    renderKpis(state.tables);
+  }
+  if (Array.isArray(data.latency)) {
+    state.latency = data.latency;
+    renderChart(state.latency);
+  }
+  if (Array.isArray(data.paths)) {
+    state.paths = data.paths;
+  }
+
+  const added = data.added || {};
+  const news = {};
+  for (const key of ["api", "lifecycle", "ticks", "components"]) {
+    const m = mergeFeed(state.feeds[key], added[key], FEED_LIMIT);
+    state.feeds[key] = m.rows;
+    news[key] = m.newKeys;
+  }
+  paintFeeds({ flash: true, news });
+  updateMeta(Object.values(news).reduce((n, s) => n + s.size, 0));
+}
+
+function paintFeeds({ flash = false, news = {} } = {}) {
+  const apiCols = ["ts", "method", "path", "status", "duration_ms"];
+  const lifeCols = ["ts", "service", "action", "ok", "pid", "error"];
+  const tickCols = [
+    "ts",
+    "services_total",
+    "services_alive",
+    "services_unhealthy",
+    "poll_interval_secs",
+  ];
+  const pathCols = ["path", "n", "avg_ms", "p95_ms", "max_ms"];
+
+  renderTable($("#recentApi"), state.feeds.api, apiCols, {
+    flash,
+    newKeys: news.api,
+  });
+  renderTable($("#apiTable"), state.feeds.api, apiCols, {
+    flash,
+    newKeys: news.api,
+  });
+  renderTable($("#pathTable"), state.paths, pathCols, { flash });
+  renderTable($("#pathTableFull"), state.paths, pathCols, { flash });
+  renderTable($("#lifeTable"), state.feeds.lifecycle, lifeCols, {
+    flash,
+    newKeys: news.lifecycle,
+  });
+  renderTable($("#tickTable"), state.feeds.ticks, tickCols, {
+    flash,
+    newKeys: news.ticks,
+  });
+
+  // components: dynamic columns
+  const comp = state.feeds.components;
+  const compCols =
+    Array.isArray(comp) && comp[0]
+      ? Object.keys(comp[0]).filter((k) => k !== "error" || true).slice(0, 10)
+      : ["ts"];
+  renderTable($("#compTable"), comp, compCols, {
+    flash,
+    newKeys: news.components,
+  });
+
+  const apiChip = $("#apiCountChip");
+  const pathChip = $("#pathCountChip");
+  if (apiChip) apiChip.textContent = String(state.feeds.api.length);
+  if (pathChip) pathChip.textContent = String((state.paths || []).length);
+}
+
+function updateMeta(addedCount) {
+  const poll = $("#pollMeta");
+  if (!poll) return;
+  const mode = state.lastMode === "delta" ? "Δ" : "全量";
+  const ms = state.lastQueryMs != null ? `${state.lastQueryMs} ms` : "—";
+  const extra =
+    addedCount != null && addedCount > 0 ? ` · +${addedCount}` : "";
+  poll.textContent = `${state.range} · ${mode} ${ms}${extra}${state.live ? " · live" : ""}`;
 }
 
 async function refreshHealth() {
@@ -134,89 +387,80 @@ async function refreshHealth() {
   const text = $("#healthText");
   try {
     const h = await api("/api/health");
-    dot.className = "dot ok";
-    text.textContent = `${h.uri} · ${h.latency_ms} ms`;
+    if (dot) dot.className = "dot ok";
+    if (text) text.textContent = `${h.uri} · ${h.latency_ms} ms`;
   } catch (e) {
-    dot.className = "dot err";
-    text.textContent = e.message || "offline";
+    if (dot) dot.className = "dot err";
+    if (text) text.textContent = e.message || "offline";
   }
 }
 
-async function refreshOverview() {
-  const data = await api("/api/overview");
-  state.overview = data;
-  renderKpis(data.tables || {});
-  renderChart(data.latency);
-  renderTable($("#recentApi"), data.recent?.api, [
-    "ts",
-    "method",
-    "path",
-    "status",
-    "duration_ms",
-  ]);
-  renderTable($("#pathTable"), data.paths, ["path", "n", "avg_ms", "max_ms"]);
-  renderTable($("#apiTable"), data.recent?.api, [
-    "ts",
-    "method",
-    "path",
-    "status",
-    "duration_ms",
-  ]);
-  renderTable($("#lifeTable"), data.recent?.lifecycle, [
-    "ts",
-    "service",
-    "action",
-    "ok",
-    "pid",
-    "error",
-  ]);
-  renderTable($("#tickTable"), data.recent?.ticks, [
-    "ts",
-    "services_total",
-    "services_alive",
-    "services_unhealthy",
-    "poll_interval_secs",
-  ]);
-}
-
-async function loadTablesCatalog() {
-  const data = await api("/api/tables");
-  state.tables = data.tables || [];
-  const sel = $("#tableSelect");
-  sel.innerHTML = state.tables
-    .map((t) => {
-      const db = t.database || "";
-      const name = t.table_name || t.name;
-      const cat = db.startsWith("cat_") ? db.slice(4) : db === "master" ? "meta" : db;
-      const value = `${cat}/${name}`;
-      return `<option value="${escapeAttr(value)}">${escapeHtml(db)}.${escapeHtml(name)}</option>`;
-    })
-    .join("");
-}
-
-async function loadSelectedTable() {
-  const value = $("#tableSelect").value;
-  if (!value) return;
-  const [category, table] = value.split("/");
-  const data = await api(`/api/table/${encodeURIComponent(category)}/${encodeURIComponent(table)}?limit=100`);
-  renderTable($("#exploreTable"), data.rows);
-}
-
-async function runSql(sql) {
-  $("#sqlError").classList.add("hidden");
-  $("#sqlMeta").textContent = "Running…";
+async function loadSnapshot({ quiet = false } = {}) {
+  if (state.abort) state.abort.abort();
+  const ac = new AbortController();
+  state.abort = ac;
+  state.loading = true;
+  if (!quiet) renderKpiSkeleton();
+  $("#btnRefresh")?.setAttribute("disabled", "true");
   try {
-    const data = await api("/api/sql", {
-      method: "POST",
-      body: JSON.stringify({ sql, limit: 200 }),
+    const data = await api(`/api/snapshot?range=${encodeURIComponent(state.range)}`, {
+      signal: ac.signal,
     });
-    renderTable($("#sqlTable"), data.rows, data.columns);
-    $("#sqlMeta").textContent = `${data.count} rows`;
+    applySnapshot(data);
+    if (!quiet) toast(`全量 ${data.query_ms} ms · ${state.range}`);
   } catch (e) {
-    $("#sqlError").textContent = e.message || String(e);
-    $("#sqlError").classList.remove("hidden");
-    $("#sqlMeta").textContent = "failed";
+    if (e.name === "AbortError") return;
+    toast(e.message || String(e), true);
+  } finally {
+    state.loading = false;
+    if (state.abort === ac) state.abort = null;
+    $("#btnRefresh")?.removeAttribute("disabled");
   }
+}
+
+async function loadDelta() {
+  if (!state.cursor || state.loading || state.abort) return;
+  try {
+    const q = new URLSearchParams({
+      range: state.range,
+      since: state.cursor,
+    });
+    const data = await api(`/api/delta?${q}`);
+    applyDelta(data);
+  } catch (e) {
+    // soft-fail: next full refresh will recover
+    console.warn("delta failed", e);
+  }
+}
+
+function setRange(range) {
+  if (state.range === range) return;
+  state.range = range;
+  state.cursor = null;
+  document.querySelectorAll("#rangeSeg button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.range === range);
+  });
+  loadSnapshot();
+}
+
+function setLive(on) {
+  state.live = !!on;
+  const btn = $("#btnLive");
+  if (btn) btn.setAttribute("aria-pressed", state.live ? "true" : "false");
+  schedulePoll();
+  updateMeta();
+}
+
+function schedulePoll() {
+  clearInterval(state.pollTimer);
+  if (!state.live) return;
+  // Differential poll: cheap for multi-component high frequency
+  state.pollTimer = setInterval(() => {
+    if (document.hidden) return;
+    if (["overview", "api", "lifecycle", "components"].includes(state.view)) {
+      loadDelta();
+    }
+  }, 5000);
 }
 
 function setView(name) {
@@ -224,67 +468,126 @@ function setView(name) {
   document.querySelectorAll(".nav button").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === name);
   });
-  ["overview", "api", "lifecycle", "explore", "sql"].forEach((v) => {
-    $(`#view-${v}`).classList.toggle("hidden", v !== name);
+  ["overview", "api", "lifecycle", "components", "explore", "sql"].forEach((v) => {
+    const el = $(`#view-${v}`);
+    if (el) el.classList.toggle("hidden", v !== name);
   });
+  const t = TITLES[name] || [name, ""];
+  const title = $("#pageTitle");
+  const sub = $("#pageSub");
+  if (title) title.textContent = t[0];
+  if (sub) sub.textContent = t[1];
+}
+
+async function loadTablesCatalog() {
+  const data = await api("/api/tables");
+  const tables = data.tables || [];
+  const sel = $("#tableSelect");
+  if (!sel) return;
+  sel.innerHTML = tables
+    .map((t) => {
+      const db = t.database || "";
+      const name = t.table_name || t.name;
+      const cat = db.startsWith("cat_")
+        ? db.slice(4)
+        : db === "master"
+          ? "meta"
+          : db;
+      const value = `${cat}/${name}`;
+      return `<option value="${escapeAttr(value)}">${escapeHtml(db)}.${escapeHtml(name)}</option>`;
+    })
+    .join("");
+}
+
+async function loadSelectedTable() {
+  const value = $("#tableSelect")?.value;
+  if (!value) return;
+  const [category, table] = value.split("/");
+  const data = await api(
+    `/api/table/${encodeURIComponent(category)}/${encodeURIComponent(table)}?limit=100&range=${encodeURIComponent(state.range)}`
+  );
+  renderTable($("#exploreTable"), data.rows);
+}
+
+async function runSql(sql) {
+  $("#sqlError")?.classList.add("hidden");
+  if ($("#sqlMeta")) $("#sqlMeta").textContent = "运行中…";
+  try {
+    const data = await api("/api/sql", {
+      method: "POST",
+      body: JSON.stringify({ sql, limit: 200 }),
+    });
+    renderTable($("#sqlTable"), data.rows, data.columns);
+    if ($("#sqlMeta")) $("#sqlMeta").textContent = `${data.count} 行`;
+  } catch (e) {
+    if ($("#sqlError")) {
+      $("#sqlError").textContent = e.message || String(e);
+      $("#sqlError").classList.remove("hidden");
+    }
+    if ($("#sqlMeta")) $("#sqlMeta").textContent = "失败";
+  }
 }
 
 function bind() {
-  $("#nav").addEventListener("click", (e) => {
+  $("#nav")?.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-view]");
     if (!btn) return;
     setView(btn.dataset.view);
   });
 
-  $("#btnRefresh").addEventListener("pointerdown", () => {
-    // instant press feedback path; actual work on click still fine
+  $("#rangeSeg")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-range]");
+    if (!btn) return;
+    setRange(btn.dataset.range);
   });
-  $("#btnRefresh").addEventListener("click", async () => {
-    await Promise.all([refreshHealth(), refreshOverview()]);
-  });
-  $("#btnLoadTable").addEventListener("click", () => loadSelectedTable().catch(showTopError));
-  $("#btnRunSql").addEventListener("click", () => runSql($("#sqlInput").value));
-  $("#btnSqlApi").addEventListener("click", () => {
+
+  $("#btnLive")?.addEventListener("click", () => setLive(!state.live));
+  $("#btnRefresh")?.addEventListener("click", () => loadSnapshot());
+
+  $("#btnLoadTable")?.addEventListener("click", () =>
+    loadSelectedTable().catch((e) => toast(e.message, true))
+  );
+  $("#btnRunSql")?.addEventListener("click", () => runSql($("#sqlInput").value));
+  $("#btnSqlApi")?.addEventListener("click", () => {
     $("#sqlInput").value = `SELECT path,
   count(*) AS n,
   avg(duration_ms) AS avg_ms,
   quantile_cont(duration_ms, 0.95) AS p95_ms
 FROM cat_orchestrator.api_requests
-WHERE ts > now() - INTERVAL 24 HOUR
+WHERE cast(ts AS TIMESTAMP) > cast(now() AS TIMESTAMP) - INTERVAL 1 HOUR
 GROUP BY 1
 ORDER BY n DESC
 LIMIT 30`;
   });
-  $("#btnSqlLife").addEventListener("click", () => {
+  $("#btnSqlLife")?.addEventListener("click", () => {
     $("#sqlInput").value = `SELECT ts, service, action, ok, pid, error
 FROM cat_e2ed.service_lifecycle
 ORDER BY ts DESC
 LIMIT 50`;
   });
-  $("#sqlInput").addEventListener("keydown", (e) => {
+  $("#sqlInput")?.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       runSql($("#sqlInput").value);
     }
   });
-}
 
-function showTopError(e) {
-  console.error(e);
-  alert(e.message || String(e));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.live && state.cursor) loadDelta();
+  });
 }
 
 async function boot() {
   bind();
   setView("overview");
+  setLive(true);
   await refreshHealth();
-  await refreshOverview();
-  await loadTablesCatalog().catch(() => {});
-  // light polling — low frequency to stay calm
-  setInterval(() => {
-    refreshHealth().catch(() => {});
-    if (state.view === "overview") refreshOverview().catch(() => {});
-  }, 15000);
+  await loadSnapshot({ quiet: true });
+  loadTablesCatalog().catch(() => {});
+  state.healthTimer = setInterval(() => {
+    if (!document.hidden) refreshHealth().catch(() => {});
+  }, 20000);
+  schedulePoll();
 }
 
-boot().catch(showTopError);
+boot().catch((e) => toast(e.message || String(e), true));

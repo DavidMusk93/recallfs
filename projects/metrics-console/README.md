@@ -62,16 +62,28 @@ bash run.sh
 
 | 视图 | 内容 |
 | --- | --- |
-| Overview | KPI、6h API latency 条形图、最近请求 |
-| API latency | path 聚合 + 明细 |
-| Lifecycle | e2ed start/stop + daemon ticks |
-| Tables | 浏览 `cat_*` 表 |
+| 概览 | 窗口 KPI、avg/p95 sparkline、最近 API + top paths |
+| API 延迟 | path 聚合（含 p95）+ 请求样本 |
+| 生命周期 | e2ed start/stop + daemon ticks |
+| 组件 | `component_ops` 窗口事件 |
+| 表浏览 | `cat_*` 表 + 当前时间窗采样 |
 | SQL | 只读 SQL（拦截 INSERT/UPDATE/DROP…） |
 
-## 设计
+### 时间范围 + 差分更新
 
-- System font、毛玻璃侧栏、大字号 KPI、克制 accent（`#0071e3`）
-- 按钮 `:active` 即时缩放；`prefers-reduced-motion` / `reduced-transparency` 降级
+| API | 作用 |
+| --- | --- |
+| `GET /api/snapshot?range=15m\|1h\|6h\|24h\|7d` | 全量窗口（并行 Quack） |
+| `GET /api/delta?range=&since=<ts>` | 仅 `ts > since` 的新行 + 重算 KPI/序列 |
+| `GET /api/overview?range=&since=` | 兼容入口（有 since 走 delta） |
+
+前端：分段控件切换 range → snapshot；Live 每 5s delta 合并，不全表闪烁。KPI 为 **窗口计数**（非全表 COUNT）。
+
+## 设计（apple-design）
+
+- System font、毛玻璃侧栏/顶栏、0.5px 分隔、分段控件
+- KPI 柔和色条、SVG sparkline（avg 实线 + p95 虚线）
+- 指针按下即时反馈；`prefers-reduced-motion` / `reduced-transparency`
 - 写路径仍在 e2ed/orchestrator；本台 **只读分析**
 
 ## 环境变量
