@@ -23,18 +23,38 @@ chmod 600 ~/.config/metrics-console/quack.token
 
 ## 启动
 
+### A. Tunnel Manager（推荐，launchd 托管）
+
+本机 **服务站** `http://127.0.0.1:9020` 已将 `metrics-console` 注册为 `kind=service`。
+
+macOS LaunchAgent **读不了** `~/Documents`（TCC）。运行时镜像在：
+
+```text
+~/Library/Application Support/metrics-console/
+```
+
+改代码后同步并重启：
+
+```bash
+bash projects/metrics-console/sync-runtime.sh
+curl -sS -X POST http://127.0.0.1:9020/api/tunnel/metrics-console/restart
+open http://127.0.0.1:9496/
+```
+
+| 操作 | API |
+| --- | --- |
+| 状态 | `GET /api/tunnel/metrics-console` |
+| 启动 | `POST /api/tunnel/metrics-console/start`（可 adopt 已监听进程） |
+| 停止 | `POST /api/tunnel/metrics-console/stop` |
+| 重启 | `POST /api/tunnel/metrics-console/restart` |
+
+`stop_on_exit=false`：Tunnel Manager 自身重启时 **不** 误杀分析台。
+
+### B. 开发机前台（Terminal，可读 Documents）
+
 ```bash
 cd projects/metrics-console
-uv venv .venv --python 3.13
-source .venv/bin/activate
-uv pip install -e .
-# or: uv pip install duckdb fastapi 'uvicorn[standard]' pydantic-settings
-
-export METRICS_QUACK_URI=quack:10.37.125.152:9494
-export METRICS_QUACK_TOKEN_FILE=~/.config/metrics-console/quack.token
-export METRICS_CONSOLE_PORT=9496
-
-python -m metrics_console.app
+bash run.sh
 # open http://127.0.0.1:9496/
 ```
 
