@@ -153,7 +153,11 @@ def _build_snapshot(range_key: str) -> dict[str, Any]:
             "api",
             lambda: c.query_dicts(
                 f"""
-                SELECT cast(ts AS VARCHAR) AS ts, method, path, status, duration_ms
+                SELECT cast(ts AS VARCHAR) AS ts, method, path, status,
+                       round(duration_ms, 3) AS duration_ms,
+                       error,
+                       cast(attrs AS VARCHAR) AS attrs,
+                       instance, host
                 FROM cat_orchestrator.api_requests
                 WHERE {win}
                 ORDER BY ts DESC
@@ -203,11 +207,11 @@ def _build_snapshot(range_key: str) -> dict[str, Any]:
             lambda: c.query_dicts(
                 f"""
                 SELECT
-                  date_trunc('{bucket}', cast(ts AS TIMESTAMP)) AS bucket,
+                  cast(date_trunc('{bucket}', cast(ts AS TIMESTAMP)) AS VARCHAR) AS bucket,
                   count(*) AS n,
-                  avg(duration_ms) AS avg_ms,
-                  max(duration_ms) AS max_ms,
-                  quantile_cont(duration_ms, 0.95) AS p95_ms
+                  round(avg(duration_ms), 3) AS avg_ms,
+                  round(max(duration_ms), 3) AS max_ms,
+                  round(quantile_cont(duration_ms, 0.95), 3) AS p95_ms
                 FROM cat_orchestrator.api_requests
                 WHERE {win}
                 GROUP BY 1
@@ -220,9 +224,9 @@ def _build_snapshot(range_key: str) -> dict[str, Any]:
             lambda: c.query_dicts(
                 f"""
                 SELECT path, count(*) AS n,
-                       avg(duration_ms) AS avg_ms,
-                       max(duration_ms) AS max_ms,
-                       quantile_cont(duration_ms, 0.95) AS p95_ms
+                       round(avg(duration_ms), 3) AS avg_ms,
+                       round(max(duration_ms), 3) AS max_ms,
+                       round(quantile_cont(duration_ms, 0.95), 3) AS p95_ms
                 FROM cat_orchestrator.api_requests
                 WHERE {win}
                 GROUP BY path
@@ -283,7 +287,11 @@ def _build_delta(range_key: str, since: str) -> dict[str, Any]:
             "api",
             lambda: c.query_dicts(
                 f"""
-                SELECT cast(ts AS VARCHAR) AS ts, method, path, status, duration_ms
+                SELECT cast(ts AS VARCHAR) AS ts, method, path, status,
+                       round(duration_ms, 3) AS duration_ms,
+                       error,
+                       cast(attrs AS VARCHAR) AS attrs,
+                       instance, host
                 FROM cat_orchestrator.api_requests
                 WHERE {since_pred}
                 ORDER BY ts DESC
@@ -360,11 +368,11 @@ def _build_delta(range_key: str, since: str) -> dict[str, Any]:
             lambda: c.query_dicts(
                 f"""
                 SELECT
-                  date_trunc('{bucket}', cast(ts AS TIMESTAMP)) AS bucket,
+                  cast(date_trunc('{bucket}', cast(ts AS TIMESTAMP)) AS VARCHAR) AS bucket,
                   count(*) AS n,
-                  avg(duration_ms) AS avg_ms,
-                  max(duration_ms) AS max_ms,
-                  quantile_cont(duration_ms, 0.95) AS p95_ms
+                  round(avg(duration_ms), 3) AS avg_ms,
+                  round(max(duration_ms), 3) AS max_ms,
+                  round(quantile_cont(duration_ms, 0.95), 3) AS p95_ms
                 FROM cat_orchestrator.api_requests
                 WHERE {win}
                 GROUP BY 1
@@ -377,9 +385,9 @@ def _build_delta(range_key: str, since: str) -> dict[str, Any]:
             lambda: c.query_dicts(
                 f"""
                 SELECT path, count(*) AS n,
-                       avg(duration_ms) AS avg_ms,
-                       max(duration_ms) AS max_ms,
-                       quantile_cont(duration_ms, 0.95) AS p95_ms
+                       round(avg(duration_ms), 3) AS avg_ms,
+                       round(max(duration_ms), 3) AS max_ms,
+                       round(quantile_cont(duration_ms, 0.95), 3) AS p95_ms
                 FROM cat_orchestrator.api_requests
                 WHERE {win}
                 GROUP BY path

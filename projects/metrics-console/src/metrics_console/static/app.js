@@ -83,7 +83,10 @@ function toast(msg, err) {
 function fmtNum(n) {
   if (n == null || typeof n === "object") return "—";
   if (typeof n === "number") {
-    return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
+    if (Number.isInteger(n)) return n.toLocaleString();
+    if (Math.abs(n) >= 100) return n.toFixed(1);
+    if (Math.abs(n) >= 10) return n.toFixed(2);
+    return n.toFixed(3);
   }
   return String(n);
 }
@@ -106,10 +109,68 @@ function fmtTs(v) {
   }
 }
 
+function fmtAxisTime(v) {
+  if (!v) return "";
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v).slice(11, 16);
+    return d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return String(v).slice(0, 16);
+  }
+}
+
 function cell(v) {
   if (v == null) return "—";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
+}
+
+/** HTTP status → short reason; prefer writer-provided error/attrs. */
+const HTTP_REASON = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not Found",
+  405: "Method Not Allowed",
+  408: "Request Timeout",
+  409: "Conflict",
+  422: "Unprocessable",
+  429: "Too Many Requests",
+  500: "Internal Server Error",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+};
+
+function statusReason(row) {
+  if (!row) return "";
+  const err = row.error;
+  if (err != null && String(err).trim()) return String(err).trim();
+  let attrs = row.attrs;
+  if (attrs) {
+    try {
+      if (typeof attrs === "string") attrs = JSON.parse(attrs);
+      if (attrs && typeof attrs === "object") {
+        const pick =
+          attrs.error ||
+          attrs.message ||
+          attrs.detail ||
+          attrs.reason ||
+          attrs.msg;
+        if (pick) return String(pick);
+      }
+    } catch {
+      if (String(attrs).trim() && String(attrs) !== "null") return String(attrs);
+    }
+  }
+  const st = Number(row.status);
+  if (!Number.isFinite(st) || st < 400) return "";
+  return HTTP_REASON[st] || `HTTP ${st}`;
 }
 
 function escapeHtml(s) {
@@ -159,7 +220,12 @@ function renderTable(el, rows, columns, opts = {}) {
   }
   const cols = columns || Object.keys(rows[0]);
   const newKeys = opts.newKeys || new Set();
-  const thead = cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
+  const thead = cols
+    .map((c) => {
+      const label = c === "reason" ? "原因" : c === "duration_ms" ? "ms" : c;
+      return `<th>${escapeHtml(label)}</th>`;
+    })
+    .join("");
   const body = rows
     .map((r) => {
       const k = rowKey(r, cols);
@@ -168,12 +234,27 @@ function renderTable(el, rows, columns, opts = {}) {
         .map((c) => {
           let val = r[c];
           if (c === "ts" || c === "bucket" || String(c).endsWith("_at")) val = fmtTs(val);
+          if (c === "duration_ms" && typeof val === "number") {
+            return `<td title="${escapeAttr(String(val))}">${escapeHtml(fmtNum(val))}</td>`;
+          }
           if (c === "ok" && typeof val === "boolean") {
             return `<td><span class="badge ${val ? "ok" : "err"}">${val ? "ok" : "fail"}</span></td>`;
           }
-          if (c === "status" && typeof val === "number") {
-            const cls = val >= 400 ? "err" : "ok";
-            return `<td><span class="badge ${cls}">${val}</span></td>`;
+          if (c === "status") {
+            const st = Number(val);
+            const cls = Number.isFinite(st) && st >= 400 ? "err" : "ok";
+            const reason = statusReason(r);
+            if (reason && Number.isFinite(st) && st >= 400) {
+              return `<td><div class="status-cell"><span class="badge ${cls}">${escapeHtml(String(val))}</span><span class="reason" title="${escapeAttr(reason)}">${escapeHtml(reason)}</span></div></td>`;
+            }
+            return `<td><span class="badge ${cls}">${escapeHtml(cell(val))}</span></td>`;
+          }
+          if (c === "reason") {
+            const reason = statusReason(r) || val;
+            if (!reason) {
+              return `<td><span class="reason empty">—</span></td>`;
+            }
+            return `<td title="${escapeAttr(reason)}"><span class="reason">${escapeHtml(reason)}</span></td>`;
           }
           return `<td title="${escapeAttr(cell(val))}">${escapeHtml(cell(val))}</td>`;
         })
@@ -217,6 +298,14 @@ function renderKpiSkeleton() {
   ).join("");
 }
 
+function niceMax(raw) {
+  if (!(raw > 0)) return 1;
+  const exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / exp;
+  const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return nice * exp;
+}
+
 function renderChart(latency) {
   const svg = $("#latencyChart");
   const empty = $("#latencyEmpty");
@@ -228,49 +317,108 @@ function renderChart(latency) {
   if (!series.length || series.error) {
     svg.innerHTML = "";
     empty?.classList.remove("hidden");
-    if (cap) cap.textContent = series.error || "avg / p95";
+    if (cap) cap.textContent = series.error || "avg / p95 · ms";
     if (chip) chip.textContent = "—";
     return;
   }
   empty?.classList.add("hidden");
 
-  const W = 640;
-  const H = 160;
-  const pad = { t: 12, r: 8, b: 16, l: 8 };
+  const W = 720;
+  const H = 220;
+  const pad = { t: 16, r: 16, b: 36, l: 48 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
   const avgs = series.map((r) => Number(r.avg_ms) || 0);
   const p95s = series.map((r) => Number(r.p95_ms) || 0);
-  const max = Math.max(...avgs, ...p95s, 1);
+  const yMax = niceMax(Math.max(...avgs, ...p95s, 0.001) * 1.08);
+  const n = series.length;
+  const xAt = (i) => {
+    if (n <= 1) return pad.l + plotW / 2;
+    return pad.l + (i / (n - 1)) * plotW;
+  };
+  const yAt = (v) => pad.t + (1 - Math.min(v, yMax) / yMax) * plotH;
 
-  const x = (i) =>
-    pad.l + (i / Math.max(series.length - 1, 1)) * (W - pad.l - pad.r);
-  const y = (v) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
-
-  const line = (vals) =>
-    vals
-      .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+  const poly = (vals) => {
+    if (n === 1) {
+      // single point: short horizontal tick so it doesn't look like a filled block
+      const x0 = xAt(0) - 18;
+      const x1 = xAt(0) + 18;
+      const y = yAt(vals[0]);
+      return `M${x0.toFixed(1)},${y.toFixed(1)} L${x1.toFixed(1)},${y.toFixed(1)}`;
+    }
+    return vals
+      .map((v, i) => `${i === 0 ? "M" : "L"}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`)
       .join(" ");
+  };
 
-  const area =
-    line(avgs) +
-    ` L${x(series.length - 1).toFixed(1)},${(H - pad.b).toFixed(1)}` +
-    ` L${x(0).toFixed(1)},${(H - pad.b).toFixed(1)} Z`;
+  const areaPath =
+    n <= 1
+      ? ""
+      : poly(avgs) +
+        ` L${xAt(n - 1).toFixed(1)},${(pad.t + plotH).toFixed(1)}` +
+        ` L${xAt(0).toFixed(1)},${(pad.t + plotH).toFixed(1)} Z`;
+
+  // Y grid + labels (4 ticks)
+  const yTicks = 4;
+  let grid = "";
+  let yLabels = "";
+  for (let i = 0; i <= yTicks; i++) {
+    const v = (yMax * i) / yTicks;
+    const y = yAt(v);
+    grid += `<line class="grid-line" x1="${pad.l}" y1="${y.toFixed(1)}" x2="${(pad.l + plotW).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+    const label = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    yLabels += `<text class="tick-label" x="${pad.l - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${label}</text>`;
+  }
+
+  // X labels: first / mid / last (more if many points)
+  const xIdx = new Set([0, n - 1]);
+  if (n >= 3) xIdx.add(Math.floor((n - 1) / 2));
+  if (n >= 8) {
+    xIdx.add(Math.floor((n - 1) / 4));
+    xIdx.add(Math.floor((3 * (n - 1)) / 4));
+  }
+  let xLabels = "";
+  [...xIdx]
+    .sort((a, b) => a - b)
+    .forEach((i) => {
+      const label = fmtAxisTime(series[i].bucket || series[i].minute);
+      xLabels += `<text class="tick-label" x="${xAt(i).toFixed(1)}" y="${(H - 12).toFixed(1)}" text-anchor="middle">${escapeHtml(label)}</text>`;
+    });
+
+  // dots only when sparse (readable)
+  let dots = "";
+  if (n <= 48) {
+    for (let i = 0; i < n; i++) {
+      const title = `${fmtTs(series[i].bucket)} · avg ${fmtNum(avgs[i])} · p95 ${fmtNum(p95s[i])} · n=${fmtNum(series[i].n)}`;
+      dots += `<circle class="dot-p95" cx="${xAt(i).toFixed(1)}" cy="${yAt(p95s[i]).toFixed(1)}" r="2.5"><title>${escapeAttr(title)}</title></circle>`;
+      dots += `<circle class="dot-avg" cx="${xAt(i).toFixed(1)}" cy="${yAt(avgs[i]).toFixed(1)}" r="2.8"><title>${escapeAttr(title)}</title></circle>`;
+    }
+  }
 
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = `
     <defs>
       <linearGradient id="gradAvg" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"/>
         <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
       </linearGradient>
     </defs>
-    <path class="area" d="${area}"></path>
-    <path class="line-p95" d="${line(p95s)}"></path>
-    <path class="line-avg" d="${line(avgs)}"></path>
+    ${grid}
+    <line class="axis-line" x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t + plotH}"/>
+    <line class="axis-line" x1="${pad.l}" y1="${pad.t + plotH}" x2="${pad.l + plotW}" y2="${pad.t + plotH}"/>
+    ${yLabels}
+    ${xLabels}
+    <text class="axis-title" x="12" y="${(pad.t + plotH / 2).toFixed(1)}" text-anchor="middle" transform="rotate(-90 12 ${(pad.t + plotH / 2).toFixed(1)})">ms</text>
+    ${areaPath ? `<path class="area" d="${areaPath}"></path>` : ""}
+    <path class="line-p95" d="${poly(p95s)}"></path>
+    <path class="line-avg" d="${poly(avgs)}"></path>
+    ${dots}
   `;
 
   const last = series[series.length - 1];
   if (cap) {
-    cap.textContent = `avg ${fmtNum(last.avg_ms)} ms · p95 ${fmtNum(last.p95_ms)} ms · n=${fmtNum(last.n)}`;
+    cap.textContent = `avg ${fmtNum(last.avg_ms)} ms · p95 ${fmtNum(last.p95_ms)} ms · n=${fmtNum(last.n)} · 纵轴 ms`;
   }
   if (chip) chip.textContent = `${series.length} pts`;
 }
@@ -325,7 +473,8 @@ function applyDelta(data) {
 }
 
 function paintFeeds({ flash = false, news = {} } = {}) {
-  const apiCols = ["ts", "method", "path", "status", "duration_ms"];
+  // reason is derived client-side from error/attrs/HTTP phrase
+  const apiCols = ["ts", "method", "path", "status", "reason", "duration_ms"];
   const lifeCols = ["ts", "service", "action", "ok", "pid", "error"];
   const tickCols = [
     "ts",

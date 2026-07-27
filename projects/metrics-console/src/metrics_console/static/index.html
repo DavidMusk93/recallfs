@@ -63,12 +63,16 @@
               <div class="panel-head">
                 <div>
                   <h3>API 延迟</h3>
-                  <p class="panel-sub" id="latencyCaption">avg / p95</p>
+                  <p class="panel-sub" id="latencyCaption">avg / p95 · ms</p>
                 </div>
-                <span class="chip" id="latencyChip">—</span>
+                <div class="chart-legend" aria-hidden="true">
+                  <span class="leg avg"><i></i>avg</span>
+                  <span class="leg p95"><i></i>p95</span>
+                  <span class="chip" id="latencyChip">—</span>
+                </div>
               </div>
               <div class="chart-wrap">
-                <svg class="spark" id="latencyChart" viewBox="0 0 640 160" preserveAspectRatio="none" aria-label="latency chart"></svg>
+                <svg class="linechart" id="latencyChart" viewBox="0 0 720 220" preserveAspectRatio="xMidYMid meet" aria-label="API latency line chart"></svg>
                 <div class="chart-empty muted hidden" id="latencyEmpty">暂无延迟序列</div>
               </div>
             </div>
