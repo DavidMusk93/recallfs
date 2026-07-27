@@ -551,24 +551,49 @@ select {
   color: var(--text-secondary);
 }
 
-/* —— Chart —— */
-.chart-wrap {
-  position: relative;
-  /* 高度跟 SVG viewBox 走，避免固定 240 在少点时撑出大空白 */
-  height: auto;
-  min-height: 140px;
-  border-radius: var(--radius-sm);
-  background: rgba(120, 120, 128, 0.04);
+/* —— Chart card：标题+折线一体，禁止内嵌第二层「灰底卡片」 —— */
+.chart-card {
+  background: var(--bg-card);
   border: 0.5px solid var(--separator);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   overflow: hidden;
-  padding: 4px 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 8px;
+}
+
+.chart-card-title h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.chart-plot {
+  position: relative;
+  /* 与卡片一体：无 border、无第二层圆角底 */
+  background: transparent;
+  padding: 0 8px 10px 4px;
+  min-height: 0;
 }
 
 .linechart {
   width: 100%;
   height: auto;
-  max-height: 240px;
+  max-height: 220px;
   display: block;
+  vertical-align: top;
 }
 
 .linechart .grid-line {

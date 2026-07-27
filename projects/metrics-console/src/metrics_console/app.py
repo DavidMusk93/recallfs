@@ -528,7 +528,20 @@ def api_sql(body: SqlBody) -> dict[str, Any]:
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(
+        STATIC_DIR / "index.html",
+        headers={"Cache-Control": "no-cache, must-revalidate"},
+    )
+
+
+@app.middleware("http")
+async def _static_no_cache(request, call_next):  # type: ignore[no-untyped-def]
+    """开发期静态资源禁止强缓存，避免折线轴逻辑改了浏览器仍跑旧 JS。"""
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 if STATIC_DIR.is_dir():

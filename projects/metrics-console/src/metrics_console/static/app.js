@@ -298,24 +298,38 @@ function renderKpiSkeleton() {
   ).join("");
 }
 
-/** 贴数据的 Y 轴上限：只留 ~12% 余量，避免 5.4k→10k 那种半屏留白。 */
+/**
+ * Y 轴上限：贴数据。
+ * 硬约束 chosen/peak ≤ 1.28，杜绝 5.4k→10k 半屏空白。
+ */
 function yScaleMax(dataMax) {
   if (!(dataMax > 0) || !Number.isFinite(dataMax)) return 1;
-  // 余量压到 ~8%：峰值 5.4s → 6s 档，而不是 10s
-  const target = dataMax * 1.08;
+  const peak = dataMax;
+  const target = peak * 1.06;
   const exp = Math.pow(10, Math.floor(Math.log10(target)));
-  // 更密的 nice 档：含 1.2/1.5/2.5/3/4/6/8，避免 5→10 跳档
-  const mults = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const mults = [1, 1.1, 1.2, 1.25, 1.5, 1.6, 2, 2.5, 3, 4, 5, 6, 8, 10];
   const cands = [];
   for (const decade of [exp / 10, exp, exp * 10]) {
     if (!(decade > 0)) continue;
     for (const m of mults) cands.push(m * decade);
   }
   cands.sort((a, b) => a - b);
+  let chosen = target;
   for (const c of cands) {
-    if (c >= target) return c;
+    if (c >= target) {
+      chosen = c;
+      break;
+    }
   }
-  return target;
+  // 若 nice 档浪费过大，直接用 target 向上取整到同量级
+  if (chosen / peak > 1.28) {
+    const e = Math.pow(10, Math.floor(Math.log10(target)));
+    chosen = Math.ceil(target / e) * e;
+  }
+  if (chosen / peak > 1.28) {
+    chosen = target; // 最后兜底：允许非整数轴
+  }
+  return chosen;
 }
 
 function renderChart(latency) {
@@ -366,31 +380,28 @@ function renderChart(latency) {
       .join(" ");
   };
 
-  // ≤2 点不画面积，避免对角色块 + 大留白
+  // 稀疏序列不画面积（少点时填充会像「另一块面板」）
   const areaPath =
-    n <= 2
+    n < 5
       ? ""
       : poly(avgs) +
         ` L${xAt(n - 1).toFixed(1)},${(pad.t + plotH).toFixed(1)}` +
         ` L${xAt(0).toFixed(1)},${(pad.t + plotH).toFixed(1)} Z`;
 
-  // Y grid：按 nice 步长，约 3–5 条
-  const roughStep = yMax / 4;
-  const stepExp = Math.pow(10, Math.floor(Math.log10(Math.max(roughStep, 1e-9))));
-  let yStep = stepExp;
-  for (const m of [1, 1.5, 2, 2.5, 5, 10]) {
-    if (m * stepExp >= roughStep * 0.85) {
-      yStep = m * stepExp;
-      break;
-    }
-  }
+  // Y 刻度：整除 yMax 的 3～4 档，最后一档必须是 yMax（不会标到轴外）
+  const tickN = 4;
   let grid = "";
   let yLabels = "";
-  for (let v = 0; v <= yMax + yStep * 1e-9; v += yStep) {
-    if (v > yMax * 1.001) break;
+  for (let i = 0; i <= tickN; i++) {
+    const v = (yMax * i) / tickN;
     const y = yAt(v);
     grid += `<line class="grid-line" x1="${pad.l}" y1="${y.toFixed(1)}" x2="${(pad.l + plotW).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
-    const label = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+    const label =
+      yMax >= 1000
+        ? Math.round(v).toString()
+        : yMax >= 10
+          ? v.toFixed(0)
+          : v.toFixed(2);
     yLabels += `<text class="tick-label" x="${pad.l - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${label}</text>`;
   }
 

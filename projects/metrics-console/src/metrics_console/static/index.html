@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Metrics · 分析台</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260727c" />
   </head>
   <body>
     <div class="shell">
@@ -59,9 +59,10 @@
           <section id="view-overview">
             <div class="grid kpi" id="kpiGrid" aria-live="off"></div>
 
-            <div class="panel">
-              <div class="panel-head">
-                <div>
+            <!-- 单一组件：标题 + 图例 + 折线同属一张 card，不内嵌第二层卡片 -->
+            <article class="chart-card" id="latencyCard">
+              <header class="chart-card-head">
+                <div class="chart-card-title">
                   <h3>API 延迟</h3>
                   <p class="panel-sub" id="latencyCaption">avg / p95 · ms</p>
                 </div>
@@ -70,12 +71,12 @@
                   <span class="leg p95"><i></i>p95</span>
                   <span class="chip" id="latencyChip">—</span>
                 </div>
-              </div>
-              <div class="chart-wrap">
-                <svg class="linechart" id="latencyChart" viewBox="0 0 720 220" preserveAspectRatio="xMidYMid meet" aria-label="API latency line chart"></svg>
+              </header>
+              <div class="chart-plot">
+                <svg class="linechart" id="latencyChart" viewBox="0 0 720 200" preserveAspectRatio="xMidYMid meet" aria-label="API latency line chart"></svg>
                 <div class="chart-empty muted hidden" id="latencyEmpty">暂无延迟序列</div>
               </div>
-            </div>
+            </article>
 
             <div class="split">
               <div class="panel">
@@ -164,6 +165,6 @@
       </div>
     </div>
     <div class="toast" id="toast" hidden></div>
-    <script src="/static/app.js" type="module"></script>
+    <script src="/static/app.js?v=20260727c" type="module"></script>
   </body>
 </html>
