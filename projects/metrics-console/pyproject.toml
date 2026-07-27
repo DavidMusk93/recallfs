@@ -1,0 +1,21 @@
+[project]
+name = "metrics-console"
+version = "0.1.0"
+description = "Local Apple-style metrics console over DuckDB Quack"
+requires-python = ">=3.11"
+dependencies = [
+  "duckdb>=1.5.5",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic-settings>=2.0",
+]
+
+[project.scripts]
+metrics-console = "metrics_console.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/metrics_console"]

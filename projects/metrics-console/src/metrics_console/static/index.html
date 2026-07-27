@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Metrics Console</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <h1>Metrics</h1>
+          <p>DuckDB Quack · e2ed / orchestrator</p>
+        </div>
+        <nav class="nav" id="nav">
+          <button type="button" data-view="overview" class="active">Overview</button>
+          <button type="button" data-view="api">API latency</button>
+          <button type="button" data-view="lifecycle">Lifecycle</button>
+          <button type="button" data-view="explore">Tables</button>
+          <button type="button" data-view="sql">SQL</button>
+        </nav>
+        <div class="status-pill" id="healthPill">
+          <span class="dot" id="healthDot"></span>
+          <span id="healthText">Connecting…</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <!-- Overview -->
+        <section id="view-overview">
+          <div class="topbar">
+            <div>
+              <h2>Overview</h2>
+              <p class="sub">Live counts from the Quack metrics master on d2.</p>
+            </div>
+            <div class="actions">
+              <button class="btn secondary" id="btnRefresh" type="button">Refresh</button>
+            </div>
+          </div>
+          <div class="grid" id="kpiGrid"></div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>API latency (6h)</h3>
+              <span class="muted" id="latencyCaption"></span>
+            </div>
+            <div class="chart" id="latencyChart" aria-label="latency chart"></div>
+          </div>
+          <div class="panel">
+            <h3>Recent API requests</h3>
+            <div class="table-wrap" id="recentApi"></div>
+          </div>
+        </section>
+
+        <!-- API -->
+        <section id="view-api" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>API latency</h2>
+              <p class="sub">Path aggregates and raw request samples.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Top paths (24h)</h3>
+            <div class="table-wrap" id="pathTable"></div>
+          </div>
+          <div class="panel">
+            <h3>Latest requests</h3>
+            <div class="table-wrap" id="apiTable"></div>
+          </div>
+        </section>
+
+        <!-- Lifecycle -->
+        <section id="view-lifecycle" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Lifecycle</h2>
+              <p class="sub">e2ed service start/stop/roll and daemon ticks.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Service lifecycle</h3>
+            <div class="table-wrap" id="lifeTable"></div>
+          </div>
+          <div class="panel">
+            <h3>Daemon ticks</h3>
+            <div class="table-wrap" id="tickTable"></div>
+          </div>
+        </section>
+
+        <!-- Explore -->
+        <section id="view-explore" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Tables</h2>
+              <p class="sub">Browse category databases attached on the master.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="toolbar-row">
+              <select class="field" id="tableSelect"></select>
+              <button class="btn secondary" type="button" id="btnLoadTable">Load</button>
+            </div>
+            <div class="table-wrap" id="exploreTable"></div>
+          </div>
+        </section>
+
+        <!-- SQL -->
+        <section id="view-sql" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>SQL</h2>
+              <p class="sub">Read-only Quack queries against the metrics master.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <textarea
+              class="sql-box"
+              id="sqlInput"
+              spellcheck="false"
+              placeholder="SELECT path, avg(duration_ms) FROM cat_orchestrator.api_requests GROUP BY 1 ORDER BY 2 DESC LIMIT 20"
+            ></textarea>
+            <div class="toolbar-row">
+              <button class="btn" type="button" id="btnRunSql">Run</button>
+              <button class="btn secondary" type="button" id="btnSqlApi">Sample: API p95</button>
+              <button class="btn secondary" type="button" id="btnSqlLife">Sample: lifecycle</button>
+              <span class="muted" id="sqlMeta"></span>
+            </div>
+            <div class="error hidden" id="sqlError"></div>
+            <div class="table-wrap" id="sqlTable"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
