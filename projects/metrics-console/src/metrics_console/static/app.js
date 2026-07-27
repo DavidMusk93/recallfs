@@ -437,7 +437,12 @@ function renderChart(latency) {
   }
 
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  // none：viewBox 拉伸铺满 SVG 盒（避免 meet + max-height 在宽屏两侧留白）
+  svg.setAttribute("preserveAspectRatio", "none");
   svg.style.aspectRatio = `${W} / ${H}`;
+  svg.style.width = "100%";
+  svg.style.height = "auto";
+  svg.style.maxHeight = "none";
   svg.innerHTML = `
     <defs>
       <linearGradient id="gradAvg" x1="0" y1="0" x2="0" y2="1">

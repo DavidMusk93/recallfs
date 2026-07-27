@@ -590,9 +590,9 @@ select {
 }
 
 .linechart {
+  /* 必须 width:100% + 无 max-height 打架，否则 meet 会在两侧 letterbox */
   width: 100%;
   height: auto;
-  max-height: 220px;
   display: block;
   vertical-align: top;
 }
