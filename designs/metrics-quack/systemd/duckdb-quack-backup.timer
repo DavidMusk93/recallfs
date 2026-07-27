@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer for DuckDB metrics cold backup
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

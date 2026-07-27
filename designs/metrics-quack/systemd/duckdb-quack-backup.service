@@ -1,0 +1,7 @@
+[Unit]
+Description=DuckDB metrics cold backup snapshot
+
+[Service]
+Type=oneshot
+Environment=DUCK_ROOT=/root/data/duck
+ExecStart=/root/data/duck/bin/duckdb_backup.sh

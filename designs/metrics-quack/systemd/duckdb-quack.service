@@ -1,0 +1,27 @@
+[Unit]
+Description=DuckDB Quack metrics master (Tide)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=DUCK_ROOT=/root/data/duck
+Environment=QUACK_URI=quack:0.0.0.0:9494
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/root/data/duck
+ExecStart=/root/data/duck/venv/bin/python /root/data/duck/bin/duckdb_quack_server.py --root /root/data/duck
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+# Allow binding non-localhost for docker clients
+LimitNOFILE=65535
+
+# Hardening (keep writable data dir)
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/root/data/duck
+
+[Install]
+WantedBy=multi-user.target
