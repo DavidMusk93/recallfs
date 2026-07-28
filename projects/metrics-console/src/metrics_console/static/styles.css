@@ -10,8 +10,9 @@
   --text-secondary: rgba(60, 60, 67, 0.64);
   --text-tertiary: rgba(60, 60, 67, 0.42);
   --separator: rgba(60, 60, 67, 0.14);
-  --accent: #007aff;
-  --accent-soft: rgba(0, 122, 255, 0.12);
+  /* 品牌主色：暖金黄（对齐黄兔 logo，按钮上白字可读） */
+  --accent: #c79100;
+  --accent-soft: rgba(199, 145, 0, 0.14);
   --ok: #34c759;
   --warn: #ff9f0a;
   --err: #ff3b30;
@@ -38,8 +39,8 @@
     --text-secondary: rgba(235, 235, 245, 0.6);
     --text-tertiary: rgba(235, 235, 245, 0.38);
     --separator: rgba(84, 84, 88, 0.45);
-    --accent: #0a84ff;
-    --accent-soft: rgba(10, 132, 255, 0.18);
+    --accent: #e8b000;
+    --accent-soft: rgba(232, 176, 0, 0.2);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 12px 36px rgba(0, 0, 0, 0.35);
   }
 }
