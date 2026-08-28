@@ -44,10 +44,10 @@ README 中“about 400 lines of safe, async Rust”是早期宣传用的约数�
 它只有一个二进制，按 CLI 角色运行：
 
 ```text
-+--------------------------+       TCP 7835        +--------------------------+
-| bore local               |---------------------->| bore server (VPS)        |
-| local_port -> service    |                       | remote_port listener     |
-+--------------------------+                       +--------------------------+
+bore server                            bore local <local_port> --to <vps>
+     |                                      |
+     +-- TCP 7835 control service           +-- TCP client
+     +-- TCP <remote_port> public listener  +-- local service connector
 ```
 
 依赖也与这一边界一致：Tokio 负责异步网络和 `copy_bidirectional`，DashMap 保存待匹配连接，Serde JSON 编码控制帧，UUID 做一次性连接关联，HMAC/SHA-256 做可选认证。
@@ -57,32 +57,24 @@ README 中“about 400 lines of safe, async Rust”是早期宣传用的约数�
 控制协议是最大 256 bytes 的 NUL 分隔 JSON，不是 HTTP，不使用 QUIC 或 WebSocket：
 
 ```text
-+---------------------------+                     +---------------------------+
-| bore local client         |                     | bore server (VPS)         |
-+---------------------------+                     +---------------------------+
-              |                                                   |
-              |--- TCP 7835 ------------------------------------>|
-              |<-- Challenge(UUID), if secret -------------------|
-              |--- Authenticate(HMAC), if secret --------------->|
-              |--- Hello(requested_port) ----------------------->|
-              |<-- Hello(assigned_port) -------------------------|
-              |<-- Heartbeat, every ~500 ms ---------------------|
+local client                                      VPS server
+    |--- TCP :7835 ------------------------------>|
+    |<-- Challenge(UUID), if secret --------------|
+    |--- Authenticate(HMAC), if secret ---------->|
+    |--- Hello(requested_port) ------------------>|
+    |<-- Hello(assigned_port) --------------------|  bind tunnel listener
+    |<-- Heartbeat, every ~500 ms ----------------|
 ```
 
 外部访问到达公开端口时，服务端不把该连接直接复用在控制流上，而以 UUID 建立单独数据流：
 
 ```text
-[Internet user] --> [VPS remote_port]
-                         |
-                         +-- Connection(UUID) --> [bore local client]
-                         |                               |
-                         |                               +-- TCP --> [local service]
-                         |
-                         +<-- TCP 7835 + Accept ----------+
-
-[Internet user] <==== TCP bytes ====> [VPS remote_port]
-                                      <==== TCP bytes ====> [bore local client]
-                                                              <==== TCP bytes ====> [local service]
+Internet user        VPS remote_port           bore local client      local service
+     |---- TCP ---------->|                           |                    |
+     |                    |-- Connection(UUID) ------>|                    |
+     |                    |<-- TCP :7835 + Accept ----|                    |
+     |                    |                            |---- TCP ---------->|
+     |                    |<==== TCP bytes =================================>|
 ```
 
 具体行为：
@@ -132,13 +124,16 @@ bore local 3000 \
 DNS 将 `app.example.com` 的 A/AAAA 记录指向 VPS。然后让 Caddy/Nginx 在 VPS 终止 TLS，并将 HTTP 请求代理到 bore 的 loopback 端口。
 
 ```text
-[Browser]
-    |
-    +-- HTTPS Host: app.example.com --> [VPS proxy :443]
-                                             |
-                                             +-- HTTP --> [bore :20001]
-                                                               |
-                                                               +-- TCP tunnel --> [local :3000]
+browser
+  | HTTPS Host: app.example.com
+  v
+DNS --> VPS :443 --> Caddy/Nginx (certificate + Host routing)
+                         |
+                         | HTTP 127.0.0.1:20001
+                         v
+                     bore server
+                         |
+                     bore client --> local :3000
 ```
 
 Caddy 示例：
@@ -208,12 +203,12 @@ client: Authenticate(hex(HMAC-SHA256(SHA256(secret), UUID)))
 ```text
 bore
 
-[local service] <-- TCP --> [bore local] <-- TCP --> [single VPS] <-- TCP --> [user]
+local service <-- TCP --> bore local <-- TCP --> single VPS <-- TCP --> user
 
 Cloudflare Tunnel
 
-[local service] <---> [cloudflared] == encrypted outbound links ==> [Cloudflare edge] <-- HTTPS --> [user]
-                                      == configuration and identity ==> [Cloudflare control plane]
+local service <---> cloudflared == encrypted outbound links ==> Cloudflare edge <-- HTTPS --> user
+                                  == configuration and identity ==> Cloudflare control plane
 ```
 
 截至 2026-08-28，Cloudflare 的官方配置文档说明：一个 `cloudflared` 实例会建立四条仅出站连接，覆盖至少两个 Cloudflare 数据中心；连接器副本可为同一 tunnel 增加入口。传输默认优先 QUIC，UDP 不可用时可回退 HTTP/2；配置可以由 Dashboard、API 或 Terraform 远程管理。[官方配置文档](https://developers.cloudflare.com/tunnel/configuration/)与[运行参数文档](https://developers.cloudflare.com/tunnel/advanced/run-parameters/)是该结论的可复核来源。
