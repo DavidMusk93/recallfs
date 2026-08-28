@@ -21,6 +21,37 @@ struct Report {
     errors: Vec<String>,
 }
 
+fn rail_columns(line: &str) -> Vec<usize> {
+    line.bytes()
+        .enumerate()
+        .filter_map(|(column, byte)| (byte == b'|').then_some(column))
+        .collect()
+}
+
+fn validate_rail_alignment(path: &Path, graph: &Graph, errors: &mut Vec<String>) {
+    let mut baseline: Option<(usize, Vec<usize>)> = None;
+
+    for (offset, line) in graph.lines.iter().enumerate() {
+        let line_number = graph.start_line + offset;
+        let columns = rail_columns(line);
+        if columns.len() < 2 {
+            baseline = None;
+            continue;
+        }
+
+        if let Some((baseline_line, expected)) = &baseline {
+            if columns != *expected {
+                errors.push(format!(
+                    "{}:{line_number}: vertical rails {columns:?} do not match line {baseline_line} {expected:?}",
+                    path.display()
+                ));
+            }
+        } else {
+            baseline = Some((line_number, columns));
+        }
+    }
+}
+
 fn inspect_markdown(path: &Path, content: &str) -> Report {
     let mut report = Report::default();
     let mut active: Option<Graph> = None;
@@ -48,6 +79,7 @@ fn inspect_markdown(path: &Path, content: &str) -> Report {
         if trimmed == "```" && active.is_some() {
             let mut graph = active.take().expect("checked is_some");
             graph.end_line = line_number - 1;
+            validate_rail_alignment(path, &graph, &mut report.errors);
             report.graphs.push(graph);
             continue;
         }
@@ -212,5 +244,12 @@ mod tests {
     fn renders_zero_based_ruler() {
         assert_eq!(ruler_line(12, false), "0         1 ");
         assert_eq!(ruler_line(12, true), "012345678901");
+    }
+
+    #[test]
+    fn rejects_misaligned_vertical_rails() {
+        let report = inspect_markdown(Path::new("doc.md"), "```text\n|   |\n|    |\n```\n");
+        assert_eq!(report.errors.len(), 1);
+        assert!(report.errors[0].contains("vertical rails"));
     }
 }

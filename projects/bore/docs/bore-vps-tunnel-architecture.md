@@ -69,12 +69,13 @@ local client                                      VPS server
 外部访问到达公开端口时，服务端不把该连接直接复用在控制流上，而以 UUID 建立单独数据流：
 
 ```text
-Internet user        VPS remote_port           bore local client      local service
-     |---- TCP ---------->|                           |                    |
-     |                    |-- Connection(UUID) ------>|                    |
-     |                    |<-- TCP :7835 + Accept ----|                    |
-     |                    |                            |---- TCP ---------->|
-     |                    |<==== TCP bytes =================================>|
+ Internet user           VPS remote_port             bore local client          local service
+       |                        |                            |                        |
+       |---- TCP -------------->|                            |                        |
+       |                        |---- Connection(UUID) ----->|                        |
+       |                        |<-- TCP :7835 + Accept -----|                        |
+       |                        |                            |---- TCP -------------->|
+       |                        |<==== TCP bytes ============|=======================>|
 ```
 
 具体行为：

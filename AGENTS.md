@@ -47,5 +47,5 @@
 ## 5. 行为
 
 - 结论先行；复杂流程用 ASCII graph；对比用表格。
-- **架构文档交付门禁**：`projects/<project>/docs/` 中的架构分析必须放在对应项目目录。所有 ASCII graph 必须置于 `text` 代码块，图内只允许可打印 ASCII 字符与换行，标签使用英文，不得混入 CJK、全角符号或 Unicode box drawing；提交前运行 `rustc tools/verify_ascii_graphs.rs -o .tmp/verify-ascii-graphs && .tmp/verify-ascii-graphs --ruler <markdown-file>`，以列标尺检查箭头和边界对齐。涉及 Cloudflare Tunnel 等托管隧道的对比，必须说明原生能力、为补齐差距额外引入的组件，以及安全/可用性责任边界。
+- **架构文档交付门禁**：`projects/<project>/docs/` 中的架构分析必须放在对应项目目录。所有 ASCII graph 必须置于 `text` 代码块，图内只允许可打印 ASCII 字符与换行，标签使用英文，不得混入 CJK、全角符号或 Unicode box drawing；提交前运行 `rustc tools/verify_ascii_graphs.rs -o .tmp/verify-ascii-graphs && .tmp/verify-ascii-graphs --ruler <markdown-file>`，以校验多竖线图的固定列锚点并用列标尺复核其余箭头和边界。涉及 Cloudflare Tunnel 等托管隧道的对比，必须说明原生能力、为补齐差距额外引入的组件，以及安全/可用性责任边界。
 - 不发明「已 AC / 已 push」；无浏览器代操作 leetcode 登录态。
