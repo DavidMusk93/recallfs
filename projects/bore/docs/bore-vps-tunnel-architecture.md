@@ -44,10 +44,10 @@ README 中“about 400 lines of safe, async Rust”是早期宣传用的约数�
 它只有一个二进制，按 CLI 角色运行：
 
 ```text
-bore server                         bore local <local_port> --to <vps>
-     |                                             |
-     +-- TCP 7835 控制服务                  +-- TCP 客户端
-     +-- TCP <remote_port> 公网监听          +-- 本机服务连接器
++--------------------------+       TCP 7835        +--------------------------+
+| bore local               |---------------------->| bore server (VPS)        |
+| local_port -> service    |                       | remote_port listener     |
++--------------------------+                       +--------------------------+
 ```
 
 依赖也与这一边界一致：Tokio 负责异步网络和 `copy_bidirectional`，DashMap 保存待匹配连接，Serde JSON 编码控制帧，UUID 做一次性连接关联，HMAC/SHA-256 做可选认证。
@@ -57,24 +57,32 @@ bore server                         bore local <local_port> --to <vps>
 控制协议是最大 256 bytes 的 NUL 分隔 JSON，不是 HTTP，不使用 QUIC 或 WebSocket：
 
 ```text
-本地 client                                      VPS server
-    |--- TCP :7835 ------------------------------>|
-    |   [Challenge(UUID)]       (仅启用 secret)   |
-    |--- Authenticate(HMAC) --------------------->|
-    |--- Hello(requested_port) ------------------>|
-    |<-- Hello(assigned_port) --------------------|  绑定隧道监听器
-    |<-- Heartbeat (约每 500 ms) -----------------|
++---------------------------+                     +---------------------------+
+| bore local client         |                     | bore server (VPS)         |
++---------------------------+                     +---------------------------+
+              |                                                   |
+              |--- TCP 7835 ------------------------------------>|
+              |<-- Challenge(UUID), if secret -------------------|
+              |--- Authenticate(HMAC), if secret --------------->|
+              |--- Hello(requested_port) ----------------------->|
+              |<-- Hello(assigned_port) -------------------------|
+              |<-- Heartbeat, every ~500 ms ---------------------|
 ```
 
 外部访问到达公开端口时，服务端不把该连接直接复用在控制流上，而以 UUID 建立单独数据流：
 
 ```text
-Internet user        VPS :<remote_port>          local client          local service
-     |---- TCP ---------->|                           |                    |
-     |                    |-- Connection(uuid) ------>|                    |
-     |                    |<-- TCP :7835 + Accept ----|                    |
-     |                    |                            |---- TCP ---------->|
-     |                    |<==== copy_bidirectional =======================>|
+[Internet user] --> [VPS remote_port]
+                         |
+                         +-- Connection(UUID) --> [bore local client]
+                         |                               |
+                         |                               +-- TCP --> [local service]
+                         |
+                         +<-- TCP 7835 + Accept ----------+
+
+[Internet user] <==== TCP bytes ====> [VPS remote_port]
+                                      <==== TCP bytes ====> [bore local client]
+                                                              <==== TCP bytes ====> [local service]
 ```
 
 具体行为：
@@ -124,16 +132,13 @@ bore local 3000 \
 DNS 将 `app.example.com` 的 A/AAAA 记录指向 VPS。然后让 Caddy/Nginx 在 VPS 终止 TLS，并将 HTTP 请求代理到 bore 的 loopback 端口。
 
 ```text
-browser
-  | HTTPS Host: app.example.com
-  v
-DNS -> VPS :443 -> Caddy/Nginx (certificate + Host 路由)
-                     |
-                     | HTTP 127.0.0.1:20001
-                     v
-                 bore server
-                     |
-                 bore client -> 127.0.0.1:3000
+[Browser]
+    |
+    +-- HTTPS Host: app.example.com --> [VPS proxy :443]
+                                             |
+                                             +-- HTTP --> [bore :20001]
+                                                               |
+                                                               +-- TCP tunnel --> [local :3000]
 ```
 
 Caddy 示例：
@@ -196,20 +201,46 @@ client: Authenticate(hex(HMAC-SHA256(SHA256(secret), UUID)))
 
 特别注意：`--secret` 不能替代 TLS。它防止未授权者使用 VPS 控制面，却不加密业务字节，也不提供客户端对服务端的密码学身份验证。secret 应通过 systemd `EnvironmentFile`、密钥管理系统或受限权限文件注入，不能出现在 shell history、命令行、镜像层或仓库中。
 
-## 是否适合做“自建 Cloudflare Tunnel”
+## 与 Cloudflare Tunnel 的对比
 
-| 需求 | bore 原生 | bore + VPS 代理 | Cloudflare Tunnel 类方案 |
+两者都通过内网侧主动建立出站连接来规避 NAT 和入站防火墙，但产品边界不同。bore 提供的是一个可自托管的 TCP 连接配对器；Cloudflare Tunnel 是连接器、Cloudflare 全局边缘、DNS/TLS、控制平面和 Zero Trust 产品的组合。
+
+```text
+bore
+
+[local service] <-- TCP --> [bore local] <-- TCP --> [single VPS] <-- TCP --> [user]
+
+Cloudflare Tunnel
+
+[local service] <---> [cloudflared] == encrypted outbound links ==> [Cloudflare edge] <-- HTTPS --> [user]
+                                      == configuration and identity ==> [Cloudflare control plane]
+```
+
+截至 2026-08-28，Cloudflare 的官方配置文档说明：一个 `cloudflared` 实例会建立四条仅出站连接，覆盖至少两个 Cloudflare 数据中心；连接器副本可为同一 tunnel 增加入口。传输默认优先 QUIC，UDP 不可用时可回退 HTTP/2；配置可以由 Dashboard、API 或 Terraform 远程管理。[官方配置文档](https://developers.cloudflare.com/tunnel/configuration/)与[运行参数文档](https://developers.cloudflare.com/tunnel/advanced/run-parameters/)是该结论的可复核来源。
+
+| Dimension | bore | bore + VPS proxy | Cloudflare Tunnel |
 | --- | --- | --- | --- |
-| 内网主动出站连接 | 是 | 是 | 是 |
-| 任意 TCP 字节转发 | 是 | 是 | 部分产品/套餐/协议相关 |
-| 固定 TCP 端口 | 是 | 是 | 不以此为主要模型 |
-| `hostname -> service` 路由 | 否 | 是，手工配置 | 是，原生配置面 |
-| 自动 TLS 证书 | 否 | Caddy/ACME 可做 | 通常是 |
-| 用户访问控制/WAF | 否 | 代理可部分实现 | 通常内置并可集成 IdP |
-| 端到端加密与双向身份 | 否 | 可自行搭建 | 通常可配置 |
-| 多 POP/高可用边缘 | 否 | 单 VPS 单点，需自行建设 | 是 |
+| Core abstraction | A TCP port paired with a local target. | bore plus a manually operated HTTP/TLS proxy. | A managed tunnel and edge routing service. |
+| Public hostname routing | No `Host`, SNI, or DNS awareness. | Static Caddy/Nginx/HAProxy routes map hostname to a fixed bore port. | Public hostname and service routes are first-class configuration. |
+| Edge and availability | One VPS is the data-plane and a single failure domain. | Same VPS failure domain unless the operator builds HA. | Multiple outbound links, edge PoPs, and connector replicas are supported. |
+| Encryption and identity | HMAC proves a shared client secret; payload is plaintext. | TLS can terminate at the proxy; tunnel still needs a separate protected transport. | Connector-to-edge encrypted transport and platform identity/control-plane integration. |
+| Access policy | None beyond the shared secret for control connections. | Proxy/application policy must be built and operated by the user. | Can integrate with Cloudflare Access and other Zero Trust controls. |
+| Operations | One binary, one port range, local logs. | DNS, certificate renewal, proxy reload, monitoring, and HA are operator work. | Managed configuration, observability, DNS/TLS, and edge operations are product capabilities. |
+| Protocol scope | Generic raw TCP. | Raw TCP plus whatever the VPS proxy understands. | Primarily application and private-network routing; public raw TCP exposure follows Cloudflare product constraints. |
 
-最终判断：
+### What bore contributes
+
+bore 的价值不在“功能比 SaaS 隧道更多”，而在将反向 TCP 隧道缩减到一个可审计的最小正确实现：
+
+1. **NAT inversion with no inbound local listener.** 本地机器只向 VPS 发起出站 TCP；公网新连接由 VPS 用 UUID 通知客户端，客户端再主动建立数据连接。这是穿透 NAT 的核心机制，没有引入 HTTP、DNS 或账户系统。
+2. **Protocol neutrality.** 数据面只复制字节流，因此 HTTP、SSH、数据库协议和自定义 TCP 协议不需要适配层。是否应当暴露这些服务仍由网络与应用安全策略决定。
+3. **Small, inspectable state machine.** 核心状态只有控制连接、端口监听器和 `UUID -> pending TcpStream` 映射；JSON 控制帧限制为 256 bytes，未匹配连接 10 秒回收。完整实现可以逐函数审计，不依赖远端账户或复杂控制平面。
+4. **Correct streaming behavior.** `copy_bidirectional` 让两端以 TCP 背压流动，避免把请求完整缓存在内存中；测试覆盖半关闭连接，证明一端发送 FIN 后反方向仍可完成响应。
+5. **A deliberate security boundary.** HMAC challenge-response 只保护谁可以请求/接受隧道，不伪装成 TLS。这个边界很窄，但可见且容易在外层用 WireGuard、mTLS 或反向代理补齐。
+
+这些特性使 bore 特别适合临时调试、个人服务、受信任内网或需要理解每一跳的工程场景。它不适合直接承担多租户公网入口的身份、策略和边缘可用性责任。
+
+### Adoption decision
 
 - 只有一两个自有服务，接受单 VPS，并能维护 TLS/防火墙：`bore + Caddy/Nginx` 足够简洁。
 - 需要按域名动态注册服务：bore 需要额外控制器，负责分配端口、更新代理配置并安全 reload；此时直接选带 hostname/control-plane 的隧道产品通常更省成本。
