@@ -202,14 +202,53 @@ client: Authenticate(hex(HMAC-SHA256(SHA256(secret), UUID)))
 两者都通过内网侧主动建立出站连接来规避 NAT 和入站防火墙，但产品边界不同。bore 提供的是一个可自托管的 TCP 连接配对器；Cloudflare Tunnel 是连接器、Cloudflare 全局边缘、DNS/TLS、控制平面和 Zero Trust 产品的组合。
 
 ```text
-bore
+Bore
 
-local service <-- TCP --> bore local <-- TCP --> single VPS <-- TCP --> user
+  Data plane
+    user
+      |
+      | public TCP
+      v
+    single VPS
+      |
+      | per-connection TCP
+      v
+    bore local
+      |
+      v
+    local service
+
+  Control plane
+    bore local
+      |
+      | TCP :7835
+      | authenticate, request port, receive connection UUID
+      v
+    single VPS
 
 Cloudflare Tunnel
 
-local service <---> cloudflared == encrypted outbound links ==> Cloudflare edge <-- HTTPS --> user
-                                  == configuration and identity ==> Cloudflare control plane
+  Data plane
+    user
+      |
+      | HTTPS
+      v
+    Cloudflare edge
+      |
+      | encrypted connector link
+      | opened outbound by cloudflared
+      v
+    cloudflared
+      |
+      v
+    local service
+
+  Control plane
+    Cloudflare control plane
+      |
+      | remote config, hostname routing, identity
+      v
+    cloudflared
 ```
 
 截至 2026-08-28，Cloudflare 的官方配置文档说明：一个 `cloudflared` 实例会建立四条仅出站连接，覆盖至少两个 Cloudflare 数据中心；连接器副本可为同一 tunnel 增加入口。传输默认优先 QUIC，UDP 不可用时可回退 HTTP/2；配置可以由 Dashboard、API 或 Terraform 远程管理。[官方配置文档](https://developers.cloudflare.com/tunnel/configuration/)与[运行参数文档](https://developers.cloudflare.com/tunnel/advanced/run-parameters/)是该结论的可复核来源。
