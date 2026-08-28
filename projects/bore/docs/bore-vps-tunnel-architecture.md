@@ -226,6 +226,8 @@ Bore
       v
     single VPS
 
+  ----------------------------------------------------------------
+
 Cloudflare Tunnel
 
   Data plane
