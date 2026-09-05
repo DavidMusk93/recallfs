@@ -7,6 +7,17 @@
 > [VLDB](https://www.vldb.org/pvldb/vol19/p1469-lee.pdf) |
 > [Artifact](https://github.com/LeeBohyun/ZLeanStore)
 
+本文的 18 个 C 代码块已使用 FIL-C 0.684 编译，并通过 6 组运行时测试。复验：
+
+```bash
+rustc tools/docs/verify_markdown_c.rs -O -o .tmp/verify-markdown-c
+.tmp/verify-markdown-c \
+  --compiler .tmp/fil-c/bin/filcc \
+  --runner .tmp/fil-c/bin/filrun \
+  --harness tools/docs/tests/how_to_write_to_ssds_harness.c \
+  docs/reports/how-to-write-to-ssds-database-engineering-notes.md
+```
+
 ## 0. 结论先行
 
 这篇论文最有价值的结论不是“SSD 喜欢顺序写”，而是：
