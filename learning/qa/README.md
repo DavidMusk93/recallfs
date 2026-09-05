@@ -4,6 +4,7 @@
 
 | 主题 | 问题 |
 | --- | --- |
+| [从 C 的视角理解 Rust](rust-from-c.md) | 如何用 C 的内存、ABI 和成本模型掌握 Rust 的 ownership、borrowing、ADT、trait 与 unsafe？ |
 | [Pointer Chasing](pointer-chasing.md) | 什么是 pointer chasing，为什么它影响 CPU cache，以及 Rust 中如何识别和优化？ |
 
 ## 写作要求
