@@ -44,7 +44,15 @@
 
 下载慢 / GitHub 超时：用户 skill **`network-accel`**（`socks5h://127.0.0.1:2080` 或国内镜像）。
 
-## 5. 行为
+## 5. 工具与记忆
+
+- **C 工具链**：C 代码必须使用 [FIL-C](https://fil-c.org/) 编译和测试。将 FIL-C 及其宿主适配封装在仓库 `.tmp/fil-c/`，不得提交编译器、VM 镜像或构建产物；若当前平台不能原生运行 FIL-C，使用其官方支持的隔离 Linux 环境，不得静默降级为系统 Clang。
+- **工具实现**：有长期复用价值的工具优先使用 Rust 实现，并按领域放入 `tools/$domain/`；工具二进制和临时输出写入 `.tmp/`。
+- **唯一记忆源**：nmem 是经验、设计和决策的唯一权威记忆源，不再将其他记忆文件作为长期沉淀。
+- **格式化写入**：写入 nmem 前先组织标题、结论、背景、约束、证据和后续动作；复杂流程使用 `text` 代码块中的 ASCII graph，图内不得使用 CJK、全角符号或 Unicode box drawing。
+- **Immutable memory**：已写入的记忆不可原地改写或删除。新认识应创建为新记忆，并通过 `EVOLVES` 或显式语义关系（如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
+
+## 6. 行为
 
 - 结论先行；复杂流程用 ASCII graph；对比用表格。
 - **架构文档交付门禁**：`projects/<project>/docs/` 中的架构分析必须放在对应项目目录。所有 ASCII graph 必须置于 `text` 代码块，图内只允许可打印 ASCII 字符与换行，标签使用英文，不得混入 CJK、全角符号或 Unicode box drawing；提交前运行 `rustc tools/verify_ascii_graphs.rs -o .tmp/verify-ascii-graphs && .tmp/verify-ascii-graphs --ruler <markdown-file>`，以校验多竖线图的固定列锚点并用列标尺复核其余箭头和边界。涉及 Cloudflare Tunnel 等托管隧道的对比，必须说明原生能力、为补齐差距额外引入的组件，以及安全/可用性责任边界。
