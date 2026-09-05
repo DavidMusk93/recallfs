@@ -7,6 +7,7 @@ This module stores long-lived technical learning records. Each study starts from
 ```text
 learning/
   README.md
+  qa/           # Focused engineering questions with runnable explanations
   sources/      # Archived web pages or source snapshots
   studies/      # One directory per learning topic
   templates/    # Reusable study templates
@@ -32,6 +33,7 @@ learning/studies/YYYYMMDD-short-topic/
 
 | Item | Format | Example |
 | --- | --- | --- |
+| Q&A | `short-question.md` | `pointer-chasing.md` |
 | Archived source | `YYYYMMDD-short-topic.md` | `20260601-lsm-compaction.md` |
 | Study directory | `YYYYMMDD-short-topic/` | `20260601-lsm-compaction/` |
 | Demo directory | `demo/` inside study | `learning/studies/20260601-lsm-compaction/demo/` |
