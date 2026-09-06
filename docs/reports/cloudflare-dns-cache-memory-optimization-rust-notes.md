@@ -139,6 +139,54 @@ Cloudflare 使用近似生产流量的数据分布填满缓存：
 只做 `size_of::<T>()` 无法发现 heap capacity；只看 requested bytes 无法发现
 jemalloc size class；只看 RSS 又无法归因到某个结构改动。
 
+### 1.3 优化来自 workload，不来自语言本身
+
+这组优化很容易被概括为“使用了 Rust 的 `Box`、`Option` 和 enum”，但因果
+关系恰好相反：
+
+```text
+Workload distribution
+        |
+        v
+Representation choice
+        |
+        v
+Language invariant
+        |
+        v
+CPU / allocator / concurrency
+        |
+        v
+Production metrics
+```
+
+先有生产 workload 的偏斜，才有改变表示的依据；Rust 类型只是把选定的
+representation 和生命周期约束编码下来。至少应同时观察六种分布：
+
+| 分布 | 要回答的问题 | 对应优化 |
+| --- | --- | --- |
+| Value frequency | 哪些值或 variant 占绝大多数？ | common-value elision、hot variant inline |
+| Size distribution | 长度和 variant size 是否长尾？ | boxing、length prefix、packed bytes |
+| Lifetime distribution | 对象何时修改，何时长期稳定？ | Builder/IR → frozen runtime representation |
+| Access distribution | 顺序扫描、随机访问和 direct copy 各占多少？ | 连续布局、offset、保留必要索引 |
+| Concurrency distribution | 哪些 CPU/线程读写，read/write ratio 多大？ | immutable snapshot、per-CPU sidecar、RCU 类发布 |
+| Topology distribution | allocation 和访问位于哪个 NUMA node/arena？ | placement、sharding、避免 remote access |
+
+Cloudflare 原文直接给出了 value、size、lifetime 和 access 四个维度的证据。
+并发与拓扑维度在跨 NUMA、共享计数器或多线程 allocator 下同样可能决定结果，
+不能只从单线程 object layout 推断。
+
+对偏斜数据，平均成本应按真实概率加权：
+
+```text
+E[bytes]       = sum(p(type) * bytes(type))
+E[read_cycles] = sum(p(path) * cycles(path))
+```
+
+但平均值不能替代约束。一个方案即使降低 `E[read_cycles]`，也可能因为 rare
+variant 解码、远端 NUMA 访问或更新重建，在 p99/p999 上回退。因此最终判断
+必须同时保留 average、tail 和资源上界。
+
 ## 2. 五步优化到底做了什么
 
 ### 2.1 第一步：把可增长容器冻结
@@ -897,7 +945,7 @@ cache misses。
 
 **验收：** memory、throughput、latency 三者同时无回退，生产 plateau 可复现。
 
-## 6. 对数据库内核开发的直接启发
+## 6. 对数据库内核与 Linux 内核的直接启发
 
 以下属于工程推导，不是 Cloudflare 原文结论。
 
@@ -980,6 +1028,159 @@ Cloudflare 计划把释放的内存重新投入更大的 cache capacity，从而
 cache hit rate -> downstream I/O -> tail latency -> fleet capacity
 ```
 
+### 6.6 Linux 内核中的同类优化
+
+这些方法不是 Rust 独有。Linux 内核长期使用 C、linker section、代码补丁、
+allocator 和并发协议，根据生命周期与访问分布改变运行期表示。
+
+| Linux 机制 | 利用的分布或阶段 | 与本文的同构点 | 额外责任与代价 |
+| --- | --- | --- | --- |
+| `__init` / `__initdata` | 只在 boot/init 阶段使用 | Builder 生命周期结束后丢弃 | 必须避免 runtime 引用已释放 init section；build 有 section mismatch 检查 |
+| `__ro_after_init` | init 时写，之后只读 | mutable → frozen | 依赖正确的 freeze 时点和 page permission 切换 |
+| `__read_mostly` | hot path 高频读、极少写 | hot/read-only data placement | 它不是 immutability；滥用会浪费 section/cacheline |
+| static keys/jump labels | 分支长期极度偏向一侧 | common case 付近零检查成本 | branch flip 需要 text patching 和锁，不能频繁切换 |
+| RCU | reader 多、writer 少 | build new → publish pointer → deferred reclaim | 必须处理 grace period、memory ordering 和 update rate |
+| per-CPU data / `this_cpu_*` | 写入按 CPU ownership 分布 | mutable sidecar 分片，减少共享写 | 增加内存和聚合成本；remote write 会破坏 locality |
+| SLUB / `kmem_cache` | 大量同尺寸、高频分配对象 | allocator-aware layout、复用与 cache hotness | size class、debug metadata、slab order 和 NUMA placement 都会影响真实成本 |
+| XArray | index 聚集、lookup/iteration 多 | 按 key distribution 选择紧凑索引 | hashed/random index 不符合其优势；更新和 RCU 规则仍需遵守 |
+| Maple Tree | non-overlapping range、区间遍历 | 高 branching factor 与 cache-efficient layout | range workload 才匹配；advanced API 把 locking 责任交给调用者 |
+| cacheline alignment/padding | 多 CPU 写入相邻字段 | hot/cold split、隔离 cacheline | 主动增加 bytes 以减少 false sharing |
+
+其中几组关系值得单独展开。
+
+**`__init` 与 `__ro_after_init` 表达生命周期。** `__init`/`__initdata` 把只在
+初始化阶段使用的代码和数据放入专用 section，初始化完成后可释放；这比
+`Vec<T> -> Box<[T]>` 更进一步，Builder 本身可以从最终 working set 中消失。
+`__ro_after_init` 则允许 init 阶段修改，随后由内核把对应区域设为只读。它与
+Rust 的 type-state/freeze 目标相似，但依靠 section、构建检查和页权限，而
+不是 ownership type。
+
+**`__read_mostly` 表达访问分布，不表达不可变。** Linux 的注释明确要求只为
+hot path 中频繁读取、很少变化的数据使用该 placement annotation，使其远离
+频繁更新的 cacheline，并建议用性能证据证明必要性。这与 hot/cold split
+相同：目标不是让 struct 看起来整齐，而是减少关键路径加载的 cacheline 和
+coherence traffic。
+
+**Static key 把 value skew 应用到 instruction path。** 当 feature 几乎总是
+关闭或开启时，普通 branch 每次仍要 load/test。jump label 在运行期 patch
+指令，使默认路径接近 NOP 或直接 jump；代价转移到低频的状态切换。它与
+“默认 owner 不存、rare owner 才分配”遵循同一原则：
+
+```text
+Common path: minimal recurring cost
+Rare path:   explicit higher transition cost
+```
+
+**RCU 把 read/write skew 应用到版本生命周期。** updater 构建新版本后发布
+pointer，旧版本在 grace period 结束后回收。它与 immutable snapshot、
+copy-on-write 和 generation swap 同构，但还必须解决跨 CPU publish ordering
+与 deferred reclamation。Rust ownership 本身不能替代 RCU protocol。
+
+```text
+Build new version
+        |
+        v
+Publish pointer
+        |
+        +------> New readers
+        |
+        v
+Wait grace period
+        |
+        v
+Reclaim old version
+```
+
+**Per-CPU data 说明“省内存”不是唯一目标。** 每个 CPU 保存一份 counter 会
+消耗更多内存，汇总读取也更贵，但它避免多个 CPU 对同一 cacheline 做原子
+read-modify-write。对高并发系统，增加 bytes 换取更少 cacheline bouncing
+可能是正确终态。
+
+**XArray 与 Maple Tree 说明数据结构要服从 key/access distribution。**
+XArray 文档明确指出 clustered index 更合适，拿 hash value 当 index 会表现
+不佳；Maple Tree 针对 non-overlapping ranges、range iteration 和 cache
+efficiency。不能因为某个结构“在 Linux 中先进”就直接采用，必须先证明数据
+分布和操作组合匹配。
+
+因此，从 Cloudflare 和 Linux 可以抽象出同一选择顺序：
+
+```text
+Measure distribution
+        |
+        v
+Choose representation
+        |
+        v
+Encode invariants
+        |
+        v
+Place and publish
+        |
+        v
+Measure end-to-end cost
+```
+
+Rust 的 `Box`/enum、Linux 的 section/static key/RCU/per-CPU 是不同层次的
+mechanism；它们共同服务于 workload，而不是反过来让 workload 迁就机制。
+
+### 6.7 优化目标与 break-even
+
+“更少 bytes”只是目标之一。完整成本至少包括：
+
+```text
+Total cycles =
+    build_count   * build_cycles
+  + read_count    * read_cycles
+  + update_count  * update_cycles
+  + reclaim_count * reclaim_cycles
+
+Steady memory =
+    live_objects * bytes_per_object
+  + allocator_overhead
+  + indexes_and_sidecars
+
+Peak memory =
+    steady_memory
+  + builder_scratch
+  + old_and_new_versions_during_publish
+```
+
+若把一次性 compile/copy 后的对象长期读取，粗略 break-even 是：
+
+```text
+read_count * saved_read_cost
+>
+compile_cost
++ update_count * extra_update_cost
++ migration_cost
+```
+
+若还要把 memory saving 与 CPU cost 放进同一 objective，必须显式给出容量预算
+或权重，不能直接把 bytes 与 cycles 相加。实际决策通常更适合使用约束：
+
+| 约束 | 示例 |
+| --- | --- |
+| Capacity | steady RSS 不超过预算，temporary peak 不触发 OOM/reclaim |
+| Read path | throughput 提升，p99/p999 不回退 |
+| Write path | insert/update/rebuild 不超过可接受窗口 |
+| Concurrency | cacheline bouncing、lock contention 和 remote NUMA access 不恶化 |
+| Correctness | version publish、reclaim、format migration 可恢复 |
+| Complexity | debug、observability、rollout 和 rollback 成本可控 |
+
+反方向的优化同样合理：
+
+- per-CPU replication 用更多内存换低 contention；
+- cacheline padding 用更多 bytes 换低 false sharing；
+- precomputed table 用空间换低 CPU；
+- RCU 在 grace period 内同时保留新旧版本；
+- reserve capacity 用内存换更少 allocation；
+- replication 用容量换可用性和 locality。
+
+所以终态原则应写成：
+
+> 在明确的 memory budget、latency SLO 和 update constraint 下，最小化完整
+> 生命周期的加权成本；不要孤立追求最小 struct 或最小 RSS。
+
 ## 7. 不能从原文直接推出什么
 
 1. **不能假设每个项目都能省 56%。** 原文收益依赖 2500 亿级对象、A/AAAA
@@ -996,14 +1197,21 @@ cache hit rate -> downstream I/O -> tail latency -> fleet capacity
    percentile，但数据库落地还需关注 p99/p999、NUMA 和并发 contention。
 7. **不能忽略 rollout 的 cold-cache 影响。** 原文图中的初始下降来自实例
    重启后的空缓存，稳定 plateau 才代表 steady state。
+8. **不能认为内存更小就一定更快。** per-CPU replication、cacheline padding
+   和预计算 table 都可能主动增加内存，以降低 coherence、branch 或计算成本。
+9. **不能从单线程 benchmark 推导多核结果。** shared counters、allocator
+   arena、false sharing、RCU grace period 和 NUMA placement 可能改变结论。
+10. **不能只测 common case。** 基于分布做优化后，还必须约束 rare variant
+    的最大解码成本、update amplification 和 p99/p999。
 
 ## 8. 建议的落地顺序
 
 ### Phase 0：建立基线
 
-- 固化生产 type/size/count 分布；
+- 固化生产 value、size、lifetime、access、concurrency、topology 分布；
 - 记录 Rust version、target、allocator；
-- 同时采集 object layout、alloc calls、usable bytes、RSS、吞吐和尾延迟；
+- 同时采集 object layout、alloc calls、usable bytes、RSS、吞吐、尾延迟、
+  branch/LLC/TLB miss 和 NUMA remote access；
 - 把每个高基数对象换算为 fleet amplification。
 
 ### Phase 1：低风险冻结
@@ -1040,6 +1248,7 @@ cache hit rate -> downstream I/O -> tail latency -> fleet capacity
 - 小比例 canary；
 - 等待 cache 达到 steady state；
 - 比较同 occupancy、同流量结构下的 p90/p98/p99；
+- 同时覆盖单线程与多核、local NUMA 与 remote NUMA；
 - 检查内存收益是否转化为命中率、I/O 和 tail latency 改善；
 - 确认回滚时不存在 cache format 兼容问题。
 
@@ -1057,14 +1266,22 @@ cache hit rate -> downstream I/O -> tail latency -> fleet capacity
 - [ ] parser 是否处理 overflow、truncation、corruption 和 version？
 - [ ] 是否同时测过 layout、allocator、CPU 和生产 RSS？
 - [ ] rollout 是否排除了 cold-cache dip，并等待 steady-state plateau？
+- [ ] 是否分别记录 value、size、lifetime、access、concurrency、topology 分布？
+- [ ] compile/copy 成本能被多少次 read 摊销，break-even 在哪里？
+- [ ] 是否检查 branch miss、LLC/TLB miss、false sharing 和 NUMA remote access？
+- [ ] 是否存在“增加内存但降低 contention/latency”的更优方案？
+- [ ] 若使用 immutable snapshot，publish ordering 和旧版本 reclaim 是否完整？
 
 ## 10. 总结
 
-Cloudflare 的五步优化，本质上完成了三次抽象升级：
+Cloudflare 的五步优化以及 Linux 中的同类机制，本质上完成了四次抽象升级：
 
 1. 从“Rust 容器怎么省 8 bytes”升级到“生命周期决定类型能力”；
 2. 从“结构体怎么变小”升级到“完整对象图如何减少 allocation 和 cache miss”；
-3. 从“内存 benchmark 变好”升级到“生产 RSS、吞吐和延迟共同验证”。
+3. 从“单一数据类型”升级到“value、size、access、concurrency 等分布共同
+   决定表示”；
+4. 从“内存 benchmark 变好”升级到“生产 RSS、吞吐、尾延迟和更新成本共同
+   验证”。
 
 它给数据库和系统 Rust 开发的终态启示是：
 
@@ -1073,9 +1290,11 @@ Cloudflare 的五步优化，本质上完成了三次抽象升级：
 > context；最后用生产 allocator 和 steady-state workload 证明收益。
 
 这不是牺牲可维护性换取几个 byte。边界检查、类型冻结、显式格式和分层测量
-恰恰使优化后的系统比依赖隐式布局的版本更容易验证。
+恰恰使优化后的系统比依赖隐式布局的版本更容易验证。Rust、Linux linker
+section、static key、RCU 和 per-CPU data 只是不同层次的实现工具；真正可迁移
+的方法是先测量 workload，再选择表示，最后验证完整生命周期成本。
 
-## 参考资料
+## 11. 参考资料
 
 - [Cloudflare 原文：How we saved 100 terabytes of memory by optimizing 1.1.1.1's DNS cache](https://blog.cloudflare.com/dns-cache-memory-optimization-1111/?utm_campaign=cf_blog&utm_content=20260827&utm_medium=organic_social&utm_source=twitter)
 - [Rust `GlobalAlloc`](https://doc.rust-lang.org/std/alloc/trait.GlobalAlloc.html)
@@ -1085,3 +1304,11 @@ Cloudflare 的五步优化，本质上完成了三次抽象升级：
 - [bitflags crate](https://docs.rs/bitflags/latest/bitflags/)
 - [jemalloc](https://jemalloc.net/)
 - [RFC 1035, domain name compression](https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.4)
+- [Linux source: `__init`, `__initdata`](https://github.com/torvalds/linux/blob/master/include/linux/init.h)
+- [Linux source: `__read_mostly`, `__ro_after_init`, cacheline alignment](https://github.com/torvalds/linux/blob/master/include/linux/cache.h)
+- [Linux kernel documentation: Static Keys](https://docs.kernel.org/staging/static-keys.html)
+- [Linux kernel documentation: What is RCU?](https://docs.kernel.org/RCU/whatisRCU.html)
+- [Linux kernel documentation: this_cpu operations](https://docs.kernel.org/core-api/this_cpu_ops.html)
+- [Linux kernel documentation: SLUB](https://docs.kernel.org/mm/slub.html)
+- [Linux kernel documentation: XArray](https://docs.kernel.org/core-api/xarray.html)
+- [Linux kernel documentation: Maple Tree](https://docs.kernel.org/core-api/maple_tree.html)
