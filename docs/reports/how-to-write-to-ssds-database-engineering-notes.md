@@ -18,13 +18,138 @@ rustc tools/docs/verify_markdown_c.rs -O -o .tmp/verify-markdown-c
   docs/reports/how-to-write-to-ssds-database-engineering-notes.md
 ```
 
+## 阅读前：名词地图
+
+本文保留论文和代码中常用的英文缩写，便于继续查阅资料；首次阅读时可以先把
+整条写路径理解成“数据库生成逻辑页，SSD 固件再把逻辑地址翻译成闪存位置”：
+
+```text
+Application update
+        |
+        v
+DB page identified by PID
+        |
+        | DBMS: WAL, DWB, compression, DB GC
+        v
+Host write addressed by LBA
+        |
+        | SSD firmware: FTL, wear leveling, SSD GC
+        v
+NAND page inside erase block / superblock
+```
+
+这里的 `page`、`block` 和 `zone` 不能互换：
+
+| 对象 | 谁能看见 | 直觉解释 |
+| --- | --- | --- |
+| DB page（数据库页） | DBMS | B-tree、buffer pool 和 WAL 操作的数据单位，常见为 4/8/16 KiB。 |
+| LBA block（逻辑块） | OS/DBMS/SSD | 主机提交给块设备的逻辑地址；只是编号，不等于真实闪存位置。 |
+| NAND page（闪存页） | SSD 固件 | NAND 能读取或 program（写入）的内部单位，通常不直接暴露给 DBMS。 |
+| Erase block（擦除块） | SSD 固件 | 多个 NAND page 的集合；NAND 必须整块擦除，不能只擦其中一页。 |
+| Superblock（超级块） | SSD 固件 | 跨 plane/die 组合的一组 erase block，用来并行写入和回收；不是文件系统 superblock。 |
+| DB zone（数据库分区） | DBMS | out-of-place 引擎自定义的连续回收单位。 |
+| ZNS zone（设备分区） | 主机与 ZNS SSD | 设备公开的顺序写入、整区 reset 单位。 |
+
+### 核心指标
+
+| 名词 | 全称 | 面向软件开发者的直觉 |
+| --- | --- | --- |
+| WAF | Write Amplification Factor，写放大系数 | “业务本想写 1 字节，某一层实际写了多少字节”的倍率。`1` 最理想，`4` 表示实际写了 4 倍。 |
+| DB WAF | Database WAF | DBMS 下发字节 / 原始脏页字节；doublewrite、checkpoint 和 DB GC 都会改变它。 |
+| SSD WAF | SSD WAF | NAND 实际写入字节 / 主机下发字节；主要来自 FTL 搬迁和 SSD GC。 |
+| Total WAF | End-to-end WAF | NAND 字节 / 原始脏页字节，也等于 `DB WAF * SSD WAF`。它才直接影响寿命和设备写带宽。 |
+| User writes | 用户页写入 | 因正常 eviction/checkpoint 必须写出的原始脏页，是论文计算 DB WAF 的基准。这里不是 SQL 文本大小。 |
+| Host writes | 主机写入 | DBMS/OS 真正提交给 SSD 的字节，包括额外副本和 DB GC 搬迁。 |
+| Flash/NAND writes | 闪存物理写入 | SSD 内部最终 program 到 NAND 的字节；普通 block I/O 统计通常看不到它。 |
+| B/op | Bytes per operation | 每完成一次 benchmark 操作，平均产生多少写入字节。 |
+| OPS | Operations per second | 每秒完成的操作数；类似吞吐量，但“operation”由 benchmark 定义。 |
+| DWPD | Drive Writes Per Day | 保修期内每天允许写满整盘多少次；`1 DWPD` 表示每天可写入约一个设备容量。 |
+
+用论文的 in-place LeanStore 数字代入，一次 4 KiB 用户页写入会变成：
+
+```text
+4 KiB user page
+   |  DB WAF = 2.00
+   v
+8 KiB host writes
+   |  SSD WAF = 2.36
+   v
+18.88 KiB NAND writes
+
+Total WAF = 18.88 / 4 = 4.72
+```
+
+因此“DBMS 下发 8 KiB”并不是终点；SSD 内部还可能再写 10.88 KiB。
+
+### 数据库写路径
+
+| 名词 | 全称 | 面向软件开发者的直觉 |
+| --- | --- | --- |
+| DBMS | Database Management System | 数据库管理系统；本文重点指 buffer manager、WAL、space manager、GC 等存储引擎部分。 |
+| Buffer pool | 缓冲池 | DBMS 在内存中缓存数据库页的区域。 |
+| Dirty page | 脏页 | 内存中已修改、尚未持久化的数据库页。 |
+| Eviction | 淘汰 | buffer pool 空间不足时移出页面；若页面是脏的，通常要先写盘。 |
+| Checkpoint | 检查点 | 把某个恢复进度及相关脏页/元数据持久化，缩短崩溃后的 WAL 重放范围。 |
+| WAL | Write-Ahead Log，预写日志 | 先持久化“如何重做修改”，再允许对应数据页落盘。它解决事务恢复，不等同于 page mapping log。 |
+| Mapping WAL | 地址映射日志 | 记录 `PID -> 新 offset` 的变化；必须在新页数据持久化之后提交。 |
+| DWB / doublewrite | Doublewrite Buffer，双写缓冲 | 覆盖原页前先保存一份安全副本，避免掉电只写了半页；代价通常接近多写一遍。 |
+| In-place write | 原地更新 | 同一个 PID 总写回固定 offset，像修改数组的固定下标。 |
+| Out-of-place write | 异地更新 | 新版本追加到新位置，持久化后再切换映射；像 copy-on-write。 |
+| PID | Page Identifier，页标识 | DBMS 认识的稳定逻辑页 ID；out-of-place 后不能再简单用 `PID * page_size` 定位。 |
+| LSN | Log Sequence Number，日志序号 | WAL 中单调递增的位置/时间轴，用于判断恢复顺序和估计页面更新间隔。 |
+| Extent | 区段 | 一段连续存储空间；旧版本失效后成为可回收 extent。 |
+| GC | Garbage Collection，垃圾回收 | 搬走仍有效的数据，再回收混有旧版本的空间。本文同时存在 DB GC 和 SSD GC，必须看清所在层。 |
+| Victim | 回收受害者 | 本轮 GC 选择回收的 zone/block，不表示数据损坏。 |
+| Valid ratio | 有效数据比例 | victim 中仍需保留的数据占比；越高，需要 copyback 的数据越多。 |
+| Copyback | 有效数据搬迁 | GC 为释放整个回收单位而重写其中仍有效的数据。 |
+| OP | Over-Provisioning，预留空间 | 不存放当前用户数据的余量。空间越多，GC 越能等待旧版本失效；这里不是 operation。 |
+| Page packing | 页装箱 | 把多个压缩页塞进对齐的 4 KiB slot，同时保证单个压缩页不跨 slot。 |
+| Slot | 槽位 | page packing 的一个对齐物理读单元，本文为 4 KiB。 |
+| Deathtime / EDT | Expected Death Time，预计失效时间 | 预计页面下次被新版本替代的 LSN；不是事务过期时间。 |
+| B-tree | Balanced Tree，平衡树索引 | 通过固定大小节点页支持点查和范围查；本文改造的 LeanStore 属于这一类。 |
+| LSM-tree | Log-Structured Merge Tree | 先顺序写入新数据，再后台合并多层有序文件；天然 out-of-place，但 compaction 仍会写放大。 |
+| Compaction | 压实/归并 | 重写多个旧文件或区段，丢弃过期版本并形成新布局；可视为 LSM/日志结构系统的一类 GC。 |
+
+### SSD 内部与新接口
+
+| 名词 | 全称 | 面向软件开发者的直觉 |
+| --- | --- | --- |
+| NAND | NAND flash | SSD 的实际存储介质；有有限擦写寿命，且写入前通常需要按 erase block 擦除。 |
+| LBA | Logical Block Address，逻辑块地址 | 主机看到的地址，类似虚拟地址。 |
+| PBA | Physical Block Address，物理块地址 | 数据在 NAND 中的真实位置，类似物理地址；通常只由 SSD 固件掌握。 |
+| FTL | Flash Translation Layer，闪存转换层 | SSD 固件中的 `LBA -> PBA` 映射、GC 和磨损均衡层，可以把它看作设备内部的小型存储引擎。 |
+| Wear leveling | 磨损均衡 | 让擦写分散到不同闪存块，避免少数块提前报废；可能改变 DBMS 推测的物理放置。 |
+| Multiplexing | 写流混排 | SSD 把多条主机写流交错放入同一 superblock，导致生命周期不同的数据被绑在一起回收。 |
+| Active group | 活跃组 | 同一时期并发写入的一组 DB zone；NoWA 需要保持组内重写频率平衡。 |
+| ZNS | Zoned Namespace | NVMe 分区接口：zone 内顺序写、整区 reset，把主要放置和 GC 责任交给主机。 |
+| FDP | Flexible Data Placement | NVMe 灵活数据放置：主机给写入附加 placement hint，让 SSD 隔离不同生命周期的数据。 |
+| RU | Reclaim Unit，回收单元 | FDP SSD 内部进行回收的空间粒度；DB zone 应与它对齐。 |
+| RUH | Reclaim Unit Handle，回收单元句柄 | FDP 提供的独立写流入口；并发 active zone 数不能超过可用 RUH 数。 |
+| PlID | Placement Identifier，放置标识 | I/O 请求携带的 FDP 提示值，用来选择 RUH。 |
+| NoWA | No Write Amplification pattern | 普通 SSD 上通过 active-group 约束和补偿写，尽量让 SSD 获得整块失效空间的写入模式。 |
+| OCP telemetry | Open Compute Project SSD telemetry | 部分数据中心 SSD 暴露的物理写入遥测，论文用它读取 NAND writes。 |
+| Namespace | NVMe Namespace | 主机看到的一块逻辑 NVMe 盘及其 LBA 空间；ZNS 是带 zone 约束的一种 namespace。 |
+
+### 工作负载与延迟
+
+| 名词 | 全称 | 面向软件开发者的直觉 |
+| --- | --- | --- |
+| OLTP | Online Transaction Processing | 大量短事务、随机读写和并发更新的在线事务负载。 |
+| YCSB-A | Yahoo! Cloud Serving Benchmark A | 典型 50% read、50% update 的固定数据集 KV 负载。 |
+| TPC-C | Transaction Processing Performance Council Benchmark C | 模拟订单、库存和支付的关系型事务负载，数据会随新订单增长。 |
+| Zipf / theta | Zipf 偏斜分布及参数 | 少量热点键承载大部分访问；`theta` 越高通常越偏斜。 |
+| QD | Queue Depth，队列深度 | 同时在设备队列中等待/执行的 I/O 数量。 |
+| p99 / p999 | 99/99.9 分位延迟 | 99%/99.9% 请求不超过的延迟，用来观察少数慢请求和 GC 停顿。 |
+| fio | Flexible I/O Tester | 绕开数据库、直接生成块 I/O 的压测工具；只能回答设备特征，不能代替数据库端到端测试。 |
+| blkdiscard | Linux block discard 工具 | 通知 SSD 某个逻辑范围全部无效，近似重置测试前的 FTL 状态；会破坏该范围内的数据。 |
+
 ## 0. 结论先行
 
 这篇论文最有价值的结论不是“SSD 喜欢顺序写”，而是：
 
-> DBMS 必须以最终写入 NAND 的字节数为目标，同时控制数据库层和 SSD
-> 层的写放大。Out-of-place 不是优化本身，而是获得写入时机、分组和位置
-> 控制权的前提。
+> 数据库管理系统（DBMS）必须以最终写入 NAND 闪存介质的字节数为目标，
+> 同时控制数据库层和 SSD 层的写放大。Out-of-place（异地更新，新版本写到
+> 新位置）不是优化本身，而是获得写入时机、分组和位置控制权的前提。
 
 端到端写路径可以概括为：
 
@@ -44,22 +169,27 @@ Total WAF = DB WAF * SSD WAF
 
 对数据库开发最重要的七点是：
 
-1. **只优化 DB WAF 不够。** DBMS 少写了一点，却让 SSD 内部混合了不同
-   生命周期的数据，最终 NAND 可能写得更多。
-2. **朴素 out-of-place 可能比 in-place 更差。** 论文的 800 GB 实验中，
+1. **只优化 DB WAF（数据库层写放大）不够。** DBMS 少写了一点，却让 SSD
+   内部混合了不同生命周期的数据，最终 NAND 可能写得更多。
+2. **朴素 out-of-place 可能比 in-place（固定位置覆盖）更差。** 论文的
+   800 GB 实验中，
    DB WAF 从 `2.00` 上升到 `4.06`，物理写入从 `4,378 B/op` 上升到
    `7,274 B/op`。原因是数据库自己的 GC 尚未治理。
-3. **压缩的收益不只来自少写数据。** 它还扩大等效 over-provisioning，
-   让 GC 可以等待更多旧版本失效，降低 victim zone 的有效页比例。
+3. **压缩的收益不只来自少写数据。** 它还扩大等效 over-provisioning
+   （OP，供回收周转的预留空间），让 GC 可以等待更多旧版本失效，降低
+   victim zone（本轮被选中回收的分区）的有效页比例。
 4. **压缩页必须遵守设备读粒度。** 变长压缩页跨越 4 KiB 边界会把一次
-   逻辑读取变成两次物理读取。page packing 的目标是“一页一次 4 KiB I/O”。
-5. **GC 的核心不是更聪明地挑 victim，而是写入时就不要混放不同
-   deathtime 的页。** 放置决策决定了未来 GC 的上限。
-6. **并发写流会在普通 SSD 内部被 multiplex。** 即使每条流都是顺序写，
-   生命周期不同的流被混进同一 superblock，仍会产生 SSD GC 写放大。
+   逻辑读取变成两次物理读取。Page packing（页装箱）的目标是“一页一次
+   4 KiB I/O”。
+5. **GC（垃圾回收）的核心不是更聪明地挑 victim，而是写入时就不要混放
+   不同 deathtime（预计失效时间）的页。** 放置决策决定了未来 GC 的上限。
+6. **并发写流会在普通 SSD 内部被 multiplex（混排）。** 即使每条流都是
+   顺序写，生命周期不同的流被混进同一 superblock（SSD 内部并行写入/
+   回收单元），仍会产生 SSD GC 写放大。
 7. **崩溃一致性是第一约束。** 新页必须先持久化，再提交
-   `PID -> offset` 映射；否则省掉 doublewrite 的同时会引入不可恢复的
-   torn mapping。
+   `PID（逻辑页 ID）-> offset（当前物理位置）` 映射；否则省掉
+   doublewrite（双写保护）的同时会引入不可恢复的 torn mapping
+   （只持久化了一半状态的地址映射）。
 
 ## 1. 论文解决了什么问题
 
@@ -115,9 +245,10 @@ static bool compute_page_waf(const struct write_counters *c, struct waf *out)
 
 ### 1.2 为什么 in-place 会在两层同时放大
 
-传统页式引擎把 `PID` 固定映射为文件偏移。覆盖旧页时，为防止 torn page，
-通常先写 doublewrite/full-page image，再覆盖目标位置，因此 DB WAF 接近
-`2`。SSD 自己仍然 out-of-place，并可能再次搬迁有效 NAND page。
+传统页式引擎把 `PID` 固定映射为文件偏移。覆盖旧页时，为防止 torn page
+（掉电后页面只有一部分是新数据），通常先写 doublewrite/full-page image
+（完整页镜像），再覆盖目标位置，因此 DB WAF 接近 `2`。SSD 自己仍然
+out-of-place，并可能再次搬迁有效 NAND page。
 
 论文在 Samsung PM9A3 上测得 in-place LeanStore：
 
@@ -131,9 +262,9 @@ static double total_waf(double db_waf, double ssd_waf)
 ```
 
 也就是说，一个 4 KiB B-tree 页更新最终约产生 `18.85 KiB` flash writes。
-论文用 1 DWPD、持续约 `400 MB/s` 的写速率粗略估算，设备耐久额度约
-1.5 个月就会耗尽。这个寿命数字依赖持续负载假设，不应直接用于容量规划，
-但它准确揭示了量级风险。
+论文用 1 DWPD（每天允许写满整盘一次）、持续约 `400 MB/s` 的写速率粗略
+估算，设备耐久额度约 1.5 个月就会耗尽。这个寿命数字依赖持续负载假设，
+不应直接用于容量规划，但它准确揭示了量级风险。
 
 ### 1.3 为什么 out-of-place 只是起点
 
@@ -151,7 +282,8 @@ struct placement_decision {
 ```
 
 但代价是 DBMS 自己必须维护地址映射、回收旧版本。如果只是把页追加到日志，
-然后使用朴素 greedy GC，数据库 GC 的 copyback 会吞掉全部收益。论文
+然后使用朴素 greedy GC（每次挑有效数据最少的 zone），数据库 GC 的
+copyback（搬走仍有效的数据）会吞掉全部收益。论文
 800 GB 实验的朴素 out-of-place 结果就是反例：
 
 | 版本 | OPS | DB WAF | SSD WAF | 物理写入 |
@@ -165,8 +297,8 @@ struct placement_decision {
 
 ## 2. 正确的 out-of-place 持久化协议
 
-论文修改了 buffer manager、I/O interface、space manager 和 GC。最关键的
-正确性不变量是：
+论文修改了 buffer manager（缓存页）、I/O interface（发起设备请求）、
+space manager（维护页到位置的映射）和 GC。最关键的正确性不变量是：
 
 ```text
 使页面版本可恢复的 WAL
@@ -178,8 +310,12 @@ PID -> 新 offset 的映射提交
 旧页面空间可被回收
 ```
 
+图中的 `happens-before` 表示持久化先后约束：前一步必须确认掉电后仍然存在，
+才能提交后一步，而不只是代码执行顺序。
+
 下面是 C 风格的协议骨架。`persist_*` 表示必须跨掉电持久化，不能仅以
-异步 I/O completion 代替。
+异步 I/O completion（请求已完成的通知）代替；completion 不一定等价于数据
+已经越过设备易失缓存。
 
 ```c
 #include <stdbool.h>
@@ -249,18 +385,19 @@ bool flush_page_out_of_place(page_id_t pid,
 }
 ```
 
-崩溃点应逐个做 fault injection：
+崩溃点应逐个做 fault injection（在指定持久化边界主动模拟掉电）：
 
 | 崩溃位置 | 恢复结果 |
 | --- | --- |
 | 新页持久化前 | checkpoint 中仍指向旧页 |
-| 新页已持久化、mapping WAL 未提交 | 新页是 orphan，旧页仍有效 |
+| 新页已持久化、mapping WAL 未提交 | 新页是 orphan（没有映射指向的孤儿空间），旧页仍有效 |
 | mapping WAL 已提交、内存映射未发布 | recovery 重放 mapping WAL 后指向新页 |
 | 旧 extent 标记失效后 | 新映射必须已经 durable |
 
 checkpoint 至少需要保存 `PID2OffsetTable` 和影响放置恢复的
 `ActiveGroupHistory`。论文从 checkpoint LSN 开始重放 mapping WAL，再从
-最终映射反建 `StorageSpace` 反向索引。这里不能只测试 clean shutdown；
+最终映射反建 `StorageSpace` 反向索引。这里不能只测试 clean shutdown
+（进程按正常流程刷盘并退出）；
 必须覆盖数据写、mapping log 写、checkpoint rename 和 zone reclaim 中间的
 掉电点。
 
@@ -268,8 +405,8 @@ checkpoint 至少需要保存 `PID2OffsetTable` 和影响放置恢复的
 
 ### 3.1 压缩为什么同时影响三件事
 
-论文使用 LZ4/ZSTD 测得多种 OLTP/真实数据集的压缩后大小为原始数据的
-`14% - 49%`。它产生三个联动收益：
+论文使用 LZ4（偏低 CPU 开销）/ZSTD（通常压缩率更高）测得多种 OLTP/
+真实数据集的压缩后大小为原始数据的 `14% - 49%`。它产生三个联动收益：
 
 1. 每次 flush 的 host bytes 下降；
 2. 数据集占用下降，等效 OP 空间增加；
@@ -282,8 +419,9 @@ checkpoint 至少需要保存 `PID2OffsetTable` 和影响放置恢复的
 ### 3.2 不能让压缩页跨 4 KiB 边界
 
 一个 3,000 B 压缩页如果跨 4 KiB 边界，需要两次 4 KiB 读取，读取量相对
-压缩页达到约 `2.73x`。论文用 best-fit packing 把多个压缩页装入对齐的
-4 KiB slot，保证每个页只需读取一个 slot。
+压缩页达到约 `2.73x`。论文用 best-fit packing（每次选择放入后剩余空间
+最小的可用 slot）把多个压缩页装入对齐的 4 KiB slot，保证每个页只需读取
+一个 slot。
 
 下面的代码表达核心不变量，不包含排序步骤；生产实现应先按压缩长度降序，
 再做 best-fit。
@@ -384,7 +522,8 @@ static double gc_waf(double valid_ratio)
 }
 ```
 
-`r = 0.75` 时，GC WAF 为 `4`。所以高水位时才启动 GC，往往已经太晚：
+`r = 0.75` 时，GC WAF 为 `4`。所以到高水位（可用空间逼近安全下限）才启动
+GC，往往已经太晚：
 空闲空间越少，候选 zone 的有效页比例越高，GC 越慢，前台又越容易追上 GC，
 最终形成写停顿。
 
@@ -450,7 +589,7 @@ static void record_persist(struct death_history *h,
 
 ### 4.3 放置和回收必须使用同一套分类
 
-写入时选择平均 EDT 最接近的 active zone：
+写入时选择平均 EDT 最接近的 active zone（仍有空间、当前允许追加的分区）：
 
 ```c
 #include <stddef.h>
@@ -558,7 +697,8 @@ static bool make_layout(const struct device_caps *d, struct db_layout *out)
 }
 ```
 
-三类策略不能混为一谈：
+三类策略不能混为一谈；“普通 SSD”在这里指传统 block namespace，主机只能
+提交 LBA 和数据，不能直接控制 NAND 放置：
 
 | 设备 | 数据库 zone 大小 | 避免 SSD multiplex 的方式 |
 | --- | --- | --- |
@@ -623,8 +763,8 @@ static int find_under_rewritten_zone(const struct active_group *g)
 ```
 
 完整 NoWA 还必须记录 active-group history、估计 SSD 最低 free-superblock
-阈值，并在 SSD GC 被触发前完成补偿写。上面的代码只表达不变量，不是完整
-实现。
+阈值，并在 SSD GC 被触发前完成 compensation write（主动重写组内落后的
+zone，使同组数据以相近频率失效）。上面的代码只表达不变量，不是完整实现。
 
 论文给出：
 
@@ -645,8 +785,9 @@ max_open_zones * db_zone_size
 ### 5.3 不知道内部 GC unit 时怎么办
 
 论文在单 active zone 下逐步增大 DB zone，观察 SSD WAF 首次收敛到 `1` 的
-位置，将其作为内部 GC unit 的上界。六块企业盘中通常落在 `4-8 GB`；无
-OCP/FDP 信息时，论文建议 `32 GB` 作为保守上界。
+位置，将其作为内部 GC unit（SSD 每次希望整体回收的空间粒度）的上界。
+六块企业盘中通常落在 `4-8 GB`；无 OCP/FDP 信息时，论文建议 `32 GB`
+作为保守上界。
 
 不能把 `32 GB` 写死进默认配置。正确做法是保存设备画像：
 
@@ -709,7 +850,8 @@ static bool checkpoint_should_preclean(const struct frame_budget *b)
 
 工程上还需要：
 
-- foreground GC 和 background GC 分开计时、计量；
+- foreground GC（业务写入被迫同步等待的回收）和 background GC（提前在
+  后台执行的回收）分开计时、计量；
 - 为 GC 预留 I/O queue depth，而不是只预留内存；
 - 同时观测 `p99/p999 commit latency`、GC pause 和 free-zone 水位；
 - 在达到紧急水位前预清理，保留停止接受写入的最后保护线；
@@ -717,9 +859,12 @@ static bool checkpoint_should_preclean(const struct frame_budget *b)
 
 ## 7. 如何验证，而不是只跑一个 fio
 
-论文的可信之处在于它不是测 fresh drive：
+`fio` 只直接测块设备 I/O；它不知道数据库的 WAL、buffer pool、checkpoint
+和 DB GC，因此不能证明数据库端到端写路径已经优化。
 
-- 每次实验前 `blkdiscard` 重置映射状态；
+论文的可信之处在于它不是只测 fresh drive（刚清空、尚未进入稳态 GC 的盘）：
+
+- 每次实验前 `blkdiscard`（通知设备整段 LBA 已无效）重置映射状态；
 - 运行到累计写入至少达到设备容量的 `4x`；
 - 使用最后一小时的平均值；
 - 数据集占设备 90%，buffer pool 为数据集的 5%-20%；
@@ -760,7 +905,7 @@ static bool reached_measurement_state(const struct run_state *s)
 | 分布 | uniform、Zipf 多个 theta、真实 trace |
 | 读写比 | 写密集、混合、读密集 |
 | 工作集 | 小于、接近、大于 buffer pool |
-| 生命周期 | fresh、1 DW、4 DW、长稳态 |
+| 生命周期 | fresh、1 DW（累计写满一盘）、4 DW（累计写满四盘）、长稳态 |
 | 并发 | 单写流到最大 worker/QD |
 | 故障 | 每个持久化边界注入掉电 |
 | 指标 | host/NAND bytes、OPS、p99/p999、GC、CPU、内存 |
@@ -783,9 +928,9 @@ static bool reached_measurement_state(const struct run_state *s)
 
 ### 8.2 ZNS 的主要收益容易被误读
 
-相同 1,500 GB 数据集时，ZNS 比普通 namespace 快 31%；但相同填充率时只快
-约 10%。这说明大部分收益来自 ZNS 暴露了更多可用容量，而不是 zone append
-本身更快。
+相同 1,500 GB 数据集时，ZNS 比普通 namespace（传统 NVMe 逻辑盘）快
+31%；但相同填充率时只快约 10%。这说明大部分收益来自 ZNS 暴露了更多
+可用容量，而不是 zone append 本身更快。
 
 选型时应分开计算：
 
@@ -826,8 +971,9 @@ Figure 13b 的柱状图也显示该版本仍有约一倍 SSD GC 写入。因此
 
 这些限制决定了方案不能直接照搬：
 
-1. **主要假设是 DBMS 直接写 block device。** 文件系统、device mapper、
-   RAID、云盘和虚拟化层都可能重排或合并写入。
+1. **主要假设是 DBMS 直接写 block device（如 `/dev/nvme...` 暴露的线性
+   逻辑块接口）。** 文件系统、device mapper（Linux 块设备映射层）、RAID、
+   云盘和虚拟化层都可能重排或合并写入。
 2. **NoWA 不具备跨设备的协议级保证。** 论文在六块企业 SSD 上实测成功，
    但也承认固件可重排数据；消费级 SSD 风险更高。
 3. **恢复设计有描述，没有系统性的掉电实验结果。** 去掉 doublewrite 前，
@@ -838,8 +984,9 @@ Figure 13b 的柱状图也显示该版本仍有约一倍 SSD GC 写入。因此
    或多盘部署必须设计 metadata paging/sharding。
 6. **压缩掩盖了部分 GC 难题。** 800 GB 数据压到 418 GB 后，工作点从
    90% 满盘变成大量空闲；必须额外看关闭压缩的结果。
-7. **实验集中在企业 SSD、写密集且 out-of-memory 的 OLTP。** 结论不能
-   无条件外推到消费盘、云 EBS、read-heavy 或全内存工作负载。
+7. **实验集中在企业 SSD、写密集且 out-of-memory（数据集大于内存）的
+   OLTP。** 结论不能无条件外推到消费盘、云 EBS、read-heavy 或全内存
+   工作负载。
 8. **未覆盖多设备和共享设备。** 这两项也被作者列为未来工作。多租户写流
    会破坏单 DBMS 对物理放置的推断。
 
@@ -860,6 +1007,9 @@ Phase 4  GDT placement + GDT-aware GC
    |
 Phase 5  按设备选择 ZNS / FDP / profiled NoWA
 ```
+
+其中 `watermark` 是触发后台/紧急 GC 的空间水位，`clean-frame reserve`
+是专门留给 GC 读取使用的干净 buffer frame 数量。
 
 每一阶段都保留 feature flag 和回退路径：
 
@@ -907,8 +1057,9 @@ static bool valid_features(const struct storage_features *f)
 ### LSM-tree
 
 LSM 已经 out-of-place，但不能据此认为问题已解决。compaction policy 会同时
-改变 DB WAF、空间放大和 SSD WAF。应把 SST 的预计删除/compaction 时间映射
-到 ZNS zone 或 FDP placement ID，而不是只优化 level 层的 bytes written。
+改变 DB WAF、空间放大和 SSD WAF。应把 SST（Sorted String Table，LSM 的
+不可变有序文件）的预计删除/compaction 时间映射到 ZNS zone 或 FDP
+placement ID，而不是只优化 level（LSM 层级）的 bytes written。
 
 ### PostgreSQL / InnoDB 类固定页位置引擎
 
@@ -919,7 +1070,8 @@ LSM 已经 out-of-place，但不能据此认为问题已解决。compaction poli
 - 校准压缩后实际 block I/O，而不是只看逻辑压缩率；
 - 监控 host writes 与 NAND writes；
 - 避免数据盘长期逼近满盘；
-- 在明确支持时评估 atomic write/FDP，而不是根据型号猜测。
+- 在明确支持时评估 atomic write（设备保证全写或全不写）/FDP，而不是根据
+  型号猜测。
 
 ### Append-only / 列存 / 对象存储
 
