@@ -91,6 +91,48 @@ static void test_waf(void)
     assert(near(expected_physical, 1103.7));
 }
 
+static void test_system_write_factors(void)
+{
+    struct system_write_counters counters = {
+        .app_payload_bytes = 100,
+        .logical_mutation_bytes = 150,
+        .wal_journal_bytes = 50,
+        .metadata_bytes = 25,
+        .relocation_bytes = 75,
+        .host_bytes = 300,
+        .media_bytes = 600,
+        .completed_ops = 10,
+        .media_bytes_known = true,
+    };
+    struct system_write_factors factors;
+
+    assert(derive_system_write_factors(&counters, &factors));
+    assert(near(factors.payload_to_logical, 1.5));
+    assert(near(factors.logical_to_host, 2.0));
+    assert(near(factors.host_to_media, 2.0));
+    assert(near(factors.payload_to_media, 6.0));
+    assert(near(factors.host_bytes_per_op, 30.0));
+    assert(near(factors.media_bytes_per_op, 60.0));
+    assert(factors.has_media_factors);
+
+    counters.media_bytes = 0;
+    counters.media_bytes_known = false;
+    assert(derive_system_write_factors(&counters, &factors));
+    assert(!factors.has_media_factors);
+    assert(near(factors.host_to_media, 0.0));
+    assert(near(factors.payload_to_media, 0.0));
+    assert(near(factors.media_bytes_per_op, 0.0));
+
+    counters.relocation_bytes = 226;
+    assert(!derive_system_write_factors(&counters, &factors));
+    counters.relocation_bytes = 75;
+
+    counters.app_payload_bytes = 0;
+    assert(!derive_system_write_factors(&counters, &factors));
+    assert(!derive_system_write_factors(NULL, &factors));
+    assert(!derive_system_write_factors(&counters, NULL));
+}
+
 static void test_persist_order(void)
 {
     const unsigned char data[128] = {0};
@@ -222,11 +264,12 @@ static void test_resource_and_feature_guards(void)
 int main(void)
 {
     test_waf();
+    test_system_write_factors();
     test_persist_order();
     test_page_packing();
     test_deathtime_and_gc();
     test_device_layout();
     test_resource_and_feature_guards();
-    puts("FIL-C tests passed: 6 suites");
+    puts("FIL-C tests passed: 7 suites");
     return 0;
 }

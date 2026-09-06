@@ -7,7 +7,7 @@
 > [VLDB](https://www.vldb.org/pvldb/vol19/p1469-lee.pdf) |
 > [Artifact](https://github.com/LeeBohyun/ZLeanStore)
 
-本文的 18 个 C 代码块已使用 FIL-C 0.684 编译，并通过 6 组运行时测试。复验：
+本文的 19 个 C 代码块已使用 FIL-C 0.684 编译，并通过 7 组运行时测试。复验：
 
 ```bash
 rustc tools/docs/verify_markdown_c.rs -O -o .tmp/verify-markdown-c
@@ -990,7 +990,272 @@ Figure 13b 的柱状图也显示该版本仍有约一倍 SSD GC 写入。因此
 8. **未覆盖多设备和共享设备。** 这两项也被作者列为未来工作。多租户写流
    会破坏单 DBMS 对物理放置的推断。
 
-## 10. 面向数据库内核的实施顺序
+## 10. 从任意写入系统落地这篇论文
+
+可以先梳理任意系统的写入特征和 metrics，再应用论文经验。但顺序不能是
+“看到随机写就改 out-of-place”，而应是：
+
+```text
+Define measurement boundary
+        |
+        v
+Characterize write workload
+        |
+        v
+Build a layered byte ledger
+        |
+        v
+Locate the dominant multiplier
+        |
+        v
+Check available control surface
+        |
+        v
+Apply one mechanism
+        |
+        v
+Validate at steady state
+```
+
+核心原则是：**先证明字节在哪一层被放大，再改拥有该层控制权的组件。**
+否则容易把吞吐变化误判成写放大改善，或把 host writes 下降误判成 NAND
+writes 下降。
+
+### 10.1 先定义测量边界
+
+“原始写入量”没有天然统一的定义。数据库论文以 eviction/checkpoint 的原始
+页字节为分母；消息队列可能以消息 payload 为分母；对象存储可能以对象新版本
+字节为分母；文件系统可能以应用 `write()` 字节为分母。
+
+开始测量前必须固定：
+
+| 边界问题 | 必须做出的决定 |
+| --- | --- |
+| 起点是什么 | 业务 payload、序列化记录、数据库脏页，还是文件系统 write bytes？ |
+| 终点是什么 | 本机 block device host bytes、SSD NAND bytes、远端副本总字节，还是云盘计费字节？ |
+| 是否包含可靠性副本 | WAL、journal、doublewrite、replication、erasure coding 是否计入？ |
+| 是否包含后台写 | checkpoint、compaction、GC、scrub、rebuild 是否计入？ |
+| operation 是什么 | 一条消息、一次事务、一次 KV update，还是一字节业务 payload？ |
+| durability 是否相同 | 两个方案是否都承诺相同的 fsync、掉电一致性和副本数？ |
+
+边界不同的 WAF 不能直接比较。尤其不能拿“业务 payload -> host”的倍率与论文
+“数据库原始页 -> host”的 DB WAF 当作同一指标。
+
+### 10.2 建立分层字节账本
+
+任意写入系统都可以用下面的分解：
+
+```text
+Application payload
+        |
+        | serialization / index / padding
+        v
+Logical mutation bytes
+        |
+        | WAL / journal / metadata / compaction / GC
+        v
+Host-issued bytes
+        |
+        | FTL relocation / SSD GC / wear leveling
+        v
+Media-written bytes
+```
+
+四层字节应在同一时间窗口、同一 operation 集合上采样。WAL、metadata 和
+relocation 还应作为互斥子类记录，便于解释 host-issued bytes 的组成。
+
+```c
+#include <stdbool.h>
+#include <stdint.h>
+
+struct system_write_counters {
+    uint64_t app_payload_bytes;
+    uint64_t logical_mutation_bytes;
+    uint64_t wal_journal_bytes; /* host_bytes 的一个互斥子类 */
+    uint64_t metadata_bytes;    /* host_bytes 的一个互斥子类 */
+    uint64_t relocation_bytes;  /* compaction / DB GC 等软件搬迁 */
+    uint64_t host_bytes;        /* 所有主机写入的总和，不重复计数 */
+    uint64_t media_bytes;       /* NAND/介质物理写入 */
+    uint64_t completed_ops;
+    bool media_bytes_known;
+};
+
+struct system_write_factors {
+    double payload_to_logical;
+    double logical_to_host;
+    double host_to_media;
+    double payload_to_media;
+    double host_bytes_per_op;
+    double media_bytes_per_op;
+    bool has_media_factors;
+};
+
+static bool derive_system_write_factors(
+    const struct system_write_counters *c,
+    struct system_write_factors *out)
+{
+    if (!c || !out ||
+        c->app_payload_bytes == 0 ||
+        c->logical_mutation_bytes == 0 ||
+        c->host_bytes == 0 ||
+        c->completed_ops == 0)
+        return false;
+    if (c->wal_journal_bytes > c->host_bytes ||
+        c->metadata_bytes > c->host_bytes - c->wal_journal_bytes ||
+        c->relocation_bytes >
+            c->host_bytes - c->wal_journal_bytes - c->metadata_bytes)
+        return false; /* host 子类重复计数或超过总量 */
+    if (c->media_bytes_known && c->media_bytes == 0)
+        return false;
+
+    out->payload_to_logical =
+        (double)c->logical_mutation_bytes / (double)c->app_payload_bytes;
+    out->logical_to_host =
+        (double)c->host_bytes / (double)c->logical_mutation_bytes;
+    out->host_bytes_per_op =
+        (double)c->host_bytes / (double)c->completed_ops;
+    out->has_media_factors = c->media_bytes_known;
+
+    if (c->media_bytes_known) {
+        out->host_to_media =
+            (double)c->media_bytes / (double)c->host_bytes;
+        out->payload_to_media =
+            (double)c->media_bytes / (double)c->app_payload_bytes;
+        out->media_bytes_per_op =
+            (double)c->media_bytes / (double)c->completed_ops;
+    } else {
+        out->host_to_media = 0.0;
+        out->payload_to_media = 0.0;
+        out->media_bytes_per_op = 0.0;
+    }
+    return true;
+}
+```
+
+当物理写入可观测时，四层关系应满足：
+
+```text
+payload_to_media
+    = payload_to_logical
+    * logical_to_host
+    * host_to_media
+```
+
+当 `media_bytes_known = false` 时，只能判断软件层写入，不能声称 SSD WAF 或
+设备寿命已经改善。物理写入遥测缺失不是 `SSD WAF = 1`，而是“未知”。
+
+### 10.3 写入画像要覆盖哪些维度
+
+平均 IOPS 和平均写带宽不够。至少要记录：
+
+| 维度 | 需要回答的问题 | 关键 metrics |
+| --- | --- | --- |
+| 写入粒度 | payload、逻辑页、host I/O 各多大？是否跨 4 KiB 边界？ | size histogram、alignment、padding bytes |
+| 更新语义 | 固定位置覆盖、append、copy-on-write，还是周期 merge？ | overwrite/append ratio、rewrite bytes |
+| 空间局部性 | sequential、uniform random，还是热点集中？ | LBA span、sequential run、Zipf theta |
+| 生命周期 | 数据多久被覆盖/删除？冷热数据是否混放？ | lifetime histogram、EDT error、valid ratio |
+| 并发形态 | 有多少 writer、stream、queue depth？ | writers、active streams、QD |
+| 持久化语义 | 每次写是否 fsync？是否 group commit？副本数是多少？ | fsync/op、WAL bytes/op、ack latency |
+| 缓存状态 | 工作集相对内存多大？dirty page 如何产生？ | hit ratio、dirty rate、eviction bytes |
+| 容量状态 | fresh、50%、75%、90% 还是接近满盘？ | fill ratio、free/OP bytes、GC debt |
+| 后台活动 | compaction、checkpoint、GC 是否与前台竞争？ | relocation bytes、GC time、stall time |
+| 存储拓扑 | 文件系统、RAID、device mapper、云盘、多租户是否介入？ | 各层 bytes、queue wait、neighbor load |
+| 设备能力 | 是否有 media telemetry、atomic write、ZNS、FDP？ | capability snapshot、model、firmware |
+
+画像必须包含分布和时间序列。两个系统平均写带宽相同，一个可能持续平稳，
+另一个可能每 30 秒因 GC 停顿一次；后者的平均值会掩盖真正问题。
+
+### 10.4 先确定证据等级，再决定能说什么
+
+| 等级 | 可观测/可控制能力 | 可以得出的结论 |
+| --- | --- | --- |
+| A：host-only | 业务、软件分类和 block host bytes | 可定位软件写放大；SSD WAF 只能标记为未知。 |
+| B：media-observed | A + OCP/厂商 NAND writes | 可分离软件 WAF 与 SSD WAF，并按寿命成本验收。 |
+| C：profiled placement | B + 独占设备、raw block、稳定型号/固件 | 可实验推断 GC unit、验证 NoWA；结论绑定该设备画像。 |
+| D：explicit placement | ZNS 或 FDP 的公开约束 | 可依协议设计 zone/RU/RUH 映射，控制边界最强。 |
+
+云盘、共享盘或 RAID 后端通常只能达到 A/B。此时仍可应用压缩、减少重复副本、
+生命周期分组和软件 GC 优化，但不能可靠应用依赖物理布局推断的 NoWA。
+
+### 10.5 从症状映射到论文机制
+
+| 观测到的证据 | 主导机制 | 优先尝试 | 不应直接得出的结论 |
+| --- | --- | --- | --- |
+| host/logical 接近 2，DWB/full-page image 占主导 | 安全副本重复写 | crash-safe out-of-place 或明确支持的 atomic write | 仅关闭 DWB 就安全 |
+| relocation bytes 高且 victim valid ratio 高 | 软件 GC/compaction 搬迁 | 增加 headroom、按 lifetime/EDT 分组、调整 GC 时机 | 顺序写自然没有 GC WAF |
+| 数据可压缩且 CPU 有余量 | 表示和 host 字节过大 | 压缩 + 对齐 page packing | 压缩率等于最终 NAND 降幅 |
+| host bytes 稳定但 media/host 随填充率上升 | SSD FTL/GC 放大 | 对齐 GC unit、隔离写流、评估 FDP/ZNS/NoWA | host bytes 低说明寿命安全 |
+| 压缩后 host bytes 降低但 read I/O 增加 | 变长页跨设备读粒度 | 4 KiB 对齐和单-read packing | 压缩总能提高性能 |
+| free space 下降时 p999/GC stall 激增 | 前台被迫同步 GC | 提前 background GC、reserve、较小 zone | 平均 OPS 足以验收 |
+| 多条顺序流合并后 SSD WAF 升高 | firmware multiplexing | lifetime stream isolation、FDP RUH、active-group balance | 每条流顺序就一定 SSD 友好 |
+| fsync latency 高但 WAF 接近 1 | 持久化等待而非字节放大 | group commit、commit pipeline、设备延迟优化 | 套用 GC/placement 优化 |
+| 只有 host telemetry | 设备层不可归因 | 先补 media telemetry 或降低结论强度 | 宣称 SSD WAF 已降到 1 |
+
+“症状 -> 机制”必须有计数器证据。一次只改一个主导机制，否则 compression
+扩大 OP 空间、GC 时机变化和设备 WAF 变化会互相混杂，无法归因。
+
+### 10.6 通用实验闭环
+
+```text
+Freeze correctness contract
+        |
+        v
+Capture workload profile
+        |
+        v
+Precondition target fill and age
+        |
+        v
+Measure all available layers
+        |
+        v
+Change one mechanism
+        |
+        v
+Run to steady state
+        |
+        v
+Compare bytes/op and tail latency
+        |
+        +---- regression ----> Restore baseline
+        |
+        v
+Canary and monitor drift
+```
+
+每轮实验至少守住：
+
+1. 相同输入、事务语义、fsync/副本承诺和结果 checksum；
+2. 相同数据规模、fill ratio、预热程度和运行时长；
+3. 同时报 `payload/logical/host/media bytes`，不可只报吞吐；
+4. 同时报 p50/p99/p999、stall time、CPU、内存、read amplification；
+5. 在多个 skew、写入粒度、并发度和容量水位下复测；
+6. 对涉及恢复协议的变化执行持久化边界 fault injection；
+7. 记录设备型号、固件、namespace、文件系统和拓扑，环境变化后画像失效。
+
+### 10.7 可复制的系统接入模板
+
+| 项目 | 当前系统答案 |
+| --- | --- |
+| 业务 operation 与 payload 分母 | 待填写 |
+| 写路径层次与 owner | 待填写 |
+| WAL/journal/replica 语义 | 待填写 |
+| overwrite/append/merge 比例 | 待填写 |
+| 写入 size/alignment 分布 | 待填写 |
+| 热点与 lifetime 分布 | 待填写 |
+| 软件 GC/compaction 触发条件 | 待填写 |
+| fill ratio 与预留空间 | 待填写 |
+| host bytes 及分类来源 | 待填写 |
+| media bytes 遥测来源 | 待填写；没有则明确 unknown |
+| p99/p999 与 stall 来源 | 待填写 |
+| 设备/文件系统/RAID/云盘拓扑 | 待填写 |
+| 可用 ZNS/FDP/atomic write 能力 | 待填写 |
+| 当前主导放大层及证据 | 待填写 |
+| 第一项单变量实验 | 待填写 |
+
+完成这张表后，论文才从“SSD 设计知识”变成某个系统的可执行优化计划。
+
+## 11. 面向数据库内核的实施顺序
 
 不要一次性重写存储层。合理顺序是：
 
@@ -1047,7 +1312,7 @@ static bool valid_features(const struct storage_features *f)
 - device profile 变化时自动禁用 NoWA/FDP 参数；
 - 优化以 `NAND bytes/op` 和尾延迟为准，不以 host throughput 单指标拍板。
 
-## 11. 对不同引擎的启发
+## 12. 对不同引擎的启发
 
 ### B-tree / 页式引擎
 
@@ -1079,10 +1344,15 @@ placement ID，而不是只优化 level（LSM 层级）的 bytes written。
 生命周期的数据重新混合。对象删除时间、partition TTL 和 compaction epoch
 都是比块设备热度推断更强的信号。
 
-## 12. 最终检查表
+## 13. 最终检查表
 
 设计一个 SSD 友好的数据库写路径前，应能回答：
 
+- [ ] measurement boundary、operation 和分母是否固定？
+- [ ] `payload -> logical -> host -> media` 的字节账本能否对齐？
+- [ ] media bytes 不可见时，是否明确把 SSD WAF 标记为 unknown？
+- [ ] 是否先用证据定位主导放大层，再选择优化机制？
+- [ ] 当前系统是否真的拥有该机制要求的控制能力？
 - [ ] `user bytes`、`host bytes`、`NAND bytes` 的定义是否固定？
 - [ ] 是否报告 `DB WAF`、`SSD WAF`、`Total WAF` 和 bytes/op？
 - [ ] 是否在 90% 等高填充率、至少数个 drive writes 后测稳态？
