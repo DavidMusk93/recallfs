@@ -1,0 +1,8 @@
+FIL-C 0.684 (clang 20.1.8), Linux/ARM64
+Command:
+.tmp/fil-c/bin/filcc -std=c11 -O2 -g -Wall -Wextra -Werror -I learning/studies/20260907-allocator-provenance/demo/include learning/studies/20260907-allocator-provenance/demo/src/allocator_demo.c learning/studies/20260907-allocator-provenance/demo/tests/allocator_demo_test.c -o .tmp/allocator-provenance-test
+.tmp/fil-c/bin/filrun .tmp/allocator-provenance-test
+
+Output:
+zeroing: explicit=128 elided=256
+FIL-C allocator tests passed: 3 suites
