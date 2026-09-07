@@ -118,6 +118,7 @@ static void test_batch_lifetime_uses_one_backing_mapping(void)
     assert(checksum == 627291);
     assert(arena.stats.backing_mappings == 1);
     assert(arena.stats.logical_allocations == 1000);
+    assert(arena.stats.requested_bytes == 1000 * sizeof(struct row));
     assert(arena.stats.explicit_zero_bytes == 0);
 
     page_arena_destroy(&arena);
