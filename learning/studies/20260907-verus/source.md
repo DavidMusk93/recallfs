@@ -51,7 +51,7 @@ The final corrected program produced:
 
 ```text
 verification results:: 2 verified, 0 errors
-total-time: 219 ms
+total-time: 229 ms
 verified executable exited successfully
 ```
 

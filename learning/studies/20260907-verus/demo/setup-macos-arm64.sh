@@ -42,7 +42,14 @@ download_verified() {
     fi
 
     rm -f "$output"
-    curl -fL --retry 3 --connect-timeout 15 -o "$output" "$url"
+    curl -fL \
+        --retry 3 \
+        --connect-timeout 15 \
+        --max-time 21600 \
+        --speed-limit 1024 \
+        --speed-time 300 \
+        -o "$output" \
+        "$url"
     if ! verify_sha256 "$output" "$sha256"; then
         echo "SHA-256 mismatch: $output" >&2
         exit 1

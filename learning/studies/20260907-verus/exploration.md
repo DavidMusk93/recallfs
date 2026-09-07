@@ -70,7 +70,7 @@ overstate Verus by implying that "verified" is an absolute property.
 | Required Rust toolchain | `1.98.0-aarch64-apple-darwin` |
 | Z3 bundled in release archive | No |
 | Z3 version selected by current Verus source | `4.16.0` |
-| Corrected demo verification + compilation | 219 ms in the captured run |
+| Corrected demo verification + compilation | 229 ms in the captured run |
 
 The release installer documentation describes the Verus archive and Rust
 toolchain setup. In this run, the verifier also required a separate Z3 binary;

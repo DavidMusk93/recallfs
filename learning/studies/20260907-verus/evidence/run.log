@@ -19,22 +19,22 @@ Verus
   Platform: macos_aarch64
   Toolchain: 1.98.0-aarch64-apple-darwin (overridden by environment variable RUSTUP_TOOLCHAIN)
 
-total-time:             160 ms
-    rust-time:                  37 ms
-        init-and-types:              7 ms
+total-time:             170 ms
+    rust-time:                  41 ms
+        init-and-types:             11 ms
         trait-conflicts:            23 ms
         compile-time:                5 ms
-    verification-time:         121 ms
-        vir-time:                  104 ms
+    verification-time:         127 ms
+        vir-time:                  113 ms
             hir-time:                    0 ms
-            import-time:                77 ms
-            rust-to-vir:                13 ms
-        verify-crate-time:          16 ms
+            import-time:                76 ms
+            rust-to-vir:                16 ms
+        verify-crate-time:          14 ms
     unaccounted-time:            2 ms
 
 verify-crate-time-breakdown
-    total verify-time:             15 ms   (1 threads)
-        total air-time:                12 ms   (1 threads)
+    total verify-time:             12 ms   (1 threads)
+        total air-time:                 9 ms   (1 threads)
         total smt-time:                 0 ms   (1 threads)
             total smt-init:                 0 ms,       29 rlimit (1 threads)
             total smt-run:                  0 ms,      356 rlimit (1 threads)
@@ -52,21 +52,21 @@ Verus
   Platform: macos_aarch64
   Toolchain: 1.98.0-aarch64-apple-darwin (overridden by environment variable RUSTUP_TOOLCHAIN)
 
-total-time:             219 ms
-    rust-time:                  92 ms
-        init-and-types:              7 ms
-        trait-conflicts:            23 ms
-        compile-time:               60 ms
-    verification-time:         125 ms
-        vir-time:                  109 ms
+total-time:             229 ms
+    rust-time:                 103 ms
+        init-and-types:             21 ms
+        trait-conflicts:            24 ms
+        compile-time:               57 ms
+    verification-time:         123 ms
+        vir-time:                  108 ms
             hir-time:                    1 ms
             import-time:                80 ms
-            rust-to-vir:                13 ms
+            rust-to-vir:                14 ms
         verify-crate-time:          15 ms
     unaccounted-time:            2 ms
 
 verify-crate-time-breakdown
-    total verify-time:             14 ms   (1 threads)
+    total verify-time:             13 ms   (1 threads)
         total air-time:                10 ms   (1 threads)
         total smt-time:                 0 ms   (1 threads)
             total smt-init:                 0 ms,       77 rlimit (1 threads)

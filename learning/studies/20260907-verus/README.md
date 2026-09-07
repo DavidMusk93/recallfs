@@ -175,7 +175,7 @@ learning/studies/20260907-verus/demo/run.sh
 最终 stage 的本机观测：
 
 ```text
-total-time: 219 ms
+total-time: 229 ms
 verification results:: 2 verified, 0 errors
 verified executable exited successfully
 ```
