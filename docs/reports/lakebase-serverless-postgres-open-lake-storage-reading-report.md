@@ -51,9 +51,10 @@ warm pool 和 autoscaling 都有明确前序工作，且很多机制直接建立
 包装成所有组件的首次发明。
 
 同样不能忽略它的交换条件：Lakebase 用网络 quorum、分层 cache、持续运行的
-storage service、约 `7x` 的历史空间、warm pool 和复杂控制面，换取
-scale-to-zero、快速分支、快速 attach 和多引擎访问。若业务不需要后面这些
-能力，前面的成本就很难成立。
+storage service、生产中约 `7x` 的 Pageserver 总空间放大（包括当前数据物化、
+GC slack 和 PITR history）、warm pool 和复杂控制面，换取 scale-to-zero、
+快速分支、快速 attach 和多引擎访问。若业务不需要后面这些能力，前面的成本
+就很难成立。
 
 ## 1. 它重新定义了什么问题
 
@@ -177,8 +178,9 @@ Quorum disk flush
 ```
 
 Safekeeper 的 term 是写者 fencing token。新 primary 必须以更高 term 在 quorum
-上完成选举；Safekeeper 只接受已见最高 term 的写入。这比“控制面认为旧主已经
-死了”更强，因为写入仲裁点本身拒绝 stale writer。
+上完成选举；每个 Safekeeper 都拒绝低于自身已观察最高 term 的写入，而 quorum
+intersection 保证新 term 完成 quorum 选举后，旧 primary 无法再取得 commit
+ACK。这比只由控制面判断旧主已经失效更强。
 
 当 Pageserver 的 ingest、local flush 或 remote upload LSN 落后 commit LSN
 超过阈值时，系统对前台写入施加 backpressure。这里体现了一个基本不变量：
@@ -211,22 +213,25 @@ Ordered WAL stream
 Safekeeper quorum
 ```
 
-因此必须区分三种“唯一性”：
+因此必须区分四种“唯一性”：
 
 | 对象 | 唯一性 |
 | --- | --- |
 | WAL record LSN | 在一条 WAL stream 内标识 record 的位置；并发插入仍占据不同 byte range。 |
 | flush / commit LSN | 已持久化到某个位置的单调 watermark；它不是 transaction ID，多个事务可被同一次 flush 覆盖。 |
-| Lakebase page version | 必须使用 `(tenant, timeline, LSN)`；不同 branch/timeline 上的数值 LSN 不能脱离 timeline 单独解释。 |
+| WAL / snapshot coordinate | 使用 `(tenant, timeline, LSN)`；不同 branch/timeline 上的数值 LSN 不能脱离 timeline 单独解释。 |
+| Lakebase page version | 页面身份还必须包含 page key，因此完整标识是 `(tenant, timeline, page key, LSN)`。 |
 
 Lakebase 论文明确每个实例只有一个 PostgreSQL primary，read replicas 不接受
 普通写入。Safekeeper 的 term 解决的也不是 LSN 分配，而是 writer fencing：
-新 primary 以更高 term 获得 quorum 后，Safekeeper 拒绝旧 term 的写入。
+新 primary 以更高 term 获得 quorum 后，quorum intersection 使旧 primary
+无法再获得 commit ACK；单个 Safekeeper 则只拒绝低于自身已观察最高 term 的
+写入。
 
 这意味着 Lakebase 没有解决同一 timeline 多个 write compute 的全局排序、
-分布式锁或分布式事务问题。若要支持真正多主写，必须额外引入全局 sequencer
-或 consensus log、冲突检测/分布式并发控制和跨节点 commit protocol，已经是
-另一种数据库架构。
+分布式锁或分布式事务问题。若要支持真正多主写并保持可比的强一致语义，可能
+需要全局 sequencer 或 consensus log、冲突检测或分布式并发控制、跨节点
+commit protocol 等机制；具体组合取决于所选架构，并会形成另一类数据库设计。
 
 Direct-to-Storage 也不是这个规则的例外。Spark 只并行构造尚不可见的冻结
 pages，最终仍由唯一 PostgreSQL primary 提交 metadata-only relation swap；
@@ -289,7 +294,8 @@ Version history ----------------------------------> LSN axis
   `O(1/I)` 和 GC compaction 的 `O(1/R)`；
 - 读取为 `O(I)` layer visits；
 - 空间放大约为 `O(1 + R + wP/N)`，其中 `wP` 是 PITR 窗口必须保留的历史；
-- 生产 fleet 观测到约 `7x` space amplification；
+- 生产 fleet 观测到约 `7x` 的 Pageserver 总空间放大，口径包括当前数据物化、
+  GC slack 和 PITR history；
 - 评测中 compute cache hit rate 通常超过 `98.5%`。
 
 所以低延迟并不是对象存储本身变快，而是绝大多数请求被 compute cache 截住；
@@ -472,7 +478,7 @@ cache、匿名分配和 CPU load 合并到扩缩容决策中，体现了 serverl
 | 多 AZ durability | commit 等待 3 个 Safekeeper 中的 quorum flush | 前台事务延迟与跨 AZ 网络 |
 | compute 可丢弃 | Pageserver 必须持续 ingest、redo、compact 并维护可恢复 metadata | 常驻 storage fleet |
 | 低成本长期存储 | cold page 要经过 compute cache、Pageserver cache，最差访问对象存储 | cold-read p95/p99 |
-| PITR 和 branch | 保留 WAL/delta/image 历史，生产 Pageserver 空间放大约 `7x` | 对象存储、GC 和计费 |
+| PITR 和 branch | 生产 Pageserver 总空间放大约 `7x`，口径包括当前数据物化、GC slack 和 PITR history | 对象存储、GC 和计费 |
 | `<500 ms` compute attach | 预建 VM、预热 binary、保留 warm capacity | 平台共享成本，而非真正归零 |
 | `O(1)` branch create | 深 ancestry 增加递归读取；detach 后台复制；不支持 merge | 后续读、compaction 和运维 |
 | 多引擎 direct access | 外部 reader 实现 PostgreSQL page/MVCC/catalog 兼容和 cache invalidation | 长期 ABI 与升级纪律 |
@@ -482,7 +488,8 @@ cache、匿名分配和 CPU load 合并到扩缩容决策中，体现了 serverl
 还存在三类论文没有量化完整的成本：
 
 1. **真实 TCO。** S3 retention 单价低，不代表 GET/PUT、跨 AZ 流量、
-   Safekeeper/Pageserver SSD、compaction CPU、warm pool 和 `7x` history 免费。
+   Safekeeper/Pageserver SSD、compaction CPU、warm pool 和 Pageserver 约
+   `7x` 的总空间放大免费；该口径包括当前数据物化、GC slack 和 PITR history。
 2. **尾延迟。** OLTP benchmark 明确让 working set 驻留 DRAM，不能回答
    cache cold start、cache churn 和 object-store tail 对事务 p99.9 的影响。
 3. **故障复杂度。** 论文没有用系统化 fault injection 展示 quorum 丢失、
@@ -500,7 +507,7 @@ cache、匿名分配和 CPU load 合并到扩缩容决策中，体现了 serverl
 | branch create | 写一个 remote metadata file，`O(1)` | 创建不随数据库大小增长。 |
 | compute startup | 生产 p95 持续低于 `500 ms` | warm pool + slim basebackup + storage-side redo 可快速 attach。 |
 | cache hit | 评测中通常 `>98.5%` | 热工作集下远端 page reconstruction 被大幅隐藏。 |
-| Pageserver space amplification | 生产约 `7x` | PITR 历史和 GC slack 是显著成本。 |
+| Pageserver space amplification | 生产总量约 `7x` | 该口径包括当前数据物化、GC slack 和 PITR history。 |
 | OLTP | 24 vCPU 下比 Gen-2 高 `26%`，p95 `<20 ms` | 缓存命中场景中，架构没有必然牺牲 OLTP 吞吐。 |
 | bulk load | 1 TB 时 Direct-to-Storage 比 COPY 快 `73.3x` | 分布式页面构造绕开单 writer 瓶颈。 |
 | analytics | TPC-H SF10 总时间快 `10x`，geomean latency 快 `3x` | 在同一份页面上换向量化分析引擎有明显收益。 |
@@ -514,7 +521,7 @@ cache、匿名分配和 CPU load 合并到扩缩容决策中，体现了 serverl
 | 故障注入与数据丢失窗口 | 论文描述协议，但没有展示 SK/PS/AZ 故障矩阵、RTO/RPO 分布或 split-brain 测试。 |
 | 深分支读放大 | 生产 branch depth 可超过 500，但没有给出 depth 对 page miss、compaction 和 GC 的曲线。 |
 | autoscaling tail latency | 图证明 actual QPS 跟随 target QPS，但没有充分量化扩容期间的事务 p95/p99 和 cache miss 惩罚。 |
-| 完整成本模型 | 只用 compute 与 S3 retention 价格说明量级，未展开 GET/PUT、跨 AZ、compaction、7x history 和 warm pool 成本。 |
+| 完整成本模型 | 只用 compute 与 S3 retention 价格说明量级，未展开 GET/PUT、跨 AZ、compaction、Pageserver 约 `7x` 总空间放大（当前数据物化、GC slack 和 PITR history）以及 warm pool 成本。 |
 | 独立可复现性 | Gen-1/Gen-2 对手匿名，Lakebase 控制面和 Lakehouse//RT 不是完整公开 artifact。 |
 | PostgreSQL 兼容深度 | 未给出 extension、major upgrade、physical layout 变化和 direct reader 兼容矩阵。 |
 | 分支合并 | 系统明确不支持 merge；“Git-like”只适合 branch/restore，不应推导出 Git 的完整语义。 |
@@ -551,7 +558,7 @@ Lakebase 的 LSN 不只是 recovery offset，而是：
 
 - commit watermark；
 - replica visibility；
-- page version；
+- page-version time coordinate；
 - branch point；
 - PITR pin；
 - cache invalidation range；
@@ -666,7 +673,7 @@ Cold read -> Pageserver and possibly object storage
 | 对比基线 | 判断 |
 | --- | --- |
 | 单机 PostgreSQL + local NVMe | Lakebase 必然增加 commit 网络跳数、cache miss 尾延迟、后台服务和故障模式；追求最低稳定延迟时通常更差。 |
-| 同步多 AZ replicated database | 跨 AZ durability 本来就需要网络确认；Lakebase 是把复制单位从 block/page 改成 WAL，并不凭空增加全部共识成本。 |
+| 论文的 Gen-1 PostgreSQL + synchronously replicated multi-AZ disk | 该特定基线本身也等待跨 AZ 持久化确认，Lakebase 则等待 Safekeeper WAL quorum；此比较不能推广为所有同步多 AZ 数据库都复制 block/page 或具有相同成本。 |
 | 分布式多写数据库 | Lakebase 不属于这一类。它保留单 writer，因此没有提供水平 write scaling，也没有承担分布式并发控制成本。 |
 
 事务正确性仍由 PostgreSQL 产生的 WAL 顺序和 MVCC 负责，但运行时会受到新的
@@ -715,7 +722,7 @@ Cold read -> Pageserver and possibly object storage
 | 类别 | 必测场景 |
 | --- | --- |
 | durability | quorum ACK 前后 kill primary；SK disk loss；对象存储延迟/失败；恢复后逐事务核对。 |
-| fencing | 旧 primary 网络分区后恢复；新旧 term 并发写；确认旧写者在存储仲裁点被拒绝。 |
+| fencing | 旧 primary 网络分区后恢复；新旧 term 并发写；确认各 Safekeeper 拒绝低于自身已观察最高 term 的写入，且新 quorum 选举后旧写者无法获得 commit ACK。 |
 | page correctness | 随机 key/LSN 与 PostgreSQL recovery 结果逐页对比；覆盖 aborted transaction 和 hint bits。 |
 | branch | 深 ancestry、detach、父分支 GC、PITR lease、branch 删除与 orphan cleanup。 |
 | cache | warm/cold/mixed working set；compute cache 和 Pageserver cache 分别失效；测 p95/p99.9。 |
@@ -723,7 +730,7 @@ Cold read -> Pageserver and possibly object storage
 | autoscaling | CPU、anonymous memory、page cache 三种压力独立注入；扩缩容时观测延迟和 refill。 |
 | external read | OLTP 并发更新时固定 LSN 扫描；DDL、VACUUM、TOAST、索引和 major-version 兼容。 |
 | direct write | 上传中断、重复提交、metadata swap 失败、并发 DML、坏页和部分对象可见。 |
-| cost | S3 request、跨 AZ、7x history、compaction、warm pool 和 cache refill 的完整账单。 |
+| cost | S3 request、跨 AZ、Pageserver 约 `7x` 总空间放大（当前数据物化、GC slack 和 PITR history）、compaction、warm pool 和 cache refill 的完整账单。 |
 
 这些测试必须运行真实 PostgreSQL、Safekeeper、Pageserver、对象存储和故障注入，
 只测 page parser 或单组件 unit test 不能证明数据库级正确性。
@@ -745,9 +752,10 @@ Branch            = parent timeline and branch LSN
 多引擎访问不再是彼此独立的附加功能，而是同一个 versioned storage substrate
 的不同投影。
 
-论文的局限也同样清楚：低延迟严重依赖缓存和 warm pool；PITR 带来约 `7x`
-生产空间放大；深分支会增加读成本；开放 PostgreSQL page 并不自动等于开放
-数据库语义；评测对 cold miss、故障恢复、兼容性和完整成本仍不充分。
+论文的局限也同样清楚：低延迟严重依赖缓存和 warm pool；生产 Pageserver
+总空间放大约 `7x`，口径包括当前数据物化、GC slack 和 PITR history；深分支
+会增加读成本；开放 PostgreSQL page 并不自动等于开放数据库语义；评测对
+cold miss、故障恢复、兼容性和完整成本仍不充分。
 
 因此，对数据库开发最合理的采纳方式不是复制它的组件名称，而是复用四条原则：
 
