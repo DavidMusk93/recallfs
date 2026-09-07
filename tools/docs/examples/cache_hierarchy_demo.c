@@ -43,6 +43,12 @@ static void fail(const char *operation)
     exit(EXIT_FAILURE);
 }
 
+static void fail_validation(const char *message)
+{
+    fprintf(stderr, "validation failed: %s\n", message);
+    exit(EXIT_FAILURE);
+}
+
 static double monotonic_seconds(void)
 {
     struct timespec now;
@@ -227,6 +233,55 @@ static void demonstrate_working_set_knees(void)
     }
 }
 
+static void validate_random_cycle(void)
+{
+    const size_t node_count = 1024;
+    struct probe_node *nodes = calloc(node_count, sizeof(*nodes));
+    uint32_t *order = malloc(node_count * sizeof(*order));
+    unsigned char *visited = calloc(node_count, sizeof(*visited));
+    uint32_t current = 0;
+    size_t step;
+
+    if (nodes == NULL || order == NULL || visited == NULL)
+        fail("allocate cycle validation");
+
+    build_random_cycle(nodes, order, node_count);
+    for (step = 0; step < node_count; step++)
+    {
+        if (current >= node_count || visited[current] != 0)
+            fail_validation("random cycle repeats before covering every node");
+        visited[current] = 1;
+        current = nodes[current].next;
+    }
+    if (current != 0)
+        fail_validation("random cycle does not return to its starting node");
+
+    free(visited);
+    free(order);
+    free(nodes);
+}
+
+static void validate_sample_sort(void)
+{
+    double samples[] = {3.0, 1.0, 2.0, 2.0, 5.0, 0.0, 4.0};
+    const double expected[] = {0.0, 1.0, 2.0, 2.0, 3.0, 4.0, 5.0};
+    size_t index;
+
+    sort_samples(samples, sizeof(samples) / sizeof(samples[0]));
+    for (index = 0; index < sizeof(samples) / sizeof(samples[0]); index++)
+    {
+        if (samples[index] != expected[index])
+            fail_validation("sample sort produced an incorrect order");
+    }
+}
+
+static void run_correctness_checks(void)
+{
+    validate_random_cycle();
+    validate_sample_sort();
+    puts("[check] cycle and sample-statistics invariants passed");
+}
+
 static uint64_t sum_rows(const volatile uint64_t *matrix, size_t side)
 {
     uint64_t sum = 0;
@@ -312,8 +367,8 @@ static void demonstrate_spatial_locality(void)
                 measure_sum(sum_rows, matrix, MATRIX_SIDE, &row_sum);
         }
 
-        assert(row_sum == expected);
-        assert(column_sum == expected);
+        if (row_sum != expected || column_sum != expected)
+            fail_validation("row-major and column-major checksums differ");
     }
     sort_samples(row_samples, LOCALITY_ROUNDS);
     sort_samples(column_samples, LOCALITY_ROUNDS);
@@ -341,7 +396,7 @@ static void demonstrate_spatial_locality(void)
 static void print_usage(const char *program)
 {
     fprintf(stderr,
-            "usage: %s {model|latency|locality|all}\n",
+            "usage: %s {check|model|latency|locality|all}\n",
             program);
 }
 
@@ -353,7 +408,9 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (strcmp(argv[1], "model") == 0)
+    if (strcmp(argv[1], "check") == 0)
+        run_correctness_checks();
+    else if (strcmp(argv[1], "model") == 0)
         demonstrate_amat();
     else if (strcmp(argv[1], "latency") == 0)
         demonstrate_working_set_knees();

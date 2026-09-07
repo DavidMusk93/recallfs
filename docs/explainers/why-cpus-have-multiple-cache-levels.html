@@ -792,31 +792,54 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
       <p>
         配套程序位于
         <code>tools/docs/examples/cache_hierarchy_demo.c</code>。验证分为两条完全
-        不同的链路：FIL-C 证明程序正确，目标机原生 GCC 才产生性能数据。
+        不同的链路：FIL-C 验证被执行路径的正确性与内存安全，目标机原生 GCC 才产生
+        性能数据。两条链必须使用 digest 相同的 source。
       </p>
 
       <h3>5.1 两阶段编译协议</h3>
-      <pre><code><span class="comment"># Correctness: memory safety, bounds, assertions, UB-sensitive paths.</span>
+      <pre><code><span class="comment"># Correctness: memory safety, bounds, invariants, UB-sensitive paths.</span>
 .tmp/fil-c/bin/filcc \
   -std=c11 -O2 -g -Wall -Wextra -Werror \
   tools/docs/examples/cache_hierarchy_demo.c \
   -o .tmp/cache-hierarchy-demo
+.tmp/fil-c/bin/filrun .tmp/cache-hierarchy-demo check
 .tmp/fil-c/bin/filrun .tmp/cache-hierarchy-demo all
 
-<span class="comment"># Performance: run on the target AMD EPYC machine.</span>
-gcc -std=c11 -O3 -march=native -mtune=native -flto -DNDEBUG \
-  -Wall -Wextra -Werror cache_hierarchy_demo.c \
-  -o cache-hierarchy-native
+<span class="comment"># Transfer the exact source into a fresh target directory.</span>
+REMOTE=fdbd:dc02:e:137::47
+REMOTE_DIR=/tmp/recallfs-cache-bench-20260907
+SOURCE=tools/docs/examples/cache_hierarchy_demo.c
+LOCAL_SHA=$(shasum -a 256 "$SOURCE" | cut -d ' ' -f 1)
+ssh -J j "$REMOTE" "install -d -m 700 '$REMOTE_DIR/.tmp'"
+scp -o ProxyJump=j "$SOURCE" "[$REMOTE]:$REMOTE_DIR/cache_hierarchy_demo.c"
+REMOTE_SHA=$(ssh -J j "$REMOTE" \
+  "sha256sum '$REMOTE_DIR/cache_hierarchy_demo.c' | cut -d ' ' -f 1")
+test "$LOCAL_SHA" = "$REMOTE_SHA"
+
+<span class="comment"># Performance: compile natively on the target AMD EPYC machine.</span>
+ssh -J j "$REMOTE" "cd '$REMOTE_DIR' &amp;&amp;
+  gcc -std=c11 -O3 -march=native -mtune=native -flto -DNDEBUG \
+    -Wall -Wextra -Werror cache_hierarchy_demo.c \
+    -o .tmp/cache-hierarchy-native &amp;&amp;
+  sha256sum cache_hierarchy_demo.c .tmp/cache-hierarchy-native"
 
 <span class="comment"># CPU 24 is on NUMA node 0; first run local, then remote socket memory.</span>
-numactl --physcpubind=24 --membind=0 ./cache-hierarchy-native all
-numactl --physcpubind=24 --membind=2 ./cache-hierarchy-native latency</code></pre>
+ssh -J j "$REMOTE" "cd '$REMOTE_DIR' &amp;&amp;
+  ./.tmp/cache-hierarchy-native check &amp;&amp;
+  numactl --physcpubind=24 --membind=0 ./.tmp/cache-hierarchy-native all &amp;&amp;
+  numactl --physcpubind=24 --membind=2 ./.tmp/cache-hierarchy-native latency"</code></pre>
 
       <p>
         目标机是 GCC 12.2.0；<code>-march=native -mtune=native</code> 实际解析为
         <code>znver3</code>。CPU governor 为 <code>performance</code>，boost 开启。
         每个点运行 7 轮，报告 median、min、max。测量前 CPU 24 的短窗口空闲率约
-        99%，但它不是隔离核，因此结果仍是工程测量，不是无噪声实验室数据。
+        99%，但它不是隔离核，因此结果仍是工程测量，不是无噪声实验室数据。最终
+        source SHA-256 为
+        <code>e624ff2937163c5a9c1be976855041a6c6f21e50958a1bc3465d109ecfb96f65</code>，
+        native binary SHA-256 为
+        <code>5e137dca3638ad3b626812f966c400daa62fe3eb99881676e23b1c62d4001a0e</code>。
+        使用相同 flags 的错误 checksum 负向构建以状态 1 退出，证明 native oracle
+        在 <code>-DNDEBUG</code> 下仍然有效。
       </p>
 
       <h3>5.2 随机依赖加载：直接看到三级边界</h3>
@@ -849,66 +872,67 @@ numactl --physcpubind=24 --membind=2 ./cache-hierarchy-native latency</code></pr
           </tr>
           <tr>
             <td>64 KiB</td>
-            <td>4.37 ns/load</td>
+            <td>4.38 ns/load</td>
             <td>4.38 ns/load</td>
             <td>超过 32 KiB L1D，主要由 L2 承接</td>
           </tr>
           <tr>
             <td>256 KiB</td>
+            <td>4.41 ns/load</td>
             <td>4.42 ns/load</td>
-            <td>4.40 ns/load</td>
             <td>L2 plateau</td>
           </tr>
           <tr>
             <td>512 KiB</td>
-            <td>7.89 ns/load</td>
-            <td>8.40 ns/load</td>
+            <td>6.41 ns/load</td>
+            <td>9.04 ns/load</td>
             <td>达到名义 L2 容量，conflict 与 replacement 开始显现</td>
           </tr>
           <tr>
             <td>1 MiB</td>
-            <td>14.31 ns/load</td>
-            <td>14.34 ns/load</td>
+            <td>14.33 ns/load</td>
+            <td>14.16 ns/load</td>
             <td>主要进入 CCD L3</td>
           </tr>
           <tr>
             <td>8 MiB</td>
-            <td>17.63 ns/load</td>
-            <td>17.69 ns/load</td>
+            <td>17.66 ns/load</td>
+            <td>17.61 ns/load</td>
             <td>L3 plateau；DRAM placement 尚不重要</td>
           </tr>
           <tr>
             <td>16 MiB</td>
-            <td>21.28 ns/load</td>
-            <td>22.15 ns/load</td>
+            <td>21.50 ns/load</td>
+            <td>21.70 ns/load</td>
             <td>L3 pressure 上升</td>
           </tr>
           <tr>
             <td>32 MiB</td>
-            <td>43.31 ns/load</td>
-            <td>112.21 ns/load</td>
+            <td>43.23 ns/load</td>
+            <td>100.22 ns/load</td>
             <td>等于一个 CCD 的 L3 容量，进入混合 hit/miss 区</td>
           </tr>
           <tr>
             <td>64 MiB</td>
-            <td>83.43 ns/load</td>
-            <td>257.34 ns/load</td>
+            <td>81.89 ns/load</td>
+            <td>242.26 ns/load</td>
             <td>超过 CCD L3；本地与跨 socket DRAM 分离</td>
           </tr>
           <tr>
             <td>256 MiB</td>
-            <td>111.48 ns/load</td>
-            <td>314.09 ns/load</td>
-            <td>稳定 DRAM 区；远端依赖链约为本地 2.8 倍</td>
+            <td>113.49 ns/load</td>
+            <td>306.41 ns/load</td>
+            <td>稳定 DRAM 区；远端依赖链约为本地 2.7 倍</td>
           </tr>
         </tbody>
       </table>
 
       <p>
-        三个转折与 sysfs 完整对应：32 KiB L1D、512 KiB L2、32 MiB CCD L3。
-        更关键的是，缓存命中阶段几乎不受物理页位于 node 0 还是 node 2 影响；一旦
-        working set 超过本 CCD L3，跨 socket 代价才被放大。这说明 cache hierarchy
-        与 NUMA 不是两个可分开调优的系统，而是一条连续的数据路径。
+        曲线转折与 sysfs 的 32 KiB L1D、512 KiB L2、32 MiB CCD L3 边界一致，
+        但它同时包含 TLB 和 page-walk 成本，不能单独证明各级纯 hit latency。
+        更关键的是，小 working set 几乎不受物理页位于 node 0 还是 node 2 影响；
+        working set 接近或超过本 CCD L3 后，跨 socket 代价才被明显放大。这说明
+        cache hierarchy 与 NUMA 不是两个可分开调优的系统，而是一条连续数据路径。
       </p>
 
       <div class="caveat">
@@ -941,8 +965,8 @@ sum_columns(<span class="kw">const volatile</span> <span class="type">uint64_t</
 
       <p>
         对 2048 × 2048、32 MiB 的 <code>uint64_t</code> 矩阵，7 轮中位数为：
-        row-major <code>1.686 ms</code>，column-major <code>28.596 ms</code>，
-        后者慢 <code>16.96x</code>。这里的 <code>volatile</code> 是微基准控制手段，
+        row-major <code>1.650 ms</code>，column-major <code>28.444 ms</code>，
+        后者慢 <code>17.24x</code>。这里的 <code>volatile</code> 是微基准控制手段，
         会阻止向量化和部分 load 优化，不应照搬进生产热循环。
       </p>
 
@@ -952,6 +976,30 @@ sum_columns(<span class="kw">const volatile</span> <span class="type">uint64_t</
         <code>&lt;not counted&gt;</code>；改为只统计 CPU 24 的 system-wide 模式后
         可用。对 locality workload 做 5 次重复，AMD 原生事件得到：
       </p>
+
+      <pre><code><span class="comment"># Run core events separately to reduce multiplexing.</span>
+for event in \
+  ls_dc_accesses \
+  l1_data_cache_fills_all \
+  l2_cache_accesses_from_dc_misses \
+  l2_cache_misses_from_dc_misses
+do
+  perf stat -a -C 24 -r 5 -e "$event" -- \
+    numactl --physcpubind=24 --membind=0 \
+    ./.tmp/cache-hierarchy-native locality
+done
+
+<span class="comment"># L3 is an uncore PMU shared by the whole CCD.</span>
+perf stat -a -C 24 -r 5 \
+  -e amd_l3/event=0x4,umask=0xff/,amd_l3/event=0x4,umask=0x1/ -- \
+  numactl --physcpubind=24 --membind=0 \
+  ./.tmp/cache-hierarchy-native locality
+
+<span class="comment"># Same-duration idle baseline for background activity.</span>
+perf stat -a -C 24 -r 5 \
+  -e ls_dc_accesses,l1_data_cache_fills_all,\
+l2_cache_accesses_from_dc_misses,l2_cache_misses_from_dc_misses -- \
+  sleep 0.25</code></pre>
 
       <table>
         <thead>
@@ -964,42 +1012,44 @@ sum_columns(<span class="kw">const volatile</span> <span class="type">uint64_t</
         <tbody>
           <tr>
             <td><code>ls_dc_accesses</code></td>
-            <td>74.27 M</td>
+            <td>74.95 M</td>
             <td>L1 data cache load/store accesses</td>
           </tr>
           <tr>
             <td><code>l1_data_cache_fills_all</code></td>
-            <td>50.22 M</td>
+            <td>50.02 M</td>
             <td>L1 data cache fills</td>
           </tr>
           <tr>
             <td><code>l2_cache_accesses_from_dc_misses</code></td>
-            <td>50.65 M</td>
+            <td>51.07 M</td>
             <td>L1D miss 后访问 L2</td>
           </tr>
           <tr>
             <td><code>l2_cache_misses_from_dc_misses</code></td>
-            <td>19.91 M</td>
+            <td>21.41 M</td>
             <td>L1D miss 且继续 miss L2</td>
           </tr>
           <tr>
             <td><code>amd_l3/event=0x4,umask=0xff/</code></td>
-            <td>52.96 M</td>
-            <td>目标 CCD 的 L3 accesses</td>
+            <td>50.89 M</td>
+            <td>workload 运行期间整个 CCD 的 L3 accesses</td>
           </tr>
           <tr>
             <td><code>amd_l3/event=0x4,umask=0x1/</code></td>
-            <td>4.91 M</td>
-            <td>L3 misses，包含 cache-line state change 请求</td>
+            <td>4.23 M</td>
+            <td>整个 CCD 的 L3 misses，包含 state change 请求</td>
           </tr>
         </tbody>
       </table>
 
       <p>
-        core PMU 四事件组只获得约 41% running time，perf 对 multiplex 后计数做了
-        scaling；L3 uncore 事件又来自独立运行。因此这些数支持“访问确实逐级下沉”，
-        但不应混合相除成精确 hit rate。最终结论必须同时满足：拓扑吻合、wall-time
-        台阶可重复、PMU 方向一致。
+        单独运行 core 事件后仍只有约 71% running time，perf 对其做了 scaling；
+        L3 uncore 事件统计整个 CCD，不能归因到进程或 CPU 24。0.25 秒 idle baseline
+        也观察到约 0.90 M data-cache access，证明 system-wide 计数含背景活动。
+        因此 PMU 只是弱的补充一致性证据，不能与不同 run 的计数混合相除成精确 hit
+        rate。完整命令、输出和摘要保存在
+        <code>docs/reports/amd-epyc-7y83-cache-benchmark-evidence.md</code>。
       </p>
     </section>
 
@@ -1252,7 +1302,7 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
     </section>
 
     <footer>
-      Composed 2026-09-07 20:00:43 +0800 by ce-explain
+      Composed 2026-09-07 22:15:34 +0800 by ce-explain
     </footer>
   </main>
 </body>
