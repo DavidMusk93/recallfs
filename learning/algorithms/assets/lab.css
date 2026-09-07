@@ -16,6 +16,22 @@
   --radius: 14px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --max: 780px;
+  /* 等宽：ASCII graph / 手推 trace 必须字符等宽；禁用连字避免 i/l 等变形 */
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+/* 全局 pre/code：裸 pre.walk 不包 <code> 时也必须等宽 */
+pre,
+code,
+.mono,
+.term,
+pre.walk {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  letter-spacing: 0;
+  tab-size: 4;
 }
 
 * { box-sizing: border-box; }
@@ -153,7 +169,6 @@ header.hero a { color: var(--blue); }
 .hint { color: var(--muted); font-size: 0.9rem; }
 
 code, .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
 }
 
@@ -164,7 +179,10 @@ pre.walk {
   padding: 0.85rem 1rem;
   overflow-x: auto;
   font-size: 0.86rem;
-  line-height: 1.5;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 img.asset {
@@ -725,7 +743,6 @@ button:disabled {
 }
 
 .term {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
   background: #f3efe8;
   padding: 0.05em 0.35em;
