@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -236,9 +237,10 @@ static void demonstrate_memory_protection(size_t page_size)
         if (errno != EINTR)
             fail("waitpid protection");
     }
-    check(WIFSIGNALED(status),
-          "read-only write unexpectedly completed: status=%d",
-          status);
+    check(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV,
+          "read-only write ended with unexpected status=%d signal=%d",
+          status,
+          WIFSIGNALED(status) ? WTERMSIG(status) : 0);
     check(mapping[0] == 0x5a,
           "failed child write changed parent byte to 0x%02x",
           (unsigned int)mapping[0]);

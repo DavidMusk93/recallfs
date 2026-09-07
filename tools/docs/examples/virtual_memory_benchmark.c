@@ -4,18 +4,17 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <sched.h>
-#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
+
+#include "virtual_memory_benchmark_support.h"
 
 #ifndef MAP_HUGE_SHIFT
 #define MAP_HUGE_SHIFT 26
@@ -38,10 +37,12 @@ enum walk_kind
     WALK_RANDOM
 };
 
-struct fault_counts
+enum
 {
-    long minor;
-    long major;
+    MAX_MEBIBYTES = 65536,
+    MAX_ROUNDS = 10000,
+    MAX_PASSES = 100000,
+    MAX_THREADS = CPU_SETSIZE
 };
 
 struct process_memory
@@ -67,6 +68,8 @@ struct protect_shared
     size_t page_size;
     size_t worker_count;
     atomic_int ready;
+    atomic_int start;
+    atomic_int participating;
     atomic_int stop;
     cpu_set_t allowed;
     int allowed_cpu_count;
@@ -77,39 +80,10 @@ struct protect_worker
     struct protect_shared *shared;
     int worker_index;
     uint64_t sum;
+    uint64_t sweeps;
 };
 
 static volatile uint64_t observation_sink;
-
-static void fail(const char *operation)
-{
-    perror(operation);
-    exit(EXIT_FAILURE);
-}
-
-static void check(int condition, const char *format, ...)
-{
-    va_list arguments;
-
-    if (condition)
-        return;
-
-    fputs("check failed: ", stderr);
-    va_start(arguments, format);
-    vfprintf(stderr, format, arguments);
-    va_end(arguments);
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
-}
-
-static double monotonic_seconds(void)
-{
-    struct timespec now;
-
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
-        fail("clock_gettime");
-    return (double)now.tv_sec + (double)now.tv_nsec / 1.0e9;
-}
 
 static uint64_t next_random_u64(uint64_t *state)
 {
@@ -122,21 +96,6 @@ static uint64_t next_random_u64(uint64_t *state)
     return value;
 }
 
-static size_t parse_positive_size(const char *text, const char *name)
-{
-    char *end = NULL;
-    unsigned long long value;
-
-    errno = 0;
-    value = strtoull(text, &end, 10);
-    check(errno == 0 && end != text && *end == '\0' && value > 0 &&
-              value <= SIZE_MAX,
-          "invalid %s: %s",
-          name,
-          text);
-    return (size_t)value;
-}
-
 static size_t system_page_size(void)
 {
     long page_size = sysconf(_SC_PAGESIZE);
@@ -145,26 +104,11 @@ static size_t system_page_size(void)
     return (size_t)page_size;
 }
 
-static size_t mebibytes_to_bytes(size_t mebibytes)
+static int strict_native_checks(void)
 {
-    const size_t scale = 1024U * 1024U;
+    const char *value = getenv("VM_BENCH_STRICT_NATIVE");
 
-    check(mebibytes <= SIZE_MAX / scale,
-          "MiB value overflows size_t: %zu",
-          mebibytes);
-    return mebibytes * scale;
-}
-
-static struct fault_counts read_fault_counts_self(void)
-{
-    struct rusage usage;
-
-    if (getrusage(RUSAGE_SELF, &usage) != 0)
-        fail("getrusage self");
-    return (struct fault_counts){
-        .minor = usage.ru_minflt,
-        .major = usage.ru_majflt,
-    };
+    return value != NULL && strcmp(value, "1") == 0;
 }
 
 static struct process_memory read_process_memory(void)
@@ -349,9 +293,59 @@ static struct mapping_info read_mapping_info(void *mapping)
     return info;
 }
 
+static int expected_numa_node(void)
+{
+    const char *text = getenv("VM_BENCH_EXPECT_NODE");
+    size_t node;
+
+    if (text == NULL || *text == '\0')
+        return -1;
+    check(try_parse_bounded_size(text, 1023, &node) || strcmp(text, "0") == 0,
+          "invalid VM_BENCH_EXPECT_NODE: %s",
+          text);
+    if (strcmp(text, "0") == 0)
+        return 0;
+    return (int)node;
+}
+
+static void verify_numa_line(const char *line, int expected_node)
+{
+    char copy[2048];
+    char *save = NULL;
+    char *token;
+    size_t total_pages = 0;
+    int observed_nodes = 0;
+
+    check(strlen(line) < sizeof(copy), "numa_maps line is too long");
+    strcpy(copy, line);
+    for (token = strtok_r(copy, " \n", &save); token != NULL;
+         token = strtok_r(NULL, " \n", &save))
+    {
+        int node;
+        size_t pages;
+
+        if (sscanf(token, "N%d=%zu", &node, &pages) != 2)
+            continue;
+        observed_nodes++;
+        total_pages += pages;
+        if (expected_node >= 0)
+            check(node == expected_node,
+                  "mapping reached NUMA node %d, expected node %d",
+                  node,
+                  expected_node);
+    }
+    check(observed_nodes > 0 && total_pages > 0,
+          "numa_maps line has no resident node pages");
+    printf("NUMA_VERIFY expected_node=%d observed_nodes=%d pages=%zu\n",
+           expected_node,
+           observed_nodes,
+           total_pages);
+}
+
 static void print_numa_map(void *mapping)
 {
     uintptr_t target = (uintptr_t)mapping;
+    int expected_node = expected_numa_node();
     char line[2048];
     FILE *maps = fopen("/proc/self/numa_maps", "r");
 
@@ -366,6 +360,7 @@ static void print_numa_map(void *mapping)
             start == (unsigned long long)target)
         {
             printf("NUMA_MAP %s", line);
+            verify_numa_line(line, expected_node);
             if (fclose(maps) != 0)
                 fail("fclose /proc/self/numa_maps");
             return;
@@ -384,8 +379,6 @@ static void shuffle_indices(uint32_t *indices, size_t count, uint64_t *state)
 
     check(
         count > 1 && count <= UINT32_MAX, "invalid shuffle count: %zu", count);
-    for (index = 0; index < count; index++)
-        indices[index] = (uint32_t)index;
     for (index = count - 1; index > 0; index--)
     {
         size_t other = (size_t)(next_random_u64(state) % (index + 1));
@@ -394,6 +387,40 @@ static void shuffle_indices(uint32_t *indices, size_t count, uint64_t *state)
         indices[index] = indices[other];
         indices[other] = temporary;
     }
+}
+
+static uint64_t validate_order(const uint32_t *order,
+                               size_t count,
+                               enum walk_kind walk,
+                               size_t *displaced)
+{
+    unsigned char *seen = calloc(count, sizeof(*seen));
+    uint64_t fingerprint = UINT64_C(1469598103934665603);
+    size_t index;
+
+    if (seen == NULL)
+        fail("calloc order validation");
+    *displaced = 0;
+    for (index = 0; index < count; index++)
+    {
+        uint32_t value = order[index];
+
+        check(value < count, "order value %u is out of range", value);
+        check(seen[value] == 0, "order value %u is duplicated", value);
+        seen[value] = 1;
+        *displaced += value != index;
+        fingerprint ^= value;
+        fingerprint *= UINT64_C(1099511628211);
+    }
+    if (walk == WALK_SEQUENTIAL)
+        check(*displaced == 0, "sequential order is not identity");
+    else
+        check(*displaced > count / 2,
+              "random order displaced only %zu of %zu entries",
+              *displaced,
+              count);
+    free(seen);
+    return fingerprint;
 }
 
 static void run_fault(size_t mebibytes, size_t rounds)
@@ -418,6 +445,10 @@ static void run_fault(size_t mebibytes, size_t rounds)
         double reserve_seconds;
         double first_seconds;
         double second_seconds;
+        long first_minor;
+        long first_major;
+        long second_minor;
+        long second_major;
 
         started = monotonic_seconds();
         mapping = mmap(NULL,
@@ -432,23 +463,32 @@ static void run_fault(size_t mebibytes, size_t rounds)
         advise_mapping((void *)mapping, length, MAPPING_BASE);
         after_map = read_process_memory();
 
-        before_first = read_fault_counts_self();
+        before_first = read_fault_counts();
         started = monotonic_seconds();
         touch_pages(mapping, length, page_size, (unsigned char)(round + 1));
         first_seconds = monotonic_seconds() - started;
-        after_first = read_fault_counts_self();
+        after_first = read_fault_counts();
         after_touch = read_process_memory();
 
-        before_second = read_fault_counts_self();
+        before_second = read_fault_counts();
         started = monotonic_seconds();
         touch_pages(mapping, length, page_size, (unsigned char)(round + 2));
         second_seconds = monotonic_seconds() - started;
-        after_second = read_fault_counts_self();
+        after_second = read_fault_counts();
 
-        check(after_first.minor > before_first.minor,
-              "first touch produced no minor faults");
-        check(after_second.minor >= before_second.minor,
-              "second-touch minor-fault counter moved backward");
+        first_minor = after_first.minor - before_first.minor;
+        first_major = after_first.major - before_first.major;
+        second_minor = after_second.minor - before_second.minor;
+        second_major = after_second.major - before_second.major;
+        check(first_minor >= (long)(length / page_size),
+              "first touch produced too few minor faults: %ld",
+              first_minor);
+        check(first_major == 0 && second_minor == 0 && second_major == 0,
+              "unexpected fault deltas: first_major=%ld second_minor=%ld "
+              "second_major=%ld",
+              first_major,
+              second_minor,
+              second_major);
 
         printf("RESULT mode=fault round=%zu mib=%zu reserve_us=%.3f "
                "first_ms=%.3f second_ms=%.3f first_minor=%ld "
@@ -461,10 +501,10 @@ static void run_fault(size_t mebibytes, size_t rounds)
                reserve_seconds * 1.0e6,
                first_seconds * 1.0e3,
                second_seconds * 1.0e3,
-               after_first.minor - before_first.minor,
-               after_first.major - before_first.major,
-               after_second.minor - before_second.minor,
-               after_second.major - before_second.major,
+               first_minor,
+               first_major,
+               second_minor,
+               second_major,
                before_map.vm_size_kib,
                after_map.vm_size_kib,
                after_map.vm_rss_kib,
@@ -487,8 +527,10 @@ static void run_walk(enum walk_kind walk,
     const size_t length = mebibytes_to_bytes(mebibytes);
     const size_t page_count = length / page_size;
     volatile unsigned char *mapping;
-    uint32_t *order = NULL;
+    uint32_t *order;
     uint64_t shuffle_state = UINT64_C(0x9e3779b97f4a7c15);
+    uint64_t order_fingerprint;
+    size_t displaced;
     struct mapping_info info;
     size_t round;
 
@@ -497,13 +539,14 @@ static void run_walk(enum walk_kind walk,
     mapping = map_memory(length, mapping_kind);
     touch_pages(mapping, length, page_size, 1U);
 
+    order = malloc(page_count * sizeof(*order));
+    if (order == NULL)
+        fail("malloc walk order");
+    for (round = 0; round < page_count; round++)
+        order[round] = (uint32_t)round;
     if (walk == WALK_RANDOM)
-    {
-        order = malloc(page_count * sizeof(*order));
-        if (order == NULL)
-            fail("malloc walk order");
         shuffle_indices(order, page_count, &shuffle_state);
-    }
+    order_fingerprint = validate_order(order, page_count, walk, &displaced);
 
     info = read_mapping_info((void *)mapping);
     printf("MAPPING mode=walk kind=%s access=%s mib=%zu "
@@ -517,6 +560,10 @@ static void run_walk(enum walk_kind walk,
            info.private_hugetlb_kib,
            info.kernel_page_kib,
            info.mmu_page_kib);
+    printf("ORDER access=%s displaced=%zu fingerprint=%" PRIu64 "\n",
+           walk == WALK_SEQUENTIAL ? "seq" : "random",
+           displaced,
+           order_fingerprint);
     print_numa_map((void *)mapping);
 
     for (round = 0; round < rounds; round++)
@@ -527,27 +574,27 @@ static void run_walk(enum walk_kind walk,
         size_t pass;
         double started;
         double elapsed;
-        size_t accesses = page_count * passes;
+        size_t accesses;
 
-        before = read_fault_counts_self();
+        check(passes <= SIZE_MAX / page_count,
+              "walk access count overflows size_t");
+        accesses = page_count * passes;
+
+        before = read_fault_counts();
         started = monotonic_seconds();
         for (pass = 0; pass < passes; pass++)
         {
             size_t index;
 
-            if (walk == WALK_SEQUENTIAL)
-            {
-                for (index = 0; index < page_count; index++)
-                    sum += mapping[index * page_size];
-            }
-            else
-            {
-                for (index = 0; index < page_count; index++)
-                    sum += mapping[(size_t)order[index] * page_size];
-            }
+            for (index = 0; index < page_count; index++)
+                sum += mapping[(size_t)order[index] * page_size];
         }
         elapsed = monotonic_seconds() - started;
-        after = read_fault_counts_self();
+        after = read_fault_counts();
+        check(sum == (uint64_t)accesses,
+              "walk checksum mismatch: actual=%" PRIu64 " expected=%zu",
+              sum,
+              accesses);
         observation_sink ^= sum;
 
         printf("RESULT mode=walk round=%zu map=%s access=%s mib=%zu "
@@ -598,11 +645,15 @@ run_bandwidth(enum mapping_kind mapping_kind, size_t mebibytes, size_t rounds)
     const size_t word_count = length / sizeof(uint64_t);
     uint64_t *mapping = map_memory(length, mapping_kind);
     struct mapping_info info;
+    uint64_t expected = 0;
     size_t index;
     size_t round;
 
     for (index = 0; index < word_count; index++)
+    {
         mapping[index] = (uint64_t)(index % 251U);
+        expected += mapping[index];
+    }
 
     info = read_mapping_info(mapping);
     printf("MAPPING mode=bandwidth map=%s mib=%zu rss_kib=%ld "
@@ -625,6 +676,11 @@ run_bandwidth(enum mapping_kind mapping_kind, size_t mebibytes, size_t rounds)
 
         sum = sum_words(mapping, word_count);
         elapsed = monotonic_seconds() - started;
+        check(sum == expected,
+              "bandwidth checksum mismatch: actual=%" PRIu64
+              " expected=%" PRIu64,
+              sum,
+              expected);
         observation_sink ^= sum;
 
         printf("RESULT mode=bandwidth round=%zu map=%s mib=%zu "
@@ -672,6 +728,7 @@ static void run_cow(size_t mebibytes, size_t rounds)
         double started;
         double baseline_seconds;
         double cow_seconds;
+        long delta_minor;
         size_t offset;
 
         started = monotonic_seconds();
@@ -700,19 +757,31 @@ static void run_cow(size_t mebibytes, size_t rounds)
             check(mapping[offset] == 0x11U,
                   "child changed parent page at offset %zu",
                   offset);
+        delta_minor = cow_usage.ru_minflt - baseline_usage.ru_minflt;
+        check(cow_usage.ru_minflt >= (long)(length / page_size),
+              "COW child produced too few minor faults: %ld",
+              cow_usage.ru_minflt);
+        if (strict_native_checks())
+            check(delta_minor >= (long)(length / page_size),
+                  "native COW child produced too few extra minor faults: %ld",
+                  delta_minor);
+        check(baseline_usage.ru_majflt == 0 && cow_usage.ru_majflt == 0,
+              "COW benchmark observed major faults");
 
-        printf("RESULT mode=cow round=%zu mib=%zu baseline_ms=%.3f "
+        printf("RESULT mode=cow round=%zu mib=%zu strict_native=%d "
+               "baseline_ms=%.3f "
                "baseline_minor=%ld baseline_major=%ld cow_ms=%.3f "
                "cow_minor=%ld cow_major=%ld delta_minor=%ld\n",
                round,
                mebibytes,
+               strict_native_checks(),
                baseline_seconds * 1.0e3,
                baseline_usage.ru_minflt,
                baseline_usage.ru_majflt,
                cow_seconds * 1.0e3,
                cow_usage.ru_minflt,
                cow_usage.ru_majflt,
-               cow_usage.ru_minflt - baseline_usage.ru_minflt);
+               delta_minor);
     }
 
     if (munmap((void *)mapping, length) != 0)
@@ -734,38 +803,55 @@ static int nth_cpu(const cpu_set_t *set, int ordinal)
     return -1;
 }
 
+static void pin_current_thread(int cpu)
+{
+    cpu_set_t target;
+    int result;
+
+    check(cpu >= 0, "could not resolve target CPU");
+    CPU_ZERO(&target);
+    CPU_SET(cpu, &target);
+    result = pthread_setaffinity_np(pthread_self(), sizeof(target), &target);
+    if (result != 0)
+    {
+        errno = result;
+        fail("pthread_setaffinity_np");
+    }
+}
+
+static uint64_t protect_sweep(const struct protect_worker *worker)
+{
+    const struct protect_shared *shared = worker->shared;
+    uint64_t sum = 0;
+    size_t offset;
+
+    for (offset = (size_t)worker->worker_index * shared->page_size;
+         offset < shared->length;
+         offset += shared->worker_count * shared->page_size)
+        sum += shared->mapping[offset];
+    return sum;
+}
+
 static void *protect_worker_main(void *opaque)
 {
     struct protect_worker *worker = opaque;
     struct protect_shared *shared = worker->shared;
-    cpu_set_t target;
     uint64_t sum = 0;
-    int cpu = nth_cpu(&shared->allowed,
-                      worker->worker_index % shared->allowed_cpu_count);
+    int cpu = nth_cpu(&shared->allowed, worker->worker_index + 1);
 
-    check(cpu >= 0, "worker could not resolve CPU");
-    CPU_ZERO(&target);
-    CPU_SET(cpu, &target);
-    {
-        int result =
-            pthread_setaffinity_np(pthread_self(), sizeof(target), &target);
-
-        if (result != 0)
-        {
-            errno = result;
-            fail("pthread_setaffinity_np");
-        }
-    }
-
+    pin_current_thread(cpu);
+    sum += protect_sweep(worker);
     atomic_fetch_add_explicit(&shared->ready, 1, memory_order_release);
+    while (atomic_load_explicit(&shared->start, memory_order_acquire) == 0)
+        sched_yield();
+
+    sum += protect_sweep(worker);
+    worker->sweeps = 1;
+    atomic_fetch_add_explicit(&shared->participating, 1, memory_order_release);
     while (atomic_load_explicit(&shared->stop, memory_order_acquire) == 0)
     {
-        size_t offset;
-
-        for (offset = (size_t)worker->worker_index * shared->page_size;
-             offset < shared->length;
-             offset += shared->worker_count * shared->page_size)
-            sum += shared->mapping[offset];
+        sum += protect_sweep(worker);
+        worker->sweeps++;
     }
     worker->sum = sum;
     return NULL;
@@ -778,23 +864,36 @@ static void run_mprotect(size_t mebibytes, size_t thread_count, size_t rounds)
     struct protect_shared shared;
     struct protect_worker *workers;
     pthread_t *threads;
+    uint64_t minimum_sweeps = UINT64_MAX;
     size_t index;
     double started;
     double elapsed;
+    int coordinator_cpu;
 
-    check(thread_count <= INT32_MAX, "too many mprotect workers");
+    check(thread_count <= INT32_MAX && thread_count <= length / page_size,
+          "too many mprotect workers");
     shared.mapping = map_memory(length, MAPPING_BASE);
     shared.length = length;
     shared.page_size = page_size;
     shared.worker_count = thread_count;
     atomic_init(&shared.ready, 0);
+    atomic_init(&shared.start, 0);
+    atomic_init(&shared.participating, 0);
     atomic_init(&shared.stop, 0);
     if (sched_getaffinity(0, sizeof(shared.allowed), &shared.allowed) != 0)
         fail("sched_getaffinity");
     shared.allowed_cpu_count = CPU_COUNT(&shared.allowed);
-    check(shared.allowed_cpu_count > 0, "empty CPU affinity mask");
+    check(shared.allowed_cpu_count > 1 &&
+              thread_count <= (size_t)(shared.allowed_cpu_count - 1),
+          "mprotect needs one coordinator CPU plus %zu reader CPUs; "
+          "allowed CPUs=%d",
+          thread_count,
+          shared.allowed_cpu_count);
+    coordinator_cpu = nth_cpu(&shared.allowed, 0);
+    pin_current_thread(coordinator_cpu);
 
     touch_pages(shared.mapping, length, page_size, 1U);
+    print_numa_map((void *)shared.mapping);
     workers = calloc(thread_count, sizeof(*workers));
     threads = calloc(thread_count, sizeof(*threads));
     if (workers == NULL || threads == NULL)
@@ -816,6 +915,10 @@ static void run_mprotect(size_t mebibytes, size_t thread_count, size_t rounds)
         }
     }
     while (atomic_load_explicit(&shared.ready, memory_order_acquire) <
+           (int)thread_count)
+        sched_yield();
+    atomic_store_explicit(&shared.start, 1, memory_order_release);
+    while (atomic_load_explicit(&shared.participating, memory_order_acquire) <
            (int)thread_count)
         sched_yield();
 
@@ -841,14 +944,21 @@ static void run_mprotect(size_t mebibytes, size_t thread_count, size_t rounds)
             fail("pthread_join");
         }
         observation_sink ^= workers[index].sum;
+        check(
+            workers[index].sweeps > 0, "worker %zu did not participate", index);
+        if (workers[index].sweeps < minimum_sweeps)
+            minimum_sweeps = workers[index].sweeps;
     }
 
-    printf("RESULT mode=mprotect mib=%zu threads=%zu allowed_cpus=%d "
+    printf("RESULT mode=mprotect mib=%zu threads=%zu coordinator_cpu=%d "
+           "reader_cpus=%d min_sweeps=%" PRIu64 " "
            "rounds=%zu transitions=%zu elapsed_ms=%.3f "
            "us_per_transition=%.3f\n",
            mebibytes,
            thread_count,
-           shared.allowed_cpu_count,
+           coordinator_cpu,
+           shared.allowed_cpu_count - 1,
+           minimum_sweeps,
            rounds,
            rounds * 2U,
            elapsed * 1.0e3,
@@ -862,16 +972,32 @@ static void run_mprotect(size_t mebibytes, size_t thread_count, size_t rounds)
 
 static void run_selftest(void)
 {
+    size_t parsed;
+
+    check(!try_parse_bounded_size("-1", 100, &parsed),
+          "parser accepted a negative value");
+    check(!try_parse_bounded_size(" 1", 100, &parsed),
+          "parser accepted leading whitespace");
+    check(!try_parse_bounded_size("0", 100, &parsed), "parser accepted zero");
+    check(!try_parse_bounded_size("101", 100, &parsed),
+          "parser accepted a value above its bound");
+    check(try_parse_bounded_size("100", 100, &parsed) && parsed == 100,
+          "parser rejected its upper bound");
+
     puts("SELFTEST fault");
     run_fault(4, 1);
-    puts("SELFTEST walk");
+    puts("SELFTEST sequential walk");
+    run_walk(WALK_SEQUENTIAL, MAPPING_BASE, 8, 2, 1);
+    puts("SELFTEST random walk");
     run_walk(WALK_RANDOM, MAPPING_BASE, 8, 2, 1);
+    puts("SELFTEST THP walk");
+    run_walk(WALK_RANDOM, MAPPING_THP, 8, 2, 1);
     puts("SELFTEST bandwidth");
     run_bandwidth(MAPPING_BASE, 8, 1);
     puts("SELFTEST cow");
     run_cow(4, 1);
     puts("SELFTEST mprotect");
-    run_mprotect(4, 2, 2);
+    run_mprotect(4, 1, 2);
     puts("All virtual-memory benchmark selftests passed.");
 }
 
@@ -899,41 +1025,47 @@ int main(int argc, char **argv)
     if (argc == 2 && strcmp(argv[1], "selftest") == 0)
     {
         run_selftest();
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 4 && strcmp(argv[1], "fault") == 0)
     {
-        run_fault(parse_positive_size(argv[2], "MiB"),
-                  parse_positive_size(argv[3], "rounds"));
+        run_fault(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
+                  parse_bounded_size(argv[3], "rounds", MAX_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 7 && strcmp(argv[1], "walk") == 0)
     {
         run_walk(parse_walk_kind(argv[2]),
                  parse_mapping_kind(argv[3]),
-                 parse_positive_size(argv[4], "MiB"),
-                 parse_positive_size(argv[5], "passes"),
-                 parse_positive_size(argv[6], "rounds"));
+                 parse_bounded_size(argv[4], "MiB", MAX_MEBIBYTES),
+                 parse_bounded_size(argv[5], "passes", MAX_PASSES),
+                 parse_bounded_size(argv[6], "rounds", MAX_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 5 && strcmp(argv[1], "bandwidth") == 0)
     {
         run_bandwidth(parse_mapping_kind(argv[2]),
-                      parse_positive_size(argv[3], "MiB"),
-                      parse_positive_size(argv[4], "rounds"));
+                      parse_bounded_size(argv[3], "MiB", MAX_MEBIBYTES),
+                      parse_bounded_size(argv[4], "rounds", MAX_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 4 && strcmp(argv[1], "cow") == 0)
     {
-        run_cow(parse_positive_size(argv[2], "MiB"),
-                parse_positive_size(argv[3], "rounds"));
+        run_cow(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
+                parse_bounded_size(argv[3], "rounds", MAX_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 5 && strcmp(argv[1], "mprotect") == 0)
     {
-        run_mprotect(parse_positive_size(argv[2], "MiB"),
-                     parse_positive_size(argv[3], "threads"),
-                     parse_positive_size(argv[4], "rounds"));
+        run_mprotect(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
+                     parse_bounded_size(argv[3], "threads", MAX_THREADS),
+                     parse_bounded_size(argv[4], "rounds", MAX_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
 

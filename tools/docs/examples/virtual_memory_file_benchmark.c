@@ -3,17 +3,16 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
+
+#include "virtual_memory_benchmark_support.h"
 
 enum file_method
 {
@@ -27,80 +26,13 @@ enum cache_state
     CACHE_WARM
 };
 
-struct fault_counts
-{
-    long minor;
-    long major;
-};
-
 static volatile uint64_t observation_sink;
 
-static void fail(const char *operation)
+enum
 {
-    perror(operation);
-    exit(EXIT_FAILURE);
-}
-
-static void check(int condition, const char *format, ...)
-{
-    va_list arguments;
-
-    if (condition)
-        return;
-
-    fputs("check failed: ", stderr);
-    va_start(arguments, format);
-    vfprintf(stderr, format, arguments);
-    va_end(arguments);
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
-}
-
-static double monotonic_seconds(void)
-{
-    struct timespec now;
-
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
-        fail("clock_gettime");
-    return (double)now.tv_sec + (double)now.tv_nsec / 1.0e9;
-}
-
-static size_t parse_positive_size(const char *text, const char *name)
-{
-    char *end = NULL;
-    unsigned long long value;
-
-    errno = 0;
-    value = strtoull(text, &end, 10);
-    check(errno == 0 && end != text && *end == '\0' && value > 0 &&
-              value <= SIZE_MAX,
-          "invalid %s: %s",
-          name,
-          text);
-    return (size_t)value;
-}
-
-static size_t mebibytes_to_bytes(size_t mebibytes)
-{
-    const size_t scale = 1024U * 1024U;
-
-    check(mebibytes <= SIZE_MAX / scale,
-          "MiB value overflows size_t: %zu",
-          mebibytes);
-    return mebibytes * scale;
-}
-
-static struct fault_counts read_fault_counts(void)
-{
-    struct rusage usage;
-
-    if (getrusage(RUSAGE_SELF, &usage) != 0)
-        fail("getrusage");
-    return (struct fault_counts){
-        .minor = usage.ru_minflt,
-        .major = usage.ru_majflt,
-    };
-}
+    MAX_FILE_MEBIBYTES = 1048576,
+    MAX_FILE_ROUNDS = 10000
+};
 
 static enum file_method parse_file_method(const char *text)
 {
@@ -130,21 +62,74 @@ static void fill_buffer(unsigned char *buffer, size_t length, uint64_t block)
         buffer[index] = (unsigned char)((index + block) % 251U);
 }
 
+static uint64_t expected_checksum(size_t length)
+{
+    const size_t block_size = 1024U * 1024U;
+    uint64_t sum = 0;
+    size_t offset;
+
+    for (offset = 0; offset < length; offset += block_size)
+    {
+        size_t chunk =
+            length - offset < block_size ? length - offset : block_size;
+        uint64_t block = offset / block_size;
+        size_t sample;
+
+        for (sample = 0; sample < chunk; sample += 64U)
+            sum += (sample + block) % 251U;
+    }
+    return sum;
+}
+
+static uint64_t read_process_io_bytes(void)
+{
+    char line[256];
+    unsigned long long value = 0;
+    int found = 0;
+    FILE *io = fopen("/proc/self/io", "r");
+
+    if (io == NULL)
+        fail("fopen /proc/self/io");
+    while (fgets(line, sizeof(line), io) != NULL)
+    {
+        if (sscanf(line, "read_bytes: %llu", &value) == 1)
+        {
+            found = 1;
+            break;
+        }
+    }
+    check(!ferror(io), "failed while reading /proc/self/io");
+    if (fclose(io) != 0)
+        fail("fclose /proc/self/io");
+    check(found, "read_bytes is missing from /proc/self/io");
+    return (uint64_t)value;
+}
+
 static void run_prepare(const char *path, size_t mebibytes)
 {
     const size_t length = mebibytes_to_bytes(mebibytes);
     const size_t block_size = 1024U * 1024U;
     unsigned char *buffer;
     size_t offset;
+    char *temporary_path;
+    size_t temporary_length;
     int fd;
     double started;
     double elapsed;
 
     check(posix_memalign((void **)&buffer, 4096U, block_size) == 0,
           "posix_memalign file buffer failed");
-    fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
+    temporary_length = strlen(path) + sizeof(".tmp.XXXXXX");
+    temporary_path = malloc(temporary_length);
+    if (temporary_path == NULL)
+        fail("malloc temporary file path");
+    check(snprintf(temporary_path, temporary_length, "%s.tmp.XXXXXX", path) > 0,
+          "failed to format temporary file path");
+    fd = mkstemp(temporary_path);
     if (fd < 0)
-        fail("open benchmark file");
+        fail("mkstemp benchmark file");
+    if (fchmod(fd, 0644) != 0)
+        fail("fchmod benchmark file");
 
     started = monotonic_seconds();
     for (offset = 0; offset < length; offset += block_size)
@@ -170,15 +155,19 @@ static void run_prepare(const char *path, size_t mebibytes)
         fail("fdatasync benchmark file");
     elapsed = monotonic_seconds() - started;
 
+    if (close(fd) != 0)
+        fail("close benchmark file");
+    if (rename(temporary_path, path) != 0)
+        fail("rename benchmark file");
     printf("RESULT mode=file_prepare path=%s mib=%zu elapsed_ms=%.3f "
-           "mib_per_s=%.3f\n",
+           "mib_per_s=%.3f checksum=%" PRIu64 "\n",
            path,
            mebibytes,
            elapsed * 1.0e3,
-           (double)mebibytes / elapsed);
+           (double)mebibytes / elapsed,
+           expected_checksum(length));
 
-    if (close(fd) != 0)
-        fail("close benchmark file");
+    free(temporary_path);
     free(buffer);
 }
 
@@ -254,6 +243,10 @@ static void run_read(enum file_method method,
 {
     struct stat metadata;
     int fd = open(path, O_RDONLY);
+    uint64_t expected;
+    const char *require_io_value = getenv("VM_BENCH_REQUIRE_IO");
+    int require_io =
+        require_io_value != NULL && strcmp(require_io_value, "1") == 0;
     size_t round;
 
     if (fd < 0)
@@ -264,11 +257,16 @@ static void run_read(enum file_method method,
     check((uintmax_t)metadata.st_size <= SIZE_MAX,
           "benchmark file is too large for size_t: %jd",
           (intmax_t)metadata.st_size);
+    expected = expected_checksum((size_t)metadata.st_size);
 
     if (cache == CACHE_WARM)
     {
         uint64_t warm_sum =
             read_file_once(method, fd, (size_t)metadata.st_size);
+        check(warm_sum == expected,
+              "warm-up checksum mismatch: actual=%" PRIu64 " expected=%" PRIu64,
+              warm_sum,
+              expected);
         observation_sink ^= warm_sum;
     }
 
@@ -277,6 +275,9 @@ static void run_read(enum file_method method,
         struct fault_counts before;
         struct fault_counts after;
         uint64_t sum;
+        uint64_t read_bytes_before;
+        uint64_t read_bytes_after;
+        uint64_t read_bytes;
         double started;
         double elapsed;
 
@@ -293,24 +294,38 @@ static void run_read(enum file_method method,
         }
 
         before = read_fault_counts();
+        read_bytes_before = read_process_io_bytes();
         started = monotonic_seconds();
         sum = read_file_once(method, fd, (size_t)metadata.st_size);
         elapsed = monotonic_seconds() - started;
+        read_bytes_after = read_process_io_bytes();
         after = read_fault_counts();
+        check(read_bytes_after >= read_bytes_before,
+              "process read_bytes moved backward");
+        read_bytes = read_bytes_after - read_bytes_before;
+        check(sum == expected,
+              "file checksum mismatch: actual=%" PRIu64 " expected=%" PRIu64,
+              sum,
+              expected);
+        if (cache == CACHE_COLD && require_io)
+            check(read_bytes > 0, "cold read produced no backing-device bytes");
         observation_sink ^= sum;
 
         printf("RESULT mode=file_read round=%zu method=%s cache=%s "
-               "bytes=%jd elapsed_ms=%.3f gib_per_s=%.3f minor=%ld "
-               "major=%ld checksum=%" PRIu64 "\n",
+               "require_io=%d bytes=%jd elapsed_ms=%.3f "
+               "gib_per_s=%.3f minor=%ld "
+               "major=%ld read_bytes=%" PRIu64 " checksum=%" PRIu64 "\n",
                round,
                method == FILE_PREAD ? "pread" : "mmap",
                cache == CACHE_COLD ? "cold" : "warm",
+               require_io,
                (intmax_t)metadata.st_size,
                elapsed * 1.0e3,
                ((double)metadata.st_size / (1024.0 * 1024.0 * 1024.0)) /
                    elapsed,
                after.minor - before.minor,
                after.major - before.major,
+               read_bytes,
                sum);
     }
 
@@ -321,10 +336,18 @@ static void run_read(enum file_method method,
 static void run_selftest(void)
 {
     const char *path = ".tmp/virtual-memory-file-selftest.bin";
+    size_t parsed;
 
     if (mkdir(".tmp", 0700) != 0 && errno != EEXIST)
         fail("mkdir .tmp");
+    check(!try_parse_bounded_size("-1", 100, &parsed),
+          "parser accepted a negative value");
+    check(!try_parse_bounded_size(" 1", 100, &parsed),
+          "parser accepted leading whitespace");
+    check(!try_parse_bounded_size("0", 100, &parsed), "parser accepted zero");
     run_prepare(path, 8);
+    run_read(FILE_PREAD, CACHE_COLD, path, 1);
+    run_read(FILE_MMAP, CACHE_COLD, path, 1);
     run_read(FILE_PREAD, CACHE_WARM, path, 1);
     run_read(FILE_MMAP, CACHE_WARM, path, 1);
     if (unlink(path) != 0)
@@ -349,11 +372,14 @@ int main(int argc, char **argv)
     if (argc == 2 && strcmp(argv[1], "selftest") == 0)
     {
         run_selftest();
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 4 && strcmp(argv[1], "prepare") == 0)
     {
-        run_prepare(argv[2], parse_positive_size(argv[3], "MiB"));
+        run_prepare(argv[2],
+                    parse_bounded_size(argv[3], "MiB", MAX_FILE_MEBIBYTES));
+        finish_output();
         return EXIT_SUCCESS;
     }
     if (argc == 6 && strcmp(argv[1], "read") == 0)
@@ -361,7 +387,8 @@ int main(int argc, char **argv)
         run_read(parse_file_method(argv[2]),
                  parse_cache_state(argv[3]),
                  argv[4],
-                 parse_positive_size(argv[5], "rounds"));
+                 parse_bounded_size(argv[5], "rounds", MAX_FILE_ROUNDS));
+        finish_output();
         return EXIT_SUCCESS;
     }
 
