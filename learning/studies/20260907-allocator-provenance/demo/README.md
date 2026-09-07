@@ -43,8 +43,23 @@ FIL-C allocator tests passed: 3 suites
 ## CMake Shape
 
 `CMakeLists.txt` records the standard project topology for IDEs and Linux
-builders. The authoritative repository verification remains the explicit
-FIL-C command above so the build cannot silently select the host compiler.
+builders. It can also drive FIL-C explicitly:
+
+```bash
+cmake \
+  -S learning/studies/20260907-allocator-provenance/demo \
+  -B .tmp/allocator-provenance-cmake \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+  -DCMAKE_C_COMPILER="$PWD/.tmp/fil-c/bin/filcc"
+
+cmake --build .tmp/allocator-provenance-cmake
+.tmp/fil-c/bin/filrun \
+  .tmp/allocator-provenance-cmake/allocator_provenance_demo
+```
+
+The direct FIL-C command remains the shortest authoritative verification and
+cannot silently select the host compiler.
 
 Generated build trees and binaries belong under `.tmp/` or `demo/build/` and
 must not be committed.

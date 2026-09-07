@@ -148,7 +148,15 @@ demo/
 | Study becomes a design basis | Link it from `designs/` or project docs |
 | Source becomes obsolete | Keep the archive and add a note; do not delete history |
 
-## 7. Agent Checklist
+## 7. Studies
+
+| Study | Topic |
+| --- | --- |
+| [Allocator provenance](studies/20260907-allocator-provenance/README.md) | C/Rust allocation lifetime, zero-state provenance, arena selection, and FIL-C verification |
+| [PowerSort](studies/20260611-powersort/README.md) | Adaptive stable merge policy over natural runs |
+| [Radix Top-K](studies/20260611-radix-top-k/README.md) | Prefix pruning and radix selection |
+
+## 8. Agent Checklist
 
 - Did the study directory use `YYYYMMDD-short-topic`?
 - Did `source.md` include the original URL?
