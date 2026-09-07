@@ -23,13 +23,12 @@ z3_archive="z3-${z3_version}-arm64-osx-15.7.3.zip"
 z3_sha256="41828fa07d5cb77bfaee326e8e6dac074f26329c09c633f9e66012bb917cf8ae"
 z3_url="https://github.com/Z3Prover/z3/releases/download/z3-${z3_version}/${z3_archive}"
 z3_dir="$tmp_dir/verus-z3"
+z3_extract_dir="$z3_dir/${z3_archive%.zip}"
 
 verify_sha256() {
     local file="$1"
     local expected="$2"
-    local actual
-    actual="$(shasum -a 256 "$file" | awk '{print $1}')"
-    [[ "$actual" == "$expected" ]]
+    printf '%s  %s\n' "$expected" "$file" | shasum -a 256 --check --status
 }
 
 download_verified() {
@@ -62,9 +61,9 @@ if ! rustup toolchain list | grep -Fq "1.98.0-aarch64-apple-darwin"; then
 fi
 
 download_verified "$z3_url" "$z3_dir/$z3_archive" "$z3_sha256"
-rm -rf "$z3_dir/z3-${z3_version}-arm64-osx-15.7.3"
+rm -rf "$z3_extract_dir"
 unzip -q "$z3_dir/$z3_archive" -d "$z3_dir"
-cp "$z3_dir/z3-${z3_version}-arm64-osx-15.7.3/bin/z3" "$z3_dir/z3"
+cp "$z3_extract_dir/bin/z3" "$z3_dir/z3"
 chmod +x "$z3_dir/z3"
 
 "$verus_toolchain_dir/verus-arm64-macos/verus" --version

@@ -49,12 +49,13 @@ expect_verus_failure() {
         echo "expected Verus to reject $source_file" >&2
         exit 1
     fi
-    if ! grep -Fq "$expected_text" "$log_file"; then
+    local matched_line
+    if ! matched_line="$(grep -F -m 1 "$expected_text" "$log_file")"; then
         echo "Verus rejected $source_file for an unexpected reason:" >&2
         cat "$log_file" >&2
         exit 1
     fi
-    grep -F "$expected_text" "$log_file" | head -1
+    printf '%s\n' "$matched_line"
 }
 
 echo "[1/5] Ordinary Rust tests exercise only selected inputs"
