@@ -445,7 +445,9 @@ Parent unchanged       Parent sees child write
 
 一次 FIL-C 运行中，4 MiB 匿名 mapping 的首次逐页写入观察到 1024 个
 minor fault、0 个 major fault；第二次写入观察到 0 个 fault。RSS 在首次
-写入后增长约 4 MiB。
+写入后增长约 4 MiB。COW 阶段让子进程逐页写 256 个私有页，并要求至少
+出现 256 个 minor fault；实际计数还可能包含 FIL-C runtime 的额外 fault。
+父进程的 256 个页必须全部保持原值。
 
 这些数字不是测试断言：
 
@@ -455,11 +457,11 @@ minor fault、0 个 major fault；第二次写入观察到 0 个 fault。RSS 在
   不能外推到普通 glibc 程序；
 - `ru_minflt`/`ru_majflt` 是进程累计值，demo 只比较阶段差值。
 
-真正的断言只检查单调性和语义：
+常驻检查不依赖 `assert`，即使定义 `NDEBUG` 也不会失效。它验证：
 
-- fault counter 不倒退；
-- first-touch 后进程仍可读写全部页面；
-- COW 后父进程仍看到原值；
+- first-touch 的 minor fault 为正且多于重复触页；
+- first-touch 后每页数据仍符合写入值；
+- 256 个 COW 写至少产生 256 个 minor fault，且父进程每页仍保持原值；
 - shared mapping 的父进程视图与 file byte 一致。
 
 ### 5.3 为什么没有在 demo 中使用 `mincore`

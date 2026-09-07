@@ -1,13 +1,14 @@
 #define _GNU_SOURCE
 
-#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -39,6 +40,26 @@ static void fail(const char *operation)
     exit(EXIT_FAILURE);
 }
 
+static void child_fail(const char *operation)
+{
+    perror(operation);
+    _exit(EXIT_FAILURE);
+}
+
+static void check(int condition, const char *format, ...)
+{
+    va_list arguments;
+
+    if (condition)
+        return;
+    fputs("check failed: ", stderr);
+    va_start(arguments, format);
+    vfprintf(stderr, format, arguments);
+    va_end(arguments);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
 static struct fault_counts read_fault_counts(void)
 {
     struct rusage usage;
@@ -53,6 +74,9 @@ static struct process_memory read_process_memory(void)
 {
     struct process_memory memory = {
         .vm_size_kib = -1, .vm_rss_kib = -1, .vm_pte_kib = -1};
+    int found_vm_size = 0;
+    int found_vm_rss = 0;
+    int found_vm_pte = 0;
     char line[256];
     FILE *status = fopen("/proc/self/status", "r");
 
@@ -60,16 +84,43 @@ static struct process_memory read_process_memory(void)
         fail("fopen /proc/self/status");
     while (fgets(line, sizeof(line), status) != NULL)
     {
-        (void)sscanf(line, "VmSize: %ld kB", &memory.vm_size_kib);
-        (void)sscanf(line, "VmRSS: %ld kB", &memory.vm_rss_kib);
-        (void)sscanf(line, "VmPTE: %ld kB", &memory.vm_pte_kib);
+        if (!found_vm_size &&
+            sscanf(line, "VmSize: %ld kB", &memory.vm_size_kib) == 1)
+        {
+            found_vm_size = 1;
+            continue;
+        }
+        if (!found_vm_rss &&
+            sscanf(line, "VmRSS: %ld kB", &memory.vm_rss_kib) == 1)
+        {
+            found_vm_rss = 1;
+            continue;
+        }
+        if (!found_vm_pte &&
+            sscanf(line, "VmPTE: %ld kB", &memory.vm_pte_kib) == 1)
+        {
+            found_vm_pte = 1;
+            continue;
+        }
     }
+    check(!ferror(status), "error while reading /proc/self/status");
     if (fclose(status) != 0)
         fail("fclose /proc/self/status");
+    check(found_vm_size && found_vm_rss && found_vm_pte,
+          "missing /proc/self/status fields: VmSize=%s VmRSS=%s VmPTE=%s",
+          found_vm_size ? "present" : "missing",
+          found_vm_rss ? "present" : "missing",
+          found_vm_pte ? "present" : "missing");
+    check(memory.vm_size_kib >= 0 && memory.vm_rss_kib >= 0 &&
+              memory.vm_pte_kib >= 0,
+          "negative /proc/self/status value: VmSize=%ld VmRSS=%ld VmPTE=%ld",
+          memory.vm_size_kib,
+          memory.vm_rss_kib,
+          memory.vm_pte_kib);
     return memory;
 }
 
-static void write_all(int fd, const void *buffer, size_t length)
+static void child_write_all(int fd, const void *buffer, size_t length)
 {
     const unsigned char *bytes = buffer;
     size_t written = 0;
@@ -81,7 +132,7 @@ static void write_all(int fd, const void *buffer, size_t length)
         if (result < 0 && errno == EINTR)
             continue;
         if (result <= 0)
-            fail("write");
+            child_fail("write");
         written += (size_t)result;
     }
 }
@@ -138,8 +189,13 @@ static void demonstrate_address_split(size_t page_size)
     const uint64_t page = address / page_size;
     const uint64_t offset = address % page_size;
 
-    assert(page * page_size + offset == address);
-    assert(offset < page_size);
+    check(page * page_size + offset == address,
+          "address split did not reconstruct 0x%" PRIx64,
+          address);
+    check(offset < page_size,
+          "page offset %" PRIu64 " is outside page size %zu",
+          offset,
+          page_size);
     puts("[1] Virtual-address split");
     printf("  address=0x%" PRIx64 " -> virtual-page=%" PRIu64
            ", offset=%" PRIu64 " (page size=%zu)\n",
@@ -160,6 +216,10 @@ static void demonstrate_demand_paging(size_t page_size)
     struct fault_counts after_first_touch;
     struct fault_counts before_second_touch;
     struct fault_counts after_second_touch;
+    long first_touch_minor_delta;
+    long first_touch_major_delta;
+    long second_touch_minor_delta;
+    long second_touch_major_delta;
     volatile unsigned char *mapping;
     size_t index;
 
@@ -182,15 +242,47 @@ static void demonstrate_demand_paging(size_t page_size)
         mapping[index * page_size] = (unsigned char)(index & 0xffU);
     after_first_touch = read_fault_counts();
     after_touch = read_process_memory();
+    for (index = 0; index < page_count; index++)
+    {
+        unsigned char expected = (unsigned char)(index & 0xffU);
+        unsigned char actual = mapping[index * page_size];
+
+        check(
+            actual == expected,
+            "page %zu changed after first touch: expected=0x%02x actual=0x%02x",
+            index,
+            (unsigned int)expected,
+            (unsigned int)actual);
+    }
     before_second_touch = read_fault_counts();
     for (index = 0; index < page_count; index++)
         mapping[index * page_size] ^= 1U;
     after_second_touch = read_fault_counts();
 
-    assert(after_first_touch.minor >= before_first_touch.minor);
-    assert(after_first_touch.major >= before_first_touch.major);
-    assert(after_second_touch.minor >= before_second_touch.minor);
-    assert(after_second_touch.major >= before_second_touch.major);
+    first_touch_minor_delta =
+        after_first_touch.minor - before_first_touch.minor;
+    first_touch_major_delta =
+        after_first_touch.major - before_first_touch.major;
+    second_touch_minor_delta =
+        after_second_touch.minor - before_second_touch.minor;
+    second_touch_major_delta =
+        after_second_touch.major - before_second_touch.major;
+    check(first_touch_minor_delta > 0,
+          "first touch produced no minor faults: first=%ld repeated=%ld",
+          first_touch_minor_delta,
+          second_touch_minor_delta);
+    check(first_touch_major_delta >= 0 && second_touch_minor_delta >= 0 &&
+              second_touch_major_delta >= 0,
+          "fault counter moved backward: first major=%ld repeated minor=%ld "
+          "repeated major=%ld",
+          first_touch_major_delta,
+          second_touch_minor_delta,
+          second_touch_major_delta);
+    check(first_touch_minor_delta > second_touch_minor_delta,
+          "first touch was not stronger than repeated touch: first minor=%ld "
+          "repeated minor=%ld",
+          first_touch_minor_delta,
+          second_touch_minor_delta);
 
     puts("[2] Reservation versus residency");
     printf("  anonymous mapping: address=%p, %zu pages (%zu KiB)\n",
@@ -198,11 +290,11 @@ static void demonstrate_demand_paging(size_t page_size)
            page_count,
            length / 1024);
     printf("  first pass faults:  minor=%ld major=%ld\n",
-           after_first_touch.minor - before_first_touch.minor,
-           after_first_touch.major - before_first_touch.major);
+           first_touch_minor_delta,
+           first_touch_major_delta);
     printf("  second pass faults: minor=%ld major=%ld\n",
-           after_second_touch.minor - before_second_touch.minor,
-           after_second_touch.major - before_second_touch.major);
+           second_touch_minor_delta,
+           second_touch_major_delta);
     print_memory("before mmap", before_map);
     print_memory("after mmap", after_map);
     print_memory("after first touch", after_touch);
@@ -213,20 +305,28 @@ static void demonstrate_demand_paging(size_t page_size)
 
 static void demonstrate_copy_on_write(size_t page_size)
 {
+    const size_t page_count = 256;
+    const size_t length = page_count * page_size;
     unsigned char *mapping;
     struct child_report report;
     int pipe_fds[2];
     pid_t child;
+    size_t index;
 
     mapping = mmap(NULL,
-                   page_size,
+                   length,
                    PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS,
                    -1,
                    0);
     if (mapping == MAP_FAILED)
         fail("mmap COW");
-    mapping[0] = 0x11;
+#ifdef MADV_NOHUGEPAGE
+    if (madvise(mapping, length, MADV_NOHUGEPAGE) != 0)
+        fail("madvise COW MADV_NOHUGEPAGE");
+#endif
+    for (index = 0; index < page_count; index++)
+        mapping[index * page_size] = 0x11;
     if (pipe(pipe_fds) != 0)
         fail("pipe");
 
@@ -235,20 +335,23 @@ static void demonstrate_copy_on_write(size_t page_size)
         fail("fork COW");
     if (child == 0)
     {
-        struct fault_counts before = read_fault_counts();
+        struct fault_counts before;
         struct fault_counts after;
+        size_t child_index;
 
         if (close(pipe_fds[0]) != 0)
-            fail("close child read pipe");
+            child_fail("close child read pipe");
         report.before = mapping[0];
-        mapping[0] = 0x22;
-        report.after = mapping[0];
+        before = read_fault_counts();
+        for (child_index = 0; child_index < page_count; child_index++)
+            mapping[child_index * page_size] = 0x22;
         after = read_fault_counts();
+        report.after = mapping[0];
         report.minor_fault_delta = after.minor - before.minor;
         report.major_fault_delta = after.major - before.major;
-        write_all(pipe_fds[1], &report, sizeof(report));
+        child_write_all(pipe_fds[1], &report, sizeof(report));
         if (close(pipe_fds[1]) != 0)
-            fail("close child write pipe");
+            child_fail("close child write pipe");
         _exit(EXIT_SUCCESS);
     }
 
@@ -259,32 +362,52 @@ static void demonstrate_copy_on_write(size_t page_size)
         fail("close parent read pipe");
     wait_for_success(child);
 
-    assert(report.before == 0x11);
-    assert(report.after == 0x22);
-    assert(mapping[0] == 0x11);
-    assert(report.minor_fault_delta >= 0);
-    assert(report.major_fault_delta >= 0);
+    check(report.before == 0x11,
+          "child saw initial byte 0x%02x instead of 0x11",
+          (unsigned int)report.before);
+    check(report.after == 0x22,
+          "child write produced byte 0x%02x instead of 0x22",
+          (unsigned int)report.after);
+    for (index = 0; index < page_count; index++)
+        check(mapping[index * page_size] == 0x11,
+              "child write changed parent page %zu to 0x%02x",
+              index,
+              (unsigned int)mapping[index * page_size]);
+    check(report.minor_fault_delta >= (long)page_count,
+          "child COW writes produced too few minor faults: "
+          "pages=%zu minor=%ld major=%ld",
+          page_count,
+          report.minor_fault_delta,
+          report.major_fault_delta);
+    check(report.major_fault_delta >= 0,
+          "child major-fault counter moved backward: delta=%ld",
+          report.major_fault_delta);
 
     puts("[3] Copy-on-write after fork");
-    printf("  child: 0x%02x -> 0x%02x, faults minor=%ld major=%ld\n",
+    printf("  child: 0x%02x -> 0x%02x across %zu pages, "
+           "faults minor=%ld major=%ld\n",
            report.before,
            report.after,
+           page_count,
            report.minor_fault_delta,
            report.major_fault_delta);
-    printf("  parent still sees 0x%02x (private mapping)\n", mapping[0]);
+    printf("  parent still sees 0x%02x on every private page\n", mapping[0]);
 
-    if (munmap(mapping, page_size) != 0)
+    if (munmap(mapping, length) != 0)
         fail("munmap COW");
 }
 
 static void demonstrate_shared_file(size_t page_size)
 {
-    char path[] = "/tmp/virtual-memory-demo-XXXXXX";
+    char path[] = ".tmp/virtual-memory-demo-XXXXXX";
     unsigned char *mapping;
     unsigned char persisted = 0;
     pid_t child;
-    int fd = mkstemp(path);
+    int fd;
 
+    if (mkdir(".tmp", 0700) != 0 && errno != EEXIST)
+        fail("mkdir .tmp");
+    fd = mkstemp(path);
     if (fd < 0)
         fail("mkstemp");
     if (unlink(path) != 0)
@@ -306,11 +429,15 @@ static void demonstrate_shared_file(size_t page_size)
     }
     wait_for_success(child);
 
-    assert(mapping[0] == 0x42);
+    check(mapping[0] == 0x42,
+          "parent saw shared byte 0x%02x instead of 0x42",
+          (unsigned int)mapping[0]);
     if (pread(fd, &persisted, sizeof(persisted), 0) !=
         (ssize_t)sizeof(persisted))
         fail("pread");
-    assert(persisted == 0x42);
+    check(persisted == 0x42,
+          "file byte is 0x%02x instead of 0x42",
+          (unsigned int)persisted);
 
     puts("[4] Shared file mapping");
     printf("  parent sees child byte=0x%02x; file byte=0x%02x\n",
