@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>多级 CPU Cache 为什么有效</title>
+  <title>多级 CPU Cache：现代硬件与 EPYC 实测</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -177,6 +177,7 @@
       background: #e8edef;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       font-size: 0.92em;
+      overflow-wrap: anywhere;
     }
 
     pre {
@@ -194,6 +195,7 @@
       background: transparent;
       color: inherit;
       font-size: 0.88rem;
+      overflow-wrap: normal;
     }
 
     .kw {
@@ -321,25 +323,33 @@
       td {
         padding: 8px;
       }
+
+      table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
     }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <h1>多级 CPU Cache 为什么有效</h1>
+      <h1>多级 CPU Cache：现代硬件与 EPYC 实测</h1>
       <dl class="meta">
         <dt>Date</dt>
         <dd>2026-09-07</dd>
         <dt>Input shape</dt>
         <dd>concept</dd>
         <dt>Subject</dt>
-        <dd>从局部性、AMAT、I/O 复杂度和物理实现理解多级 CPU cache，并用 C 验证</dd>
+        <dd>从理论模型到双路 AMD EPYC 7Y83 的 cache、CCD 与 NUMA 实测</dd>
       </dl>
       <p class="lead">
-        多级 cache 不是把一块大 SRAM 随意切成几段，而是在互相冲突的目标之间做分层：
-        离执行单元越近，越强调低延迟、端口和带宽；越远，越强调容量、密度、共享和
-        DRAM 流量过滤。程序的时间与空间局部性，恰好让这种分工成立。
+        2016 年原文对“为什么不能只有一个大 cache”的物理直觉仍然成立，但现代服务器
+        已不能用“每核 L1/L2 + 全 socket 共享一个 L3”的简单图概括。真实层次还包括
+        SMT、CCD/chiplet、多个 LLC domain、NUMA 和跨 socket 路径；这些边界必须从
+        目标机器读取，并用原生优化构建测量。
       </p>
     </header>
 
@@ -463,7 +473,85 @@
     </section>
 
     <section>
-      <h2>1. 原文真正解释了什么</h2>
+      <h2>1. 目标机揭示的现代层次</h2>
+      <p>
+        2026-09-07 直接登录 <code>dc02-pe-t137-n047</code> 读取
+        <code>lscpu</code>、sysfs cache topology 与 NUMA distance。机器是双路
+        AMD EPYC 7Y83（Zen 3 / Milan），128 个物理核心、256 个逻辑 CPU。Linux
+        暴露的不是一个 512 MiB 大 L3，而是 16 个彼此独立的 32 MiB L3 domain。
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>资源</th>
+            <th>单实例</th>
+            <th>共享范围</th>
+            <th>整机聚合</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>L1D / L1I</td>
+            <td>各 32 KiB，8-way，64 B line</td>
+            <td>一个物理核心的 2 个 SMT thread</td>
+            <td>各 4 MiB / 128 实例</td>
+          </tr>
+          <tr>
+            <td>L2 unified</td>
+            <td>512 KiB，8-way，64 B line</td>
+            <td>一个物理核心的 2 个 SMT thread</td>
+            <td>64 MiB / 128 实例</td>
+          </tr>
+          <tr>
+            <td>L3 unified</td>
+            <td>32 MiB，16-way，64 B line</td>
+            <td>一个 8-core CCD，即 16 个 SMT thread</td>
+            <td>512 MiB / 16 实例</td>
+          </tr>
+          <tr>
+            <td>NUMA</td>
+            <td>约 516,000 MiB / node（约 504 GiB）</td>
+            <td>每 socket 2 个 node，每 node 覆盖 4 个 CCD</td>
+            <td>4 nodes / 2 sockets</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>System
+  2 sockets
+    2 NUMA nodes per socket
+      4 L3 domains per NUMA node
+        8 physical cores per L3 domain
+          2 SMT threads per core
+            private 32 KiB L1D + 32 KiB L1I + 512 KiB L2</code></pre>
+
+      <p>
+        以 CPU 24 为例，它和 SMT sibling 152 共享 L1/L2；CPU
+        <code>24-31,152-159</code> 共享同一个 32 MiB L3。NUMA distance 为：
+        本 node <code>10</code>、同 socket 另一 node <code>12</code>、另一 socket
+        <code>32</code>。所以“数据在 L3 还是 DRAM”还不够，必须继续问：
+        <strong>在哪个 L3 domain、由哪个 core 访问、物理页落在哪个 NUMA node。</strong>
+      </p>
+
+      <h3>1.1 相比 2016 模型，多了哪些一等变量</h3>
+      <ul class="compact">
+        <li><strong>LLC 是分域的。</strong> socket 总 L3 容量不能当作任一线程可等价使用的单块容量。</li>
+        <li><strong>SMT 会共享近端资源。</strong> sibling thread 不只竞争执行端口，也竞争 L1/L2 容量和带宽。</li>
+        <li><strong>chiplet 改变距离。</strong> 同一 socket 内跨 CCD 也要经过更远互连，不等价于本 CCD hit。</li>
+        <li><strong>NUMA 与 cache 叠加。</strong> cache miss 最终落到本地或远端内存，延迟可以相差数倍。</li>
+        <li><strong>预取与乱序隐藏延迟。</strong> 顺序吞吐不能代表依赖 load latency，二者要分开测。</li>
+        <li><strong>异构核心已很常见。</strong> 其他现代 CPU 甚至会让不同 core type 拥有不同 cache 尺寸和延迟。</li>
+      </ul>
+
+      <div class="caveat">
+        <code>lscpu</code> 的 512 MiB L3 是 16 个实例的总和，不是 CPU 24 可独占的
+        512 MiB。容量规划若只读聚合值，会把单线程 working-set 上限高估 16 倍。
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 原文真正解释了什么</h2>
       <p>
         Fabian Giesen 的文章用办公桌、文件柜、地下档案室和异地仓库作类比。它最有价值
         的不是类比本身，而是把 cache 看成一个物理物流系统：数据要占面积，要穿过实际
@@ -516,9 +604,9 @@
     </section>
 
     <section>
-      <h2>2. 为什么一个大 cache 不能等价替代</h2>
+      <h2>3. 为什么一个大 cache 不能等价替代</h2>
 
-      <h3>2.1 容量与 hit time 互相冲突</h3>
+      <h3>3.1 容量与 hit time 互相冲突</h3>
       <p>
         cache lookup 至少涉及地址译码、set 选择、tag 读取与比较、way 选择、数据阵列
         读取和结果路由。阵列扩大后，word line、bit line、decoder、bank 间连线和输出
@@ -527,7 +615,7 @@
         “更大而同样快”不是免费的设计点。
       </p>
 
-      <h3>2.2 私有带宽与全局共享互相冲突</h3>
+      <h3>3.2 私有带宽与全局共享互相冲突</h3>
       <p>
         每个核心的私有 L1 可以并行服务请求。若所有核心每次 load、store 和取指都进入
         一个共享大 cache，就必须为总端口数、仲裁、队列、布线和一致性流量买单。共享
@@ -535,7 +623,7 @@
         换来低协调成本和随核心数增长的聚合带宽。
       </p>
 
-      <h3>2.3 不同层服务不同粒度和职责</h3>
+      <h3>3.3 不同层服务不同粒度和职责</h3>
       <p>
         核心执行的是字节、word、向量 load/store，层间通常搬运 cache line。靠近核心
         的层要支持细粒度访问、store forwarding 和高端口压力；较远层可以把更多面积
@@ -583,9 +671,9 @@
     </section>
 
     <section>
-      <h2>3. 可计算的理论支持</h2>
+      <h2>4. 可计算的理论支持</h2>
 
-      <h3>3.1 AMAT：逐级 miss 的条件概率</h3>
+      <h3>4.1 AMAT：逐级 miss 的条件概率</h3>
       <p>
         Average Memory Access Time 把层次的收益写成递归期望值。对三级 cache，
         若 <code>m1</code> 是 L1 miss rate，<code>m2</code> 是“已经 miss L1
@@ -654,7 +742,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
         理解方向的期望模型，不是周期精确模拟器。
       </p>
 
-      <h3>3.2 局部性、working set 与 reuse distance</h3>
+      <h3>4.2 局部性、working set 与 reuse distance</h3>
       <p>
         Denning 的 locality principle 指出，程序会在一段时间内集中使用有限集合。
         时间局部性解释“刚用过的数据值得保留”，空间局部性解释“搬一个 line 而非一个
@@ -674,7 +762,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
         大部分请求；若访问几乎无复用，层次无法凭空创造 locality。
       </p>
 
-      <h3>3.3 I/O 复杂度：算术次数不等于数据移动次数</h3>
+      <h3>4.3 I/O 复杂度：算术次数不等于数据移动次数</h3>
       <p>
         外存模型把快存储容量记为 <code>M</code>，搬运块大小记为 <code>B</code>，
         算法成本按块传输次数计算。顺序扫描 <code>N</code> 个连续元素约需
@@ -690,7 +778,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
         访问结构可以同时利用多个 cache level。
       </p>
 
-      <h3>3.4 功耗与排队也是一等成本</h3>
+      <h3>4.4 功耗与排队也是一等成本</h3>
       <p>
         动态能耗近似随切换电容和电压平方增长；更大的阵列、更长的线和更远的数据搬运
         往往切换更多电容。另一方面，共享层和 DRAM 是有限服务率的队列。即使单次延迟
@@ -700,75 +788,225 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
     </section>
 
     <section>
-      <h2>4. 用 C 看见层次与局部性</h2>
+      <h2>5. 用 C 在目标机上验证</h2>
       <p>
         配套程序位于
-        <code>tools/docs/examples/cache_hierarchy_demo.c</code>。它包含三个独立实验：
-        AMAT 模型、随机依赖加载、C 行主序遍历。复验命令：
+        <code>tools/docs/examples/cache_hierarchy_demo.c</code>。验证分为两条完全
+        不同的链路：FIL-C 证明程序正确，目标机原生 GCC 才产生性能数据。
       </p>
 
-      <pre><code>.tmp/fil-c/bin/filcc \
+      <h3>5.1 两阶段编译协议</h3>
+      <pre><code><span class="comment"># Correctness: memory safety, bounds, assertions, UB-sensitive paths.</span>
+.tmp/fil-c/bin/filcc \
   -std=c11 -O2 -g -Wall -Wextra -Werror \
   tools/docs/examples/cache_hierarchy_demo.c \
   -o .tmp/cache-hierarchy-demo
+.tmp/fil-c/bin/filrun .tmp/cache-hierarchy-demo all
 
-.tmp/fil-c/bin/filrun .tmp/cache-hierarchy-demo all</code></pre>
+<span class="comment"># Performance: run on the target AMD EPYC machine.</span>
+gcc -std=c11 -O3 -march=native -mtune=native -flto -DNDEBUG \
+  -Wall -Wextra -Werror cache_hierarchy_demo.c \
+  -o cache-hierarchy-native
 
-      <h3>4.1 随机依赖加载：为什么要让 load 彼此依赖</h3>
+<span class="comment"># CPU 24 is on NUMA node 0; first run local, then remote socket memory.</span>
+numactl --physcpubind=24 --membind=0 ./cache-hierarchy-native all
+numactl --physcpubind=24 --membind=2 ./cache-hierarchy-native latency</code></pre>
+
       <p>
-        普通数组扫描可被硬件预取器提前搬运，也允许多个 cache miss 同时在途。随机
-        pointer chase 让下一地址依赖上一次 load 的结果，压低 memory-level
-        parallelism，更接近测量逐级 load latency：
+        目标机是 GCC 12.2.0；<code>-march=native -mtune=native</code> 实际解析为
+        <code>znver3</code>。CPU governor 为 <code>performance</code>，boost 开启。
+        每个点运行 7 轮，报告 median、min、max。测量前 CPU 24 的短窗口空闲率约
+        99%，但它不是隔离核，因此结果仍是工程测量，不是无噪声实验室数据。
+      </p>
+
+      <h3>5.2 随机依赖加载：直接看到三级边界</h3>
+      <p>
+        每个 node 占 64 B，所有 node 被洗牌后连成一个环。下一地址依赖上一次 load
+        的结果，硬件预取和 memory-level parallelism 很难隐藏真实 latency：
       </p>
 
       <pre><code><span class="type">uint32_t</span> current = <span class="num">0</span>;
 
-<span class="comment">/* nodes form one shuffled cycle; every load reveals the next address. */</span>
+<span class="comment">/* Each load reveals the address of the next load. */</span>
 <span class="kw">for</span> (<span class="type">size_t</span> step = <span class="num">0</span>; step &lt; steps; step++)
     current = nodes[current].next;</code></pre>
 
-      <p>本次 FIL-C 运行的部分输出：</p>
-
-      <pre><code>working-set KiB | ns/dependent-load
-              32 |              1.40
-             256 |              3.47
-            2048 |              8.90
-            8192 |             13.29
-           16384 |             60.80
-           65536 |            117.94</code></pre>
-
-      <div class="caveat">
-        这些台阶说明 working set 会改变访问代价，但不能直接据此宣布“某一级 cache
-        就是某个大小”。本次程序运行在 FIL-C 0.684 的 Linux/ARM64 VM 中，包含安全
-        检查、虚拟化、调度、TLB 和预取等影响。cache 容量应从目标机器拓扑读取，延迟
-        应在目标部署环境重复测量。
-      </div>
-
-      <h3>4.2 C 是 row-major：交换循环顺序就改变流量</h3>
-      <pre><code><span class="comment">/* contiguous: matrix[row][0], matrix[row][1], ... */</span>
-<span class="kw">for</span> (<span class="type">size_t</span> row = <span class="num">0</span>; row &lt; side; row++)
-    <span class="kw">for</span> (<span class="type">size_t</span> column = <span class="num">0</span>; column &lt; side; column++)
-        sum += matrix[row * side + column];
-
-<span class="comment">/* strided: each access jumps side * sizeof(uint64_t) bytes. */</span>
-<span class="kw">for</span> (<span class="type">size_t</span> column = <span class="num">0</span>; column &lt; side; column++)
-    <span class="kw">for</span> (<span class="type">size_t</span> row = <span class="num">0</span>; row &lt; side; row++)
-        sum += matrix[row * side + column];</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Working set</th>
+            <th>CPU 24 + local node 0</th>
+            <th>CPU 24 + remote node 2</th>
+            <th>主要解释</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>16 KiB</td>
+            <td>1.56 ns/load</td>
+            <td>1.60 ns/load</td>
+            <td>L1D hit</td>
+          </tr>
+          <tr>
+            <td>64 KiB</td>
+            <td>4.07 ns/load</td>
+            <td>4.14 ns/load</td>
+            <td>超过 32 KiB L1D，主要由 L2 承接</td>
+          </tr>
+          <tr>
+            <td>256 KiB</td>
+            <td>4.10 ns/load</td>
+            <td>4.09 ns/load</td>
+            <td>L2 plateau</td>
+          </tr>
+          <tr>
+            <td>512 KiB</td>
+            <td>7.97 ns/load</td>
+            <td>8.72 ns/load</td>
+            <td>达到名义 L2 容量，conflict 与 replacement 开始显现</td>
+          </tr>
+          <tr>
+            <td>1 MiB</td>
+            <td>13.92 ns/load</td>
+            <td>13.87 ns/load</td>
+            <td>主要进入 CCD L3</td>
+          </tr>
+          <tr>
+            <td>8 MiB</td>
+            <td>17.36 ns/load</td>
+            <td>17.46 ns/load</td>
+            <td>L3 plateau；DRAM placement 尚不重要</td>
+          </tr>
+          <tr>
+            <td>16 MiB</td>
+            <td>21.23 ns/load</td>
+            <td>22.84 ns/load</td>
+            <td>L3 pressure 上升</td>
+          </tr>
+          <tr>
+            <td>32 MiB</td>
+            <td>46.09 ns/load</td>
+            <td>119.52 ns/load</td>
+            <td>等于一个 CCD 的 L3 容量，进入混合 hit/miss 区</td>
+          </tr>
+          <tr>
+            <td>64 MiB</td>
+            <td>84.85 ns/load</td>
+            <td>246.33 ns/load</td>
+            <td>超过 CCD L3；本地与跨 socket DRAM 分离</td>
+          </tr>
+          <tr>
+            <td>256 MiB</td>
+            <td>111.48 ns/load</td>
+            <td>309.42 ns/load</td>
+            <td>稳定 DRAM 区；远端依赖链约为本地 2.8 倍</td>
+          </tr>
+        </tbody>
+      </table>
 
       <p>
-        两段代码执行相同数量的 C 加法，结果也完全相同；但第二段在
-        <code>side=2048</code> 时每次跨 16 KiB，几乎无法消费刚搬入 line 的相邻
-        元素。本次 32 MiB 矩阵实验中，最佳观测为：
-        <code>row=1.491 ms</code>、<code>column=12.160 ms</code>，
-        后者约慢 <code>8.16x</code>。差异同时包含 cache line 利用率、TLB、
-        预取和编译器向量化效果，不能只归因于某一级 miss。
+        三个转折与 sysfs 完整对应：32 KiB L1D、512 KiB L2、32 MiB CCD L3。
+        更关键的是，缓存命中阶段几乎不受物理页位于 node 0 还是 node 2 影响；一旦
+        working set 超过本 CCD L3，跨 socket 代价才被放大。这说明 cache hierarchy
+        与 NUMA 不是两个可分开调优的系统，而是一条连续的数据路径。
+      </p>
+
+      <div class="caveat">
+        名义容量点不代表“纯命中延迟”。tag、辅助数据、set conflict、替换策略和系统
+        干扰都会让转折提前；而且本次使用 4 KiB base page，THP 为
+        <code>madvise</code> 模式但程序没有请求 huge page，大 working set 的结果还
+        包含 DTLB miss 与 page walk。512 KiB 与 32 MiB 两行是混合区，应看 plateau
+        与多个相邻点，不应从单点反推官方 latency。
+      </div>
+
+      <h3>5.3 C row-major：最佳优化也不能修复被强制的坏布局</h3>
+      <p>
+        对纯 unsigned reduction，GCC <code>-O3 -flto</code> 可以合法地重排、合并或
+        消除不影响可观察结果的计算；一个中间版本因此错误测出 column-major 与
+        row-major 近似 <code>1:1</code>。benchmark 把 matrix 参数声明为
+        <code>volatile</code>，只用于强制保留源代码访问顺序：
+      </p>
+
+      <pre><code><span class="comment">/* Benchmark guard only: volatile prevents loop interchange and DCE. */</span>
+<span class="kw">static</span> <span class="type">uint64_t</span>
+sum_columns(<span class="kw">const volatile</span> <span class="type">uint64_t</span> *matrix, <span class="type">size_t</span> side)
+{
+    <span class="type">uint64_t</span> sum = <span class="num">0</span>;
+
+    <span class="kw">for</span> (<span class="type">size_t</span> column = <span class="num">0</span>; column &lt; side; column++)
+        <span class="kw">for</span> (<span class="type">size_t</span> row = <span class="num">0</span>; row &lt; side; row++)
+            sum += matrix[row * side + column];
+    <span class="kw">return</span> sum;
+}</code></pre>
+
+      <p>
+        对 2048 × 2048、32 MiB 的 <code>uint64_t</code> 矩阵，7 轮中位数为：
+        row-major <code>1.687 ms</code>，column-major <code>28.604 ms</code>，
+        后者慢 <code>16.96x</code>。这里的 <code>volatile</code> 是微基准控制手段，
+        会阻止向量化和部分 load 优化，不应照搬进生产热循环。
+      </p>
+
+      <h3>5.4 PMU：wall time 之后的解释证据</h3>
+      <p>
+        该机器的普通 per-process <code>perf stat</code> 返回
+        <code>&lt;not counted&gt;</code>；改为只统计 CPU 24 的 system-wide 模式后
+        可用。对 locality workload 做 5 次重复，AMD 原生事件得到：
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>AMD 事件</th>
+            <th>平均计数</th>
+            <th>含义</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ls_dc_accesses</code></td>
+            <td>74.27 M</td>
+            <td>L1 data cache load/store accesses</td>
+          </tr>
+          <tr>
+            <td><code>l1_data_cache_fills_all</code></td>
+            <td>50.22 M</td>
+            <td>L1 data cache fills</td>
+          </tr>
+          <tr>
+            <td><code>l2_cache_accesses_from_dc_misses</code></td>
+            <td>50.65 M</td>
+            <td>L1D miss 后访问 L2</td>
+          </tr>
+          <tr>
+            <td><code>l2_cache_misses_from_dc_misses</code></td>
+            <td>19.91 M</td>
+            <td>L1D miss 且继续 miss L2</td>
+          </tr>
+          <tr>
+            <td><code>amd_l3/event=0x4,umask=0xff/</code></td>
+            <td>52.96 M</td>
+            <td>目标 CCD 的 L3 accesses</td>
+          </tr>
+          <tr>
+            <td><code>amd_l3/event=0x4,umask=0x1/</code></td>
+            <td>4.91 M</td>
+            <td>L3 misses，包含 cache-line state change 请求</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        core PMU 四事件组只获得约 41% running time，perf 对 multiplex 后计数做了
+        scaling；L3 uncore 事件又来自独立运行。因此这些数支持“访问确实逐级下沉”，
+        但不应混合相除成精确 hit rate。最终结论必须同时满足：拓扑吻合、wall-time
+        台阶可重复、PMU 方向一致。
       </p>
     </section>
 
     <section>
-      <h2>5. 实际编码技巧</h2>
+      <h2>6. 实际编码技巧</h2>
 
-      <h3>5.1 先改变访问流，不要先猜硬件常数</h3>
+      <h3>6.1 先改变访问流，不要先猜硬件常数</h3>
       <ul class="compact">
         <li>把热循环的数据放进连续数组，避免 allocator 随机散布的链表和对象图。</li>
         <li>缩小 hot record；把低频字段拆到 cold storage，减少每个 line 的无效字节。</li>
@@ -791,7 +1029,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
     <span class="type">float</span> *z;
 };</code></pre>
 
-      <h3>5.2 Blocking：让正在复用的 tile 留在快层</h3>
+      <h3>6.2 Blocking：让正在复用的 tile 留在快层</h3>
       <p>
         tiling 的目标不是“循环更复杂”，而是把 reuse distance 从整张矩阵缩短到一个
         tile。下面是 blocked transpose 的骨架；<code>tile</code> 不是永恒常数，要让
@@ -816,25 +1054,29 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
                     dst[j * n + i] = src[i * n + j];
 }</code></pre>
 
-      <h3>5.3 并发写入要按 coherence line 思考</h3>
+      <h3>6.3 并发写入要按 coherence line 思考</h3>
       <p>
         两个线程修改不同变量，若变量落在同一 coherence line，仍会让 line 在核心间
         反复失效，这就是 false sharing。C11 的 <code>_Alignas</code> 可以控制起点，
         但真正需要的是字段间距至少覆盖目标机器的 line size：
       </p>
 
-      <pre><code><span class="kw">struct</span> worker_counter {
-    _Alignas(<span class="num">128</span>) _Atomic <span class="type">uint64_t</span> value;
-    <span class="type">unsigned char</span> padding[<span class="num">128</span> - <span class="kw">sizeof</span>(_Atomic <span class="type">uint64_t</span>)];
+      <pre><code><span class="kw">enum</span> { CACHE_LINE_BYTES = <span class="num">64</span> }; <span class="comment">/* Read from the target topology. */</span>
+
+<span class="kw">struct</span> worker_counter {
+    _Alignas(CACHE_LINE_BYTES) _Atomic <span class="type">uint64_t</span> value;
+    <span class="type">unsigned char</span> padding[
+        CACHE_LINE_BYTES - <span class="kw">sizeof</span>(_Atomic <span class="type">uint64_t</span>)];
 };</code></pre>
 
       <p>
-        <code>128</code> 只是示例，不应复制为跨平台真理。对本机读取 line size，
-        再检查数组 stride 和实际字段 offset。padding 会增大 footprint，可能把问题
-        从 coherence 转成 capacity/TLB miss，所以只对有证据的热点使用。
+        目标 EPYC 的 line size 是 64 B，但这个常量不应复制为跨平台真理。部署到其他
+        CPU 前重新读取 line size，并检查数组 stride 和实际字段 offset。padding 会
+        增大 footprint，可能把问题从 coherence 转成 capacity/TLB miss，所以只对
+        有证据的热点使用。
       </p>
 
-      <h3>5.4 Prefetch 是延迟隐藏，不是减少数据量</h3>
+      <h3>6.4 Prefetch 是延迟隐藏，不是减少数据量</h3>
       <p>
         顺序和固定 stride 通常先交给硬件预取器。软件 prefetch 只有在地址能提前计算、
         中间有足够计算可覆盖延迟、prefetch 不会过早被逐出且不会挤掉热数据时才可能
@@ -853,7 +1095,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
     consume(items[i]);
 }</code></pre>
 
-      <h3>5.5 Streaming 写与 cache pollution</h3>
+      <h3>6.5 Streaming 写与 cache pollution</h3>
       <p>
         对巨大、单次写入且短期不读回的输出，write-allocate 可能先读入 line，再写满并
         驱逐，污染 cache。特定 ISA 的 non-temporal store 可绕开部分层级或降低污染，
@@ -861,7 +1103,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
         cache、短期无复用且带宽受限，再选择目标架构实现；不要把它包装成默认 store。
       </p>
 
-      <h3>5.6 代码布局和数据布局是两条流</h3>
+      <h3>6.6 代码布局和数据布局是两条流</h3>
       <p>
         L1I 与 L1D 分离意味着 instruction footprint 也需要治理。过度模板化、复制
         热路径、巨大 switch 和冷错误处理内联会挤压 I-cache；数据端则关注 record
@@ -871,7 +1113,7 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
     </section>
 
     <section>
-      <h2>6. 正确的测量流程</h2>
+      <h2>7. 正确的测量流程</h2>
       <ol class="flow">
         <li><strong>固定 workload</strong><br>真实数据分布、并发度、CPU 亲和性、输入规模和 warm-up。</li>
         <li><strong>读取拓扑</strong><br>确认 level、type、size、line size、共享 CPU 和 NUMA。</li>
@@ -879,15 +1121,16 @@ hierarchy_amat(<span class="kw">const</span> <span class="kw">struct</span> cach
         <li><strong>单变量实验</strong><br>只改布局、tile 或线程放置之一，重复运行并看尾延迟。</li>
       </ol>
 
-      <h3>6.1 Linux</h3>
+      <h3>7.1 Linux</h3>
       <pre><code><span class="comment"># Topology; do not assume L2/L3 sharing.</span>
 lscpu -C
 find /sys/devices/system/cpu/cpu0/cache -maxdepth 2 -type f -print
 
-<span class="comment"># Discover the exact events supported by this PMU first.</span>
-perf list cache
-perf stat -r 10 -e cycles,instructions,cache-references,cache-misses \
-  -- ./workload
+<span class="comment"># Discover native events; pin workload and system-wide counters together.</span>
+perf list --details
+perf stat -a -C 24 -r 5 \
+  -e ls_dc_accesses,l1_data_cache_fills_all \
+  -- numactl --physcpubind=24 --membind=0 ./workload
 
 <span class="comment"># For false sharing on supported systems.</span>
 perf c2c record -- ./workload
@@ -899,7 +1142,7 @@ perf c2c report</code></pre>
         <code>perf list</code>、处理器事件文档和采样覆盖率解释。
       </p>
 
-      <h3>6.2 macOS / Apple Silicon</h3>
+      <h3>7.2 macOS / Apple Silicon</h3>
       <pre><code><span class="comment"># Heterogeneous cores may report per-performance-level values.</span>
 sysctl hw.cachelinesize
 sysctl hw.l1icachesize
@@ -913,7 +1156,7 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
         会把多种硬件行为混在一次测量中，因此需要固定场景并检查调度位置。
       </p>
 
-      <h3>6.3 不要只看 miss rate</h3>
+      <h3>7.3 不要只看 miss rate</h3>
       <p>至少同时回答：</p>
       <ul class="compact">
         <li>每条指令多少 miss，而不是只有“cache references 中的百分比”？</li>
@@ -925,7 +1168,7 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
     </section>
 
     <section>
-      <h2>7. 常见误区</h2>
+      <h2>8. 常见误区</h2>
       <table>
         <thead>
           <tr>
@@ -967,7 +1210,7 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
     </section>
 
     <section>
-      <h2>8. 可执行的优化顺序</h2>
+      <h2>9. 可执行的优化顺序</h2>
       <ol class="compact">
         <li><strong>先证明 memory-bound。</strong> 用 wall time、IPC、stall 和带宽排除计算、锁和 I/O。</li>
         <li><strong>画出访问流。</strong> 标明每轮读取字段、stride、复用距离、写入者和共享线程。</li>
@@ -986,7 +1229,7 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
     </section>
 
     <section>
-      <h2>9. 证据与边界</h2>
+      <h2>10. 证据与边界</h2>
       <p>
         原文提供物理直觉；下列理论和工具资料用于支撑公式、算法模型与观测方法。
         本文没有把任何具体 cache 容量、latency 或 line size 当作跨 CPU 常量。
@@ -1001,13 +1244,15 @@ sysctl -a | grep 'hw.perflevel'</code></pre>
         <li>Naveen Muralimanohar, Rajeev Balasubramonian, Norman Jouppi, “CACTI 6.0: A Tool to Model Large Caches”, 2009.</li>
         <li>Wm. A. Wulf and Sally A. McKee, “Hitting the Memory Wall”, ACM SIGARCH Computer Architecture News 23(1), 1995, doi:10.1145/216585.216588.</li>
         <li>Intel 64 and IA-32 Architectures Optimization Reference Manual, version 050, 2026.</li>
+        <li>AMD, “Ecosystem Readiness for 3rd Generation AMD EPYC Processors”, 2021.</li>
         <li>Linux kernel documentation: CPU cache sysfs ABI, perf-stat, and false-sharing analysis.</li>
         <li>Apple, “Optimize CPU performance with Instruments”, WWDC 2025.</li>
+        <li>Target-machine evidence: AMD EPYC 7Y83 topology, sysfs cache data, NUMA distances, native GCC benchmark, and AMD PMU events collected on 2026-09-07.</li>
       </ol>
     </section>
 
     <footer>
-      Composed 2026-09-07 16:49:55 +0800 by ce-explain
+      Composed 2026-09-07 20:00:43 +0800 by ce-explain
     </footer>
   </main>
 </body>
