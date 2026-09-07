@@ -444,8 +444,8 @@ Parent unchanged       Parent sees child write
 ### 5.2 输出如何解读
 
 一次 FIL-C 运行中，4 MiB 匿名 mapping 的首次逐页写入观察到 1024 个
-minor fault、0 个 major fault；第二次写入仍出现少量 runtime 噪声，但远低于
-首次逐页触页。RSS 在首次写入后增长约 4 MiB。
+minor fault、0 个 major fault；第二次写入观察到 0 个 fault。RSS 在首次
+写入后增长约 4 MiB。
 
 这些数字不是测试断言：
 
@@ -480,7 +480,7 @@ minor fault、0 个 major fault；第二次写入仍出现少量 runtime 噪声�
 - 没有制造 major fault；这需要受控冷 file cache 或 swap 环境。
 - 没有比较 `mmap` 与 `read` 性能；这必须使用真实文件、访问模式和并发。
 - 没有测试 NUMA；单 node VM 无法代表多 socket production topology。
-- `msync(MS_SYNC)` 只用于展示同步 file mapping，不等于完整数据库事务协议。
+- 没有调用 `msync` 或 `fsync`；共享值可见性不构成掉电持久性证明。
 
 ## 6. 从文章到代码评审
 

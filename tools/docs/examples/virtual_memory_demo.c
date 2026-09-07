@@ -2,16 +2,12 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -39,7 +35,7 @@ struct child_report
 
 static void fail(const char *operation)
 {
-    fprintf(stderr, "%s: %s\n", operation, strerror(errno));
+    perror(operation);
     exit(EXIT_FAILURE);
 }
 
@@ -162,6 +158,7 @@ static void demonstrate_demand_paging(size_t page_size)
     struct process_memory after_touch;
     struct fault_counts before_first_touch;
     struct fault_counts after_first_touch;
+    struct fault_counts before_second_touch;
     struct fault_counts after_second_touch;
     volatile unsigned char *mapping;
     size_t index;
@@ -185,14 +182,15 @@ static void demonstrate_demand_paging(size_t page_size)
         mapping[index * page_size] = (unsigned char)(index & 0xffU);
     after_first_touch = read_fault_counts();
     after_touch = read_process_memory();
+    before_second_touch = read_fault_counts();
     for (index = 0; index < page_count; index++)
         mapping[index * page_size] ^= 1U;
     after_second_touch = read_fault_counts();
 
     assert(after_first_touch.minor >= before_first_touch.minor);
     assert(after_first_touch.major >= before_first_touch.major);
-    assert(after_second_touch.minor >= after_first_touch.minor);
-    assert(after_second_touch.major >= after_first_touch.major);
+    assert(after_second_touch.minor >= before_second_touch.minor);
+    assert(after_second_touch.major >= before_second_touch.major);
 
     puts("[2] Reservation versus residency");
     printf("  anonymous mapping: address=%p, %zu pages (%zu KiB)\n",
@@ -203,8 +201,8 @@ static void demonstrate_demand_paging(size_t page_size)
            after_first_touch.minor - before_first_touch.minor,
            after_first_touch.major - before_first_touch.major);
     printf("  second pass faults: minor=%ld major=%ld\n",
-           after_second_touch.minor - after_first_touch.minor,
-           after_second_touch.major - after_first_touch.major);
+           after_second_touch.minor - before_second_touch.minor,
+           after_second_touch.major - before_second_touch.major);
     print_memory("before mmap", before_map);
     print_memory("after mmap", after_map);
     print_memory("after first touch", after_touch);
@@ -304,8 +302,6 @@ static void demonstrate_shared_file(size_t page_size)
     if (child == 0)
     {
         mapping[0] = 0x42;
-        if (msync(mapping, page_size, MS_SYNC) != 0)
-            fail("child msync");
         _exit(EXIT_SUCCESS);
     }
     wait_for_success(child);
