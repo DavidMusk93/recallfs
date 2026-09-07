@@ -12,11 +12,12 @@ enum
 {
     PROBE_GRANULE_BYTES = 64,
     MIN_PROBE_BYTES = 4 * 1024,
-    MAX_PROBE_BYTES = 64 * 1024 * 1024,
+    MAX_PROBE_BYTES = 256 * 1024 * 1024,
     MIN_PROBE_STEPS = 1 * 1024 * 1024,
     MAX_PROBE_STEPS = 8 * 1024 * 1024,
+    PROBE_ROUNDS = 7,
     MATRIX_SIDE = 2048,
-    LOCALITY_ROUNDS = 3
+    LOCALITY_ROUNDS = 7
 };
 
 struct cache_level
@@ -144,6 +145,24 @@ static size_t probe_step_count(size_t node_count)
     return steps;
 }
 
+static void sort_samples(double *samples, size_t count)
+{
+    size_t index;
+
+    for (index = 1; index < count; index++)
+    {
+        double value = samples[index];
+        size_t insertion = index;
+
+        while (insertion > 0 && samples[insertion - 1] > value)
+        {
+            samples[insertion] = samples[insertion - 1];
+            insertion--;
+        }
+        samples[insertion] = value;
+    }
+}
+
 static double measure_dependent_loads(const struct probe_node *nodes,
                                       size_t node_count,
                                       size_t steps)
@@ -169,8 +188,8 @@ static void demonstrate_working_set_knees(void)
 {
     size_t bytes;
 
-    puts("[2] Random dependent-load sweep");
-    puts("  working-set KiB | ns/dependent-load");
+    printf("[2] Random dependent-load sweep (%d rounds)\n", PROBE_ROUNDS);
+    puts("  working-set KiB | median ns/load | min ns/load | max ns/load");
 
     for (bytes = MIN_PROBE_BYTES; bytes <= MAX_PROBE_BYTES; bytes *= 2)
     {
@@ -178,21 +197,31 @@ static void demonstrate_working_set_knees(void)
         size_t steps = probe_step_count(node_count);
         struct probe_node *nodes = calloc(node_count, sizeof(*nodes));
         uint32_t *order = malloc(node_count * sizeof(*order));
-        double nanoseconds;
+        double samples[PROBE_ROUNDS];
+        int round;
 
         if (nodes == NULL || order == NULL)
             fail("allocate pointer-chase working set");
 
         build_random_cycle(nodes, order, node_count);
-        nanoseconds = measure_dependent_loads(nodes, node_count, steps);
-        printf("  %15zu | %17.2f\n", bytes / 1024, nanoseconds);
+        for (round = 0; round < PROBE_ROUNDS; round++)
+        {
+            samples[round] =
+                measure_dependent_loads(nodes, node_count, steps);
+        }
+        sort_samples(samples, PROBE_ROUNDS);
+        printf("  %15zu | %14.2f | %11.2f | %11.2f\n",
+               bytes / 1024,
+               samples[PROBE_ROUNDS / 2],
+               samples[0],
+               samples[PROBE_ROUNDS - 1]);
 
         free(order);
         free(nodes);
     }
 }
 
-static uint64_t sum_rows(const uint64_t *matrix, size_t side)
+static uint64_t sum_rows(const volatile uint64_t *matrix, size_t side)
 {
     uint64_t sum = 0;
     size_t row;
@@ -207,7 +236,7 @@ static uint64_t sum_rows(const uint64_t *matrix, size_t side)
     return sum;
 }
 
-static uint64_t sum_columns(const uint64_t *matrix, size_t side)
+static uint64_t sum_columns(const volatile uint64_t *matrix, size_t side)
 {
     uint64_t sum = 0;
     size_t column;
@@ -222,15 +251,19 @@ static uint64_t sum_columns(const uint64_t *matrix, size_t side)
     return sum;
 }
 
-static double measure_sum(uint64_t (*sum)(const uint64_t *, size_t),
-                          const uint64_t *matrix,
-                          size_t side,
-                          uint64_t *result)
+static double measure_sum(
+    uint64_t (*sum)(const volatile uint64_t *, size_t),
+    const volatile uint64_t *matrix,
+    size_t side,
+    uint64_t *result)
 {
     double started = monotonic_seconds();
+    double elapsed;
 
     *result = sum(matrix, side);
-    return monotonic_seconds() - started;
+    elapsed = monotonic_seconds() - started;
+    observation_sink = *result;
+    return elapsed;
 }
 
 static void demonstrate_spatial_locality(void)
@@ -239,8 +272,8 @@ static void demonstrate_spatial_locality(void)
     const size_t bytes = element_count * sizeof(uint64_t);
     uint64_t *matrix = malloc(bytes);
     uint64_t expected = 0;
-    double best_row_seconds = 1.0e100;
-    double best_column_seconds = 1.0e100;
+    double row_samples[LOCALITY_ROUNDS];
+    double column_samples[LOCALITY_ROUNDS];
     size_t index;
     int round;
 
@@ -257,42 +290,44 @@ static void demonstrate_spatial_locality(void)
     {
         uint64_t row_sum;
         uint64_t column_sum;
-        double row_seconds;
-        double column_seconds;
 
         if ((round & 1) == 0)
         {
-            row_seconds =
+            row_samples[round] =
                 measure_sum(sum_rows, matrix, MATRIX_SIDE, &row_sum);
-            column_seconds =
+            column_samples[round] =
                 measure_sum(sum_columns, matrix, MATRIX_SIDE, &column_sum);
         }
         else
         {
-            column_seconds =
+            column_samples[round] =
                 measure_sum(sum_columns, matrix, MATRIX_SIDE, &column_sum);
-            row_seconds =
+            row_samples[round] =
                 measure_sum(sum_rows, matrix, MATRIX_SIDE, &row_sum);
         }
 
         assert(row_sum == expected);
         assert(column_sum == expected);
-        if (row_seconds < best_row_seconds)
-            best_row_seconds = row_seconds;
-        if (column_seconds < best_column_seconds)
-            best_column_seconds = column_seconds;
-        observation_sink ^= row_sum ^ column_sum;
     }
+    sort_samples(row_samples, LOCALITY_ROUNDS);
+    sort_samples(column_samples, LOCALITY_ROUNDS);
 
-    puts("[3] C row-major layout");
+    printf("[3] C row-major layout (%d rounds)\n", LOCALITY_ROUNDS);
     printf("  matrix:       %d x %d (%zu MiB)\n",
            MATRIX_SIDE,
            MATRIX_SIDE,
            bytes / (1024 * 1024));
-    printf("  row-major:    %.3f ms\n", best_row_seconds * 1.0e3);
-    printf("  column-major: %.3f ms\n", best_column_seconds * 1.0e3);
-    printf("  ratio:        %.2fx\n",
-           best_column_seconds / best_row_seconds);
+    printf("  row-major:    %.3f ms median [%.3f, %.3f]\n",
+           row_samples[LOCALITY_ROUNDS / 2] * 1.0e3,
+           row_samples[0] * 1.0e3,
+           row_samples[LOCALITY_ROUNDS - 1] * 1.0e3);
+    printf("  column-major: %.3f ms median [%.3f, %.3f]\n",
+           column_samples[LOCALITY_ROUNDS / 2] * 1.0e3,
+           column_samples[0] * 1.0e3,
+           column_samples[LOCALITY_ROUNDS - 1] * 1.0e3);
+    printf("  median ratio: %.2fx\n",
+           column_samples[LOCALITY_ROUNDS / 2]
+               / row_samples[LOCALITY_ROUNDS / 2]);
 
     free(matrix);
 }
