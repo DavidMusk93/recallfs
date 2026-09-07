@@ -201,7 +201,6 @@ static uint64_t read_with_pread(int fd, size_t length)
 
     check(posix_memalign((void **)&buffer, 4096U, block_size) == 0,
           "posix_memalign pread buffer failed");
-    memset(buffer, 0, block_size);
 
     for (offset = 0; offset < length; offset += block_size)
     {

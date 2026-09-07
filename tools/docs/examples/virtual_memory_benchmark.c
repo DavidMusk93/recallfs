@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 
 #include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include <sched.h>
@@ -13,7 +12,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -82,7 +80,6 @@ struct protect_worker
 };
 
 static volatile uint64_t observation_sink;
-static uint64_t random_state = UINT64_C(0x9e3779b97f4a7c15);
 
 static void fail(const char *operation)
 {
@@ -114,14 +111,14 @@ static double monotonic_seconds(void)
     return (double)now.tv_sec + (double)now.tv_nsec / 1.0e9;
 }
 
-static uint64_t next_random_u64(void)
+static uint64_t next_random_u64(uint64_t *state)
 {
-    uint64_t value = random_state;
+    uint64_t value = *state;
 
     value ^= value << 13;
     value ^= value >> 7;
     value ^= value << 17;
-    random_state = value;
+    *state = value;
     return value;
 }
 
@@ -253,6 +250,20 @@ static enum walk_kind parse_walk_kind(const char *text)
     return WALK_SEQUENTIAL;
 }
 
+static void advise_mapping(void *mapping, size_t length, enum mapping_kind kind)
+{
+    if (kind == MAPPING_BASE)
+    {
+        if (madvise(mapping, length, MADV_NOHUGEPAGE) != 0)
+            fail("madvise MADV_NOHUGEPAGE");
+    }
+    else if (kind == MAPPING_THP)
+    {
+        if (madvise(mapping, length, MADV_HUGEPAGE) != 0)
+            fail("madvise MADV_HUGEPAGE");
+    }
+}
+
 static void *map_memory(size_t length, enum mapping_kind kind)
 {
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -269,16 +280,7 @@ static void *map_memory(size_t length, enum mapping_kind kind)
     if (mapping == MAP_FAILED)
         fail("mmap benchmark memory");
 
-    if (kind == MAPPING_BASE)
-    {
-        if (madvise(mapping, length, MADV_NOHUGEPAGE) != 0)
-            fail("madvise MADV_NOHUGEPAGE");
-    }
-    else if (kind == MAPPING_THP)
-    {
-        if (madvise(mapping, length, MADV_HUGEPAGE) != 0)
-            fail("madvise MADV_HUGEPAGE");
-    }
+    advise_mapping(mapping, length, kind);
 
     return mapping;
 }
@@ -376,7 +378,7 @@ static void print_numa_map(void *mapping)
     check(0, "mapping %p was not found in /proc/self/numa_maps", mapping);
 }
 
-static void shuffle_indices(uint32_t *indices, size_t count)
+static void shuffle_indices(uint32_t *indices, size_t count, uint64_t *state)
 {
     size_t index;
 
@@ -386,7 +388,7 @@ static void shuffle_indices(uint32_t *indices, size_t count)
         indices[index] = (uint32_t)index;
     for (index = count - 1; index > 0; index--)
     {
-        size_t other = (size_t)(next_random_u64() % (index + 1));
+        size_t other = (size_t)(next_random_u64(state) % (index + 1));
         uint32_t temporary = indices[index];
 
         indices[index] = indices[other];
@@ -418,8 +420,16 @@ static void run_fault(size_t mebibytes, size_t rounds)
         double second_seconds;
 
         started = monotonic_seconds();
-        mapping = map_memory(length, MAPPING_BASE);
+        mapping = mmap(NULL,
+                       length,
+                       PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS,
+                       -1,
+                       0);
+        if (mapping == MAP_FAILED)
+            fail("mmap fault benchmark");
         reserve_seconds = monotonic_seconds() - started;
+        advise_mapping((void *)mapping, length, MAPPING_BASE);
         after_map = read_process_memory();
 
         before_first = read_fault_counts_self();
@@ -477,7 +487,8 @@ static void run_walk(enum walk_kind walk,
     const size_t length = mebibytes_to_bytes(mebibytes);
     const size_t page_count = length / page_size;
     volatile unsigned char *mapping;
-    uint32_t *order;
+    uint32_t *order = NULL;
+    uint64_t shuffle_state = UINT64_C(0x9e3779b97f4a7c15);
     struct mapping_info info;
     size_t round;
 
@@ -486,10 +497,13 @@ static void run_walk(enum walk_kind walk,
     mapping = map_memory(length, mapping_kind);
     touch_pages(mapping, length, page_size, 1U);
 
-    order = malloc(page_count * sizeof(*order));
-    if (order == NULL)
-        fail("malloc walk order");
-    shuffle_indices(order, page_count);
+    if (walk == WALK_RANDOM)
+    {
+        order = malloc(page_count * sizeof(*order));
+        if (order == NULL)
+            fail("malloc walk order");
+        shuffle_indices(order, page_count, &shuffle_state);
+    }
 
     info = read_mapping_info((void *)mapping);
     printf("MAPPING mode=walk kind=%s access=%s mib=%zu "
