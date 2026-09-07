@@ -843,62 +843,62 @@ numactl --physcpubind=24 --membind=2 ./cache-hierarchy-native latency</code></pr
         <tbody>
           <tr>
             <td>16 KiB</td>
-            <td>1.56 ns/load</td>
-            <td>1.60 ns/load</td>
+            <td>1.87 ns/load</td>
+            <td>1.87 ns/load</td>
             <td>L1D hit</td>
           </tr>
           <tr>
             <td>64 KiB</td>
-            <td>4.07 ns/load</td>
-            <td>4.14 ns/load</td>
+            <td>4.37 ns/load</td>
+            <td>4.38 ns/load</td>
             <td>超过 32 KiB L1D，主要由 L2 承接</td>
           </tr>
           <tr>
             <td>256 KiB</td>
-            <td>4.10 ns/load</td>
-            <td>4.09 ns/load</td>
+            <td>4.42 ns/load</td>
+            <td>4.40 ns/load</td>
             <td>L2 plateau</td>
           </tr>
           <tr>
             <td>512 KiB</td>
-            <td>7.97 ns/load</td>
-            <td>8.72 ns/load</td>
+            <td>7.89 ns/load</td>
+            <td>8.40 ns/load</td>
             <td>达到名义 L2 容量，conflict 与 replacement 开始显现</td>
           </tr>
           <tr>
             <td>1 MiB</td>
-            <td>13.92 ns/load</td>
-            <td>13.87 ns/load</td>
+            <td>14.31 ns/load</td>
+            <td>14.34 ns/load</td>
             <td>主要进入 CCD L3</td>
           </tr>
           <tr>
             <td>8 MiB</td>
-            <td>17.36 ns/load</td>
-            <td>17.46 ns/load</td>
+            <td>17.63 ns/load</td>
+            <td>17.69 ns/load</td>
             <td>L3 plateau；DRAM placement 尚不重要</td>
           </tr>
           <tr>
             <td>16 MiB</td>
-            <td>21.23 ns/load</td>
-            <td>22.84 ns/load</td>
+            <td>21.28 ns/load</td>
+            <td>22.15 ns/load</td>
             <td>L3 pressure 上升</td>
           </tr>
           <tr>
             <td>32 MiB</td>
-            <td>46.09 ns/load</td>
-            <td>119.52 ns/load</td>
+            <td>43.31 ns/load</td>
+            <td>112.21 ns/load</td>
             <td>等于一个 CCD 的 L3 容量，进入混合 hit/miss 区</td>
           </tr>
           <tr>
             <td>64 MiB</td>
-            <td>84.85 ns/load</td>
-            <td>246.33 ns/load</td>
+            <td>83.43 ns/load</td>
+            <td>257.34 ns/load</td>
             <td>超过 CCD L3；本地与跨 socket DRAM 分离</td>
           </tr>
           <tr>
             <td>256 MiB</td>
             <td>111.48 ns/load</td>
-            <td>309.42 ns/load</td>
+            <td>314.09 ns/load</td>
             <td>稳定 DRAM 区；远端依赖链约为本地 2.8 倍</td>
           </tr>
         </tbody>
@@ -941,7 +941,7 @@ sum_columns(<span class="kw">const volatile</span> <span class="type">uint64_t</
 
       <p>
         对 2048 × 2048、32 MiB 的 <code>uint64_t</code> 矩阵，7 轮中位数为：
-        row-major <code>1.687 ms</code>，column-major <code>28.604 ms</code>，
+        row-major <code>1.686 ms</code>，column-major <code>28.596 ms</code>，
         后者慢 <code>16.96x</code>。这里的 <code>volatile</code> 是微基准控制手段，
         会阻止向量化和部分 load 优化，不应照搬进生产热循环。
       </p>

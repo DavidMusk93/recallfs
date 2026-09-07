@@ -1,7 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,24 +162,31 @@ static void sort_samples(double *samples, size_t count)
     }
 }
 
-static double measure_dependent_loads(const struct probe_node *nodes,
-                                      size_t node_count,
-                                      size_t steps)
+static uint32_t follow_dependent_loads(
+    const volatile struct probe_node *nodes,
+    size_t steps)
 {
     uint32_t current = 0;
     size_t step;
-    double started;
-    double elapsed;
 
-    for (step = 0; step < node_count; step++)
-        current = nodes[current].next;
-
-    started = monotonic_seconds();
     for (step = 0; step < steps; step++)
         current = nodes[current].next;
+    return current;
+}
+
+static double measure_dependent_loads(
+    const volatile struct probe_node *nodes,
+    size_t steps)
+{
+    double started;
+    double elapsed;
+    uint32_t current;
+
+    started = monotonic_seconds();
+    current = follow_dependent_loads(nodes, steps);
     elapsed = monotonic_seconds() - started;
 
-    observation_sink ^= current;
+    observation_sink = current;
     return elapsed * 1.0e9 / (double)steps;
 }
 
@@ -204,10 +210,10 @@ static void demonstrate_working_set_knees(void)
             fail("allocate pointer-chase working set");
 
         build_random_cycle(nodes, order, node_count);
+        observation_sink = follow_dependent_loads(nodes, node_count);
         for (round = 0; round < PROBE_ROUNDS; round++)
         {
-            samples[round] =
-                measure_dependent_loads(nodes, node_count, steps);
+            samples[round] = measure_dependent_loads(nodes, steps);
         }
         sort_samples(samples, PROBE_ROUNDS);
         printf("  %15zu | %14.2f | %11.2f | %11.2f\n",
