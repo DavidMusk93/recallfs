@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -205,6 +206,57 @@ static void demonstrate_address_split(size_t page_size)
            page_size);
 }
 
+static void demonstrate_memory_protection(size_t page_size)
+{
+    volatile unsigned char *mapping;
+    pid_t child;
+    int status;
+
+    mapping = mmap(NULL,
+                   page_size,
+                   PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS,
+                   -1,
+                   0);
+    if (mapping == MAP_FAILED)
+        fail("mmap protection");
+    mapping[0] = 0x5a;
+    if (mprotect((void *)mapping, page_size, PROT_READ) != 0)
+        fail("mprotect read-only");
+
+    child = fork();
+    if (child < 0)
+        fail("fork protection");
+    if (child == 0)
+    {
+        mapping[0] = 0xa5;
+        _exit(42);
+    }
+    while (waitpid(child, &status, 0) < 0)
+    {
+        if (errno != EINTR)
+            fail("waitpid protection");
+    }
+    check(WIFSIGNALED(status),
+          "read-only write unexpectedly completed: status=%d",
+          status);
+    check(mapping[0] == 0x5a,
+          "failed child write changed parent byte to 0x%02x",
+          (unsigned int)mapping[0]);
+
+    if (mprotect((void *)mapping, page_size, PROT_READ | PROT_WRITE) != 0)
+        fail("mprotect restore read-write");
+    mapping[0] = 0xa5;
+    check(mapping[0] == 0xa5, "restored write permission did not take effect");
+
+    puts("[2] Page permission enforcement");
+    printf("  read-only child write terminated by signal=%d\n",
+           WTERMSIG(status));
+
+    if (munmap((void *)mapping, page_size) != 0)
+        fail("munmap protection");
+}
+
 static void demonstrate_demand_paging(size_t page_size)
 {
     const size_t page_count = 1024;
@@ -284,7 +336,7 @@ static void demonstrate_demand_paging(size_t page_size)
           first_touch_minor_delta,
           second_touch_minor_delta);
 
-    puts("[2] Reservation versus residency");
+    puts("[3] Reservation versus residency");
     printf("  anonymous mapping: address=%p, %zu pages (%zu KiB)\n",
            (void *)mapping,
            page_count,
@@ -383,7 +435,7 @@ static void demonstrate_copy_on_write(size_t page_size)
           "child major-fault counter moved backward: delta=%ld",
           report.major_fault_delta);
 
-    puts("[3] Copy-on-write after fork");
+    puts("[4] Copy-on-write after fork");
     printf("  child: 0x%02x -> 0x%02x across %zu pages, "
            "faults minor=%ld major=%ld\n",
            report.before,
@@ -439,7 +491,7 @@ static void demonstrate_shared_file(size_t page_size)
           "file byte is 0x%02x instead of 0x42",
           (unsigned int)persisted);
 
-    puts("[4] Shared file mapping");
+    puts("[5] Shared file mapping");
     printf("  parent sees child byte=0x%02x; file byte=0x%02x\n",
            mapping[0],
            persisted);
@@ -458,6 +510,7 @@ int main(void)
         fail("sysconf _SC_PAGESIZE");
     puts("Virtual memory demo (Linux semantics)");
     demonstrate_address_split((size_t)page_size);
+    demonstrate_memory_protection((size_t)page_size);
     demonstrate_demand_paging((size_t)page_size);
     demonstrate_copy_on_write((size_t)page_size);
     demonstrate_shared_file((size_t)page_size);
