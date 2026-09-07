@@ -75,9 +75,11 @@ Observed output:
 
 ```text
 zeroing: explicit=128 elided=256
-FIL-C allocator tests passed: 3 suites
+FIL-C allocator tests passed: 4 suites
 ```
 
 The test demonstrates that fresh and fully reclaimed zeroed requests elide
 `256` bytes of explicit clearing, while dirty reuse clears `128` bytes. This is
 not a throughput benchmark and is not comparable to the article's percentages.
+The same suite also passes with `-DNDEBUG`, and CMake Release + CTest runs the
+Linux binary through the explicit FIL-C runner.

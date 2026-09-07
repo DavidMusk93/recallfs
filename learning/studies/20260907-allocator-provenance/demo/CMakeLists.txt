@@ -22,5 +22,13 @@ target_compile_options(
     -Werror
 )
 
+set(FIL_RUNNER "" CACHE FILEPATH "Path to the FIL-C executable runner")
+if(NOT FIL_RUNNER)
+    message(FATAL_ERROR "FIL_RUNNER is required to run FIL-C executables")
+endif()
+
 enable_testing()
-add_test(NAME allocator_provenance COMMAND allocator_provenance_demo)
+add_test(
+    NAME allocator_provenance
+    COMMAND "${FIL_RUNNER}" "$<TARGET_FILE:allocator_provenance_demo>"
+)

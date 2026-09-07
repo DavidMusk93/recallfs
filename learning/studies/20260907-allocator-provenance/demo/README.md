@@ -12,6 +12,7 @@ performance benchmark.
 | Dirty allocation -> arena reset -> zeroed allocation | Run explicit clear |
 | Dirty allocation -> full successful reclaim -> zeroed allocation | Skip explicit clear |
 | Reclaim while allocations are live | Reject and keep conservative state |
+| Reclaim failure on a locked dirty mapping -> zeroed allocation | Run explicit clear |
 | Invalid alignment or capacity overflow | Return failure without moving cursor |
 | 1000 batch-lifetime rows | Use one backing mapping |
 
@@ -37,7 +38,7 @@ Expected output:
 
 ```text
 zeroing: explicit=128 elided=256
-FIL-C allocator tests passed: 3 suites
+FIL-C allocator tests passed: 4 suites
 ```
 
 ## CMake Shape
@@ -51,11 +52,11 @@ cmake \
   -B .tmp/allocator-provenance-cmake \
   -DCMAKE_SYSTEM_NAME=Linux \
   -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
-  -DCMAKE_C_COMPILER="$PWD/.tmp/fil-c/bin/filcc"
+  -DCMAKE_C_COMPILER="$PWD/.tmp/fil-c/bin/filcc" \
+  -DFIL_RUNNER="$PWD/.tmp/fil-c/bin/filrun"
 
 cmake --build .tmp/allocator-provenance-cmake
-.tmp/fil-c/bin/filrun \
-  .tmp/allocator-provenance-cmake/allocator_provenance_demo
+ctest --test-dir .tmp/allocator-provenance-cmake --output-on-failure
 ```
 
 The direct FIL-C command remains the shortest authoritative verification and

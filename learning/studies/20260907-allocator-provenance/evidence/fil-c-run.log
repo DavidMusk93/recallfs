@@ -5,4 +5,8 @@ Command:
 
 Output:
 zeroing: explicit=128 elided=256
-FIL-C allocator tests passed: 3 suites
+FIL-C allocator tests passed: 4 suites
+
+Release verification:
+The same test passed with `-DNDEBUG`; CMake Release + CTest passed 1/1 tests
+through the explicit FIL-C runner.

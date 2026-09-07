@@ -30,6 +30,7 @@ struct arena_stats {
     size_t elided_zero_bytes;
 };
 
+/* Study-only representation for white-box tests; use an opaque handle in production. */
 struct page_arena {
     unsigned char *base;
     size_t capacity;

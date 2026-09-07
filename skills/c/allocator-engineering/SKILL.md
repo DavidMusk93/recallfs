@@ -191,6 +191,12 @@ does not imply that nested resources were released.
 
 ### Step 7: Verify
 
+Before compiling C, confirm that `.tmp/fil-c/bin/filcc` and
+`.tmp/fil-c/bin/filrun` are executable. If either is absent, read
+`../../../tools/c/README.md` and provision the repository-local supported Linux
+environment. If provisioning cannot complete, stop and report FIL-C as a
+blocker. Never substitute the host C compiler.
+
 For C:
 
 ```bash
@@ -205,9 +211,10 @@ Required test categories:
 - fresh zero path;
 - dirty reuse path;
 - full reclaim path;
-- partial/failed reclaim fallback;
+- failed reclaim fallback;
+- partial reclaim fallback when the implementation accepts partial ranges;
 - alignment and overflow;
-- batch reset invalidation;
+- reset lifetime contract, plus stale-handle rejection when the API enforces it;
 - concurrent ownership when concurrency exists.
 
 FIL-C establishes runtime memory-safety evidence for exercised paths. It does
