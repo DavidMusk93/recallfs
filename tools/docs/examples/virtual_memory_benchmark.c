@@ -2,9 +2,6 @@
 
 #include <errno.h>
 #include <inttypes.h>
-#include <pthread.h>
-#include <sched.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,8 +38,7 @@ enum
 {
     MAX_MEBIBYTES = 65536,
     MAX_ROUNDS = 10000,
-    MAX_PASSES = 100000,
-    MAX_THREADS = CPU_SETSIZE
+    MAX_PASSES = 100000
 };
 
 struct process_memory
@@ -59,28 +55,6 @@ struct mapping_info
     long private_hugetlb_kib;
     long kernel_page_kib;
     long mmu_page_kib;
-};
-
-struct protect_shared
-{
-    volatile unsigned char *mapping;
-    size_t length;
-    size_t page_size;
-    size_t worker_count;
-    atomic_int ready;
-    atomic_int start;
-    atomic_int participating;
-    atomic_int stop;
-    cpu_set_t allowed;
-    int allowed_cpu_count;
-};
-
-struct protect_worker
-{
-    struct protect_shared *shared;
-    int worker_index;
-    uint64_t sum;
-    uint64_t sweeps;
 };
 
 static volatile uint64_t observation_sink;
@@ -788,188 +762,6 @@ static void run_cow(size_t mebibytes, size_t rounds)
         fail("munmap COW benchmark");
 }
 
-static int nth_cpu(const cpu_set_t *set, int ordinal)
-{
-    int cpu;
-
-    for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
-    {
-        if (!CPU_ISSET(cpu, set))
-            continue;
-        if (ordinal == 0)
-            return cpu;
-        ordinal--;
-    }
-    return -1;
-}
-
-static void pin_current_thread(int cpu)
-{
-    cpu_set_t target;
-    int result;
-
-    check(cpu >= 0, "could not resolve target CPU");
-    CPU_ZERO(&target);
-    CPU_SET(cpu, &target);
-    result = pthread_setaffinity_np(pthread_self(), sizeof(target), &target);
-    if (result != 0)
-    {
-        errno = result;
-        fail("pthread_setaffinity_np");
-    }
-}
-
-static uint64_t protect_sweep(const struct protect_worker *worker)
-{
-    const struct protect_shared *shared = worker->shared;
-    uint64_t sum = 0;
-    size_t offset;
-
-    for (offset = (size_t)worker->worker_index * shared->page_size;
-         offset < shared->length;
-         offset += shared->worker_count * shared->page_size)
-        sum += shared->mapping[offset];
-    return sum;
-}
-
-static void *protect_worker_main(void *opaque)
-{
-    struct protect_worker *worker = opaque;
-    struct protect_shared *shared = worker->shared;
-    uint64_t sum = 0;
-    int cpu = nth_cpu(&shared->allowed, worker->worker_index + 1);
-
-    pin_current_thread(cpu);
-    sum += protect_sweep(worker);
-    atomic_fetch_add_explicit(&shared->ready, 1, memory_order_release);
-    while (atomic_load_explicit(&shared->start, memory_order_acquire) == 0)
-        sched_yield();
-
-    sum += protect_sweep(worker);
-    worker->sweeps = 1;
-    atomic_fetch_add_explicit(&shared->participating, 1, memory_order_release);
-    while (atomic_load_explicit(&shared->stop, memory_order_acquire) == 0)
-    {
-        sum += protect_sweep(worker);
-        worker->sweeps++;
-    }
-    worker->sum = sum;
-    return NULL;
-}
-
-static void run_mprotect(size_t mebibytes, size_t thread_count, size_t rounds)
-{
-    const size_t page_size = system_page_size();
-    const size_t length = mebibytes_to_bytes(mebibytes);
-    struct protect_shared shared;
-    struct protect_worker *workers;
-    pthread_t *threads;
-    uint64_t minimum_sweeps = UINT64_MAX;
-    size_t index;
-    double started;
-    double elapsed;
-    int coordinator_cpu;
-
-    check(thread_count <= INT32_MAX && thread_count <= length / page_size,
-          "too many mprotect workers");
-    shared.mapping = map_memory(length, MAPPING_BASE);
-    shared.length = length;
-    shared.page_size = page_size;
-    shared.worker_count = thread_count;
-    atomic_init(&shared.ready, 0);
-    atomic_init(&shared.start, 0);
-    atomic_init(&shared.participating, 0);
-    atomic_init(&shared.stop, 0);
-    if (sched_getaffinity(0, sizeof(shared.allowed), &shared.allowed) != 0)
-        fail("sched_getaffinity");
-    shared.allowed_cpu_count = CPU_COUNT(&shared.allowed);
-    check(shared.allowed_cpu_count > 1 &&
-              thread_count <= (size_t)(shared.allowed_cpu_count - 1),
-          "mprotect needs one coordinator CPU plus %zu reader CPUs; "
-          "allowed CPUs=%d",
-          thread_count,
-          shared.allowed_cpu_count);
-    coordinator_cpu = nth_cpu(&shared.allowed, 0);
-    pin_current_thread(coordinator_cpu);
-
-    touch_pages(shared.mapping, length, page_size, 1U);
-    print_numa_map((void *)shared.mapping);
-    workers = calloc(thread_count, sizeof(*workers));
-    threads = calloc(thread_count, sizeof(*threads));
-    if (workers == NULL || threads == NULL)
-        fail("allocate mprotect workers");
-
-    for (index = 0; index < thread_count; index++)
-    {
-        workers[index].shared = &shared;
-        workers[index].worker_index = (int)index;
-        {
-            int result = pthread_create(
-                &threads[index], NULL, protect_worker_main, &workers[index]);
-
-            if (result != 0)
-            {
-                errno = result;
-                fail("pthread_create");
-            }
-        }
-    }
-    while (atomic_load_explicit(&shared.ready, memory_order_acquire) <
-           (int)thread_count)
-        sched_yield();
-    atomic_store_explicit(&shared.start, 1, memory_order_release);
-    while (atomic_load_explicit(&shared.participating, memory_order_acquire) <
-           (int)thread_count)
-        sched_yield();
-
-    started = monotonic_seconds();
-    for (index = 0; index < rounds; index++)
-    {
-        if (mprotect((void *)shared.mapping, length, PROT_READ) != 0)
-            fail("mprotect read-only");
-        if (mprotect((void *)shared.mapping, length, PROT_READ | PROT_WRITE) !=
-            0)
-            fail("mprotect read-write");
-    }
-    elapsed = monotonic_seconds() - started;
-    atomic_store_explicit(&shared.stop, 1, memory_order_release);
-
-    for (index = 0; index < thread_count; index++)
-    {
-        int result = pthread_join(threads[index], NULL);
-
-        if (result != 0)
-        {
-            errno = result;
-            fail("pthread_join");
-        }
-        observation_sink ^= workers[index].sum;
-        check(
-            workers[index].sweeps > 0, "worker %zu did not participate", index);
-        if (workers[index].sweeps < minimum_sweeps)
-            minimum_sweeps = workers[index].sweeps;
-    }
-
-    printf("RESULT mode=mprotect mib=%zu threads=%zu coordinator_cpu=%d "
-           "reader_cpus=%d min_sweeps=%" PRIu64 " "
-           "rounds=%zu transitions=%zu elapsed_ms=%.3f "
-           "us_per_transition=%.3f\n",
-           mebibytes,
-           thread_count,
-           coordinator_cpu,
-           shared.allowed_cpu_count - 1,
-           minimum_sweeps,
-           rounds,
-           rounds * 2U,
-           elapsed * 1.0e3,
-           elapsed * 1.0e6 / (double)(rounds * 2U));
-
-    free(threads);
-    free(workers);
-    if (munmap((void *)shared.mapping, length) != 0)
-        fail("munmap mprotect benchmark");
-}
-
 static void run_selftest(void)
 {
     size_t parsed;
@@ -996,8 +788,6 @@ static void run_selftest(void)
     run_bandwidth(MAPPING_BASE, 8, 1);
     puts("SELFTEST cow");
     run_cow(4, 1);
-    puts("SELFTEST mprotect");
-    run_mprotect(4, 1, 2);
     puts("All virtual-memory benchmark selftests passed.");
 }
 
@@ -1010,9 +800,7 @@ static void print_usage(const char *program)
             "  %s walk <seq|random> <base|thp|hugetlb> "
             "<MiB> <passes> <rounds>\n"
             "  %s bandwidth <base|thp|hugetlb> <MiB> <rounds>\n"
-            "  %s cow <MiB> <rounds>\n"
-            "  %s mprotect <MiB> <threads> <rounds>\n",
-            program,
+            "  %s cow <MiB> <rounds>\n",
             program,
             program,
             program,
@@ -1060,15 +848,6 @@ int main(int argc, char **argv)
         finish_output();
         return EXIT_SUCCESS;
     }
-    if (argc == 5 && strcmp(argv[1], "mprotect") == 0)
-    {
-        run_mprotect(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
-                     parse_bounded_size(argv[3], "threads", MAX_THREADS),
-                     parse_bounded_size(argv[4], "rounds", MAX_ROUNDS));
-        finish_output();
-        return EXIT_SUCCESS;
-    }
-
     print_usage(argv[0]);
     return EXIT_FAILURE;
 }
