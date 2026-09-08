@@ -1,0 +1,853 @@
+#define _GNU_SOURCE
+
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "virtual_memory_benchmark_support.h"
+
+#ifndef MAP_HUGE_SHIFT
+#define MAP_HUGE_SHIFT 26
+#endif
+
+#ifndef MAP_HUGE_2MB
+#define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
+#endif
+
+enum mapping_kind
+{
+    MAPPING_BASE,
+    MAPPING_THP,
+    MAPPING_HUGETLB
+};
+
+enum walk_kind
+{
+    WALK_SEQUENTIAL,
+    WALK_RANDOM
+};
+
+enum
+{
+    MAX_MEBIBYTES = 65536,
+    MAX_ROUNDS = 10000,
+    MAX_PASSES = 100000
+};
+
+struct process_memory
+{
+    long vm_size_kib;
+    long vm_rss_kib;
+    long vm_pte_kib;
+};
+
+struct mapping_info
+{
+    long rss_kib;
+    long anon_huge_kib;
+    long private_hugetlb_kib;
+    long kernel_page_kib;
+    long mmu_page_kib;
+};
+
+static volatile uint64_t observation_sink;
+
+static uint64_t next_random_u64(uint64_t *state)
+{
+    uint64_t value = *state;
+
+    value ^= value << 13;
+    value ^= value >> 7;
+    value ^= value << 17;
+    *state = value;
+    return value;
+}
+
+static size_t system_page_size(void)
+{
+    long page_size = sysconf(_SC_PAGESIZE);
+
+    check(page_size > 0, "sysconf(_SC_PAGESIZE) failed");
+    return (size_t)page_size;
+}
+
+static int strict_native_checks(void)
+{
+    const char *value = getenv("VM_BENCH_STRICT_NATIVE");
+
+    return value != NULL && strcmp(value, "1") == 0;
+}
+
+static struct process_memory read_process_memory(void)
+{
+    struct process_memory memory = {
+        .vm_size_kib = -1,
+        .vm_rss_kib = -1,
+        .vm_pte_kib = -1,
+    };
+    unsigned int found = 0;
+    char line[256];
+    FILE *status = fopen("/proc/self/status", "r");
+
+    if (status == NULL)
+        fail("fopen /proc/self/status");
+
+    while (fgets(line, sizeof(line), status) != NULL)
+    {
+        long value;
+
+        if ((found & 1U) == 0 && sscanf(line, "VmSize: %ld kB", &value) == 1)
+        {
+            memory.vm_size_kib = value;
+            found |= 1U;
+        }
+        else if ((found & 2U) == 0 &&
+                 sscanf(line, "VmRSS: %ld kB", &value) == 1)
+        {
+            memory.vm_rss_kib = value;
+            found |= 2U;
+        }
+        else if ((found & 4U) == 0 &&
+                 sscanf(line, "VmPTE: %ld kB", &value) == 1)
+        {
+            memory.vm_pte_kib = value;
+            found |= 4U;
+        }
+    }
+
+    check(!ferror(status), "failed while reading /proc/self/status");
+    if (fclose(status) != 0)
+        fail("fclose /proc/self/status");
+    check(found == 7U, "missing fields in /proc/self/status: mask=%u", found);
+    check(memory.vm_size_kib >= 0 && memory.vm_rss_kib >= 0 &&
+              memory.vm_pte_kib >= 0,
+          "negative process memory value");
+    return memory;
+}
+
+static const char *mapping_kind_name(enum mapping_kind kind)
+{
+    switch (kind)
+    {
+    case MAPPING_BASE:
+        return "base";
+    case MAPPING_THP:
+        return "thp";
+    case MAPPING_HUGETLB:
+        return "hugetlb";
+    }
+    return "unknown";
+}
+
+static enum mapping_kind parse_mapping_kind(const char *text)
+{
+    if (strcmp(text, "base") == 0)
+        return MAPPING_BASE;
+    if (strcmp(text, "thp") == 0)
+        return MAPPING_THP;
+    if (strcmp(text, "hugetlb") == 0)
+        return MAPPING_HUGETLB;
+    check(0, "invalid mapping kind: %s", text);
+    return MAPPING_BASE;
+}
+
+static enum walk_kind parse_walk_kind(const char *text)
+{
+    if (strcmp(text, "seq") == 0)
+        return WALK_SEQUENTIAL;
+    if (strcmp(text, "random") == 0)
+        return WALK_RANDOM;
+    check(0, "invalid walk kind: %s", text);
+    return WALK_SEQUENTIAL;
+}
+
+static void advise_mapping(void *mapping, size_t length, enum mapping_kind kind)
+{
+    if (kind == MAPPING_BASE)
+    {
+        if (madvise(mapping, length, MADV_NOHUGEPAGE) != 0)
+            fail("madvise MADV_NOHUGEPAGE");
+    }
+    else if (kind == MAPPING_THP)
+    {
+        if (madvise(mapping, length, MADV_HUGEPAGE) != 0)
+            fail("madvise MADV_HUGEPAGE");
+    }
+}
+
+static void *map_memory(size_t length, enum mapping_kind kind)
+{
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    void *mapping;
+
+    if (kind == MAPPING_HUGETLB)
+    {
+        check(length % (2U * 1024U * 1024U) == 0,
+              "HugeTLB length must be 2 MiB aligned");
+        flags |= MAP_HUGETLB | MAP_HUGE_2MB;
+    }
+
+    mapping = mmap(NULL, length, PROT_READ | PROT_WRITE, flags, -1, 0);
+    if (mapping == MAP_FAILED)
+        fail("mmap benchmark memory");
+
+    advise_mapping(mapping, length, kind);
+
+    return mapping;
+}
+
+static void touch_pages(volatile unsigned char *mapping,
+                        size_t length,
+                        size_t page_size,
+                        unsigned char value)
+{
+    size_t offset;
+
+    for (offset = 0; offset < length; offset += page_size)
+        mapping[offset] = value;
+}
+
+static struct mapping_info read_mapping_info(void *mapping)
+{
+    struct mapping_info info = {
+        .rss_kib = -1,
+        .anon_huge_kib = -1,
+        .private_hugetlb_kib = -1,
+        .kernel_page_kib = -1,
+        .mmu_page_kib = -1,
+    };
+    uintptr_t target = (uintptr_t)mapping;
+    int active = 0;
+    char line[512];
+    FILE *smaps = fopen("/proc/self/smaps", "r");
+
+    if (smaps == NULL)
+        fail("fopen /proc/self/smaps");
+
+    while (fgets(line, sizeof(line), smaps) != NULL)
+    {
+        unsigned long long start;
+        unsigned long long end;
+        char permissions[8];
+        long value;
+
+        if (sscanf(line, "%llx-%llx %7s", &start, &end, permissions) == 3)
+        {
+            if (active)
+                break;
+            active = start == (unsigned long long)target;
+            continue;
+        }
+        if (!active)
+            continue;
+
+        if (sscanf(line, "Rss: %ld kB", &value) == 1)
+            info.rss_kib = value;
+        else if (sscanf(line, "AnonHugePages: %ld kB", &value) == 1)
+            info.anon_huge_kib = value;
+        else if (sscanf(line, "Private_Hugetlb: %ld kB", &value) == 1)
+            info.private_hugetlb_kib = value;
+        else if (sscanf(line, "KernelPageSize: %ld kB", &value) == 1)
+            info.kernel_page_kib = value;
+        else if (sscanf(line, "MMUPageSize: %ld kB", &value) == 1)
+            info.mmu_page_kib = value;
+    }
+
+    check(!ferror(smaps), "failed while reading /proc/self/smaps");
+    if (fclose(smaps) != 0)
+        fail("fclose /proc/self/smaps");
+    check(active, "mapping %p was not found in /proc/self/smaps", mapping);
+    return info;
+}
+
+static int expected_numa_node(void)
+{
+    const char *text = getenv("VM_BENCH_EXPECT_NODE");
+    size_t node;
+
+    if (text == NULL || *text == '\0')
+        return -1;
+    check(try_parse_bounded_size(text, 1023, &node) || strcmp(text, "0") == 0,
+          "invalid VM_BENCH_EXPECT_NODE: %s",
+          text);
+    if (strcmp(text, "0") == 0)
+        return 0;
+    return (int)node;
+}
+
+static void verify_numa_line(const char *line, int expected_node)
+{
+    char copy[2048];
+    char *save = NULL;
+    char *token;
+    size_t total_pages = 0;
+    int observed_nodes = 0;
+
+    check(strlen(line) < sizeof(copy), "numa_maps line is too long");
+    strcpy(copy, line);
+    for (token = strtok_r(copy, " \n", &save); token != NULL;
+         token = strtok_r(NULL, " \n", &save))
+    {
+        int node;
+        size_t pages;
+
+        if (sscanf(token, "N%d=%zu", &node, &pages) != 2)
+            continue;
+        observed_nodes++;
+        total_pages += pages;
+        if (expected_node >= 0)
+            check(node == expected_node,
+                  "mapping reached NUMA node %d, expected node %d",
+                  node,
+                  expected_node);
+    }
+    check(observed_nodes > 0 && total_pages > 0,
+          "numa_maps line has no resident node pages");
+    printf("NUMA_VERIFY expected_node=%d observed_nodes=%d pages=%zu\n",
+           expected_node,
+           observed_nodes,
+           total_pages);
+}
+
+static void print_numa_map(void *mapping)
+{
+    uintptr_t target = (uintptr_t)mapping;
+    int expected_node = expected_numa_node();
+    char line[2048];
+    FILE *maps = fopen("/proc/self/numa_maps", "r");
+
+    if (maps == NULL)
+        fail("fopen /proc/self/numa_maps");
+
+    while (fgets(line, sizeof(line), maps) != NULL)
+    {
+        unsigned long long start;
+
+        if (sscanf(line, "%llx", &start) == 1 &&
+            start == (unsigned long long)target)
+        {
+            printf("NUMA_MAP %s", line);
+            verify_numa_line(line, expected_node);
+            if (fclose(maps) != 0)
+                fail("fclose /proc/self/numa_maps");
+            return;
+        }
+    }
+
+    check(!ferror(maps), "failed while reading /proc/self/numa_maps");
+    if (fclose(maps) != 0)
+        fail("fclose /proc/self/numa_maps");
+    check(0, "mapping %p was not found in /proc/self/numa_maps", mapping);
+}
+
+static void shuffle_indices(uint32_t *indices, size_t count, uint64_t *state)
+{
+    size_t index;
+
+    check(
+        count > 1 && count <= UINT32_MAX, "invalid shuffle count: %zu", count);
+    for (index = count - 1; index > 0; index--)
+    {
+        size_t other = (size_t)(next_random_u64(state) % (index + 1));
+        uint32_t temporary = indices[index];
+
+        indices[index] = indices[other];
+        indices[other] = temporary;
+    }
+}
+
+static uint64_t validate_order(const uint32_t *order,
+                               size_t count,
+                               enum walk_kind walk,
+                               size_t *displaced)
+{
+    unsigned char *seen = calloc(count, sizeof(*seen));
+    uint64_t fingerprint = UINT64_C(1469598103934665603);
+    size_t index;
+
+    if (seen == NULL)
+        fail("calloc order validation");
+    *displaced = 0;
+    for (index = 0; index < count; index++)
+    {
+        uint32_t value = order[index];
+
+        check(value < count, "order value %u is out of range", value);
+        check(seen[value] == 0, "order value %u is duplicated", value);
+        seen[value] = 1;
+        *displaced += value != index;
+        fingerprint ^= value;
+        fingerprint *= UINT64_C(1099511628211);
+    }
+    if (walk == WALK_SEQUENTIAL)
+        check(*displaced == 0, "sequential order is not identity");
+    else
+        check(*displaced > count / 2,
+              "random order displaced only %zu of %zu entries",
+              *displaced,
+              count);
+    free(seen);
+    return fingerprint;
+}
+
+static void run_fault(size_t mebibytes, size_t rounds)
+{
+    const size_t page_size = system_page_size();
+    const size_t length = mebibytes_to_bytes(mebibytes);
+    size_t round;
+
+    check(length % page_size == 0, "fault size is not page aligned");
+
+    for (round = 0; round < rounds; round++)
+    {
+        struct process_memory before_map = read_process_memory();
+        struct process_memory after_map;
+        struct process_memory after_touch;
+        struct fault_counts before_first;
+        struct fault_counts after_first;
+        struct fault_counts before_second;
+        struct fault_counts after_second;
+        volatile unsigned char *mapping;
+        double started;
+        double reserve_seconds;
+        double first_seconds;
+        double second_seconds;
+        long first_minor;
+        long first_major;
+        long second_minor;
+        long second_major;
+
+        started = monotonic_seconds();
+        mapping = mmap(NULL,
+                       length,
+                       PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS,
+                       -1,
+                       0);
+        if (mapping == MAP_FAILED)
+            fail("mmap fault benchmark");
+        reserve_seconds = monotonic_seconds() - started;
+        advise_mapping((void *)mapping, length, MAPPING_BASE);
+        after_map = read_process_memory();
+
+        before_first = read_fault_counts();
+        started = monotonic_seconds();
+        touch_pages(mapping, length, page_size, (unsigned char)(round + 1));
+        first_seconds = monotonic_seconds() - started;
+        after_first = read_fault_counts();
+        after_touch = read_process_memory();
+
+        before_second = read_fault_counts();
+        started = monotonic_seconds();
+        touch_pages(mapping, length, page_size, (unsigned char)(round + 2));
+        second_seconds = monotonic_seconds() - started;
+        after_second = read_fault_counts();
+
+        first_minor = after_first.minor - before_first.minor;
+        first_major = after_first.major - before_first.major;
+        second_minor = after_second.minor - before_second.minor;
+        second_major = after_second.major - before_second.major;
+        check(first_minor >= (long)(length / page_size),
+              "first touch produced too few minor faults: %ld",
+              first_minor);
+        check(first_major == 0 && second_minor == 0 && second_major == 0,
+              "unexpected fault deltas: first_major=%ld second_minor=%ld "
+              "second_major=%ld",
+              first_major,
+              second_minor,
+              second_major);
+
+        printf("RESULT mode=fault round=%zu mib=%zu reserve_us=%.3f "
+               "first_ms=%.3f second_ms=%.3f first_minor=%ld "
+               "first_major=%ld second_minor=%ld second_major=%ld "
+               "vmsize_before_kib=%ld vmsize_map_kib=%ld "
+               "rss_map_kib=%ld rss_touch_kib=%ld pte_map_kib=%ld "
+               "pte_touch_kib=%ld\n",
+               round,
+               mebibytes,
+               reserve_seconds * 1.0e6,
+               first_seconds * 1.0e3,
+               second_seconds * 1.0e3,
+               first_minor,
+               first_major,
+               second_minor,
+               second_major,
+               before_map.vm_size_kib,
+               after_map.vm_size_kib,
+               after_map.vm_rss_kib,
+               after_touch.vm_rss_kib,
+               after_map.vm_pte_kib,
+               after_touch.vm_pte_kib);
+
+        if (munmap((void *)mapping, length) != 0)
+            fail("munmap fault benchmark");
+    }
+}
+
+static void run_walk(enum walk_kind walk,
+                     enum mapping_kind mapping_kind,
+                     size_t mebibytes,
+                     size_t passes,
+                     size_t rounds)
+{
+    const size_t page_size = system_page_size();
+    const size_t length = mebibytes_to_bytes(mebibytes);
+    const size_t page_count = length / page_size;
+    volatile unsigned char *mapping;
+    uint32_t *order;
+    uint64_t shuffle_state = UINT64_C(0x9e3779b97f4a7c15);
+    uint64_t order_fingerprint;
+    size_t displaced;
+    struct mapping_info info;
+    size_t round;
+
+    check(page_size > 0 && length % page_size == 0 && page_count <= UINT32_MAX,
+          "invalid walk benchmark size");
+    mapping = map_memory(length, mapping_kind);
+    touch_pages(mapping, length, page_size, 1U);
+
+    order = malloc(page_count * sizeof(*order));
+    if (order == NULL)
+        fail("malloc walk order");
+    for (round = 0; round < page_count; round++)
+        order[round] = (uint32_t)round;
+    if (walk == WALK_RANDOM)
+        shuffle_indices(order, page_count, &shuffle_state);
+    order_fingerprint = validate_order(order, page_count, walk, &displaced);
+
+    info = read_mapping_info((void *)mapping);
+    printf("MAPPING mode=walk kind=%s access=%s mib=%zu "
+           "rss_kib=%ld anon_huge_kib=%ld private_hugetlb_kib=%ld "
+           "kernel_page_kib=%ld mmu_page_kib=%ld\n",
+           mapping_kind_name(mapping_kind),
+           walk == WALK_SEQUENTIAL ? "seq" : "random",
+           mebibytes,
+           info.rss_kib,
+           info.anon_huge_kib,
+           info.private_hugetlb_kib,
+           info.kernel_page_kib,
+           info.mmu_page_kib);
+    printf("ORDER access=%s displaced=%zu fingerprint=%" PRIu64 "\n",
+           walk == WALK_SEQUENTIAL ? "seq" : "random",
+           displaced,
+           order_fingerprint);
+    print_numa_map((void *)mapping);
+
+    for (round = 0; round < rounds; round++)
+    {
+        struct fault_counts before;
+        struct fault_counts after;
+        uint64_t sum = 0;
+        size_t pass;
+        double started;
+        double elapsed;
+        size_t accesses;
+
+        check(passes <= SIZE_MAX / page_count,
+              "walk access count overflows size_t");
+        accesses = page_count * passes;
+
+        before = read_fault_counts();
+        started = monotonic_seconds();
+        for (pass = 0; pass < passes; pass++)
+        {
+            size_t index;
+
+            for (index = 0; index < page_count; index++)
+                sum += mapping[(size_t)order[index] * page_size];
+        }
+        elapsed = monotonic_seconds() - started;
+        after = read_fault_counts();
+        check(sum == (uint64_t)accesses,
+              "walk checksum mismatch: actual=%" PRIu64 " expected=%zu",
+              sum,
+              accesses);
+        observation_sink ^= sum;
+
+        printf("RESULT mode=walk round=%zu map=%s access=%s mib=%zu "
+               "passes=%zu accesses=%zu elapsed_ms=%.3f ns_per_access=%.3f "
+               "minor=%ld major=%ld checksum=%" PRIu64 "\n",
+               round,
+               mapping_kind_name(mapping_kind),
+               walk == WALK_SEQUENTIAL ? "seq" : "random",
+               mebibytes,
+               passes,
+               accesses,
+               elapsed * 1.0e3,
+               elapsed * 1.0e9 / (double)accesses,
+               after.minor - before.minor,
+               after.major - before.major,
+               sum);
+    }
+
+    free(order);
+    if (munmap((void *)mapping, length) != 0)
+        fail("munmap walk benchmark");
+}
+
+static uint64_t sum_words(const uint64_t *words, size_t word_count)
+{
+    uint64_t sum0 = 0;
+    uint64_t sum1 = 0;
+    uint64_t sum2 = 0;
+    uint64_t sum3 = 0;
+    size_t index = 0;
+
+    for (; index + 4 <= word_count; index += 4)
+    {
+        sum0 += words[index];
+        sum1 += words[index + 1];
+        sum2 += words[index + 2];
+        sum3 += words[index + 3];
+    }
+    for (; index < word_count; index++)
+        sum0 += words[index];
+    return sum0 + sum1 + sum2 + sum3;
+}
+
+static void
+run_bandwidth(enum mapping_kind mapping_kind, size_t mebibytes, size_t rounds)
+{
+    const size_t length = mebibytes_to_bytes(mebibytes);
+    const size_t word_count = length / sizeof(uint64_t);
+    uint64_t *mapping = map_memory(length, mapping_kind);
+    struct mapping_info info;
+    uint64_t expected = 0;
+    size_t index;
+    size_t round;
+
+    for (index = 0; index < word_count; index++)
+    {
+        mapping[index] = (uint64_t)(index % 251U);
+        expected += mapping[index];
+    }
+
+    info = read_mapping_info(mapping);
+    printf("MAPPING mode=bandwidth map=%s mib=%zu rss_kib=%ld "
+           "anon_huge_kib=%ld private_hugetlb_kib=%ld "
+           "kernel_page_kib=%ld mmu_page_kib=%ld\n",
+           mapping_kind_name(mapping_kind),
+           mebibytes,
+           info.rss_kib,
+           info.anon_huge_kib,
+           info.private_hugetlb_kib,
+           info.kernel_page_kib,
+           info.mmu_page_kib);
+    print_numa_map(mapping);
+
+    for (round = 0; round < rounds; round++)
+    {
+        uint64_t sum;
+        double started = monotonic_seconds();
+        double elapsed;
+
+        sum = sum_words(mapping, word_count);
+        elapsed = monotonic_seconds() - started;
+        check(sum == expected,
+              "bandwidth checksum mismatch: actual=%" PRIu64
+              " expected=%" PRIu64,
+              sum,
+              expected);
+        observation_sink ^= sum;
+
+        printf("RESULT mode=bandwidth round=%zu map=%s mib=%zu "
+               "elapsed_ms=%.3f gib_per_s=%.3f checksum=%" PRIu64 "\n",
+               round,
+               mapping_kind_name(mapping_kind),
+               mebibytes,
+               elapsed * 1.0e3,
+               ((double)length / (1024.0 * 1024.0 * 1024.0)) / elapsed,
+               sum);
+    }
+
+    if (munmap(mapping, length) != 0)
+        fail("munmap bandwidth benchmark");
+}
+
+static void wait_child(pid_t child, struct rusage *usage)
+{
+    int status;
+
+    while (wait4(child, &status, 0, usage) < 0)
+    {
+        if (errno != EINTR)
+            fail("wait4");
+    }
+    check(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+          "child failed: status=%d",
+          status);
+}
+
+static void run_cow(size_t mebibytes, size_t rounds)
+{
+    const size_t page_size = system_page_size();
+    const size_t length = mebibytes_to_bytes(mebibytes);
+    volatile unsigned char *mapping = map_memory(length, MAPPING_BASE);
+    size_t round;
+
+    touch_pages(mapping, length, page_size, 0x11U);
+
+    for (round = 0; round < rounds; round++)
+    {
+        struct rusage baseline_usage;
+        struct rusage cow_usage;
+        pid_t child;
+        double started;
+        double baseline_seconds;
+        double cow_seconds;
+        long delta_minor;
+        size_t offset;
+
+        started = monotonic_seconds();
+        child = fork();
+        if (child < 0)
+            fail("fork baseline");
+        if (child == 0)
+            _exit(EXIT_SUCCESS);
+        wait_child(child, &baseline_usage);
+        baseline_seconds = monotonic_seconds() - started;
+
+        started = monotonic_seconds();
+        child = fork();
+        if (child < 0)
+            fail("fork COW");
+        if (child == 0)
+        {
+            for (offset = 0; offset < length; offset += page_size)
+                mapping[offset] = 0x22U;
+            _exit(EXIT_SUCCESS);
+        }
+        wait_child(child, &cow_usage);
+        cow_seconds = monotonic_seconds() - started;
+
+        for (offset = 0; offset < length; offset += page_size)
+            check(mapping[offset] == 0x11U,
+                  "child changed parent page at offset %zu",
+                  offset);
+        delta_minor = cow_usage.ru_minflt - baseline_usage.ru_minflt;
+        check(cow_usage.ru_minflt >= (long)(length / page_size),
+              "COW child produced too few minor faults: %ld",
+              cow_usage.ru_minflt);
+        if (strict_native_checks())
+            check(delta_minor >= (long)(length / page_size),
+                  "native COW child produced too few extra minor faults: %ld",
+                  delta_minor);
+        check(baseline_usage.ru_majflt == 0 && cow_usage.ru_majflt == 0,
+              "COW benchmark observed major faults");
+
+        printf("RESULT mode=cow round=%zu mib=%zu strict_native=%d "
+               "baseline_ms=%.3f "
+               "baseline_minor=%ld baseline_major=%ld cow_ms=%.3f "
+               "cow_minor=%ld cow_major=%ld delta_minor=%ld\n",
+               round,
+               mebibytes,
+               strict_native_checks(),
+               baseline_seconds * 1.0e3,
+               baseline_usage.ru_minflt,
+               baseline_usage.ru_majflt,
+               cow_seconds * 1.0e3,
+               cow_usage.ru_minflt,
+               cow_usage.ru_majflt,
+               delta_minor);
+    }
+
+    if (munmap((void *)mapping, length) != 0)
+        fail("munmap COW benchmark");
+}
+
+static void run_selftest(void)
+{
+    size_t parsed;
+
+    check(!try_parse_bounded_size("-1", 100, &parsed),
+          "parser accepted a negative value");
+    check(!try_parse_bounded_size(" 1", 100, &parsed),
+          "parser accepted leading whitespace");
+    check(!try_parse_bounded_size("0", 100, &parsed), "parser accepted zero");
+    check(!try_parse_bounded_size("101", 100, &parsed),
+          "parser accepted a value above its bound");
+    check(try_parse_bounded_size("100", 100, &parsed) && parsed == 100,
+          "parser rejected its upper bound");
+
+    puts("SELFTEST fault");
+    run_fault(4, 1);
+    puts("SELFTEST sequential walk");
+    run_walk(WALK_SEQUENTIAL, MAPPING_BASE, 8, 2, 1);
+    puts("SELFTEST random walk");
+    run_walk(WALK_RANDOM, MAPPING_BASE, 8, 2, 1);
+    puts("SELFTEST THP walk");
+    run_walk(WALK_RANDOM, MAPPING_THP, 8, 2, 1);
+    puts("SELFTEST bandwidth");
+    run_bandwidth(MAPPING_BASE, 8, 1);
+    puts("SELFTEST cow");
+    run_cow(4, 1);
+    puts("All virtual-memory benchmark selftests passed.");
+}
+
+static void print_usage(const char *program)
+{
+    fprintf(stderr,
+            "usage:\n"
+            "  %s selftest\n"
+            "  %s fault <MiB> <rounds>\n"
+            "  %s walk <seq|random> <base|thp|hugetlb> "
+            "<MiB> <passes> <rounds>\n"
+            "  %s bandwidth <base|thp|hugetlb> <MiB> <rounds>\n"
+            "  %s cow <MiB> <rounds>\n",
+            program,
+            program,
+            program,
+            program,
+            program);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc == 2 && strcmp(argv[1], "selftest") == 0)
+    {
+        run_selftest();
+        finish_output();
+        return EXIT_SUCCESS;
+    }
+    if (argc == 4 && strcmp(argv[1], "fault") == 0)
+    {
+        run_fault(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
+                  parse_bounded_size(argv[3], "rounds", MAX_ROUNDS));
+        finish_output();
+        return EXIT_SUCCESS;
+    }
+    if (argc == 7 && strcmp(argv[1], "walk") == 0)
+    {
+        run_walk(parse_walk_kind(argv[2]),
+                 parse_mapping_kind(argv[3]),
+                 parse_bounded_size(argv[4], "MiB", MAX_MEBIBYTES),
+                 parse_bounded_size(argv[5], "passes", MAX_PASSES),
+                 parse_bounded_size(argv[6], "rounds", MAX_ROUNDS));
+        finish_output();
+        return EXIT_SUCCESS;
+    }
+    if (argc == 5 && strcmp(argv[1], "bandwidth") == 0)
+    {
+        run_bandwidth(parse_mapping_kind(argv[2]),
+                      parse_bounded_size(argv[3], "MiB", MAX_MEBIBYTES),
+                      parse_bounded_size(argv[4], "rounds", MAX_ROUNDS));
+        finish_output();
+        return EXIT_SUCCESS;
+    }
+    if (argc == 4 && strcmp(argv[1], "cow") == 0)
+    {
+        run_cow(parse_bounded_size(argv[2], "MiB", MAX_MEBIBYTES),
+                parse_bounded_size(argv[3], "rounds", MAX_ROUNDS));
+        finish_output();
+        return EXIT_SUCCESS;
+    }
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+}

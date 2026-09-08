@@ -1,0 +1,35 @@
+# started on Mon Sep  7 22:10:01 2026
+
+
+ Performance counter stats for 'system wide' (5 runs):
+
+        74,945,870      ls_dc_accesses                                                          ( +-  0.88% )  (71.40%)
+
+          0.233557 +- 0.000561 seconds time elapsed  ( +-  0.24% )
+
+# started on Mon Sep  7 22:10:02 2026
+
+
+ Performance counter stats for 'system wide' (5 runs):
+
+        50,022,862      l1_data_cache_fills_all                                                 ( +-  0.36% )  (71.09%)
+
+          0.232859 +- 0.000361 seconds time elapsed  ( +-  0.15% )
+
+# started on Mon Sep  7 22:10:04 2026
+
+
+ Performance counter stats for 'system wide' (5 runs):
+
+        51,066,213      l2_cache_accesses_from_dc_misses                                        ( +-  0.35% )  (70.97%)
+
+          0.233553 +- 0.000530 seconds time elapsed  ( +-  0.23% )
+
+# started on Mon Sep  7 22:10:05 2026
+
+
+ Performance counter stats for 'system wide' (5 runs):
+
+        21,412,191      l2_cache_misses_from_dc_misses                                          ( +-  0.35% )  (71.11%)
+
+          0.233735 +- 0.000246 seconds time elapsed  ( +-  0.11% )
