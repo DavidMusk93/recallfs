@@ -37,8 +37,9 @@ static int check_value(const char *name, hms_converter converter,
 }
 
 static int check_range(const char *name, hms_converter converter,
+                       uint32_t inclusive_min,
                        uint32_t inclusive_max) {
-    for (uint32_t value = 0; value <= inclusive_max; ++value) {
+    for (uint32_t value = inclusive_min; value <= inclusive_max; ++value) {
         if (!check_value(name, converter, value)) {
             return 0;
         }
@@ -93,16 +94,16 @@ int main(void) {
     for (size_t index = 0;
          index < sizeof(daily_variants) / sizeof(daily_variants[0]); ++index) {
         if (!check_range(daily_variants[index].name,
-                         daily_variants[index].converter, 86399U)) {
+                         daily_variants[index].converter, 0U, 86399U)) {
             return 1;
         }
     }
 
     if (!check_full_range_samples("traditional", hms_traditional) ||
         !check_full_range_samples("parallel_div", hms_parallel_div) ||
-        !check_range("parallel_fixed", hms_parallel_fixed, 2257198U) ||
-        !check_range("hi_low", hms_hi_low, 2255818U) ||
-        !check_range("base64", hms_base64, 2257198U)) {
+        !check_range("parallel_fixed", hms_parallel_fixed, 86400U, 2257198U) ||
+        !check_range("hi_low", hms_hi_low, 86400U, 2255818U) ||
+        !check_range("base64", hms_base64, 86400U, 2257198U)) {
         return 1;
     }
 
@@ -113,6 +114,8 @@ int main(void) {
         return 1;
     }
 
-    puts("FIL-C correctness passed: 5 variants, exhaustive declared ranges");
+    puts("FIL-C correctness passed: all variants exhaustive over one day; "
+         "fixed-point variants exhaustive over their claimed extended ranges; "
+         "full-range division variants sampled at uint32 boundaries");
     return 0;
 }

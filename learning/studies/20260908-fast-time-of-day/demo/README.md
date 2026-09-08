@@ -33,7 +33,7 @@ From the repository root:
 Expected output:
 
 ```text
-FIL-C correctness passed: 5 variants, exhaustive declared ranges
+FIL-C correctness passed: all variants exhaustive over one day; fixed-point variants exhaustive over their claimed extended ranges; full-range division variants sampled at uint32 boundaries
 ```
 
 The test checks every value in `[0, 86399]`, every value in each restricted
@@ -59,7 +59,8 @@ ctest --test-dir .tmp/fast-time-of-day-cmake --output-on-failure
 ## Native Benchmark
 
 FIL-C timings are not performance evidence. Build the benchmark natively on
-the target CPU after the FIL-C correctness gate:
+the target CPU after the FIL-C correctness gate. The benchmark requires GCC or
+Clang because its scalar-workload contract uses compiler-specific controls:
 
 ```bash
 cc \

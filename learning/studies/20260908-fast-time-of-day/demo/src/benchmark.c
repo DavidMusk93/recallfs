@@ -18,18 +18,13 @@
 #define NOINLINE_USED                                                     \
     __attribute__((noinline, used, optimize("no-tree-vectorize")))
 #else
-#define NO_VECTOR
-#define NOINLINE_USED
+#error "fast_time_benchmark requires Clang or GCC benchmark controls"
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
 #define KEEP_HMS_FIELDS(value)                                                  \
     __asm__ volatile(""                                                        \
                      : "+r"((value).hour), "+r"((value).minute),              \
                        "+r"((value).second))
-#else
-#define KEEP_HMS_FIELDS(value) ((void)(value))
-#endif
 
 enum {
     DEFAULT_COUNT = 8192,
@@ -85,14 +80,30 @@ static uint64_t pack_hms(hms_time value) {
         for (uint32_t round = 0; round < rounds; ++round) {                     \
             NO_VECTOR                                                          \
             for (size_t index = 0; index < count; index += 8) {                 \
-                a0 += pack_hms(converter(input[index]));                        \
-                a1 += pack_hms(converter(input[index + 1]));                    \
-                a2 += pack_hms(converter(input[index + 2]));                    \
-                a3 += pack_hms(converter(input[index + 3]));                    \
-                a4 += pack_hms(converter(input[index + 4]));                    \
-                a5 += pack_hms(converter(input[index + 5]));                    \
-                a6 += pack_hms(converter(input[index + 6]));                    \
-                a7 += pack_hms(converter(input[index + 7]));                    \
+                hms_time r0 = converter(input[index]);                          \
+                hms_time r1 = converter(input[index + 1]);                      \
+                hms_time r2 = converter(input[index + 2]);                      \
+                hms_time r3 = converter(input[index + 3]);                      \
+                hms_time r4 = converter(input[index + 4]);                      \
+                hms_time r5 = converter(input[index + 5]);                      \
+                hms_time r6 = converter(input[index + 6]);                      \
+                hms_time r7 = converter(input[index + 7]);                      \
+                KEEP_HMS_FIELDS(r0);                                            \
+                KEEP_HMS_FIELDS(r1);                                            \
+                KEEP_HMS_FIELDS(r2);                                            \
+                KEEP_HMS_FIELDS(r3);                                            \
+                KEEP_HMS_FIELDS(r4);                                            \
+                KEEP_HMS_FIELDS(r5);                                            \
+                KEEP_HMS_FIELDS(r6);                                            \
+                KEEP_HMS_FIELDS(r7);                                            \
+                a0 += pack_hms(r0);                                             \
+                a1 += pack_hms(r1);                                             \
+                a2 += pack_hms(r2);                                             \
+                a3 += pack_hms(r3);                                             \
+                a4 += pack_hms(r4);                                             \
+                a5 += pack_hms(r5);                                             \
+                a6 += pack_hms(r6);                                             \
+                a7 += pack_hms(r7);                                             \
             }                                                                   \
         }                                                                       \
         return a0 ^ a1 ^ a2 ^ a3 ^ a4 ^ a5 ^ a6 ^ a7;                         \
@@ -223,7 +234,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (count < 8U || count % 8U != 0U) {
+    if (count % 8U != 0U) {
         fputs("--count must be a positive multiple of 8\n", stderr);
         return 2;
     }
