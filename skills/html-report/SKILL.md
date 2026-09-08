@@ -42,6 +42,7 @@ Keep this skill's technical-report rules authoritative for:
 - evidence density;
 - semantic HTML;
 - table column contracts;
+- sequence-lane mechanism contracts;
 - code and ASCII graph rendering;
 - browser geometry acceptance.
 
@@ -223,6 +224,20 @@ content.
 Use inline SVG only when spatial geometry or quantitative comparison is more
 legible than text. Prose remains complete without the SVG.
 
+When explaining a race, TOCTOU failure, lock handoff, retry, recovery sequence,
+or another mechanism whose meaning depends on event order across actors and
+shared state, read
+[`references/sequence-lane-contract.md`](references/sequence-lane-contract.md).
+Use a full-width sequence-lane board instead of an ASCII pseudo-table:
+
+- time moves down the rows;
+- each active actor has one stable lane;
+- shared state has its own lane explicitly labeled as state, not an actor;
+- state fields and symbols are defined before the board;
+- the race window, first invalid invariant, and delayed consequence are
+  separate, labeled steps;
+- header and rows consume one board-owned column-track definition.
+
 Render code with a true language label, static token classes when practical,
 line-number spans, preserved logical lines, and internal horizontal scrolling.
 Read the code-block contract in the design reference.
@@ -280,6 +295,8 @@ Before opening a browser, verify:
 - meaningful headings in order;
 - all images and SVGs have accessible text alternatives;
 - all tables have `data-column-kinds`, `colgroup`, and fixed layout;
+- every sequence-lane board has a lane manifest, an explicit shared-state
+  lane, visible field definitions, and one shared column-track definition;
 - reduced-motion, reduced-transparency, and increased-contrast fallbacks;
 - no semantic fact exists only in color.
 
@@ -296,6 +313,8 @@ At minimum:
 - capture full-page and focused screenshots;
 - assert no page-level horizontal overflow;
 - run the bundled table probe on every visible table state;
+- run the bundled sequence-alignment probe on every visible sequence-lane
+  mechanism at both viewports;
 - inspect console errors and failed asset requests;
 - verify long words, code, diagrams, and tables stay within their own scroll
   containers.
@@ -303,6 +322,11 @@ At minimum:
 When changing this skill's probe or golden example, run
 `tests/probe-regression.mjs`. It verifies the example at both required
 viewports and proves malformed tables fail closed.
+
+When changing the sequence-lane contract or probe, also run
+`tests/sequence-probe-regression.mjs`. It verifies shared lane tracks at desktop
+and the stacked mobile form, then proves common alignment and semantics defects
+fail closed.
 
 If the host browser cannot set viewport width, use an available Playwright or
 Chromium harness for the missing viewport while retaining the same URL and DOM
@@ -330,6 +354,7 @@ running.
 - [ ] Semantic HTML carries all meaning.
 - [ ] Typography, spacing, and palette are restrained and readable.
 - [ ] Tables declare and pass their column contracts.
+- [ ] Sequence-lane mechanisms declare and pass their lane/alignment contract.
 - [ ] Code and diagrams scroll internally without page overflow.
 - [ ] Accessibility preference fallbacks exist.
 - [ ] Desktop and 390px browser states were visually inspected.
@@ -354,3 +379,8 @@ Flowkit-specific report service, systemd, cluster identity, and directory rules
 were intentionally not copied. RecallFS paths and ownership rules govern here.
 The table probe was strengthened after migration; the source digest records the
 upstream baseline, not byte identity with the reviewed RecallFS version.
+
+The sequence-lane contract and executable alignment probe were added on
+2026-09-08 after the SQLite WAL-reset report exposed two reusable failure
+patterns: prose `max-width` leaking into grid rows, and glossary dividers that
+visually imply alignment with unrelated lane tracks.

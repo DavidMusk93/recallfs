@@ -350,6 +350,34 @@ The graph source uses printable ASCII characters and no tabs. Keep labels
 inside box boundaries. Complex RecallFS architecture graphs must also pass the
 repository ASCII graph verifier.
 
+## 8.1. Sequence-Lane Mechanisms
+
+Use a sequence-lane mechanism instead of ASCII when causality depends on the
+interleaving of two or more actors and shared mutable state. Read the complete
+contract in
+[`sequence-lane-contract.md`](sequence-lane-contract.md).
+
+Required visual grammar:
+
+- rows are ordered moments, with time moving from top to bottom;
+- columns are a time rail, stable actor lanes, and one explicitly labeled
+  shared-state lane;
+- state variables and symbols are defined before the board;
+- the race window, first invalid invariant, and delayed consequence are
+  distinct rows;
+- warning and failure tints are paired with literal status text;
+- the board fills the available mechanism width.
+
+Alignment is a data contract. The board owns one `--sequence-columns` custom
+property consumed by both `.sequence-head` and `.sequence-row`. Sequence rows
+must reset inherited prose constraints with `width: 100%` and
+`max-width: none`. Do not place a glossary with unrelated vertical dividers
+directly above the lane board; it falsely implies shared column tracks.
+
+On mobile, preserve one semantic structure and stack actor/state cells within
+each numbered row. Repeat lane names as real `.mobile-lane` text. Do not shrink
+the desktop matrix or create a second hidden copy of the mechanism.
+
 ## 9. Code Blocks
 
 Use this markup:

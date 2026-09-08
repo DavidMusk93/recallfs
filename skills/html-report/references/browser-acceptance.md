@@ -10,6 +10,7 @@ local screenshot.
 | --- | --- |
 | Every report | Desktop screenshot, 390px screenshot, page geometry, console |
 | Report with tables | Table probe for every visible table state |
+| Report with sequence lanes | Sequence probe plus focused desktop/mobile screenshots |
 | Report with filters/tabs/details affecting layout | Every reachable visible state |
 | Report with wide tables | Mobile left edge and right edge screenshots |
 | Report with bars or proportions | Actual pixel geometry versus declared value |
@@ -84,6 +85,7 @@ Repeat the full state matrix. Check:
 - metric grids collapse predictably;
 - long words and identifiers wrap without covering neighbors;
 - code and ASCII graphs scroll internally;
+- sequence lanes stack by numbered event with visible lane labels;
 - tables scroll inside `.table-wrap`;
 - buttons and tabs retain usable hit targets;
 - headings do not overflow;
@@ -111,7 +113,7 @@ JSON.stringify({
     viewportRight: window.innerWidth,
   })),
   scrollContainers: [...document.querySelectorAll(
-    ".table-wrap,.code-block,.ascii-graph"
+    ".table-wrap,.code-block,.ascii-graph,.sequence-board,.ownership-flow"
   )].map((element) => ({
     className: element.className,
     clientWidth: element.clientWidth,
@@ -128,6 +130,54 @@ Failure conditions:
 - wide content has `scrollWidth > clientWidth` without
   `overflow-x: auto|scroll`;
 - a supposedly fixed-format region changes size when labels or values update.
+
+## 6.1. Sequence-Lane Probe
+
+For every visible sequence-lane mechanism, execute the complete source of:
+
+```text
+../scripts/html_sequence_alignment_probe.js
+```
+
+A pass is:
+
+```json
+{
+  "ok": true,
+  "errors": []
+}
+```
+
+The probe validates:
+
+- an ordered `data-sequence-lanes` manifest;
+- at least two actor lanes and exactly one shared-state lane;
+- one board-owned `--sequence-columns` definition;
+- ordinary row lane order and outcome-span declarations;
+- full-width rows unaffected by global prose `max-width`;
+- exact desktop header/row lane boundaries within `0.75px`;
+- visible mobile lane labels when the desktop header is hidden;
+- component and page overflow.
+
+Also inspect the focused screenshots. The probe cannot determine whether the
+event decomposition is causally correct, whether a state lane is explained in
+plain language, or whether the first invalid invariant is the right one.
+
+For desktop, require every ordinary row's left/right lane boundaries to match
+the corresponding header lane. For mobile, require one vertical event stack
+per time step; do not accept a scaled-down desktop matrix.
+
+When changing the sequence contract or probe, run:
+
+```bash
+PLAYWRIGHT_MODULE="file://$PWD/.tmp/tools/playwright/node_modules/playwright/index.mjs" \
+  node skills/html-report/tests/sequence-probe-regression.mjs
+```
+
+The regression runner requires two valid viewport cases to pass and six
+malformed structures to fail closed: inherited row width, an undersized board,
+divergent header tracks, missing shared-state semantics, an incorrect outcome
+span, and hidden mobile lane labels.
 
 ## 7. Table Probe
 
@@ -264,6 +314,10 @@ Store temporary evidence under:
   mobile-full.png
   mobile-<table>-left.png
   mobile-<table>-right.png
+  desktop-sequence.png
+  mobile-sequence.png
+  desktop-sequence-probe.json
+  mobile-sequence-probe.json
   desktop-table-probe.json
   mobile-table-probe.json
   geometry.json
@@ -280,6 +334,10 @@ A report fails acceptance when:
 - visible text overlaps or clips;
 - a critical table never enters a screenshot;
 - a table probe reports any error;
+- a sequence-lane row does not fill the board or its lane boundaries differ
+  from the header;
+- a shared-state lane is presented as though it were another actor;
+- a mobile sequence hides the desktop header without visible lane labels;
 - a numeric column is not right-aligned and tabular;
 - an identifier is treated as a measure;
 - interaction states were omitted;
@@ -303,6 +361,7 @@ Report:
 | Viewports | Desktop width and 390px |
 | States | All states tested |
 | Table probes | Pass/fail per state |
+| Sequence probes | Pass/fail per sequence mechanism |
 | Page overflow | Width values |
 | Screenshots | Evidence paths |
 | Console/network | Errors or `none` |
