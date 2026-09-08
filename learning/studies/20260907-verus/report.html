@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verus：把 Rust 的内存安全推进到实现满足规格</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #5c6773;
+      --line: #cbd3dc;
+      --paper: #f7f8fa;
+      --panel: #ffffff;
+      --rust: #b64d2c;
+      --proof: #176b55;
+      --warn: #a16610;
+      --danger: #a13535;
+      --blue: #315f9a;
+      --code: #1e2530;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      color: var(--ink);
+      background: var(--paper);
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    header,
+    main,
+    footer {
+      width: min(1120px, calc(100% - 32px));
+      margin-inline: auto;
+    }
+
+    header {
+      padding: 64px 0 32px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      max-width: 780px;
+      margin: 0 0 24px;
+      font-size: clamp(2rem, 5vw, 3.75rem);
+      line-height: 1.08;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.55rem;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    p,
+    ul,
+    ol {
+      max-width: 70ch;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 6px 18px;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    dt {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    main {
+      padding: 36px 0 64px;
+    }
+
+    section {
+      min-width: 0;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lead {
+      max-width: 70ch;
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .verdict {
+      border-left: 5px solid var(--proof);
+      padding: 2px 0 2px 20px;
+    }
+
+    .diagram {
+      width: 100%;
+      max-width: 100%;
+      margin: 26px 0 20px;
+      padding: 20px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 760px;
+      height: auto;
+    }
+
+    .contrast,
+    .three-modes,
+    .evidence-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .contrast {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-modes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .evidence-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .panel {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .panel p {
+      margin: 0;
+    }
+
+    .panel.rust {
+      border-top: 4px solid var(--rust);
+    }
+
+    .panel.proof {
+      border-top: 4px solid var(--proof);
+    }
+
+    .panel.warn {
+      border-top: 4px solid var(--warn);
+    }
+
+    .step {
+      position: relative;
+      padding-top: 48px;
+    }
+
+    .step b {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      display: grid;
+      width: 24px;
+      height: 24px;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .status {
+      display: inline-block;
+      margin-top: 10px;
+      font: 700 0.8rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--proof);
+    }
+
+    .status.fail {
+      color: var(--danger);
+    }
+
+    pre {
+      max-width: 100%;
+      margin: 18px 0;
+      padding: 18px;
+      overflow: auto;
+      border-radius: 8px;
+      color: #e7edf3;
+      background: var(--code);
+      font: 0.9rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    p code,
+    li code,
+    td code {
+      padding: 0.12em 0.3em;
+      color: #24374a;
+      background: #e8edf2;
+      border-radius: 4px;
+    }
+
+    .kw {
+      color: #78b7ff;
+    }
+
+    .contract {
+      color: #7ee0b6;
+    }
+
+    .comment {
+      color: #aeb9c5;
+    }
+
+    .bad {
+      color: #ff9b9b;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 18px;
+      border-collapse: collapse;
+      background: var(--panel);
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    th {
+      background: #edf1f5;
+    }
+
+    .callout {
+      margin-top: 20px;
+      padding: 16px 18px;
+      border: 1px solid #d7b36b;
+      border-radius: 8px;
+      background: #fff8e8;
+    }
+
+    footer {
+      padding: 24px 0 40px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 820px) {
+      header {
+        padding-top: 38px;
+      }
+
+      h1 {
+        font-size: 2rem;
+        line-height: 1.14;
+      }
+
+      dl {
+        grid-template-columns: 92px minmax(0, 1fr);
+      }
+
+      .contrast,
+      .three-modes,
+      .evidence-grid {
+        grid-template-columns: 1fr;
+      }
+
+      th,
+      td {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Verus：把 Rust 的“内存安全”推进到“实现满足规格”</h1>
+    <dl>
+      <dt>Date</dt>
+      <dd>2026-09-07</dd>
+      <dt>Input shape</dt>
+      <dd>concept</dd>
+      <dt>Subject</dt>
+      <dd>Verus automated program verifier for Rust</dd>
+    </dl>
+  </header>
+
+  <main>
+    <section class="verdict">
+      <h2>一句话结论</h2>
+      <p class="lead">
+        Verus 不是“更严格的 Rust 编译器”，而是一套建立在 Rust
+        语法、所有权系统和 SMT 求解器之上的程序验证器。你先写出函数对所有输入都必须满足的数学契约，
+        再由 Verus 检查可执行 Rust 实现是否真的满足它。
+      </p>
+    </section>
+
+    <section>
+      <h2>它填补的是哪一层空白</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1040 330" role="img"
+          aria-label="Rust compiler, tests, and Verus cover different correctness obligations">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8"
+              refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#5c6773"></path>
+            </marker>
+          </defs>
+          <rect x="20" y="34" width="250" height="110" rx="6"
+            fill="#fff3ee" stroke="#b64d2c" stroke-width="2"></rect>
+          <text x="145" y="68" text-anchor="middle" font-size="22"
+            font-weight="700" fill="#17212b">Rust compiler</text>
+          <text x="145" y="98" text-anchor="middle" font-size="16"
+            fill="#5c6773">types, ownership, borrowing</text>
+          <text x="145" y="123" text-anchor="middle" font-size="16"
+            fill="#5c6773">memory and data-race safety</text>
+
+          <rect x="395" y="34" width="250" height="110" rx="6"
+            fill="#fff8e8" stroke="#a16610" stroke-width="2"></rect>
+          <text x="520" y="68" text-anchor="middle" font-size="22"
+            font-weight="700" fill="#17212b">Tests</text>
+          <text x="520" y="98" text-anchor="middle" font-size="16"
+            fill="#5c6773">selected concrete executions</text>
+          <text x="520" y="123" text-anchor="middle" font-size="16"
+            fill="#5c6773">good at finding observed bugs</text>
+
+          <rect x="770" y="34" width="250" height="110" rx="6"
+            fill="#edf8f4" stroke="#176b55" stroke-width="2"></rect>
+          <text x="895" y="68" text-anchor="middle" font-size="22"
+            font-weight="700" fill="#17212b">Verus</text>
+          <text x="895" y="98" text-anchor="middle" font-size="16"
+            fill="#5c6773">all inputs under a contract</text>
+          <text x="895" y="123" text-anchor="middle" font-size="16"
+            fill="#5c6773">functional correctness proof</text>
+
+          <path d="M270 89 L380 89" stroke="#5c6773" stroke-width="2"
+            marker-end="url(#arrow)"></path>
+          <path d="M645 89 L755 89" stroke="#5c6773" stroke-width="2"
+            marker-end="url(#arrow)"></path>
+
+          <rect x="190" y="214" width="660" height="76" rx="6"
+            fill="#ffffff" stroke="#315f9a" stroke-width="2"></rect>
+          <text x="520" y="245" text-anchor="middle" font-size="19"
+            font-weight="700" fill="#17212b">Each layer answers a different question</text>
+          <text x="520" y="271" text-anchor="middle" font-size="16"
+            fill="#5c6773">Verus supplements the compiler and tests; it does not replace them.</text>
+        </svg>
+      </div>
+      <p>
+        Rust 能阻止悬垂引用、违反借用规则的数据竞争等问题，但它不会证明二分查找返回的一定是目标，
+        也不会证明磁盘 extent 的尾位置不会越过容量。测试只能覆盖被执行的样本。Verus
+        把后一类要求写成逻辑公式，并尝试对所有满足前置条件的输入证明它们。
+      </p>
+    </section>
+
+    <section>
+      <h2>核心模型：Hoare triple 落进 Rust 源码</h2>
+      <p>
+        如果用 C/系统程序员熟悉的形式看，一个 Verus 函数就是
+        <code>{P} C {Q}</code>：<code>requires</code> 是调用者必须建立的
+        <code>P</code>，函数体是可执行代码 <code>C</code>，<code>ensures</code>
+        是实现必须保证的 <code>Q</code>。
+      </p>
+      <pre><code><span class="kw">fn</span> extent_end(start_block: u64, block_count: u64, capacity: u64)
+    -&gt; (end: u64)
+    <span class="contract">requires</span>
+        start_block &lt;= capacity,
+        block_count &lt;= capacity - start_block,
+    <span class="contract">ensures</span>
+        end == start_block + block_count,
+        start_block &lt;= end &lt;= capacity,
+{
+    start_block + block_count
+}</code></pre>
+      <p>
+        这里的价值不在于“加法很难”，而在于契约同时固定了三件事：加法不溢出、返回值语义正确、
+        返回范围不越过容量。之后每个调用点都必须证明前置条件成立。
+      </p>
+
+      <div class="three-modes">
+        <article class="panel rust">
+          <h3><code>exec</code></h3>
+          <p>真正编译运行的 Rust。默认模式，保留系统代码的低级控制能力。</p>
+        </article>
+        <article class="panel warn">
+          <h3><code>spec</code></h3>
+          <p>描述数学对象和目标性质。纯函数、必须终止，编译时擦除。</p>
+        </article>
+        <article class="panel proof">
+          <h3><code>proof</code></h3>
+          <p>给 SMT 求解器的高层证明步骤。受借用与线性约束，编译时擦除。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>它为什么特别适合系统代码</h2>
+      <div class="contrast">
+        <article class="panel rust">
+          <h3>普通 SMT 验证的痛点</h3>
+          <p>
+            可变内存、别名、指针和并发资源会迅速放大验证条件。若所有权关系也完全交给求解器，
+            证明会更重、更脆弱。
+          </p>
+        </article>
+        <article class="panel proof">
+          <h3>Verus 的关键取舍</h3>
+          <p>
+            借用检查器先解决大量内存与别名问题；线性 ghost permission
+            在证明层表达“谁有权访问哪个资源”。SMT 主要处理剩余的函数性质和状态关系。
+          </p>
+        </article>
+      </div>
+      <p>
+        因此它的上限不只是纯算法。官方项目已经覆盖 parser/serializer、X.509
+        验证、持久内存日志、页表、微内核、Kubernetes controller、并发内存分配器等系统场景。
+        Amazon 文章强调的 <code>unsafe</code> 与自定义锁验证，正是这个组合的目标区间。
+      </p>
+    </section>
+
+    <section>
+      <h2>本地 demo 给出的五级证据</h2>
+      <div class="evidence-grid">
+        <article class="panel step">
+          <b>1</b>
+          <h3>普通测试</h3>
+          <p>三个典型输入全部通过。</p>
+          <span class="status">PASS</span>
+        </article>
+        <article class="panel step">
+          <b>2</b>
+          <h3>无边界</h3>
+          <p>同一加法无法证明对所有 <code>u64</code> 安全。</p>
+          <span class="status fail">REJECT</span>
+        </article>
+        <article class="panel step">
+          <b>3</b>
+          <h3>弱规格</h3>
+          <p>永远返回 0 的坏实现也能通过。</p>
+          <span class="status">2 VERIFIED</span>
+        </article>
+        <article class="panel step">
+          <b>4</b>
+          <h3>强规格</h3>
+          <p>off-by-one 实现违反后置条件。</p>
+          <span class="status fail">REJECT</span>
+        </article>
+        <article class="panel step">
+          <b>5</b>
+          <h3>修正实现</h3>
+          <p>证明、编译、运行全部成功。</p>
+          <span class="status">2 VERIFIED</span>
+        </article>
+      </div>
+      <pre><code>learning/studies/20260907-verus/demo/setup-macos-arm64.sh
+learning/studies/20260907-verus/demo/run.sh</code></pre>
+      <p>
+        本机实测版本为 Verus <code>0.2026.09.06.8dea4a2</code>、Z3
+        <code>4.16.0</code>。最终验证加编译约 229 ms；这支持“交互式反馈很快”的判断，
+        但不能外推为大型项目的性能承诺。
+      </p>
+    </section>
+
+    <section>
+      <h2>最重要的边界：证明只和规格一样可靠</h2>
+      <p>
+        demo 第 3 步故意写了一个弱规格：只要求结果不超过容量。于是永远返回 0
+        的实现被成功“证明”。Verus 没有犯错，它精确证明了一个没有表达业务语义的命题。
+      </p>
+      <div class="callout">
+        <strong>必须审查的可信边界：</strong>
+        顶层规格、<code>assume</code>/<code>admit</code>、外部函数体和库模型、
+        Verus 与 Z3、Rust/LLVM 编译链、硬件和运行时假设。形式化验证缩小了信任面，
+        但不会让信任消失。
+      </div>
+    </section>
+
+    <section>
+      <h2>什么时候值得投入</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>场景</th>
+            <th>判断</th>
+            <th>原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>存储格式、日志恢复、页表、分配器</td>
+            <td>高价值</td>
+            <td>状态不变量稳定，错误代价高，核心可切成较小验证边界。</td>
+          </tr>
+          <tr>
+            <td>自定义并发原语、原子状态机</td>
+            <td>高价值但昂贵</td>
+            <td>线性 ghost state 很匹配，但证明设计本身是专业工作。</td>
+          </tr>
+          <tr>
+            <td>纯算法、parser/serializer</td>
+            <td>良好切入点</td>
+            <td>输入输出关系清楚，规格相对容易评审。</td>
+          </tr>
+          <tr>
+            <td>普通 CRUD、UI、快速变化的胶水代码</td>
+            <td>通常不划算</td>
+            <td>规格维护成本高于风险收益，测试与类型系统更经济。</td>
+          </tr>
+          <tr>
+            <td>一次验证整个现有 Rust 生态</td>
+            <td>不现实</td>
+            <td>Verus 只支持 Rust 子集，依赖和外部行为需要模型或可信边界。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>最终判断</h2>
+      <p>
+        Verus 的真正价值不是替代测试，而是把最昂贵的正确性要求变成可由机器反复检查的接口。
+        对数据库内核而言，最合理的采用方式是从小而稳定的核心开始：页号算术、磁盘格式、
+        redo/undo 状态机、crash consistency 不变量或自定义并发原语。先让人审查规格，
+        再让 Verus 审查实现和调用点。
+      </p>
+      <p>
+        这是一种“把设计意图编译进 CI”的能力。它的收益与 bug 代价、规格稳定性和可信边界大小成正比，
+        与代码变化频率和外部依赖复杂度成反比。
+      </p>
+    </section>
+  </main>
+
+  <footer>Composed 2026-09-07 by ce-explain</footer>
+</body>
+</html>
