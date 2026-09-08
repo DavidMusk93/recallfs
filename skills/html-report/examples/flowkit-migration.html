@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>RecallFS HTML 报告能力迁移</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f5f5f7;
+      --surface: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #606067;
+      --line: #d2d2d7;
+      --info: #075ca8;
+      --info-soft: #eaf3fb;
+      --success: #08783e;
+      --success-soft: #e8f7ee;
+      --warning: #8a4b08;
+      --warning-soft: #fff5df;
+      --code-bg: #20242b;
+      --code-ink: #e8edf4;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.58;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 44px 0 72px;
+    }
+
+    header {
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--info);
+      font-size: 13px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 8px 0 12px;
+      font-size: 40px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    p,
+    li {
+      max-width: 72ch;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .conclusion {
+      margin-top: 22px;
+      padding: 17px 18px;
+      border: 1px solid #a8daba;
+      border-radius: 6px;
+      background: var(--success-soft);
+      color: #064d29;
+      font-weight: 680;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    section {
+      min-width: 0;
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 8px 18px;
+      margin: 0;
+    }
+
+    .facts dt { color: var(--muted); }
+
+    .facts dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    p code,
+    dd code,
+    td code,
+    footer code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .ascii-graph {
+      width: max-content;
+      max-width: 100%;
+      margin: 18px auto 0;
+      overflow-x: auto;
+      padding: 16px;
+      border: 1px solid #c7c7cc;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1d1d1f;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #ececf0;
+      color: #353539;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    th.measure,
+    td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    .col-source { width: 48%; }
+    .col-count { width: 18%; }
+    .col-target { width: 34%; }
+
+    .code-block {
+      max-width: 100%;
+      margin: 18px 0 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      counter-reset: line;
+      border: 1px solid #343942;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .code-block code {
+      display: block;
+      min-width: max-content;
+      padding: 16px 0;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 16px;
+      white-space: pre;
+      counter-increment: line;
+    }
+
+    .code-line::before {
+      content: counter(line);
+      display: inline-block;
+      width: 3ch;
+      margin-right: 18px;
+      color: #89909d;
+      text-align: right;
+      user-select: none;
+    }
+
+    .tok-tag { color: #8ec9ff; }
+    .tok-attr { color: #d8b4fe; }
+    .tok-string { color: #a7d7a9; }
+
+    .callout {
+      margin-top: 16px;
+      padding: 15px 17px;
+      border: 1px solid #e5c591;
+      border-radius: 6px;
+      background: var(--warning-soft);
+      color: #663806;
+    }
+
+    footer {
+      padding-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 700px) {
+      main {
+        width: min(100% - 24px, 1080px);
+        padding-top: 28px;
+      }
+
+      h1 { font-size: 32px; }
+      h2 { font-size: 21px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .facts { grid-template-columns: 1fr; gap: 2px; }
+      .facts dd { margin-bottom: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .metric,
+      .table-wrap,
+      .callout {
+        background: var(--surface);
+      }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --line: #707075; }
+      .metric,
+      .table-wrap,
+      .callout { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">RecallFS / Skill Migration</p>
+      <h1>HTML 报告能力从 Flowkit 迁移到 RecallFS</h1>
+      <p class="lede">把视觉原则、语义结构、表格列合同和真实浏览器验收收敛为仓库内可版本化能力，而不是只复制一个 CSS 主题。</p>
+      <aside class="conclusion">迁移结果：RecallFS 获得自包含、证据优先、可被 Agent 阅读，并可通过桌面与移动端 DOM 几何门禁的 HTML 报告工作流。</aside>
+      <ul class="metrics">
+        <li class="metric"><strong>1</strong><span>单文件 HTML 交付</span></li>
+        <li class="metric"><strong>2</strong><span>桌面与移动视口</span></li>
+        <li class="metric"><strong>3</strong><span>表格列语义类型</span></li>
+        <li class="metric"><strong>0</strong><span>外部框架运行时</span></li>
+      </ul>
+    </header>
+
+    <section id="identity">
+      <h2>迁移身份</h2>
+      <dl class="facts">
+        <dt>来源仓库</dt><dd><code>flowkit</code></dd>
+        <dt>目标仓库</dt><dd><code>recallfs</code></dd>
+        <dt>视觉原则</dt><dd><code>apple-design</code></dd>
+        <dt>验收真源</dt><dd><code>html_table_alignment_probe.js</code></dd>
+      </dl>
+    </section>
+
+    <section id="mechanism">
+      <h2>能力组合</h2>
+      <pre class="ascii-graph">+-----------------------------+
+| evidence and reader goal    |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| semantic HTML composition   |
+| single file + visible facts |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| restrained visual system    |
+| type + spacing + semantics  |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| browser acceptance          |
+| desktop + mobile + DOM      |
++-----------------------------+</pre>
+    </section>
+
+    <section id="mapping">
+      <h2>来源到目标的映射</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,identifier">
+          <colgroup>
+            <col class="col-source">
+            <col class="col-count">
+            <col class="col-target">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Flowkit 能力</th>
+              <th class="measure">合同数</th>
+              <th>RecallFS 入口</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>视觉与交互原则</td>
+              <td class="measure">17</td>
+              <td><code>apple-design</code></td>
+            </tr>
+            <tr>
+              <td>报告生成工作流</td>
+              <td class="measure">10</td>
+              <td><code>html-report</code></td>
+            </tr>
+            <tr>
+              <td>表格 DOM 几何门禁</td>
+              <td class="measure">1</td>
+              <td><code>html_table_alignment_probe.js</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="code-contract">
+      <h2>代码块合同</h2>
+      <p>语言、逻辑行和复制语义都在真实 HTML 中表达；行号只由 CSS counter 渲染。</p>
+      <pre class="code-block" data-language="html"><code><span class="code-line"><span class="tok-tag">&lt;table</span> <span class="tok-attr">data-column-kinds</span>=<span class="tok-string">"text,measure,identifier"</span><span class="tok-tag">&gt;</span></span><!--
+--><span class="code-line">  <span class="tok-tag">&lt;colgroup&gt;&lt;col&gt;&lt;col&gt;&lt;col&gt;&lt;/colgroup&gt;</span></span><!--
+--><span class="code-line">  <span class="tok-tag">&lt;thead&gt;</span>...<span class="tok-tag">&lt;/thead&gt;</span></span><!--
+--><span class="code-line">  <span class="tok-tag">&lt;tbody&gt;</span>...<span class="tok-tag">&lt;/tbody&gt;</span></span><!--
+--><span class="code-line"><span class="tok-tag">&lt;/table&gt;</span></span></code></pre>
+      <div class="callout">边界：该示例展示报告型 HTML，不替代产品应用的设计系统，也不允许用视觉效果掩盖证据缺口。</div>
+    </section>
+
+    <footer>Composed 2026-09-08 by <code>html-report</code> from Flowkit HTML contracts and production report patterns.</footer>
+  </main>
+</body>
+</html>
