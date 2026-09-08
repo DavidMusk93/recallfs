@@ -18,6 +18,10 @@
 | [Article](https://www.benjoffe.com/fast-time-of-day) | Main claims, formulas, validity ranges, and published benchmarks |
 | [Reference code](https://github.com/benjoffe/fast-world-calendars/tree/25f6d9345f2d681a77315cf6eaeee25b3629af8c/time) | Cross-check exact algorithms and upstream test methodology |
 | [Faster Remainder by Direct Computation](https://arxiv.org/abs/1902.01961) | Background for interpreting multiplication low bits as fractional progress |
+| [Linux clocksource timekeeping](https://www.kernel.org/doc/Documentation/timers/timekeeping.rst) | Production multiply-shift conversion from hardware cycles to nanoseconds |
+| [CMSIS-DSP fixed-point types](https://github.com/ARM-software/CMSIS-DSP/blob/main/Include/arm_math_types.h) | Q7/Q15/Q31 representations used by DSP, filters, transforms, and control code |
+| [TensorFlow Lite int8 quantization](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/performance/quantization_spec.md) | Affine scale and zero-point model for integer tensor arithmetic |
+| [libdivide](https://libdivide.com/) | Runtime precomputation for repeated integer division, including SIMD paths |
 
 ## 2. Reproduction Scope
 
@@ -36,6 +40,10 @@ claimed range is checked as a deliberate mismatch.
 Performance measurements distinguish serial dependency latency from independent
 scalar throughput. SIMD, sub-second fields, leap seconds, time zones, and
 calendar-date conversion are outside this reproduction.
+
+The broader fixed-point application map is explanatory. It identifies recurring
+multiply-shift, Q-format, and multiply-high structures, but this study does not
+benchmark those external domains.
 
 ## 3. Source Limitations
 

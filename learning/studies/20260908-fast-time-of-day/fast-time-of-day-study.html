@@ -392,6 +392,10 @@
     .col-range-note { width: 26%; }
     .col-choice { width: 27%; }
     .col-guidance { width: 73%; }
+    .col-app-domain { width: 18%; }
+    .col-app-shape { width: 25%; }
+    .col-app-value { width: 29%; }
+    .col-app-risk { width: 28%; }
 
     .callout {
       margin-top: 16px;
@@ -480,18 +484,19 @@
     <header>
       <p class="eyebrow">Systems Performance / Integer Arithmetic</p>
       <h1>Fast Time-of-Day：打断依赖链</h1>
-      <p class="lede">把日内秒数转换成 hour、minute、second。关键优化不是先找 magic number，而是先把串行商余链重写成两条可重叠的数据依赖。</p>
-      <aside class="conclusion" aria-label="工程结论">工程默认应先选 V1 division：它保留完整 <code>uint32_t</code> 输入契约，同时在目标机上把串行延迟降低 47.8%。只有在调用方明确保证日内范围且 profile 证明必要时，再考虑 V2/V3。</aside>
+      <p class="lede">把日内秒数转换成 hour、minute、second 是一个入口。背后的定点表示、multiply-shift 和 multiply-high 技术还覆盖时钟换算、DSP、图形、量化、索引映射与模运算。</p>
+      <aside class="conclusion" aria-label="工程结论">工程默认应先选 V1 division：它保留完整 <code>uint32_t</code> 输入契约，同时在目标机上把串行延迟降低 47.8%。更广泛地说，定点优化必须从 scale、range、rounding 和 overflow policy 开始，而不是从 magic number 开始。</aside>
       <ul class="metrics">
         <li class="metric"><strong>47.8%</strong><span>V1 latency reduction</span></li>
         <li class="metric"><strong>56.5%</strong><span>V3 latency reduction</span></li>
         <li class="metric"><strong>30.0%</strong><span>V3 throughput reduction</span></li>
-        <li class="metric"><strong>5</strong><span>validated scalar variants</span></li>
+        <li class="metric"><strong>8</strong><span>fixed-point application domains</span></li>
       </ul>
       <nav class="toc" aria-label="报告导航">
         <a href="#scope">问题边界</a>
         <a href="#dependency">依赖链</a>
         <a href="#fixed-point">定点算法</a>
+        <a href="#fixed-point-beyond">应用地图</a>
         <a href="#benchmark">目标机实测</a>
         <a href="#decision">工程选择</a>
         <a href="#evidence">证据与限制</a>
@@ -615,6 +620,160 @@
         </table>
       </div>
       <aside class="callout warning" aria-label="输入范围警告">若 API 接受任意 <code>uint32_t</code> duration，只有 Traditional 与 V1 division 可直接使用。采用任一定点版本时，必须在入口处执行并测试范围约束。</aside>
+    </section>
+
+    <section id="fixed-point-beyond">
+      <h2>定点数的通用优化版图</h2>
+      <p class="section-intro">Time-of-Day 不是孤立技巧。它同时展示了三种可迁移能力：用整数编码有界小数、用 multiply-shift 完成比例变换、从宽乘积高低位提取商余或区间位置。</p>
+      <div class="method-grid">
+        <article class="method">
+          <span class="tag safe">Representation</span>
+          <h3>Q-format</h3>
+          <p><code>real ~= integer / 2^F</code>。固定 fraction bits 后，加减使用整数指令，乘法在宽类型中完成后再缩放。</p>
+        </article>
+        <article class="method">
+          <span class="tag">Transform</span>
+          <h3>multiply-shift</h3>
+          <p><code>y ~= (x*multiplier+bias) &gt;&gt; shift</code>。适合高频单位换算、常量除法和仿射缩放。</p>
+        </article>
+        <article class="method">
+          <span class="tag bound">Extraction</span>
+          <h3>multiply-high / low</h3>
+          <p>高位近似商或区间索引，低位保留 fractional progress，可直接构造 remainder 或下一阶段比例。</p>
+        </article>
+      </div>
+
+      <h3>Q-format 的四条运算纪律</h3>
+      <ol>
+        <li><strong>加减先对齐 scale。</strong>Q15 与 Q31 代表不同小数位，不能把底层整数直接相加。</li>
+        <li><strong>乘法保留宽中间结果。</strong>Q15 乘积需要 32-bit，Q31 乘积需要 64-bit。CMSIS 常见 C target 的 integer promotion 已为 Q15 提供 32-bit 计算，但 rescale 前窄化仍会丢失 Q30。</li>
+        <li><strong>累加器通常更宽。</strong>滤波、卷积和控制环先在 32/64-bit accumulator 中累加，最后统一 requantize。</li>
+        <li><strong>overflow policy 是算法语义。</strong>wrap、saturate、trap、widen 不能由偶然的类型提升决定。</li>
+      </ol>
+      <pre class="formula">encode:       I = round(real * 2^F)
+multiply:     P = widen(A) * widen(B)
+rescale:      R = round(P / 2^F)
+decode:    real ~= R / 2^F</pre>
+
+      <h3>八类典型应用</h3>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text,text,text">
+          <colgroup>
+            <col class="col-app-domain">
+            <col class="col-app-shape">
+            <col class="col-app-value">
+            <col class="col-app-risk">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>应用域</th>
+              <th>固定点形状</th>
+              <th>价值</th>
+              <th>首要风险</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>时钟与单位换算</td>
+              <td><code>counter*mult &gt;&gt; shift</code></td>
+              <td>高频把 ticks 换成 ns/us，避免通用除法</td>
+              <td>wrap、累计误差、乘积位宽</td>
+            </tr>
+            <tr>
+              <td>常量或重复除法</td>
+              <td>multiply/add/shift descriptor</td>
+              <td>编译期 strength reduction；运行时可预计算 descriptor</td>
+              <td>并非所有 divisor 都只需 multiply-high；signed rounding 不同</td>
+            </tr>
+            <tr>
+              <td>DSP、滤波与控制</td>
+              <td>Q7 / Q15 / Q31 MAC</td>
+              <td>适配 MCU 与整数 DSP/SIMD 指令</td>
+              <td>saturation、动态范围、反馈误差</td>
+            </tr>
+            <tr>
+              <td>图形、几何与插值</td>
+              <td>subpixel fixed coordinates</td>
+              <td>固定分辨率、可重复栅格、批量乘加</td>
+              <td>缩放后精度不足、坐标 overflow</td>
+            </tr>
+            <tr>
+              <td>ML integer quantization</td>
+              <td><code>(q-zero_point)*scale</code></td>
+              <td>降低模型体积和 memory bandwidth，适配整数 accelerator</td>
+              <td>calibration、clipping、scale 粒度</td>
+            </tr>
+            <tr>
+              <td>bucket / range mapping</td>
+              <td><code>high(x*range)</code></td>
+              <td>快速映射 shard、sample bucket 与坐标区间</td>
+              <td>离散 bias；严格无偏时需要 rejection</td>
+            </tr>
+            <tr>
+              <td>模运算与密码学</td>
+              <td>Barrett / Montgomery reduction</td>
+              <td>同模数批量运算摊销预计算</td>
+              <td>证明、overflow、constant-time</td>
+            </tr>
+            <tr>
+              <td>金额与遥测</td>
+              <td>decimal scaled integer</td>
+              <td>精确 decimal unit 与跨平台确定性</td>
+              <td>主要是语义收益，不保证快于硬件浮点</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>运行时 divisor 与区间映射</h3>
+      <p>divisor 在编译期已知时，先检查 compiler codegen；divisor 只在运行时得知但随后被大量复用时，才值得预计算 multiplier、shift 和 add indicator。有些 descriptor 退化为 multiply-high，另一些需要 add correction 与 post-shift。<a href="https://libdivide.com/">libdivide</a> 将这条路径推广到 scalar 与 SIMD。</p>
+      <p>普通 reciprocal 高位不是通用 quotient。对 <code>d=7</code> 和 <code>m=ceil(2^32/7)=613566757</code>：</p>
+      <pre class="formula">x = 3724842645
+high32(x * m) = 532120378
+floor(x / 7)  = 532120377</pre>
+      <p>这个 off-by-one 说明 multiplier、add indicator 与 shift 必须作为一个经过证明的 descriptor 生成，不能只取 <code>ceil(2^w/d)</code>。</p>
+      <pre class="formula">u32 bucket = high32(u32_value * u32_range)
+u64 bucket = high64(u64_value * u64_range)</pre>
+      <p>multiply-high 适合 hash shard、sampling bucket 和坐标缩放，但它不会自动让有限离散域“严格无偏”。若随机数必须无偏，应检查 <code>2^w</code> 与 range 的关系，并在需要时加入 rejection。</p>
+
+      <h3>采用前的判断顺序</h3>
+      <pre class="ascii-graph">                           +----------------------+
+                           | repeated hot scaling |
+                           +----------+-----------+
+                                      |
+                       +--------------+--------------+
+                       |                             |
+                       v                             v
+              +----------------+           +----------------+
+              | exact domain?  |           | bounded error? |
+              +-------+--------+           +-------+--------+
+                      |                            |
+              yes     |                            | yes
+                      v                            v
+              +----------------+           +----------------+
+              | scaled integer |           | Q / mult-shift |
+              +----------------+           +----------------+
+                       \                           /
+                        \                         /
+                         v                       v
+                         +-----------------------+
+                         | verify range + codegen|
+                         +-----------------------+</pre>
+      <pre class="formula">define scale/range/error
+        -&gt; derive integer transform
+        -&gt; prove overflow and rounding
+        -&gt; exhaust or property-test the domain
+        -&gt; inspect optimized code
+        -&gt; benchmark the real consumer</pre>
+      <aside class="callout warning" aria-label="定点数采用边界">路径不热、编译器已经生成等价序列、目标 CPU 浮点更强、误差预算未定义或输入范围无法证明时，不要使用定点技巧。本文只 benchmark 了 Time-of-Day 五个 scalar variant；其他应用是机制地图，不是本机性能结论。</aside>
+
+      <h3>生产系统中的同一模式</h3>
+      <ul class="references">
+        <li><a href="https://www.kernel.org/doc/Documentation/timers/timekeeping.rst">Linux clocksource</a> 使用 <code>ns ~= cycles*mult &gt;&gt; shift</code> 换算硬件计数器。</li>
+        <li><a href="https://github.com/ARM-software/CMSIS-DSP/blob/main/Include/arm_math_types.h">CMSIS-DSP</a> 提供 Q7、Q15、Q31 类型，并将 fixed-point 用于 filters、transforms、statistics 与 control。</li>
+        <li><a href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/performance/quantization_spec.md">TensorFlow Lite int8 quantization</a> 使用 scale 与 zero point 把 real value 映射到整数张量。</li>
+        <li><a href="https://lemire.me/en/publication/arxiv190201961/">Faster Remainder by Direct Computation</a> 从 reciprocal product 的 fractional part 直接恢复 remainder。</li>
+      </ul>
     </section>
 
     <section id="benchmark">

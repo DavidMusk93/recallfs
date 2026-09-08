@@ -156,7 +156,162 @@ minute = (total_minutes + 4 * hour) & 63;
 `lea` 和 2 个 `and`，没有 `idiv`。这条技巧依赖非负整数和已验证 range；
 不要把 signed `%` 的语义混进来。
 
-## 7. 实测
+## 7. 从时分秒到通用定点优化
+
+这里的技巧不是日期算法专属。更准确地说，它属于三类相关但不同的整数化
+方法：
+
+| 类别 | 通用形式 | 目标 |
+| --- | --- | --- |
+| Q-format 表示 | `real ~= integer / 2^F` | 用整数保存和计算有界小数 |
+| 比例变换 | `y ~= (x * multiplier + bias) >> shift` | 把除法、单位换算或仿射缩放变成乘加移位 |
+| multiply-high / low | `product = x * reciprocal` | 从宽乘积的高低位直接提取商、余数进度或区间位置 |
+
+Time-of-Day 的 V1 fixed-point 属于第二类；V2 同时使用第三类；V3 又叠加了
+把 base-60 remainder 转成 base-64 mask 的代数变换。把它们统称为“定点数”
+没有错，但工程上必须知道自己究竟在优化表示、比例变换，还是商余计算。
+
+### 7.1 Q-format 的基本运算
+
+若整数 `I` 带有 `F` 个 fraction bits，则其代表的实数近似为：
+
+```text
+real ~= I / 2^F
+resolution = 2^-F
+```
+
+这带来四个必须显式设计的规则：
+
+1. **加减必须同 scale。** Q15 与 Q31 不能直接相加，必须先对齐小数位。
+2. **乘法必须保留足够宽的中间结果。** Q15 乘积需要 32-bit，Q31 乘积需要
+   64-bit。CMSIS 常见 C target 上的 integer promotion 已为 Q15 提供
+   32-bit 计算，但若在 rescale 前窄化或存回 Q15，仍会丢失 Q30 结果。
+3. **累加器通常更宽。** DSP 的 multiply-accumulate 常用 64-bit accumulator
+   承接 16/32-bit 输入，最后才 requantize。
+4. **overflow policy 是语义。** wrap、saturate、trap、widen 会产生不同结果，
+   不能由编译器或偶然类型提升决定。
+
+```text
+encode:       I = round(real * 2^F)
+multiply:     P = widen(A) * widen(B)
+rescale:      R = round(P / 2^F)
+decode:    real ~= R / 2^F
+```
+
+### 7.2 应用地图
+
+| 应用域 | 固定点形状 | 为什么有价值 | 首要风险 |
+| --- | --- | --- | --- |
+| 时钟与单位换算 | `units ~= counter * mult >> shift` | 高频把 hardware ticks 转换成 ns/us，不在热路径做通用除法 | counter wrap、累计误差、乘积位宽 |
+| 常量或重复除法 | precomputed multiply/add/shift descriptor | compile-time divisor 可 strength-reduce；runtime divisor 可预计算 descriptor 后复用 | 并非所有 divisor 都只需 multiply-high；signed 和 rounding 语义不同 |
+| DSP、滤波与控制 | Q7/Q15/Q31 multiply-accumulate | 适配没有高性能 FPU 的 MCU，也便于使用整数 SIMD/DSP 指令 | saturation、动态范围、反馈环误差积累 |
+| 图形、几何与插值 | fixed subpixel coordinates / affine scale | 保证固定分辨率与可重复栅格结果，批量乘加容易向量化 | zoom 后精度不足、坐标乘法 overflow |
+| ML integer quantization | `real ~= (q - zero_point) * scale` | 缩小模型和内存带宽，让整数 accelerator 执行卷积/矩阵乘 | calibration、clipping、per-tensor scale 丢精度 |
+| bucket / range mapping | `bucket = high(x * range)` | 把均匀整数快速映射到有界索引，不先 `% range` | 非整除域仍需分析 bias；无偏随机数通常需要 rejection |
+| 模运算与密码学 | reciprocal/Barrett 或 Montgomery reduction | 在大量同模数运算中摊销预计算，避免通用除法 | 证明、溢出和 constant-time 要求，不能套用普通业务近似 |
+| 金额与遥测 | `stored = real * decimal_scale` | 精确表达 decimal unit、跨平台可重复，不必依赖 binary float | 价值主要是语义确定性，不保证比硬件浮点更快 |
+
+Linux clocksource 是典型生产例子：文档明确使用
+`ns ~= (cycles * mult) >> shift` 把计数器换算为纳秒。CMSIS-DSP 则同时提供
+Q7、Q15、Q31 与浮点运算，覆盖 filters、transforms、statistics 和 control。
+TensorFlow Lite 的 int8 quantization 使用
+`real_value = (int8_value - zero_point) * scale`，说明定点/量化优化也经常首先
+减少模型体积与 memory bandwidth，而不只是减少一条除法。
+
+### 7.3 runtime divisor 与区间映射
+
+编译器通常能优化 compile-time constant division，但 divisor 只在运行时
+得知、随后被大量复用时，可以先计算 divider descriptor，再对整批 numerator
+使用 multiply/add/shift；有些 descriptor 退化为 multiply-high，另一些需要
+add correction 与 post-shift。`libdivide` 就提供 scalar 与 SIMD 形式。
+
+不能把普通 reciprocal 的高位写成通用等式。以 `d=7`、
+`m=ceil(2^32/7)=613566757` 为例：
+
+```text
+x = 3724842645
+high32(x * m) = 532120378
+floor(x / 7)  = 532120377
+```
+
+这个 off-by-one 说明 magic multiplier、add indicator 与 shift 必须作为一个
+经过证明的 descriptor 生成，不能只取 `ceil(2^w/d)`。
+
+宽乘积还可以直接表达区间位置：
+
+```text
+u32 bucket = high32(u32_value * u32_range)
+u64 bucket = high64(u64_value * u64_range)
+```
+
+它适合 hash table shard、sampling bucket 和坐标缩放。若目标是严格无偏随机
+整数，仍需检查 `2^w` 是否能被 range 整除，并在需要时加入 rejection；只把
+`% range` 换成 multiply-high 不会自动消除离散映射偏差。
+
+### 7.4 什么时候不要用
+
+```text
+                           +----------------------+
+                           | repeated hot scaling |
+                           +----------+-----------+
+                                      |
+                       +--------------+--------------+
+                       |                             |
+                       v                             v
+              +----------------+           +----------------+
+              | exact domain?  |           | bounded error? |
+              +-------+--------+           +-------+--------+
+                      |                            |
+              yes     |                            | yes
+                      v                            v
+              +----------------+           +----------------+
+              | scaled integer |           | Q / mult-shift |
+              +----------------+           +----------------+
+                       \                           /
+                        \                         /
+                         v                       v
+                         +-----------------------+
+                         | verify range + codegen|
+                         +-----------------------+
+```
+
+先拒绝以下情形：
+
+- 路径不热，复杂度成本高于纳秒收益；
+- divisor 已是 compile-time constant，当前 compiler 已生成同等或更好的序列；
+- 目标 CPU 的浮点/SIMD 更快，或者整数转换反而增加 dependency chain；
+- 误差预算、rounding mode、saturation 和 overflow policy 尚未定义；
+- 输入范围无法静态证明，也没有执行时 guard；
+- 需要无偏、constant-time 或 bit-exact 语义，却只验证了“样例看起来相同”。
+
+因此，定点优化的正确顺序是：
+
+```text
+define scale/range/error
+        ->
+derive integer transform
+        ->
+prove overflow and rounding
+        ->
+exhaust or property-test the domain
+        ->
+inspect optimized code
+        ->
+benchmark the real consumer
+```
+
+本 study 只对 Time-of-Day 五个 scalar variant 提供了目标机 benchmark。上述
+其他应用域是机制与工程边界地图，不代表已经在当前机器上测得性能收益。
+
+延伸资料：
+
+- [Linux clocksource timekeeping](https://www.kernel.org/doc/Documentation/timers/timekeeping.rst)
+- [CMSIS-DSP fixed-point types](https://github.com/ARM-software/CMSIS-DSP/blob/main/Include/arm_math_types.h)
+- [TensorFlow Lite int8 quantization specification](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/g3doc/performance/quantization_spec.md)
+- [Faster Remainder by Direct Computation](https://lemire.me/en/publication/arxiv190201961/)
+- [libdivide runtime division](https://libdivide.com/)
+
+## 8. 实测
 
 目标：`dc02-pe-t137-n047`，AMD EPYC 7Y83，2 sockets、128 cores、
 SMT2、4 NUMA nodes。进程固定在 NUMA 0 的 CPU 31，governor 为
@@ -195,7 +350,7 @@ sample 的原始日志。
 完整环境、hash、run-level median 汇总、throughput codegen 证明和限制见
 [`evidence/target-benchmark.md`](evidence/target-benchmark.md)。
 
-## 8. 工程选择
+## 9. 工程选择
 
 | 场景 | 建议 |
 | --- | --- |
@@ -211,7 +366,7 @@ sample 的原始日志。
 物化完整返回值的成本；本 study 的第一次反汇编检查正好发现并修复了这个
 问题。
 
-## 9. Demo
+## 10. Demo
 
 | Item | Value |
 | --- | --- |
@@ -223,7 +378,7 @@ sample 的原始日志。
 | Build and run | See [`demo/README.md`](demo/README.md) |
 | Exploration | See [`exploration.md`](exploration.md) |
 
-## 10. Next Steps
+## 11. Next Steps
 
 1. 在真实调用点 profile，而不是直接替换公共日期 API。
 2. 若采用任一定点版本（V1 fixed-point、V2、V3），把 `[0, 86399]`
