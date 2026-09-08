@@ -2,7 +2,10 @@
 
 # 计算密集
 
-- 消除高周期指令，如除法使用`libdivide` 库、利用定点数近似计算。
+- 消除高周期指令前先确认 profile、consumer 与目标 ISA。
+- repeated division/modulo、`libdivide`、定点数近似、multiply-shift 或
+  multiply-high 优化必须加载 `fixed-point-optimization`，完成数值合同、
+  codegen 和目标机 benchmark 门禁。
 - simd。
 
 # 内存密集
@@ -28,4 +31,3 @@
 mutex 在竞争轻度的情况下，性能较好。场景简单，尽量使用lock free 的数据解耦。
 
 分析锁的区域和类型，避免死锁和不必要的锁。
-

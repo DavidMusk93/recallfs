@@ -78,3 +78,12 @@ bench 流程
 - 一次只改一个关键变量，否则无法判断收益来源。
 - 收益不稳定时，不要急着提交，先检查样本量、波动和测量方法。
 - 不仅记录成功经验，也记录失败尝试，避免重复走弯路。
+
+定点数专项：
+
+- 遇到 repeated division/modulo、unit scaling、Q-format、quantization、
+  multiply-high 或 range mapping 时，先加载 `fixed-point-optimization`。
+- baseline 必须包含编译器自然生成的 `/`、`%` 或浮点版本，不能只和故意保留
+  hardware divide 的弱基线比较。
+- correctness、optimized binary codegen、setup/conversion 成本与真实 consumer
+  benchmark 缺一不可。
