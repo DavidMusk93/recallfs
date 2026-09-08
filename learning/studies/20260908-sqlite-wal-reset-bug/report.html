@@ -257,21 +257,19 @@
     }
 
     .sequence-terms {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
       margin: 0 0 18px;
-      border-block: 1px solid var(--line);
+      padding: 14px 16px;
+      border: 1px solid #c6d9e8;
+      border-radius: 6px;
+      background: var(--info-soft);
     }
 
     .sequence-terms > div {
+      flex: 1 1 280px;
       min-width: 0;
-      padding: 12px 16px;
-      border-left: 1px solid var(--line);
-    }
-
-    .sequence-terms > div:first-child {
-      border-left: 0;
     }
 
     .sequence-terms dt {
@@ -727,17 +725,13 @@
       }
 
       .sequence-terms {
+        display: grid;
         grid-template-columns: 1fr;
+        gap: 10px;
       }
 
       .sequence-terms > div {
-        padding: 10px 12px;
-        border-top: 1px solid var(--line);
-        border-left: 0;
-      }
-
-      .sequence-terms > div:first-child {
-        border-top: 0;
+        padding: 0;
       }
 
       .sequence-head {
@@ -757,6 +751,12 @@
       .sequence-time::after {
         top: 46px;
         bottom: -16px;
+      }
+
+      .sequence-time small {
+        width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
       .sequence-cell {
@@ -920,81 +920,87 @@
             <dd>WAL 代际标识；reset 后从 <code>S</code> 变为 <code>S + 1</code>。</dd>
           </div>
         </dl>
-        <div class="sequence-board">
+        <div class="sequence-board" data-sequence-lanes="time,checkpointer,writer,wal-index">
           <div class="sequence-head">
-            <span>时序</span>
-            <span>Checkpointer A<small>持有旧 header 快照</small></span>
-            <span>Writer B<small>能够 reset 并提交新 WAL</small></span>
-            <span>共享状态<small>wal-index / <code>-shm</code>，不是线程</small></span>
+            <span data-sequence-lane="time" data-sequence-kind="time">时序</span>
+            <span data-sequence-lane="checkpointer" data-sequence-kind="actor">
+              Checkpointer A<small>持有旧 header 快照</small>
+            </span>
+            <span data-sequence-lane="writer" data-sequence-kind="actor">
+              Writer B<small>能够 reset 并提交新 WAL</small>
+            </span>
+            <span data-sequence-lane="wal-index" data-sequence-kind="shared-state">
+              共享状态<small>wal-index / <code>-shm</code>，不是线程</small>
+            </span>
           </div>
           <ol class="sequence-rows">
             <li class="sequence-row">
-              <div class="sequence-time"><strong>0</strong><small>前置</small></div>
-              <div class="sequence-cell sequence-checkpointer">
+              <div class="sequence-time" data-sequence-lane="time"><strong>0</strong><small>前置</small></div>
+              <div class="sequence-cell sequence-checkpointer" data-sequence-lane="checkpointer">
                 <span class="mobile-lane">Checkpointer A</span>
                 <strong>前一次 checkpoint 已完整结束</strong>
                 <p>旧 WAL 的全部 <code>L</code> 个 frame 已经回填。</p>
               </div>
-              <div class="sequence-cell sequence-writer">
+              <div class="sequence-cell sequence-writer" data-sequence-lane="writer">
                 <span class="mobile-lane">Writer B</span>
                 <strong>尚未开始新事务</strong>
                 <p>WAL 现在满足 reset 条件。</p>
               </div>
-              <div class="sequence-cell sequence-state">
+              <div class="sequence-cell sequence-state" data-sequence-lane="wal-index">
                 <span class="mobile-lane">共享 wal-index 状态</span>
                 <strong>旧代际 S，状态一致</strong>
                 <p><code>mxFrame=L</code> · <code>nBackfill=L</code> · <code>salt=S</code></p>
               </div>
             </li>
             <li class="sequence-row">
-              <div class="sequence-time"><strong>1</strong><small>A 读取</small></div>
-              <div class="sequence-cell sequence-checkpointer">
+              <div class="sequence-time" data-sequence-lane="time"><strong>1</strong><small>A 读取</small></div>
+              <div class="sequence-cell sequence-checkpointer" data-sequence-lane="checkpointer">
                 <span class="mobile-lane">Checkpointer A</span>
                 <strong>读取 header 到私有缓存</strong>
                 <p>A 记住 <code>cached.mxFrame=L</code> 和 <code>cached.salt=S</code>。</p>
               </div>
-              <div class="sequence-cell sequence-writer">
+              <div class="sequence-cell sequence-writer" data-sequence-lane="writer">
                 <span class="mobile-lane">Writer B</span>
                 <strong>仍未写入</strong>
                 <p>此刻没有问题，A 的缓存仍然有效。</p>
               </div>
-              <div class="sequence-cell sequence-state">
+              <div class="sequence-cell sequence-state" data-sequence-lane="wal-index">
                 <span class="mobile-lane">共享 wal-index 状态</span>
                 <strong>共享状态尚未变化</strong>
                 <p><code>mxFrame=L</code> · <code>nBackfill=L</code> · <code>salt=S</code></p>
               </div>
             </li>
             <li class="sequence-row phase-window">
-              <div class="sequence-time"><strong>2</strong><small>竞态窗口</small></div>
-              <div class="sequence-cell sequence-checkpointer">
+              <div class="sequence-time" data-sequence-lane="time"><strong>2</strong><small>竞态窗口</small></div>
+              <div class="sequence-cell sequence-checkpointer" data-sequence-lane="checkpointer">
                 <span class="mobile-lane">Checkpointer A</span>
                 <strong>尚未取得 <code>READ_LOCK(0)</code></strong>
                 <p>A 暂停在“已读旧 header、尚未保护 backfill”的窗口中。</p>
               </div>
-              <div class="sequence-cell sequence-writer">
+              <div class="sequence-cell sequence-writer" data-sequence-lane="writer">
                 <span class="mobile-lane">Writer B</span>
                 <strong>reset WAL，并提交 m 个新 frame</strong>
                 <p>B 从 frame 1 重新写入，commit 返回成功。</p>
               </div>
-              <div class="sequence-cell sequence-state">
+              <div class="sequence-cell sequence-state" data-sequence-lane="wal-index">
                 <span class="mobile-lane">共享 wal-index 状态</span>
                 <strong>已进入新代际 S + 1</strong>
                 <p><code>mxFrame=m</code> · <code>nBackfill=0</code> · <code>salt=S+1</code></p>
               </div>
             </li>
             <li class="sequence-row phase-poison">
-              <div class="sequence-time"><strong>3</strong><small>错误形成</small></div>
-              <div class="sequence-cell sequence-checkpointer">
+              <div class="sequence-time" data-sequence-lane="time"><strong>3</strong><small>错误形成</small></div>
+              <div class="sequence-cell sequence-checkpointer" data-sequence-lane="checkpointer">
                 <span class="mobile-lane">Checkpointer A</span>
                 <strong>取得锁后仍使用旧 <code>L</code></strong>
                 <p>旧代码不重验 salt；判断 <code>0 &lt; L</code> 成立，并发布 <code>nBackfill=L</code>。</p>
               </div>
-              <div class="sequence-cell sequence-writer">
+              <div class="sequence-cell sequence-writer" data-sequence-lane="writer">
                 <span class="mobile-lane">Writer B</span>
                 <strong>新事务已经成功返回</strong>
                 <p>B 不知道 A 正在把旧代际进度写回共享状态。</p>
               </div>
-              <div class="sequence-cell sequence-state">
+              <div class="sequence-cell sequence-state" data-sequence-lane="wal-index">
                 <span class="mobile-lane">共享 wal-index 状态</span>
                 <strong>出现不可能的不变量</strong>
                 <p>新 WAL 实际只有 <code>m</code> 个 frame，却声称已回填到旧上界 <code>L</code>。</p>
@@ -1002,26 +1008,26 @@
               </div>
             </li>
             <li class="sequence-row">
-              <div class="sequence-time"><strong>4</strong><small>错误潜伏</small></div>
-              <div class="sequence-cell sequence-checkpointer">
+              <div class="sequence-time" data-sequence-lane="time"><strong>4</strong><small>错误潜伏</small></div>
+              <div class="sequence-cell sequence-checkpointer" data-sequence-lane="checkpointer">
                 <span class="mobile-lane">Checkpointer A</span>
                 <strong>正常返回，没有立即报错</strong>
                 <p>真正的数据丢失尚未发生，坏的是后续 checkpoint 的起点。</p>
               </div>
-              <div class="sequence-cell sequence-writer">
+              <div class="sequence-cell sequence-writer" data-sequence-lane="writer">
                 <span class="mobile-lane">Writer B</span>
                 <strong>继续追加，直到新 WAL 超过 L</strong>
                 <p>新代际中的 frame 1..L 包含已经 ACK 的事务。</p>
               </div>
-              <div class="sequence-cell sequence-state">
+              <div class="sequence-cell sequence-state" data-sequence-lane="wal-index">
                 <span class="mobile-lane">共享 wal-index 状态</span>
                 <strong>错误进度仍为 <code>nBackfill=L</code></strong>
                 <p>frame 1..L 被错误标记为“已经写入主数据库”。</p>
               </div>
             </li>
             <li class="sequence-row phase-loss">
-              <div class="sequence-time"><strong>5</strong><small>后续 checkpoint</small></div>
-              <div class="sequence-outcome">
+              <div class="sequence-time" data-sequence-lane="time"><strong>5</strong><small>后续 checkpoint</small></div>
+              <div class="sequence-outcome" data-sequence-span="checkpointer,writer,wal-index">
                 <strong>后续 checkpoint 从 L + 1 开始，跳过本代 WAL 的 frame 1..L。</strong>
                 <p>
                   这些 frame 在 WAL 再次 reset 或 truncate 后失去最后一份副本：
