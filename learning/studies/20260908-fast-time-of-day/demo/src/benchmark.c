@@ -12,16 +12,23 @@
 
 #if defined(__clang__)
 #define NO_VECTOR _Pragma("clang loop vectorize(disable)")
+#define NOINLINE_USED __attribute__((noinline, used))
 #elif defined(__GNUC__)
-#define NO_VECTOR _Pragma("GCC novector")
+#define NO_VECTOR
+#define NOINLINE_USED                                                     \
+    __attribute__((noinline, used, optimize("no-tree-vectorize")))
 #else
 #define NO_VECTOR
+#define NOINLINE_USED
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#define NOINLINE_USED __attribute__((noinline, used))
+#define KEEP_HMS_FIELDS(value)                                                  \
+    __asm__ volatile(""                                                        \
+                     : "+r"((value).hour), "+r"((value).minute),              \
+                       "+r"((value).second))
 #else
-#define NOINLINE_USED
+#define KEEP_HMS_FIELDS(value) ((void)(value))
 #endif
 
 enum {
@@ -64,6 +71,7 @@ static uint64_t pack_hms(hms_time value) {
             for (size_t index = 0; index < count; ++index) {                    \
                 uint32_t value = input[index] ^ carry;                          \
                 hms_time result = converter(value);                             \
+                KEEP_HMS_FIELDS(result);                                        \
                 carry = result.hour ^ result.minute ^ result.second;            \
             }                                                                   \
         }                                                                       \
