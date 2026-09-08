@@ -289,6 +289,8 @@
     }
 
     .sequence-board {
+      --sequence-columns:
+        78px minmax(0, 1.02fr) minmax(0, 1.02fr) minmax(0, 1.28fr);
       width: 100%;
       overflow: hidden;
       border: 1px solid #c7c7cc;
@@ -299,8 +301,7 @@
     .sequence-head,
     .sequence-row {
       display: grid;
-      grid-template-columns:
-        78px minmax(0, 1.02fr) minmax(0, 1.02fr) minmax(0, 1.28fr);
+      grid-template-columns: var(--sequence-columns);
     }
 
     .sequence-head {
