@@ -6,9 +6,10 @@
 
 | 规则 | 说明 |
 | --- | --- |
+| **单分支** | RecallFS 仅使用一个分支，即 `master`；所有改动直接提交并推送到 `master`，不得创建或保留其他分支。发现其他分支时，必须先确认其提交已被 `master` 包含，再删除该分支。 |
 | **及时 commit** | 完成一个可独立描述的单元（骨架 / 单题 / 一项 workflow 优化 / 一批 docs）后 **立即** `git commit`，不要攒大批未提交改动。 |
 | **粒度** | 一步一提交；message = short subject + 空行 + long details（完整句子）。 |
-| **及时 push** | commit 后 **尽快** `git push origin <branch>`（默认 `master`）。推送失败（如 SSH key）须在回复里明确说明，不得假装已推送。 |
+| **及时 push** | commit 后 **尽快** `git push origin master`。推送失败（如 SSH key）须在回复里明确说明，不得假装已推送。 |
 | **不混装** | 骨架与业务题、无关重构不要塞进同一 commit。 |
 | **可提交内容** | 算法模块 `learning/algorithms/`（含 progress、patterns、单题 notes/html/rs）、skills、AGENTS、rules、designs 等长期沉淀 **应入库**。 |
 | **勿提交** | `target/`、`.tmp/`、密钥、大体积无关二进制；遵守 `.gitignore`。 |
