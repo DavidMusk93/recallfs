@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>SQLite WAL-Reset Bug：触发、漏测与旧版本规避</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f5f5f7;
+      --surface: #ffffff;
+      --surface-2: #ececf0;
+      --ink: #1d1d1f;
+      --muted: #606067;
+      --line: #d2d2d7;
+      --info: #075ca8;
+      --info-soft: #eaf3fb;
+      --success: #08783e;
+      --success-soft: #e8f7ee;
+      --warning: #8a4b08;
+      --warning-soft: #fff5df;
+      --danger: #a13232;
+      --danger-soft: #fbeaea;
+      --code: #202124;
+      --code-ink: #f5f5f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 40px 0 72px;
+    }
+
+    header {
+      padding: 0 0 34px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    section {
+      min-width: 0;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    footer {
+      padding-top: 28px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 8px 0 12px;
+      font-size: 40px;
+      line-height: 1.12;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    p,
+    li {
+      max-width: 76ch;
+    }
+
+    a {
+      color: var(--info);
+      text-underline-offset: 0.18em;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    p code,
+    li code,
+    dd code,
+    td code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--info);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .conclusion {
+      max-width: 900px;
+      margin-top: 22px;
+      padding: 16px 18px;
+      border: 1px solid #c89797;
+      border-radius: 6px;
+      background: var(--danger-soft);
+      color: #6f2424;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 22px;
+      font-size: 14px;
+    }
+
+    .toc a {
+      color: var(--muted);
+    }
+
+    .callout {
+      max-width: 900px;
+      margin: 18px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .callout.info {
+      background: var(--info-soft);
+      color: #064473;
+    }
+
+    .callout.success {
+      background: var(--success-soft);
+      color: #064d29;
+    }
+
+    .callout.warning {
+      background: var(--warning-soft);
+      color: #663806;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 8px 18px;
+      margin: 20px 0 0;
+    }
+
+    .facts dt {
+      color: var(--muted);
+    }
+
+    .facts dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .ascii-graph {
+      width: max-content;
+      max-width: 100%;
+      margin: 20px auto 0;
+      overflow-x: auto;
+      padding: 16px;
+      border: 1px solid #c7c7cc;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1d1d1f;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .results-table {
+      min-width: 900px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-2);
+      color: #353539;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th.measure,
+    td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status.bad {
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .status.good {
+      color: var(--success);
+      background: var(--success-soft);
+    }
+
+    .code-block {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 18px 0;
+      padding: 16px 0;
+      counter-reset: line;
+      border-radius: 8px;
+      background: var(--code);
+      color: var(--code-ink);
+    }
+
+    .code-block::before {
+      content: attr(data-language);
+      display: block;
+      padding: 0 18px 10px;
+      color: #aeb1b7;
+      font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: uppercase;
+    }
+
+    .code-block code {
+      display: block;
+      min-width: max-content;
+    }
+
+    .code-line {
+      display: block;
+      min-height: 1.45em;
+      padding-right: 18px;
+      white-space: pre;
+      counter-increment: line;
+    }
+
+    .code-line::before {
+      content: counter(line);
+      display: inline-block;
+      width: 3ch;
+      margin-right: 1.25rem;
+      color: #7f848d;
+      text-align: right;
+      user-select: none;
+    }
+
+    .tok-keyword {
+      color: #ff9d76;
+    }
+
+    .tok-type {
+      color: #7ec8e3;
+    }
+
+    .tok-function {
+      color: #d7ba7d;
+    }
+
+    .tok-string {
+      color: #a8d08d;
+    }
+
+    .tok-number {
+      color: #c7a0ff;
+    }
+
+    .tok-comment {
+      color: #9ca3ad;
+    }
+
+    .steps {
+      padding-left: 1.4rem;
+    }
+
+    .steps li {
+      margin: 9px 0;
+      padding-left: 0.25rem;
+    }
+
+    .decision {
+      padding: 20px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .decision:first-of-type {
+      border-top: 0;
+    }
+
+    .decision h3 {
+      margin-top: 0;
+    }
+
+    .evidence-note {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 700px) {
+      main {
+        width: min(calc(100% - 24px), 1080px);
+        padding-top: 28px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
+      h2 {
+        font-size: 21px;
+      }
+
+      .lede {
+        font-size: 16px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric strong {
+        font-size: 23px;
+      }
+
+      .facts {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+
+      .facts dd {
+        margin-bottom: 10px;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .metric,
+      .table-wrap,
+      .callout {
+        background-color: var(--surface);
+      }
+    }
+
+    @media (prefers-contrast: more) {
+      :root {
+        --line: #707075;
+      }
+
+      .metric,
+      .table-wrap,
+      .callout {
+        border-width: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">SQLite / Failure analysis / 2026-09-08</p>
+      <h1>WAL-Reset Bug：触发、漏测与旧版本规避</h1>
+      <p class="lede">
+        一次 checkpoint 把上一代 WAL 的进度写进了下一代 WAL。结果不是只会
+        “损坏”：已返回成功的事务也可能永久消失，而
+        <code>integrity_check</code> 仍然返回 <code>ok</code>。
+      </p>
+      <aside class="conclusion">
+        <strong>决策结论：</strong>升级或回移官方 salt 校验是首选。无法改
+        SQLite 时，必须从结构上消除 write 与 checkpoint 的跨连接重叠，或
+        停写后退出 WAL；仅调 checkpoint 模式、超时和同步级别不够。
+      </aside>
+      <div class="metrics" aria-label="关键事实">
+        <article class="metric">
+          <strong>3.7.0-3.51.2</strong>
+          <span>SQLite 官方列出的受影响范围</span>
+        </article>
+        <article class="metric">
+          <strong>19</strong>
+          <span>Tailscale 六个月内的生产损坏事件</span>
+        </article>
+        <article class="metric">
+          <strong>6/6</strong>
+          <span>两台机器上的 vulnerable run 均命中</span>
+        </article>
+        <article class="metric">
+          <strong>2 lost / check OK</strong>
+          <span>结构完整性不能覆盖提交语义</span>
+        </article>
+      </div>
+      <nav class="toc" aria-label="报告目录">
+        <a href="#trigger">触发机制</a>
+        <a href="#testing">为何漏测</a>
+        <a href="#evidence">复现实证</a>
+        <a href="#mitigation">无法升级时</a>
+        <a href="#operations">检测与恢复</a>
+      </nav>
+    </header>
+
+    <section id="identity">
+      <h2>证据身份</h2>
+      <dl class="facts">
+        <dt>主来源</dt>
+        <dd><a href="https://tailscale.com/blog/sqlite-wal-reset-bug">Tailscale incident report</a></dd>
+        <dt>上游定义</dt>
+        <dd><a href="https://sqlite.org/wal.html#the_wal_reset_bug">SQLite WAL documentation, section 11</a></dd>
+        <dt>修复提交</dt>
+        <dd><code>7168988acbec2d8d</code>，2026-03-03</dd>
+        <dt>非撤回修复版</dt>
+        <dd><code>3.51.3</code>，2026-03-13</dd>
+        <dt>自然复现器</dt>
+        <dd><a href="https://theconsensus.dev/p/2026/08/23/another-look-at-sqlite-wal-reset.html">Phil Eaton, 2026-08-23</a></dd>
+        <dt>本研究源码</dt>
+        <dd><code>70c10489af0c1cfdfa6122eb7b888c454369fcd9a182efe5cd2e98d5c4fd34f2</code></dd>
+      </dl>
+    </section>
+
+    <section id="trigger">
+      <h2>真正的触发场景</h2>
+      <p>
+        必须同时具备 WAL、同一数据库文件上的至少两个连接、不同执行线程或
+        进程，以及 checkpoint 与能够 reset WAL 的 commit 的精确交错。普通
+        “多线程使用 SQLite”并不足以触发。
+      </p>
+      <pre class="ascii-graph">checkpointer A                 writer B                  wal-index
+     |                            |                     nBackfill = L
+     | read cached header         |                     salt = S
+     | mxFrame = L                |
+     |                            | reset WAL
+     |                            | append m frames      nBackfill = 0
+     |                            | commit               salt = S + 1
+     | acquire read-lock 0        |
+     | stale test: 0 &lt; L          |
+     | publish nBackfill = L      |                     nBackfill = L
+     |                            | append past frame L
+     | later checkpoint skips new frames 1..L
+     v
+acknowledged write is absent from the database file</pre>
+      <ol class="steps">
+        <li>先完成一次 checkpoint，使旧 WAL 可被 reset。</li>
+        <li>第二个 checkpoint 缓存旧 <code>mxFrame=L</code>。</li>
+        <li>另一连接在 read-lock 0 之前 reset WAL、更新 salt 并提交新 frame。</li>
+        <li>旧 checkpoint 误把 <code>nBackfill</code> 写成旧值 <code>L</code>。</li>
+        <li>第三次 checkpoint 跳过本代 WAL 的前 <code>L</code> 个 frame。</li>
+      </ol>
+      <aside class="callout info">
+        PASSIVE checkpoint 有 checkpoint lock，但没有 writer lock。问题不是
+        两个 checkpoint 同时执行，而是 checkpoint 与 writer reset 同时执行。
+      </aside>
+    </section>
+
+    <section id="fix">
+      <h2>修复：锁后重验 WAL 代际</h2>
+      <p>
+        修复在 read-lock 0 已取得后比较实时 wal-index salt 与之前缓存的
+        header salt。发现 WAL 已换代，就不执行旧 backfill，也不发布旧
+        <code>nBackfill</code>。
+      </p>
+      <pre class="code-block" data-language="c"><code><span class="code-line"><span class="tok-type">WalIndexHdr</span> *pLive = (<span class="tok-type">WalIndexHdr</span>*)<span class="tok-function">walIndexHdr</span>(pWal);</span><!--
+--><span class="code-line"><span class="tok-type">int</span> bChg = <span class="tok-function">memcmp</span>(pLive-&gt;aSalt, pWal-&gt;hdr.aSalt,</span><!--
+--><span class="code-line">                  <span class="tok-keyword">sizeof</span>(pWal-&gt;hdr.aSalt));</span><!--
+--><span class="code-line"><span class="tok-keyword">if</span>( <span class="tok-number">0</span>==bChg ){</span><!--
+--><span class="code-line">  <span class="tok-comment">/* backfill and publish nBackfill */</span></span><!--
+--><span class="code-line">}</span></code></pre>
+      <p class="evidence-note">
+        比较如果发生在早期 header read 之后、加锁之前，writer 仍可在比较后
+        reset，因此检查位置与检查本身同等重要。
+      </p>
+    </section>
+
+    <section id="testing">
+      <h2>为什么官方测试没有及时覆盖</h2>
+      <p>
+        SQLite 的 100% branch coverage、并发压力测试和 crash testing 都是
+        真实能力，但 coverage unit 是控制流分支，不是所有跨连接调度序列。
+      </p>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text,text">
+          <colgroup>
+            <col style="width:24%">
+            <col style="width:38%">
+            <col style="width:38%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>缺口</th>
+              <th>具体原因</th>
+              <th>后来如何补上</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>调度状态空间</td>
+              <td>五阶段交错横跨多连接，执行每条分支不等于执行该顺序。</td>
+              <td>新增 fault point 660，在 checkpoint 内精确插入第二连接写入。</td>
+            </tr>
+            <tr>
+              <td>自然窗口极窄</td>
+              <td>官方修复时仍无法在实验室自然复现。</td>
+              <td>后续自然复现器用大 mmap 的 munmap 延长窗口。</td>
+            </tr>
+            <tr>
+              <td>错误延迟显现</td>
+              <td>第二次 checkpoint 污染进度，第三次才跳过 frame。</td>
+              <td>回归测试固定完整的跨 checkpoint 状态序列。</td>
+            </tr>
+            <tr>
+              <td>oracle 不完整</td>
+              <td>整笔事务消失后，B-tree 仍可能结构自洽。</td>
+              <td>同时检查 acknowledged-write counter 与数据库行数。</td>
+            </tr>
+            <tr>
+              <td>生产放大器</td>
+              <td>常见自动 checkpoint 远少于主动、高频 checkpoint。</td>
+              <td>Tailscale 的规模与操作模式积累了足够事件证据。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="callout warning">
+        16 年延迟主要发生在发现和复现阶段。根因于 2026-03-03 定位后，
+        3.51.3 于 2026-03-13 发布；不能概括为上游在已知根因后长期不修。
+      </aside>
+    </section>
+
+    <section id="evidence">
+      <h2>真实 SQLite A/B</h2>
+      <p>
+        C11 demo 使用官方 3.51.2 与 3.51.3 amalgamation，不修改 SQLite，
+        不使用测试 hook。unsafe 模式保留自然竞争；另外两组在同一旧版上
+        分别消除并发交错和 WAL。
+      </p>
+      <div class="table-wrap">
+        <table class="results-table" data-column-kinds="identifier,identifier,text,measure,measure,text">
+          <colgroup>
+            <col style="width:13%">
+            <col style="width:15%">
+            <col style="width:22%">
+            <col style="width:15%">
+            <col style="width:15%">
+            <col style="width:20%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>环境</th>
+              <th>SQLite / 模式</th>
+              <th>运行</th>
+              <th class="measure">已确认提交</th>
+              <th class="measure">丢失</th>
+              <th>结果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>M5/macOS</code></td>
+              <td><code>3.51.2 unsafe</code></td>
+              <td>3 次；第 17/17/4 轮停止</td>
+              <td class="measure">618/632/106</td>
+              <td class="measure">618/632/2</td>
+              <td><span class="status bad">3/3 命中</span></td>
+            </tr>
+            <tr>
+              <td><code>M5/macOS</code></td>
+              <td><code>3.51.3 unsafe</code></td>
+              <td>400 轮</td>
+              <td class="measure">15,102</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+            <tr>
+              <td><code>M5/macOS</code></td>
+              <td><code>3.51.2 serialized</code></td>
+              <td>400 轮</td>
+              <td class="measure">992</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+            <tr>
+              <td><code>M5/macOS</code></td>
+              <td><code>3.51.2 rollback</code></td>
+              <td>400 轮</td>
+              <td class="measure">804</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+            <tr>
+              <td><code>EPYC/Linux</code></td>
+              <td><code>3.51.2 unsafe</code></td>
+              <td>3 次；第 6/7/4 轮停止</td>
+              <td class="measure">671/692/447</td>
+              <td class="measure">671/692/2</td>
+              <td><span class="status bad">3/3 命中</span></td>
+            </tr>
+            <tr>
+              <td><code>EPYC/Linux</code></td>
+              <td><code>3.51.3 unsafe</code></td>
+              <td>400 轮</td>
+              <td class="measure">68,200</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+            <tr>
+              <td><code>EPYC/Linux</code></td>
+              <td><code>3.51.2 serialized</code></td>
+              <td>400 轮</td>
+              <td class="measure">6,106</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+            <tr>
+              <td><code>EPYC/Linux</code></td>
+              <td><code>3.51.2 rollback</code></td>
+              <td>400 轮</td>
+              <td class="measure">800</td>
+              <td class="measure">0</td>
+              <td><span class="status good">未观测到丢失</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="callout warning">
+        “未观测到”不是概率为零。修复版的可信度来自上游代码与回归测试；
+        规避组的可信度来自移除了官方列明的必要条件。表中数字不用于性能比较。
+      </aside>
+      <h3>完整性检查会漏掉什么</h3>
+      <pre class="code-block" data-language="text"><code><span class="code-line">sqlite_version=3.51.2</span><!--
+--><span class="code-line">mode=unsafe</span><!--
+--><span class="code-line">committed=106</span><!--
+--><span class="code-line">recovered=104</span><!--
+--><span class="code-line">lost=2</span><!--
+--><span class="code-line">integrity=ok</span></code></pre>
+    </section>
+
+    <section id="mitigation">
+      <h2>已有场景无法升级：决策顺序</h2>
+      <article class="decision">
+        <h3>1. 能重编：回移官方补丁</h3>
+        <p>
+          这是最接近升级的低扰动方案。优先使用官方 3.44.6 或 3.50.7
+          backport；其他 vendor 版本应移植 salt revalidation 与 forced
+          regression test，并在实际加载的连接上核对
+          <code>sqlite_source_id()</code>。
+        </p>
+      </article>
+      <article class="decision">
+        <h3>2. 必须保留 WAL：一个全局 write/checkpoint owner</h3>
+        <p>
+          所有 write transaction 与 checkpoint 必须通过同一个数据库级
+          gate。只读连接可以保留，但应设为 <code>query_only</code>。多进程
+          必须用 IPC owner 或所有参与者共同遵守的跨进程锁。
+        </p>
+        <pre class="ascii-graph">all writes --------+
+                   +---> one owner/gate ---> SQLite writer
+all checkpoints ---+
+
+read-only connections --------------------> SQLite readers</pre>
+        <pre class="code-block" data-language="sql"><code><span class="code-line"><span class="tok-keyword">PRAGMA</span> wal_autocheckpoint=<span class="tok-number">0</span>;</span><!--
+--><span class="code-line"><span class="tok-keyword">PRAGMA</span> query_only=<span class="tok-keyword">ON</span>; <span class="tok-comment">-- every reader</span></span></code></pre>
+        <p>
+          owner 在停接、排空 writer 后执行 checkpoint。必须监控 WAL 大小、
+          磁盘余量和读延迟，不能以“永不 checkpoint”作为长期方案。
+        </p>
+      </article>
+      <article class="decision">
+        <h3>3. 可以牺牲 WAL 并发：切回 rollback journal</h3>
+        <p>
+          在维护窗口停掉所有连接和写流量，备份并验证后 checkpoint，再切换
+          模式。必须检查 pragma 返回值；已损坏数据库不能靠切模式修复。
+        </p>
+        <pre class="code-block" data-language="sql"><code><span class="code-line"><span class="tok-keyword">PRAGMA</span> wal_checkpoint(TRUNCATE);</span><!--
+--><span class="code-line"><span class="tok-keyword">PRAGMA</span> journal_mode=DELETE;</span></code></pre>
+      </article>
+      <aside class="callout success">
+        只有当全部写入口、checkpoint 入口和实际 SQLite 副本都被盘点并受控，
+        “全局串行化”才是规避。单进程、单 ORM、<code>SQLITE_THREADSAFE=1</code>
+        都不能替代这项证明。
+      </aside>
+    </section>
+
+    <section id="not-enough">
+      <h2>看似相关，但不构成修复</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="identifier,text">
+          <colgroup>
+            <col style="width:34%">
+            <col style="width:66%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>措施</th>
+              <th>边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>busy_timeout</code></td>
+              <td>处理锁等待，不会让旧 header 自动变成新代际。</td>
+            </tr>
+            <tr>
+              <td><code>synchronous=FULL</code></td>
+              <td>增强持久化屏障，不修复 checkpoint 的状态判断。</td>
+            </tr>
+            <tr>
+              <td><code>FULL/RESTART/TRUNCATE</code></td>
+              <td>writer lock 获取失败时可以按 PASSIVE 继续；不检查返回值并不安全。</td>
+            </tr>
+            <tr>
+              <td>降低 checkpoint 频率</td>
+              <td>降低暴露概率，但保留所有必要条件。</td>
+            </tr>
+            <tr>
+              <td><code>integrity_check</code></td>
+              <td>能发现结构损坏，不能证明所有 ACK 事务仍存在。</td>
+            </tr>
+            <tr>
+              <td>在线复制 <code>.db</code></td>
+              <td>可能遗漏 WAL 或取得不一致快照，本身还会引入备份风险。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="operations">
+      <h2>检测与恢复闭环</h2>
+      <ol class="steps">
+        <li>从每个真实连接查询 <code>sqlite_version()</code> 与 <code>sqlite_source_id()</code>，不要相信 CLI 或 lockfile。</li>
+        <li>在 SQLite 外保留单调 transaction ID 或可重放操作日志，检测 ACK 后不可见。</li>
+        <li>使用 Online Backup API、<code>VACUUM INTO</code> 或一致性工具；备份后重新打开验证。</li>
+        <li>同时检查结构完整性与业务不变量、计数、transaction watermark。</li>
+        <li>告警时立即停写并保留同一时刻的 <code>.db</code>、<code>-wal</code>、<code>-shm</code> 和日志。</li>
+      </ol>
+      <aside class="callout info">
+        备份解决恢复，外部 transaction ledger 解决“完整性正常但数据已丢”的
+        可见性。两者都不能替代预防性补丁或结构性规避。
+      </aside>
+    </section>
+
+    <section id="limits">
+      <h2>证据边界</h2>
+      <p>
+        FIL-C 运行了旧版 SQLite 与 serialized demo 路径，完成 6 次提交且
+        无内存安全或未定义行为报告。原生复现在 Apple M5 Pro/macOS 与
+        AMD EPYC 7Y83/Linux 上执行。FIL-C 时序不是性能证据；本报告也不把
+        400 轮无故障外推为概率证明。
+      </p>
+      <p>
+        本研究未穷举所有历史 SQLite 版本、VFS、文件系统和语言绑定。生产
+        判定必须以实际连接的 source ID、连接拓扑和 checkpoint 所有权为准。
+      </p>
+    </section>
+
+    <footer>
+      <p>
+        来源：Tailscale、SQLite 官方 WAL/测试/提交记录、Phil Eaton 自然
+        复现器。原始材料访问于 2026-09-08；命令、环境、digest 与原始输出
+        位于同目录 <code>evidence/</code>。
+      </p>
+    </footer>
+  </main>
+</body>
+</html>

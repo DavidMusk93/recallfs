@@ -1,0 +1,60 @@
+Linux dc02-pe-t137-n047 5.15.152.bsk.15-amd64 #5.15.152.bsk.15 SMP Debian 5.15.152.bsk.15 Wed Mar 4 03:58:37 U x86_64 GNU/Linux
+Architecture:                       x86_64
+CPU op-mode(s):                     32-bit, 64-bit
+Address sizes:                      48 bits physical, 48 bits virtual
+Byte Order:                         Little Endian
+CPU(s):                             256
+On-line CPU(s) list:                0-255
+Vendor ID:                          AuthenticAMD
+BIOS Vendor ID:                     Advanced Micro Devices, Inc.
+Model name:                         AMD EPYC 7Y83 64-Core Processor
+BIOS Model name:                    AMD EPYC 7Y83 64-Core Processor                 Unknown CPU @ 2.4GHz
+BIOS CPU family:                    107
+CPU family:                         25
+Model:                              1
+Thread(s) per core:                 2
+Core(s) per socket:                 64
+Socket(s):                          2
+Stepping:                           1
+Frequency boost:                    enabled
+CPU(s) scaling MHz:                 65%
+CPU max MHz:                        3854.4431
+CPU min MHz:                        1500.0000
+BogoMIPS:                           4890.87
+Flags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 invpcid_single hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 invpcid cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin brs arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload vgif v_spec_ctrl umip pku ospke vaes vpclmulqdq rdpid overflow_recov succor smca
+Virtualization:                     AMD-V
+L1d cache:                          4 MiB (128 instances)
+L1i cache:                          4 MiB (128 instances)
+L2 cache:                           64 MiB (128 instances)
+L3 cache:                           512 MiB (16 instances)
+NUMA node(s):                       4
+NUMA node0 CPU(s):                  0-31,128-159
+NUMA node1 CPU(s):                  32-63,160-191
+NUMA node2 CPU(s):                  64-95,192-223
+NUMA node3 CPU(s):                  96-127,224-255
+Vulnerability Gather data sampling: Not affected
+Vulnerability Itlb multihit:        Not affected
+Vulnerability L1tf:                 Not affected
+Vulnerability Mds:                  Not affected
+Vulnerability Meltdown:             Not affected
+Vulnerability Mmio stale data:      Not affected
+Vulnerability Retbleed:             Not affected
+Vulnerability Spec rstack overflow: Vulnerable, no microcode
+Vulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:           Vulnerable, IBPB: conditional, IBRS_FW, STIBP: always-on, RSB filling, PBRSB-eIBRS: Not affected
+Vulnerability Srbds:                Not affected
+Vulnerability Tsx async abort:      Not affected
+cc (Debian 12.2.0-14) 12.2.0
+Copyright (C) 2022 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+TARGET SOURCE         FSTYPE OPTIONS
+/      /dev/nvme0n1p2 ext4   rw,noatime,discard,errors=remount-ro,stripe=32
+compile_flags=-std=c11 -O2 -g -Wall -Wextra -Werror -DSQLITE_THREADSAFE=1 -pthread -ldl -lm
+70c10489af0c1cfdfa6122eb7b888c454369fcd9a182efe5cd2e98d5c4fd34f2  wal_reset_repro.c
+4b7d555a895c62d344e9d83976b2186ad284af4312abd1828e8f5dfff0d40961  wal-reset-repro-3512
+cbed94df02e9b59e682da5cff89622303cb3dc33318fd589eefedd644b4d030a  wal-reset-repro-3513
+6e2a845a493026bdbad0618b2b5a0cf48584faab47384480ed9f592d912f23ec  sqlite-amalgamation-3510200.zip
+acb1e6f5d832484bf6d32b681e858c38add8b2acdfd42ac5df24b8afb46552b4  sqlite-amalgamation-3510300.zip

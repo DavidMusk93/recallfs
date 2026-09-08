@@ -1,0 +1,14 @@
+Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
+Apple M5 Pro
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+native_compile=cmake Release, AppleClang defaults for SQLite and -Wall -Wextra -Werror for reproducer
+clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
+Target: aarch64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
+Build config: +assertions
+70c10489af0c1cfdfa6122eb7b888c454369fcd9a182efe5cd2e98d5c4fd34f2  learning/studies/20260908-sqlite-wal-reset-bug/demo/src/wal_reset_repro.c
+7147ba936eb4ba8ed208c215609d1182aea20d0a72aa4290512fdbc2043d0cb5  .tmp/sqlite-wal-reset-demo/build-3512/wal-reset-repro
+3ff54a6a3f4c5c9ed43e223035d1946278b22f7ff220dec1009212856f21167f  .tmp/sqlite-wal-reset-demo/build-3513/wal-reset-repro
+6e2a845a493026bdbad0618b2b5a0cf48584faab47384480ed9f592d912f23ec  .tmp/sqlite-amalgamation-3510200.zip
+acb1e6f5d832484bf6d32b681e858c38add8b2acdfd42ac5df24b8afb46552b4  .tmp/sqlite-amalgamation-3510300.zip

@@ -1,0 +1,10 @@
+sqlite_version=3.51.2
+mode=serialized
+attempts=400
+committed=992
+recovered=992
+lost=0
+integrity=ok
+writer_errors=0
+outcome=no-loss-observed
+exit=0
