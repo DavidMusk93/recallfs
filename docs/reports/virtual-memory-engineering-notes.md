@@ -17,7 +17,8 @@
 | [`virtual_memory_benchmark.c`](../../tools/docs/examples/virtual_memory_benchmark.c) | fault、页大小、NUMA 与 COW benchmark | FIL-C 小规模 selftest；目标机原生 benchmark |
 | [`virtual_memory_mprotect_benchmark.c`](../../tools/docs/examples/virtual_memory_mprotect_benchmark.c) | 多核 `mprotect` 与 TLB flush benchmark | FIL-C 小规模 selftest；目标机原生 benchmark |
 | [`virtual_memory_file_benchmark.c`](../../tools/docs/examples/virtual_memory_file_benchmark.c) | cold/warm `pread` 与 `mmap` 文件读取 | FIL-C 小规模 selftest；目标机原生 benchmark |
-| [`virtual_memory_benchmark_support.h`](../../tools/docs/examples/virtual_memory_benchmark_support.h) | 三个 benchmark 共用的输入、计时、fault 和输出检查 | 编译进三个 benchmark |
+| [`mmap_pread_tradeoff_benchmark.c`](../../tools/docs/examples/mmap_pread_tradeoff_benchmark.c) | remap/persistent 与 scan/lookup 生命周期对照 | FIL-C 全模式 selftest；目标机原生 benchmark |
+| [`virtual_memory_benchmark_support.h`](../../tools/docs/examples/virtual_memory_benchmark_support.h) | 四个 benchmark 共用的输入、计时、fault 和输出检查 | 编译进四个 benchmark |
 
 FIL-C 0.684 只作为功能正确性、内存安全和未定义行为边界门禁，不作为运行时
 性能基线。正确性复验：
@@ -46,6 +47,12 @@ FIL-C 0.684 只作为功能正确性、内存安全和未定义行为边界门�
   tools/docs/examples/virtual_memory_file_benchmark.c \
   -o .tmp/virtual-memory-file-benchmark-filc
 .tmp/fil-c/bin/filrun .tmp/virtual-memory-file-benchmark-filc selftest
+
+.tmp/fil-c/bin/filcc -Itools/docs/examples \
+  -std=c11 -O2 -g -Wall -Wextra -Werror \
+  tools/docs/examples/mmap_pread_tradeoff_benchmark.c \
+  -o .tmp/mmap-pread-tradeoff-filc
+.tmp/fil-c/bin/filrun .tmp/mmap-pread-tradeoff-filc selftest
 ```
 
 性能数据来自目标机 `dc02-pe-t137-n047`（IPv6
@@ -247,6 +254,48 @@ file-backed `mmap` 可以让 PTE 直接指向 page-cache page。真正的选择�
 **关键边界：** `MAP_SHARED` 的“其他进程可见”和“掉电后持久化”是两回事。
 需要持久化协议时，必须明确 `msync(MS_SYNC)`、`fsync`、文件系统和设备保证，
 不能把一次普通 store 当成 durability barrier。
+
+#### 生命周期是被忽略的第一控制变量
+
+“warm `mmap`”至少可能表示两种完全不同的程序：
+
+```text
+remap per operation
+    mmap -> fault PTEs -> access -> munmap
+
+persistent mapping
+    mmap once -> warm once -> access many times
+```
+
+第一种每轮重建 VMA/PTE 并触发 TLB invalidation；第二种把这些成本摊到整个
+mapping lifetime。此前 2 GiB benchmark 的 `mmap` 分支属于第一种，因此
+即使 page cache 已 warm，每轮仍产生约 32768 个 minor fault。它不能代表
+数据库 index、只读 segment、模型权重或长期 Arrow mapping 的典型用法。
+
+在同一目标机上加入 persistent mapping 后：
+
+| 场景 | `pread` | remap `mmap` | persistent `mmap` |
+| --- | ---: | ---: | ---: |
+| 2 GiB warm 顺序扫描 | 9.582 GiB/s | 8.734 GiB/s | 19.954 GiB/s |
+| 2 GiB warm 随机逐页 lookup | 446.290 ns/probe | 235.351 ns/probe | 15.385 ns/probe |
+
+这与“实践中 mmap 通常更快”并不矛盾：实践保留 mapping，直接消费 page-cache
+frame，既没有每次 `pread` 的 syscall/copy，也没有每轮 remap 的 PTE 重建。
+完整实验、perf syscall/fault 计数和选择矩阵见
+[mmap 与 pread 生命周期实验](virtual-memory-native-benchmark-results.md)。
+
+#### 选择时先固定语义
+
+| 问题 | 倾向 `mmap` | 倾向 `pread` |
+| --- | --- | --- |
+| mapping lifetime | 长期保留并重复访问 | one-shot 或频繁换文件 |
+| access | warm、细粒度、随机、pointer-native | cold、顺序、大块 streaming |
+| ownership | 接受 page cache 与 PTE 成本 | 需要显式 buffer/cache |
+| control | 内核 fault/readahead 足够 | 需要取消、优先级、backpressure |
+| failure | 可处理 `SIGBUS` 与 truncation contract | 希望 errno/short-read 控制流 |
+
+不要从 API 名称选择。先固定相同的 cache state、访问粒度、mapping lifetime、
+预热策略、checksum 和字节数，再比较 setup、warmup、steady-state 和 p99。
 
 ### 2.4 `fork` 的成本取决于后续写入
 
@@ -535,7 +584,7 @@ minor fault、0 个 major fault；第二次写入观察到 0 个 fault。RSS 在
 | 顺序访问更友好 | 每页读 1 byte，identity/shuffled order | `10.724 / 14.604 ns` | shuffled 访问慢 `1.36x` |
 | Huge Page 不是万能加速 | shuffled base/THP/HugeTLB | `14.604 / 14.115 / 14.150 ns` | 本负载只改善约 `3%` |
 | COW 把复制推迟到写入 | 512 MiB，空 child 与逐页写 child | `4.561 / 153.961 ms` | 写入路径触发 131072 个额外 minor fault |
-| `mmap` 不是总比 `pread` 快 | 2 GiB 本地 NVMe cold scan | `2.671 / 3.611 GiB/s` | cold `mmap` 低 `26.03%` |
+| `mmap` 胜负取决于生命周期 | 2 GiB cold remap / warm persistent | `2.726 vs 3.360 / 19.954 vs 9.582 GiB/s` | cold remap 落后，warm persistent 领先 `2.08x` |
 | 页表修改有跨核成本 | 64 MiB 上反复 `mprotect` | `166 -> 596 us` | 1 到 63 reader 中位成本约 `3.60x` |
 | NUMA 拓扑不能被指针隐藏 | CPU node3/node2/node0 读 node3 RAM | `22.925/20.275/13.056 GiB/s` | 跨 socket 带宽下降 `43.05%` |
 
@@ -619,6 +668,7 @@ NUMA、cgroup、文件系统、数据量、访问分布和并发数。否则结�
 - [内存与 NUMA C benchmark](../../tools/docs/examples/virtual_memory_benchmark.c)
 - [mprotect C benchmark](../../tools/docs/examples/virtual_memory_mprotect_benchmark.c)
 - [文件映射 C benchmark](../../tools/docs/examples/virtual_memory_file_benchmark.c)
+- [mmap/pread 生命周期 benchmark](../../tools/docs/examples/mmap_pread_tradeoff_benchmark.c)
 - [原文：Virtual Memory From First Principles](https://blog.codingconfessions.com/p/virtual-memory)
 - [Linux Page Tables](https://docs.kernel.org/mm/page_tables.html)
 - [Linux Transparent Hugepage Support](https://docs.kernel.org/admin-guide/mm/transhuge.html)
