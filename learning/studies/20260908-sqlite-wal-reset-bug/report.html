@@ -230,18 +230,299 @@
       overflow-wrap: anywhere;
     }
 
-    .ascii-graph {
-      width: max-content;
-      max-width: 100%;
-      margin: 20px auto 0;
-      overflow-x: auto;
-      padding: 16px;
+    .sequence-figure {
+      width: 100%;
+      margin: 26px 0 10px;
+    }
+
+    .sequence-figure figcaption {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: 22px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    .sequence-figure figcaption > strong {
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .sequence-figure figcaption > span > strong {
+      color: var(--ink);
+    }
+
+    .sequence-figure figcaption span {
+      color: var(--muted);
+    }
+
+    .sequence-terms {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0;
+      margin: 0 0 18px;
+      border-block: 1px solid var(--line);
+    }
+
+    .sequence-terms > div {
+      min-width: 0;
+      padding: 12px 16px;
+      border-left: 1px solid var(--line);
+    }
+
+    .sequence-terms > div:first-child {
+      border-left: 0;
+    }
+
+    .sequence-terms dt {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--info);
+      font: 700 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .sequence-terms dd {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .sequence-board {
+      width: 100%;
+      overflow: hidden;
       border: 1px solid #c7c7cc;
-      border-radius: 6px;
-      background: #ffffff;
-      color: #1d1d1f;
-      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      white-space: pre;
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .sequence-head,
+    .sequence-row {
+      display: grid;
+      grid-template-columns:
+        78px minmax(0, 1.02fr) minmax(0, 1.02fr) minmax(0, 1.28fr);
+    }
+
+    .sequence-head {
+      background: var(--surface-2);
+      color: #353539;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .sequence-head > span {
+      padding: 12px 16px;
+      border-left: 1px solid var(--line);
+    }
+
+    .sequence-head > span:first-child {
+      border-left: 0;
+      text-align: center;
+    }
+
+    .sequence-head small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .sequence-rows {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sequence-row {
+      width: 100%;
+      max-width: none;
+      min-height: 110px;
+      border-top: 1px solid var(--line);
+    }
+
+    .sequence-row:first-child {
+      border-top: 0;
+    }
+
+    .sequence-time {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 16px 8px;
+      background: #fafafa;
+      text-align: center;
+    }
+
+    .sequence-time::after {
+      position: absolute;
+      top: 48px;
+      bottom: -18px;
+      left: 50%;
+      width: 1px;
+      background: #b8b8bd;
+      content: "";
+    }
+
+    .sequence-row:last-child .sequence-time::after {
+      display: none;
+    }
+
+    .sequence-time strong {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border: 1px solid #8e8e93;
+      border-radius: 50%;
+      background: var(--surface);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sequence-time small {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .sequence-cell {
+      min-width: 0;
+      padding: 16px 18px;
+      border-left: 1px solid var(--line);
+    }
+
+    .sequence-cell strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .sequence-cell p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .sequence-cell code {
+      font-size: 13px;
+    }
+
+    .mobile-lane {
+      display: none;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .phase-window .sequence-time,
+    .phase-window .sequence-writer {
+      background: var(--warning-soft);
+    }
+
+    .phase-poison .sequence-time,
+    .phase-poison .sequence-checkpointer,
+    .phase-poison .sequence-state {
+      background: var(--danger-soft);
+    }
+
+    .phase-loss .sequence-time,
+    .phase-loss .sequence-checkpointer,
+    .phase-loss .sequence-state {
+      background: #f3e8e8;
+    }
+
+    .bad-invariant {
+      display: block;
+      margin-top: 7px;
+      color: var(--danger);
+      font: 700 15px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .sequence-outcome {
+      grid-column: 2 / 5;
+      padding: 20px 22px;
+      border-left: 1px solid var(--line);
+      background: #f3e8e8;
+    }
+
+    .sequence-outcome strong {
+      display: block;
+      color: #6f2424;
+      font-size: 17px;
+    }
+
+    .sequence-outcome p {
+      margin: 5px 0 0;
+      color: #6f2424;
+    }
+
+    .ownership-flow {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 42px minmax(230px, 0.9fr) 42px minmax(0, 1fr);
+      align-items: stretch;
+      width: 100%;
+      margin: 20px 0;
+    }
+
+    .flow-node {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      justify-content: center;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .flow-node strong {
+      font-size: 16px;
+    }
+
+    .flow-node span {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .flow-node.owner {
+      border-color: #94b9d8;
+      background: var(--info-soft);
+      color: #064473;
+      text-align: center;
+    }
+
+    .flow-node.output {
+      border-color: #93c6aa;
+      background: var(--success-soft);
+    }
+
+    .flow-inputs {
+      display: grid;
+      gap: 8px;
+    }
+
+    .flow-inputs .flow-node {
+      padding-block: 12px;
+    }
+
+    .flow-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 24px;
+      font-weight: 700;
     }
 
     .table-wrap {
@@ -439,6 +720,74 @@
         margin-bottom: 10px;
       }
 
+      .sequence-figure figcaption {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .sequence-terms {
+        grid-template-columns: 1fr;
+      }
+
+      .sequence-terms > div {
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
+
+      .sequence-terms > div:first-child {
+        border-top: 0;
+      }
+
+      .sequence-head {
+        display: none;
+      }
+
+      .sequence-row {
+        grid-template-columns: 52px minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .sequence-time {
+        grid-row: 1 / 4;
+        padding: 14px 6px;
+      }
+
+      .sequence-time::after {
+        top: 46px;
+        bottom: -16px;
+      }
+
+      .sequence-cell {
+        grid-column: 2;
+        padding: 14px 16px;
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .sequence-time + .sequence-cell {
+        border-top: 0;
+      }
+
+      .mobile-lane {
+        display: block;
+      }
+
+      .sequence-outcome {
+        grid-column: 2;
+        padding: 16px;
+      }
+
+      .ownership-flow {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .flow-arrow {
+        min-height: 28px;
+        transform: rotate(90deg);
+      }
+
       th,
       td {
         padding: 10px 12px;
@@ -544,27 +893,144 @@
         进程，以及 checkpoint 与能够 reset WAL 的 commit 的精确交错。普通
         “多线程使用 SQLite”并不足以触发。
       </p>
-      <pre class="ascii-graph">checkpointer A                 writer B                  wal-index
-     |                            |                     nBackfill = L
-     | read cached header         |                     salt = S
-     | mxFrame = L                |
-     |                            | reset WAL
-     |                            | append m frames      nBackfill = 0
-     |                            | commit               salt = S + 1
-     | acquire read-lock 0        |
-     | stale test: 0 &lt; L          |
-     | publish nBackfill = L      |                     nBackfill = L
-     |                            | append past frame L
-     | later checkpoint skips new frames 1..L
-     v
-acknowledged write is absent from the database file</pre>
-      <ol class="steps">
-        <li>先完成一次 checkpoint，使旧 WAL 可被 reset。</li>
-        <li>第二个 checkpoint 缓存旧 <code>mxFrame=L</code>。</li>
-        <li>另一连接在 read-lock 0 之前 reset WAL、更新 salt 并提交新 frame。</li>
-        <li>旧 checkpoint 误把 <code>nBackfill</code> 写成旧值 <code>L</code>。</li>
-        <li>第三次 checkpoint 跳过本代 WAL 的前 <code>L</code> 个 frame。</li>
-      </ol>
+      <figure class="sequence-figure" aria-labelledby="wal-sequence-title">
+        <figcaption>
+          <strong id="wal-sequence-title">时间从上到下；每一行都是同一个瞬间的三方视图。</strong>
+          <span>
+            <strong>最右列不是第三个线程。</strong>
+            它是存放在 <code>-shm</code> 中、由两个连接共同读写的
+            <code>wal-index</code> 元数据。竞态的本质，就是 A 使用旧快照覆盖了
+            B 已经推进到新代际的共享状态。图中 <code>L</code> 是旧 WAL 的
+            frame 数，<code>m</code> 是 reset 后的新 frame 数，且
+            <code>m &lt; L</code>。
+          </span>
+        </figcaption>
+        <dl class="sequence-terms" aria-label="时序图符号">
+          <div>
+            <dt>mxFrame</dt>
+            <dd>当前代 WAL 的最后一个有效 frame；从旧值 <code>L</code> 变为新值 <code>m</code>。</dd>
+          </div>
+          <div>
+            <dt>nBackfill</dt>
+            <dd>共享 checkpoint 进度；值 N 表示 frame 1..N 已经复制进主数据库。</dd>
+          </div>
+          <div>
+            <dt>salt</dt>
+            <dd>WAL 代际标识；reset 后从 <code>S</code> 变为 <code>S + 1</code>。</dd>
+          </div>
+        </dl>
+        <div class="sequence-board">
+          <div class="sequence-head">
+            <span>时序</span>
+            <span>Checkpointer A<small>持有旧 header 快照</small></span>
+            <span>Writer B<small>能够 reset 并提交新 WAL</small></span>
+            <span>共享状态<small>wal-index / <code>-shm</code>，不是线程</small></span>
+          </div>
+          <ol class="sequence-rows">
+            <li class="sequence-row">
+              <div class="sequence-time"><strong>0</strong><small>前置</small></div>
+              <div class="sequence-cell sequence-checkpointer">
+                <span class="mobile-lane">Checkpointer A</span>
+                <strong>前一次 checkpoint 已完整结束</strong>
+                <p>旧 WAL 的全部 <code>L</code> 个 frame 已经回填。</p>
+              </div>
+              <div class="sequence-cell sequence-writer">
+                <span class="mobile-lane">Writer B</span>
+                <strong>尚未开始新事务</strong>
+                <p>WAL 现在满足 reset 条件。</p>
+              </div>
+              <div class="sequence-cell sequence-state">
+                <span class="mobile-lane">共享 wal-index 状态</span>
+                <strong>旧代际 S，状态一致</strong>
+                <p><code>mxFrame=L</code> · <code>nBackfill=L</code> · <code>salt=S</code></p>
+              </div>
+            </li>
+            <li class="sequence-row">
+              <div class="sequence-time"><strong>1</strong><small>A 读取</small></div>
+              <div class="sequence-cell sequence-checkpointer">
+                <span class="mobile-lane">Checkpointer A</span>
+                <strong>读取 header 到私有缓存</strong>
+                <p>A 记住 <code>cached.mxFrame=L</code> 和 <code>cached.salt=S</code>。</p>
+              </div>
+              <div class="sequence-cell sequence-writer">
+                <span class="mobile-lane">Writer B</span>
+                <strong>仍未写入</strong>
+                <p>此刻没有问题，A 的缓存仍然有效。</p>
+              </div>
+              <div class="sequence-cell sequence-state">
+                <span class="mobile-lane">共享 wal-index 状态</span>
+                <strong>共享状态尚未变化</strong>
+                <p><code>mxFrame=L</code> · <code>nBackfill=L</code> · <code>salt=S</code></p>
+              </div>
+            </li>
+            <li class="sequence-row phase-window">
+              <div class="sequence-time"><strong>2</strong><small>竞态窗口</small></div>
+              <div class="sequence-cell sequence-checkpointer">
+                <span class="mobile-lane">Checkpointer A</span>
+                <strong>尚未取得 <code>READ_LOCK(0)</code></strong>
+                <p>A 暂停在“已读旧 header、尚未保护 backfill”的窗口中。</p>
+              </div>
+              <div class="sequence-cell sequence-writer">
+                <span class="mobile-lane">Writer B</span>
+                <strong>reset WAL，并提交 m 个新 frame</strong>
+                <p>B 从 frame 1 重新写入，commit 返回成功。</p>
+              </div>
+              <div class="sequence-cell sequence-state">
+                <span class="mobile-lane">共享 wal-index 状态</span>
+                <strong>已进入新代际 S + 1</strong>
+                <p><code>mxFrame=m</code> · <code>nBackfill=0</code> · <code>salt=S+1</code></p>
+              </div>
+            </li>
+            <li class="sequence-row phase-poison">
+              <div class="sequence-time"><strong>3</strong><small>错误形成</small></div>
+              <div class="sequence-cell sequence-checkpointer">
+                <span class="mobile-lane">Checkpointer A</span>
+                <strong>取得锁后仍使用旧 <code>L</code></strong>
+                <p>旧代码不重验 salt；判断 <code>0 &lt; L</code> 成立，并发布 <code>nBackfill=L</code>。</p>
+              </div>
+              <div class="sequence-cell sequence-writer">
+                <span class="mobile-lane">Writer B</span>
+                <strong>新事务已经成功返回</strong>
+                <p>B 不知道 A 正在把旧代际进度写回共享状态。</p>
+              </div>
+              <div class="sequence-cell sequence-state">
+                <span class="mobile-lane">共享 wal-index 状态</span>
+                <strong>出现不可能的不变量</strong>
+                <p>新 WAL 实际只有 <code>m</code> 个 frame，却声称已回填到旧上界 <code>L</code>。</p>
+                <span class="bad-invariant">nBackfill=L &gt; mxFrame=m</span>
+              </div>
+            </li>
+            <li class="sequence-row">
+              <div class="sequence-time"><strong>4</strong><small>错误潜伏</small></div>
+              <div class="sequence-cell sequence-checkpointer">
+                <span class="mobile-lane">Checkpointer A</span>
+                <strong>正常返回，没有立即报错</strong>
+                <p>真正的数据丢失尚未发生，坏的是后续 checkpoint 的起点。</p>
+              </div>
+              <div class="sequence-cell sequence-writer">
+                <span class="mobile-lane">Writer B</span>
+                <strong>继续追加，直到新 WAL 超过 L</strong>
+                <p>新代际中的 frame 1..L 包含已经 ACK 的事务。</p>
+              </div>
+              <div class="sequence-cell sequence-state">
+                <span class="mobile-lane">共享 wal-index 状态</span>
+                <strong>错误进度仍为 <code>nBackfill=L</code></strong>
+                <p>frame 1..L 被错误标记为“已经写入主数据库”。</p>
+              </div>
+            </li>
+            <li class="sequence-row phase-loss">
+              <div class="sequence-time"><strong>5</strong><small>后续 checkpoint</small></div>
+              <div class="sequence-outcome">
+                <strong>后续 checkpoint 从 L + 1 开始，跳过本代 WAL 的 frame 1..L。</strong>
+                <p>
+                  这些 frame 在 WAL 再次 reset 或 truncate 后失去最后一份副本：
+                  已 ACK 的事务永久消失；若表页与索引页只丢一部分，则进一步表现为数据库损坏。
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </figure>
       <aside class="callout info">
         PASSIVE checkpoint 有 checkpoint lock，但没有 writer lock。问题不是
         两个 checkpoint 同时执行，而是 checkpoint 与 writer reset 同时执行。
@@ -771,11 +1237,28 @@ acknowledged write is absent from the database file</pre>
           gate。只读连接可以保留，但应设为 <code>query_only</code>。多进程
           必须用 IPC owner 或所有参与者共同遵守的跨进程锁。
         </p>
-        <pre class="ascii-graph">all writes --------+
-                   +---> one owner/gate ---> SQLite writer
-all checkpoints ---+
-
-read-only connections --------------------> SQLite readers</pre>
+        <div class="ownership-flow" aria-label="写入和 checkpoint 的单一所有者结构">
+          <div class="flow-inputs">
+            <div class="flow-node">
+              <strong>所有写事务</strong>
+              <span>daemon、worker、CLI 和后台任务都不能绕过。</span>
+            </div>
+            <div class="flow-node">
+              <strong>所有 checkpoint</strong>
+              <span>自动、手动、备份前 checkpoint 都纳入同一入口。</span>
+            </div>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <div class="flow-node owner">
+            <strong>唯一 owner / gate</strong>
+            <span>write 与 checkpoint 共享同一个临界区，禁止重叠。</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <div class="flow-node output">
+            <strong>唯一 write-capable connection</strong>
+            <span>其他连接保持 <code>query_only</code>，只承担读取。</span>
+          </div>
+        </div>
         <pre class="code-block" data-language="sql"><code><span class="code-line"><span class="tok-keyword">PRAGMA</span> wal_autocheckpoint=<span class="tok-number">0</span>;</span><!--
 --><span class="code-line"><span class="tok-keyword">PRAGMA</span> query_only=<span class="tok-keyword">ON</span>; <span class="tok-comment">-- every reader</span></span></code></pre>
         <p>
