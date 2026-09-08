@@ -219,6 +219,7 @@ sample 的原始日志。
 | Language | C11 |
 | Correctness | FIL-C 0.684; all variants exhaustive over one day; fixed-point variants exhaustive over their claimed extended ranges; full-range division variants sampled at uint32 boundaries |
 | Native target | AMD EPYC 7Y83, GCC 12.2.0 |
+| Visual report | [`fast-time-of-day-study.html`](fast-time-of-day-study.html) |
 | Build and run | See [`demo/README.md`](demo/README.md) |
 | Exploration | See [`exploration.md`](exploration.md) |
 

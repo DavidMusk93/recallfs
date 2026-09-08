@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Fast Time-of-Day：打断依赖链</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f4f5f7;
+      --surface: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #626269;
+      --line: #d3d5d9;
+      --line-strong: #aeb2b9;
+      --blue: #075ca8;
+      --blue-soft: #eaf3fb;
+      --green: #08783e;
+      --green-soft: #e8f7ee;
+      --amber: #8a4b08;
+      --amber-soft: #fff5df;
+      --red: #a13232;
+      --red-soft: #fbeaea;
+      --code-bg: #20242b;
+      --code-ink: #e8edf4;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    a:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid rgba(7, 92, 168, 0.3);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 44px 0 72px;
+    }
+
+    header {
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 8px 0 12px;
+      font-size: 42px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    p,
+    li {
+      max-width: 74ch;
+    }
+
+    .lede {
+      max-width: 850px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .conclusion {
+      margin-top: 22px;
+      padding: 17px 18px;
+      border: 1px solid #9fd8b4;
+      border-radius: 6px;
+      background: var(--green-soft);
+      color: #064d29;
+      font-weight: 680;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 24px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 1.08;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-top: 22px;
+      font-size: 14px;
+    }
+
+    .toc a {
+      color: #3a3a3f;
+      text-decoration: none;
+    }
+
+    .toc a:hover { color: var(--blue); }
+
+    section {
+      min-width: 0;
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 20px;
+    }
+
+    .section-intro {
+      margin-top: -4px;
+      color: var(--muted);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    p code,
+    li code,
+    dd code,
+    td code,
+    footer code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 8px 18px;
+      margin: 20px 0 0;
+    }
+
+    .facts dt { color: var(--muted); }
+
+    .facts dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .chain-grid,
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .method-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .method {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .method p { margin-bottom: 0; }
+
+    .tag {
+      display: inline-flex;
+      padding: 3px 8px;
+      border: 1px solid #a9cce9;
+      border-radius: 6px;
+      background: var(--blue-soft);
+      color: #064f8d;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .tag.safe {
+      border-color: #9fd8b4;
+      background: var(--green-soft);
+      color: #076532;
+    }
+
+    .tag.bound {
+      border-color: #e5c591;
+      background: var(--amber-soft);
+      color: #714006;
+    }
+
+    .ascii-graph {
+      width: max-content;
+      max-width: 100%;
+      margin: 16px auto 0;
+      overflow-x: auto;
+      padding: 16px;
+      border: 1px solid #c7c7cc;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1d1d1f;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .formula {
+      display: block;
+      max-width: 100%;
+      margin: 14px 0 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      color: #2d343c;
+      font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .code-block {
+      max-width: 100%;
+      margin: 18px 0 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      counter-reset: line;
+      border: 1px solid #343942;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      font: 13px/1.58 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .code-block::before {
+      content: attr(data-language);
+      display: block;
+      padding: 8px 16px;
+      border-bottom: 1px solid #3d434d;
+      color: #aeb7c4;
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .code-block code {
+      display: block;
+      min-width: max-content;
+      padding: 14px 0;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 16px;
+      white-space: pre;
+      counter-increment: line;
+    }
+
+    .code-line::before {
+      content: counter(line);
+      display: inline-block;
+      width: 3ch;
+      margin-right: 18px;
+      color: #89909d;
+      text-align: right;
+      user-select: none;
+    }
+
+    .tok-type { color: #8ec9ff; }
+    .tok-name { color: #d8b4fe; }
+    .tok-number { color: #f4c27a; }
+    .tok-comment { color: #8f9baa; }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    caption {
+      padding: 11px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #ececf0;
+      color: #353539;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    th.measure,
+    td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .col-algorithm { width: 28%; }
+    .col-value { width: 18%; }
+    .col-range-name { width: 30%; }
+    .col-range-value { width: 22%; }
+    .col-range-note { width: 26%; }
+    .col-choice { width: 27%; }
+    .col-guidance { width: 73%; }
+
+    .callout {
+      margin-top: 16px;
+      padding: 15px 17px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .callout.info {
+      border-color: #a9cce9;
+      background: var(--blue-soft);
+      color: #064f8d;
+    }
+
+    .callout.warning {
+      border-color: #e5c591;
+      background: var(--amber-soft);
+      color: #663806;
+    }
+
+    .callout.danger {
+      border-color: #e4adad;
+      background: var(--red-soft);
+      color: #7c2525;
+    }
+
+    .references {
+      display: grid;
+      gap: 8px;
+      padding-left: 20px;
+    }
+
+    footer {
+      padding-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 24px, 1120px);
+        padding-top: 28px;
+      }
+
+      h1 { font-size: 32px; }
+      h2 { font-size: 21px; }
+      .lede { font-size: 17px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chain-grid,
+      .method-grid { grid-template-columns: 1fr; }
+      .facts { grid-template-columns: 1fr; gap: 2px; }
+      .facts dd { margin-bottom: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .metric,
+      .method,
+      .table-wrap,
+      .callout {
+        background: var(--surface);
+      }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --line: #707075; }
+      .metric,
+      .method,
+      .table-wrap,
+      .callout { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Systems Performance / Integer Arithmetic</p>
+      <h1>Fast Time-of-Day：打断依赖链</h1>
+      <p class="lede">把日内秒数转换成 hour、minute、second。关键优化不是先找 magic number，而是先把串行商余链重写成两条可重叠的数据依赖。</p>
+      <aside class="conclusion" aria-label="工程结论">工程默认应先选 V1 division：它保留完整 <code>uint32_t</code> 输入契约，同时在目标机上把串行延迟降低 47.8%。只有在调用方明确保证日内范围且 profile 证明必要时，再考虑 V2/V3。</aside>
+      <ul class="metrics">
+        <li class="metric"><strong>47.8%</strong><span>V1 latency reduction</span></li>
+        <li class="metric"><strong>56.5%</strong><span>V3 latency reduction</span></li>
+        <li class="metric"><strong>30.0%</strong><span>V3 throughput reduction</span></li>
+        <li class="metric"><strong>5</strong><span>validated scalar variants</span></li>
+      </ul>
+      <nav class="toc" aria-label="报告导航">
+        <a href="#scope">问题边界</a>
+        <a href="#dependency">依赖链</a>
+        <a href="#fixed-point">定点算法</a>
+        <a href="#benchmark">目标机实测</a>
+        <a href="#decision">工程选择</a>
+        <a href="#evidence">证据与限制</a>
+      </nav>
+    </header>
+
+    <section id="scope">
+      <h2>问题边界</h2>
+      <p class="section-intro">输入是已经归一化的一天内秒数，不是 Unix timestamp，也不负责日期、时区或闰秒。</p>
+      <dl class="facts">
+        <dt>Input</dt><dd><code>day_second in [0, 86399]</code></dd>
+        <dt>Output</dt><dd><code>hour [0,23]</code> / <code>minute [0,59]</code> / <code>second [0,59]</code></dd>
+        <dt>Excluded</dt><dd>calendar conversion、time zone、DST、sub-second、SIMD、<code>23:59:60</code></dd>
+        <dt>Reference</dt><dd><a href="https://www.benjoffe.com/fast-time-of-day">Ben Joffe, Fast Time-of-Day</a></dd>
+      </dl>
+    </section>
+
+    <section id="dependency">
+      <h2>先改变依赖图</h2>
+      <p class="section-intro">传统写法和 V1 的运算集合相近，但 critical path 不同。CPU 能否重叠工作，取决于数据依赖而不是源码看起来有几行。</p>
+      <div class="chain-grid">
+        <article class="method">
+          <span class="tag bound">Traditional</span>
+          <h3>一条连续依赖链</h3>
+          <pre class="ascii-graph">+-------+    +------+
+| input |--->| hour |
++-------+    +--+---+
+                |
+                v
+           +----------+
+           | hour rem |
+           +----+-----+
+                |
+                v
+           +----------+
+           | minute   |
+           +----+-----+
+                |
+                v
+           +----------+
+           | second   |
+           +----------+</pre>
+        </article>
+        <article class="method">
+          <span class="tag safe">V1</span>
+          <h3>两条可重叠链</h3>
+          <pre class="ascii-graph">              +---------------+------> second
+          +-->| total_minutes |---+
+          |   +---------------+   |
++-------+-+                       v
+| input |                     +--------+
++-------+-+                    | minute |
+          |   +-------------+ +---^----+
+          +-->| hour        |-----+
+              +-------------+</pre>
+        </article>
+      </div>
+      <pre class="code-block" data-language="c"><code><span class="code-line"><span class="tok-type">uint32_t</span> <span class="tok-name">total_minutes</span> = time / <span class="tok-number">60</span>;</span><!--
+--><span class="code-line"><span class="tok-type">uint32_t</span> <span class="tok-name">hour</span> = time / <span class="tok-number">3600</span>;</span><!--
+--><span class="code-line"><span class="tok-type">uint32_t</span> <span class="tok-name">second</span> = time - total_minutes * <span class="tok-number">60</span>;</span><!--
+--><span class="code-line"><span class="tok-type">uint32_t</span> <span class="tok-name">minute</span> = total_minutes - hour * <span class="tok-number">60</span>;</span></code></pre>
+      <p>令 <code>t = 60q + s</code> 且 <code>q = 60h + m</code>。那么 <code>q=floor(t/60)</code>、<code>h=floor(t/3600)</code>、<code>s=t-60q</code>、<code>m=q-60h</code>。V1 只是把同一恒等式写成了更适合乱序执行的形状。</p>
+    </section>
+
+    <section id="fixed-point">
+      <h2>定点算法：收益来自更强的输入合同</h2>
+      <p class="section-intro">对常量除数 <code>d</code> 使用 <code>M=floor(2^32/d)+1</code>，再取 <code>x*M</code> 的高 32 位近似商。近似会在足够大的输入处提前进位，所以 range 是 API 合同。</p>
+      <div class="method-grid">
+        <article class="method">
+          <span class="tag safe">V1 fixed-point</span>
+          <h3>显式 reciprocal multiply</h3>
+          <p>保持 V1 的两条独立链，把两次常量除法写成乘高位。结构清楚，范围受限。</p>
+        </article>
+        <article class="method">
+          <span class="tag bound">V2 hi/low</span>
+          <h3>低位不是废料</h3>
+          <p>乘积高位给出商，低位表示向下一整数推进的定点小数；低位乘 60 后取高位得到余数。</p>
+        </article>
+        <article class="method">
+          <span class="tag bound">V3 base-64</span>
+          <h3>把 modulo 60 补成 64</h3>
+          <p>利用 <code>x mod D = (x + c*floor(x/D)) mod (D+c)</code>，取 <code>D=60,c=4</code> 后用 <code>&amp;63</code>。</p>
+        </article>
+      </div>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,measure,text">
+          <colgroup>
+            <col class="col-range-name">
+            <col class="col-range-value">
+            <col class="col-range-value">
+            <col class="col-range-note">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Variant</th>
+              <th class="measure">最后正确输入</th>
+              <th class="measure">首个失配输入</th>
+              <th>结论</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>V1 fixed-point</td>
+              <td class="measure">2,257,198</td>
+              <td class="measure">2,257,199</td>
+              <td>覆盖日内范围</td>
+            </tr>
+            <tr>
+              <td>V2 hi/low</td>
+              <td class="measure">2,255,818</td>
+              <td class="measure">2,255,819</td>
+              <td>覆盖日内范围</td>
+            </tr>
+            <tr>
+              <td>V3 base-64</td>
+              <td class="measure">2,257,198</td>
+              <td class="measure">2,257,199</td>
+              <td>覆盖日内范围</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="callout warning" aria-label="输入范围警告">若 API 接受任意 <code>uint32_t</code> duration，只有 Traditional 与 V1 division 可直接使用。采用任一定点版本时，必须在入口处执行并测试范围约束。</aside>
+    </section>
+
+    <section id="benchmark">
+      <h2>目标机实测</h2>
+      <p class="section-intro">AMD EPYC 7Y83，GCC 12.2，CPU 31 / NUMA 0。每个值为三次独立运行 median 的中位数；每次含 31 个 sample，每个 sample 执行 2,097,152 次转换。</p>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,measure,measure,measure">
+          <caption>Median ns/value；Gain 相对 Traditional</caption>
+          <colgroup>
+            <col class="col-algorithm">
+            <col class="col-value">
+            <col class="col-value">
+            <col class="col-value">
+            <col class="col-value">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th class="measure">Latency</th>
+              <th class="measure">Gain</th>
+              <th class="measure">Throughput</th>
+              <th class="measure">Gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Traditional</td>
+              <td class="measure">7.180</td>
+              <td class="measure">0.0%</td>
+              <td class="measure">2.510</td>
+              <td class="measure">0.0%</td>
+            </tr>
+            <tr>
+              <td>V1 division</td>
+              <td class="measure">3.745</td>
+              <td class="measure">47.8%</td>
+              <td class="measure">2.072</td>
+              <td class="measure">17.5%</td>
+            </tr>
+            <tr>
+              <td>V1 fixed-point</td>
+              <td class="measure">3.747</td>
+              <td class="measure">47.8%</td>
+              <td class="measure">1.875</td>
+              <td class="measure">25.3%</td>
+            </tr>
+            <tr>
+              <td>V2 hi/low</td>
+              <td class="measure">3.746</td>
+              <td class="measure">47.8%</td>
+              <td class="measure">1.844</td>
+              <td class="measure">26.5%</td>
+            </tr>
+            <tr>
+              <td>V3 base-64</td>
+              <td class="measure">3.122</td>
+              <td class="measure">56.5%</td>
+              <td class="measure">1.757</td>
+              <td class="measure">30.0%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <dl class="facts">
+        <dt>Compiler flags</dt><dd><code>-O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf</code></dd>
+        <dt>Scalar fidelity</dt><dd>五个 throughput symbol 均有 count/rounds 两条 backward branch，且无 <code>xmm</code>/<code>ymm</code>/<code>zmm</code> 引用。</dd>
+        <dt>Negative check</dt><dd>rounds 从 64 增至 256，wall time 增长约 3.97 倍。</dd>
+        <dt>Correctness</dt><dd>FIL-C 穷举日内范围与三个定点扩展范围；full-range division 版本抽样边界。</dd>
+      </dl>
+      <aside class="callout info" aria-label="性能证据边界">结论只适用于该机器、编译器、flags 和 consumer。传统 loop 在 GCC 12 中保留一个 <code>idiv</code>，编译器代码生成放大了差距。</aside>
+    </section>
+
+    <section id="decision">
+      <h2>工程选择</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text">
+          <colgroup>
+            <col class="col-choice">
+            <col class="col-guidance">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>场景</th>
+              <th>建议</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>普通日期库，尚无 profile</td>
+              <td>保持现状；不为纳秒级冷路径增加维护成本。</td>
+            </tr>
+            <tr>
+              <td>标量单次延迟敏感</td>
+              <td>优先 V1 division：收益来自依赖结构，且保持 full-range。</td>
+            </tr>
+            <tr>
+              <td>确认的日内热点</td>
+              <td>同时 benchmark V1 fixed-point、V2 和 V3；入口强制 <code>[0,86399]</code>。</td>
+            </tr>
+            <tr>
+              <td>SIMD / columnar batch</td>
+              <td>单独检查 auto-vectorization 与目标 ISA，不能沿用 scalar 排名。</td>
+            </tr>
+            <tr>
+              <td>signed 输入</td>
+              <td>先定义负值与 remainder 语义；不要直接照搬 unsigned mask。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="evidence">
+      <h2>证据边界</h2>
+      <ul>
+        <li>FIL-C 0.684 验证执行路径、内存安全与边界输出，不作为性能基线。</li>
+        <li>目标机硬件 PMU 返回 <code>&lt;not counted&gt;</code>；本文不报告 cycles 或 IPC。</li>
+        <li>保留的是三次 run-level median 汇总，不是 31 个 sample 的原始日志。</li>
+        <li>SMT sibling 未被独占，小幅差异仍可能受系统噪声影响。</li>
+      </ul>
+      <h3>Sources &amp; References</h3>
+      <ul class="references">
+        <li><a href="https://www.benjoffe.com/fast-time-of-day">原始文章：A faster way to convert a timestamp</a></li>
+        <li><a href="https://github.com/benjoffe/fast-world-calendars/tree/25f6d9345f2d681a77315cf6eaeee25b3629af8c/time">上游算法与 benchmark revision</a></li>
+        <li><a href="README.md">完整学习笔记</a></li>
+        <li><a href="evidence/target-benchmark.md">目标机 benchmark 与 codegen 证据</a></li>
+        <li><a href="evidence/filc.md">FIL-C 正确性证据</a></li>
+        <li><a href="demo/README.md">可复现 C11 demo</a></li>
+      </ul>
+    </section>
+
+    <footer>Composed 2026-09-08 by <code>html-report</code> from the archived article, FIL-C checks, target-machine benchmark evidence, and <code>learning/studies/20260908-fast-time-of-day/README.md</code>.</footer>
+  </main>
+</body>
+</html>
