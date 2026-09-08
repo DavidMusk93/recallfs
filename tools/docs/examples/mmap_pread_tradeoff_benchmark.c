@@ -154,6 +154,28 @@ static void drop_file_cache(int fd, off_t length)
     }
 }
 
+static void validate_cache_io(enum cache_state cache,
+                              int verify_io,
+                              uint64_t read_bytes,
+                              uint64_t cold_minimum,
+                              const char *operation)
+{
+    if (!verify_io)
+        return;
+    if (cache == CACHE_COLD)
+        check(read_bytes >= cold_minimum,
+              "cold %s read only %" PRIu64 " device bytes; expected at least %"
+              PRIu64,
+              operation,
+              read_bytes,
+              cold_minimum);
+    else
+        check(read_bytes == 0,
+              "warm %s unexpectedly read %" PRIu64 " device bytes",
+              operation,
+              read_bytes);
+}
+
 static void
 read_fully(int fd, unsigned char *buffer, size_t length, off_t offset)
 {
@@ -275,14 +297,12 @@ static void run_scan(enum access_method method,
                      enum cache_state cache,
                      const char *path,
                      size_t length,
-                     size_t rounds)
+                     size_t rounds,
+                     int verify_io)
 {
     struct scan_context context;
     struct stat metadata;
     uint64_t expected;
-    const char *require_io_value = getenv("VM_BENCH_REQUIRE_IO");
-    int require_io =
-        require_io_value != NULL && strcmp(require_io_value, "1") == 0;
     int fd = open(path, O_RDONLY);
     size_t round;
 
@@ -306,12 +326,13 @@ static void run_scan(enum access_method method,
         warm_scan_context(&context, expected);
 
     printf("SETUP mode=scan method=%s cache=%s bytes=%zu setup_us=%.3f "
-           "warmup_us=%.3f\n",
+           "warmup_us=%.3f verify_io=%d\n",
            method_name(method),
            cache == CACHE_COLD ? "cold" : "warm",
            length,
            context.setup_us,
-           context.warmup_us);
+           context.warmup_us,
+           verify_io);
 
     for (round = 0; round < rounds; round++)
     {
@@ -339,19 +360,19 @@ static void run_scan(enum access_method method,
               sum,
               expected);
         check(io_after >= io_before, "scan read_bytes moved backward");
-        if (cache == CACHE_COLD && require_io)
-            check(io_after > io_before, "cold scan performed no device I/O");
+        validate_cache_io(
+            cache, verify_io, io_after - io_before, length, "scan");
         observation_sink ^= sum;
 
         printf("RESULT mode=tradeoff_scan round=%zu method=%s cache=%s "
-               "require_io=%d bytes=%zu setup_us=%.3f warmup_us=%.3f "
+               "verify_io=%d bytes=%zu setup_us=%.3f warmup_us=%.3f "
                "elapsed_ms=%.3f gib_per_s=%.3f "
                "logical_calls=%" PRIu64 " minor=%ld major=%ld "
                "read_bytes=%" PRIu64 " checksum=%" PRIu64 "\n",
                round,
                method_name(method),
                cache == CACHE_COLD ? "cold" : "warm",
-               require_io,
+               verify_io,
                length,
                context.setup_us,
                context.warmup_us,
@@ -385,7 +406,7 @@ static void build_random_pages(uint32_t *order, size_t page_count)
     uint64_t state = UINT64_C(0x243f6a8885a308d3);
     size_t index;
 
-    check(page_count > 1 && page_count <= UINT32_MAX,
+    check(page_count > 0 && page_count <= UINT32_MAX,
           "invalid page count: %zu",
           page_count);
     for (index = 0; index < page_count; index++)
@@ -469,7 +490,8 @@ static void run_lookup(enum access_method method,
                        const char *path,
                        size_t length,
                        size_t probes,
-                       size_t rounds)
+                       size_t rounds,
+                       int verify_io)
 {
     const size_t page_size = system_page_size();
     const size_t page_count = length / page_size;
@@ -477,9 +499,6 @@ static void run_lookup(enum access_method method,
     unsigned char *persistent_mapping = NULL;
     uint32_t *order;
     uint64_t expected;
-    const char *require_io_value = getenv("VM_BENCH_REQUIRE_IO");
-    int require_io =
-        require_io_value != NULL && strcmp(require_io_value, "1") == 0;
     double setup_started;
     double setup_us;
     double warmup_us = 0.0;
@@ -558,13 +577,14 @@ static void run_lookup(enum access_method method,
     }
 
     printf("SETUP mode=lookup method=%s cache=%s bytes=%zu probes=%zu "
-           "setup_us=%.3f warmup_us=%.3f\n",
+           "setup_us=%.3f warmup_us=%.3f verify_io=%d\n",
            method_name(method),
            cache == CACHE_COLD ? "cold" : "warm",
            length,
            probes,
            setup_us,
-           warmup_us);
+           warmup_us,
+           verify_io);
 
     for (round = 0; round < rounds; round++)
     {
@@ -613,13 +633,16 @@ static void run_lookup(enum access_method method,
               sum,
               expected);
         check(io_after >= io_before, "lookup read_bytes moved backward");
-        if (cache == CACHE_COLD && require_io)
-            check(io_after > io_before, "cold lookup performed no device I/O");
+        validate_cache_io(cache,
+                          verify_io,
+                          io_after - io_before,
+                          (uint64_t)probes * page_size,
+                          "lookup");
         observation_sink ^= sum;
 
         printf("RESULT mode=tradeoff_lookup round=%zu method=%s cache=%s "
                "bytes=%zu probes=%zu setup_us=%.3f warmup_us=%.3f "
-               "elapsed_ms=%.3f ns_per_probe=%.3f require_io=%d "
+               "elapsed_ms=%.3f ns_per_probe=%.3f verify_io=%d "
                "logical_calls=%" PRIu64
                " minor=%ld major=%ld read_bytes=%" PRIu64 " checksum=%" PRIu64
                "\n",
@@ -632,7 +655,7 @@ static void run_lookup(enum access_method method,
                warmup_us,
                elapsed * 1.0e3,
                elapsed * 1.0e9 / (double)probes,
-               require_io,
+               verify_io,
                logical_calls,
                after.minor - before.minor,
                after.major - before.major,
@@ -645,6 +668,28 @@ static void run_lookup(enum access_method method,
     free(order);
     if (close(fd) != 0)
         fail("close lookup file");
+}
+
+static void test_random_pages(void)
+{
+    uint32_t single[1];
+    uint32_t order[32];
+    unsigned char seen[32] = {0};
+    int moved = 0;
+    size_t index;
+
+    build_random_pages(single, 1);
+    check(single[0] == 0, "single-page order is invalid");
+
+    build_random_pages(order, 32);
+    for (index = 0; index < 32; index++)
+    {
+        check(order[index] < 32, "random page index is out of range");
+        check(!seen[order[index]], "random page order contains a duplicate");
+        seen[order[index]] = 1;
+        moved |= order[index] != index;
+    }
+    check(moved, "random page order remained identity");
 }
 
 static void prepare_selftest_file(const char *path, size_t length)
@@ -681,6 +726,8 @@ static void prepare_selftest_file(const char *path, size_t length)
             }
         }
     }
+    if (fdatasync(fd) != 0)
+        fail("fdatasync selftest file");
     if (close(fd) != 0)
         fail("close selftest file");
     free(buffer);
@@ -694,19 +741,21 @@ static void run_selftest(void)
 
     if (mkdir(".tmp", 0700) != 0 && errno != EEXIST)
         fail("mkdir .tmp");
+    test_random_pages();
     prepare_selftest_file(path, length);
 
-    run_scan(METHOD_PREAD_REUSE, CACHE_COLD, path, length, 1);
-    run_scan(METHOD_MMAP_REMAP, CACHE_COLD, path, length, 1);
-    run_scan(METHOD_PREAD_REUSE, CACHE_WARM, path, length, 1);
-    run_scan(METHOD_MMAP_REMAP, CACHE_WARM, path, length, 1);
-    run_scan(METHOD_MMAP_PERSISTENT, CACHE_WARM, path, length, 1);
+    run_scan(METHOD_PREAD_REUSE, CACHE_COLD, path, length, 1, 0);
+    run_scan(METHOD_MMAP_REMAP, CACHE_COLD, path, length, 1, 0);
+    run_scan(METHOD_PREAD_REUSE, CACHE_WARM, path, length, 1, 0);
+    run_scan(METHOD_MMAP_REMAP, CACHE_WARM, path, length, 1, 0);
+    run_scan(METHOD_MMAP_PERSISTENT, CACHE_WARM, path, length, 2, 0);
 
-    run_lookup(METHOD_PREAD_REUSE, CACHE_COLD, path, length, probes, 1);
-    run_lookup(METHOD_MMAP_REMAP, CACHE_COLD, path, length, probes, 1);
-    run_lookup(METHOD_PREAD_REUSE, CACHE_WARM, path, length, probes, 1);
-    run_lookup(METHOD_MMAP_REMAP, CACHE_WARM, path, length, probes, 1);
-    run_lookup(METHOD_MMAP_PERSISTENT, CACHE_WARM, path, length, probes, 1);
+    run_lookup(METHOD_PREAD_REUSE, CACHE_COLD, path, length, probes, 1, 0);
+    run_lookup(METHOD_MMAP_REMAP, CACHE_COLD, path, length, probes, 1, 0);
+    run_lookup(METHOD_PREAD_REUSE, CACHE_WARM, path, length, probes, 1, 0);
+    run_lookup(METHOD_MMAP_REMAP, CACHE_WARM, path, length, probes, 1, 0);
+    run_lookup(
+        METHOD_MMAP_PERSISTENT, CACHE_WARM, path, length, probes, 2, 0);
 
     if (unlink(path) != 0)
         fail("unlink selftest file");
@@ -741,7 +790,8 @@ int main(int argc, char **argv)
                  parse_cache_state(argv[3]),
                  argv[4],
                  parse_bounded_size(argv[5], "bytes", SIZE_MAX),
-                 parse_bounded_size(argv[6], "rounds", MAX_ROUNDS));
+                 parse_bounded_size(argv[6], "rounds", MAX_ROUNDS),
+                 1);
         finish_output();
         return EXIT_SUCCESS;
     }
@@ -752,7 +802,8 @@ int main(int argc, char **argv)
                    argv[4],
                    parse_bounded_size(argv[5], "bytes", SIZE_MAX),
                    parse_bounded_size(argv[6], "probes", MAX_PROBES),
-                   parse_bounded_size(argv[7], "rounds", MAX_ROUNDS));
+                   parse_bounded_size(argv[7], "rounds", MAX_ROUNDS),
+                   1);
         finish_output();
         return EXIT_SUCCESS;
     }
