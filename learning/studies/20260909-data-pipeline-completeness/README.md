@@ -1,44 +1,42 @@
-# Distributed Data-Pipeline Completeness
+# 分布式 Data Pipeline Completeness 研究
 
-> Source: [How we measure data completeness at scale](https://www.datadoghq.com/blog/engineering/data-pipeline-completeness/)
+> 原文：[How we measure data completeness at scale](https://www.datadoghq.com/blog/engineering/data-pipeline-completeness/)
 >
-> Studied and reproduced on 2026-09-09. This report separates Datadog's
-> published claims from mathematical derivation and local executable evidence.
+> 研究与复现日期：2026-09-09。本文严格区分 Datadog 的公开陈述、数学推导与本地可执行证据。
 
-## 1. Conclusion
+## 1. 结论先行
 
-The article contains a strong architecture pattern worth retaining:
+这篇文章最值得沉淀的架构思想是：
 
-> Completeness is not a property of a counter. It is the discharge status of
-> explicit delivery obligations for one cohort under one topology version.
+> Completeness 不是某个 counter 的属性，而是特定 topology version 下，一个
+> cohort 的显式 delivery obligations 是否已经履行。
 
-Datadog's segment model, create/ack evidence, failure-independent observer,
-dynamic topology, and decision gating form a useful control plane for large
-distributed pipelines. The local model reproduces the core idempotency
-mechanism and demonstrates why several omitted contracts are mandatory.
+Datadog 的 segment model、create/ack evidence、failure-independent
+observer、dynamic topology 与 decision gating，共同构成了一套适用于大型
+distributed pipeline 的 correctness control plane。本研究通过本地模型复现了
+核心 idempotency 机制，并证明了文章未展开的若干工程合同为什么不可缺失。
 
-The article should not be copied as a complete design. Its public description
-does not define the statistical estimator, confidence bounds, late-bucket
-finalization, transformation cardinality, or measurement-health protocol.
-Without those, a plausible completeness percentage can be mathematically
-invalid or operationally unsafe.
+但这篇文章不能直接作为完整设计照搬。公开内容没有定义 statistical
+estimator、confidence interval、late bucket finalization、transformation
+cardinality 和 measurement-health protocol。缺少这些合同，一个看似合理的
+completeness percentage 可能在数学上无效，在操作上也不安全。
 
-## 2. Evidence Summary
+## 2. 证据摘要
 
-| Finding | Status | Evidence |
+| 结论 | 状态 | 证据 |
 | --- | --- | --- |
-| Create/ack can converge under duplicates and reordering | Reproduced | All event sequences up to length eight |
-| Root ingress bucket must be inherited | Reproduced | Cross-bucket create and ack do not match |
-| Sequential ratios require cohort conservation | Derived and reproduced | Valid `100 -> 90 -> 81 -> 72`; mismatched chain rejected |
-| Volume weighting can hide a failed required branch | Reproduced | Delivery mass `0.99`, required floor `0.0` |
-| Create and ack need one sampling decision | Reproduced | Stable result `1.0`; independent result `0.128483` |
-| Automation must inspect measurement health | Reproduced | Invalid, stale, undersampled, and unknown-topology signals fail closed |
-| Custom storage is cheaper at Datadog scale | Reported only | No public implementation or benchmark |
-| Detection usually occurs in under one minute | Reported only | No incident-level measurements |
+| create/ack 在重复与乱序下可以收敛 | 已复现 | 穷举长度不超过 8 的全部 event sequence |
+| root ingress bucket 必须沿链路继承 | 已复现 | 跨 bucket 的 create 与 ack 不会错误匹配 |
+| sequential ratio 相乘需要 cohort conservation | 已推导并复现 | 合法链路 $100 \to 90 \to 81 \to 72$；不守恒链路被拒绝 |
+| volume weighting 会掩盖低流量 required branch 故障 | 已复现 | delivery mass 为 $0.99$，required floor 为 $0$ |
+| create 与 ack 必须共享 sampling decision | 已复现 | consistent sampling 得到 $1$；independent sampling 得到 $0.128483$ |
+| automation 必须检查 measurement health | 已复现 | invalid、stale、undersampled 与 unknown-topology signal 均 fail closed |
+| custom storage 在 Datadog 规模下成本更低 | 仅为原文陈述 | 没有公开实现或 benchmark |
+| 故障通常在一分钟内被发现 | 仅为原文陈述 | 没有公开 incident-level measurements |
 
-## 3. The Useful Architecture
+## 3. 值得沉淀的架构
 
-The article turns an unbounded end-to-end question into four bounded layers:
+文章将一个无边界的 end-to-end 问题拆成四个有边界的层次：
 
 ```text
 payload context
@@ -55,49 +53,45 @@ topology graph --------> path completeness query
 
 ### 3.1 Local evidence
 
-Each segment emits create and acknowledgment evidence for a stable payload ID.
-The minimum identity is:
+每个 segment 都为稳定的 payload ID 产生 create 与 acknowledgment evidence。
+最小 evidence identity 为
+`(root_bucket, payload_id, segment_id)`。
 
-```text
-(root_bucket, payload_id, segment_id)
-```
+`root_bucket` 由可信的 intake clock 生成，并沿整条 pipeline 继承。如果每个
+hop 都按照本地 arrival time 重新分桶，延迟到达的 create 与 acknowledgment
+会被放入不同 bucket，从而制造并不存在的 loss。
 
-The root bucket is assigned by a trusted intake clock and inherited across the
-path. Using local event arrival time at each hop would place delayed create and
-acknowledgment events in different buckets and manufacture loss.
+紧凑状态机如下：
 
-The compact state machine is:
-
-| Stored state | Create seen | Ack seen | Meaning |
+| Stored state | Create seen | Ack seen | 含义 |
 | --- | --- | --- | --- |
-| `Created` | yes | no | entered, not yet observed leaving |
-| `AckBeforeCreate` | no | yes | reordered evidence awaiting create |
-| `Complete` | yes | yes | both facts observed |
+| `Created` | yes | no | 已进入 segment，尚未观测到离开 |
+| `AckBeforeCreate` | no | yes | 乱序 evidence，等待 create |
+| `Complete` | yes | yes | 两项 evidence 均已观测 |
 
-Duplicate events are no-ops. Acknowledgment-before-create is not discarded.
-This gives order-independent local evidence without distributed coordination.
+重复 event 是 no-op；acknowledgment-before-create 不能被丢弃。由此可以在不引入
+distributed coordination 的前提下，得到与 delivery order 无关的局部 evidence。
 
 ### 3.2 Topology evidence
 
-The topology must be time-versioned separately from payload evidence. A current
-service graph cannot correctly interpret an old bucket after routes, ownership,
-or branch policy changed.
+Topology 必须与 payload evidence 分开保存，并带有时间版本。route、ownership 或
+branch policy 发生变化后，当前 service graph 无法正确解释历史 bucket。
 
-This graph is operational evidence, not merely visualization. It provides:
+这个 graph 是 operational evidence，不只是 visualization。它负责提供：
 
-- the paths valid for a time bucket;
-- the owner of a degraded segment;
-- branch semantics and expected successor counts;
-- the context needed to explain a scalar result;
-- a route from detection to paging and automated mitigation.
+- 某个 time bucket 对应的合法 path；
+- degraded segment 的 owner；
+- branch semantics 与 expected successor count；
+- 解释 scalar result 所需的上下文；
+- 从 detection 到 paging 和 automated mitigation 的路由。
 
 ### 3.3 Decision gating
 
-The most transferable product pattern is attaching data quality to a query and
-letting the consumer fail closed. An autoscaler should not treat a successful
-HTTP response as proof that the returned metrics are fit for a decision.
+最值得迁移的产品模式，是把 data quality 与查询结果一起返回，并由 consumer
+执行 fail-closed 判断。HTTP 请求成功，不代表返回的 metrics 足以支撑
+autoscaling decision。
 
-The completeness result therefore needs to be a typed envelope, not a float:
+因此，completeness result 应该是 typed envelope，而不是一个 `float`：
 
 ```text
 CompletenessEvidence
@@ -115,63 +109,84 @@ CompletenessEvidence
   invalidation_state
 ```
 
-## 4. Sequential Composition: The Missing Proof Obligation
+## 4. Sequential Composition 缺失的证明义务
 
-For segment `i`, let:
+对第 $i$ 个 segment，定义：
 
-```text
-E_i = unique creates in one root cohort
-A_i = matched acknowledgments in the same cohort
-c_i = A_i / E_i
-```
+- $E_i$：一个 root cohort 中的 unique creates；
+- $A_i$：同一 cohort 中匹配成功的 acknowledgments；
+- $c_i$：该 segment 的 completeness ratio。
 
-The article multiplies sequential ratios. That operation is valid only if
-adjacent segments conserve the same cohort:
+$$
+c_i = \frac{A_i}{E_i}
+$$
 
-```text
-E_(i+1) = A_i
-```
+原文使用乘法合并 sequential ratios。该运算成立的前提，是相邻 segment
+确实守恒同一个 cohort：
 
-Then the terms cancel:
+$$
+E_{i+1} = A_i
+$$
 
-```text
-product(c_i)
-  = (A_1 / E_1) * (A_2 / E_2) * ... * (A_n / E_n)
-  = A_n / E_1
-```
+在此前提下，中间项可以约去：
 
-The demo verifies a chain:
+$$
+\begin{aligned}
+\prod_{i=1}^{n} c_i
+&= \frac{A_1}{E_1}
+   \cdot \frac{A_2}{E_2}
+   \cdots
+   \frac{A_n}{E_n} \\
+&= \frac{A_n}{E_1}.
+\end{aligned}
+$$
 
-```text
-100 --90%--> 90 --90%--> 81 --88.89%--> 72
-```
+Demo 验证的链路是：
 
-Its composed result is `72 / 100 = 0.72`.
+$$
+100
+\xrightarrow{90\%}
+90
+\xrightarrow{90\%}
+81
+\xrightarrow{88.89\%}
+72
+$$
 
-A superficially similar chain `(100, 90), (100, 90)` fails conservation.
-Multiplying `0.9 * 0.9` would report `0.81`, even though the second 100 may be a
-different population. The correct behavior is to reject the composition, not
-return a number.
+因此 end-to-end completeness 为：
 
-This constraint requires more than matching counts. Production systems should
-carry a root cohort or lineage identity so equal counts from different
-populations cannot pass validation.
+$$
+\frac{72}{100} = 0.72
+$$
 
-## 5. Generalizing from Payloads to Obligations
+表面相似的两个 segment $(100, 90)$、$(100, 90)$ 不能据此证明 conservation。
+如果机械地计算：
 
-An `ack/create` ratio assumes one create implies exactly one expected
-acknowledgment. Real pipelines violate that assumption:
+$$
+0.9 \times 0.9 = 0.81
+$$
 
-| Transformation | Required contract |
+就会产生一个没有 end-to-end 含义的数值，因为第二个 denominator 可能来自完全
+不同的 population。正确行为是拒绝 composition，而不是返回一个看似合理的结果。
+
+因此，仅比较 count 不够。生产系统必须携带 root cohort 或 lineage identity，
+避免不同集合在 count 恰好相等时通过校验。
+
+## 5. 从 Payload 推广到 Delivery Obligation
+
+`ack/create` ratio 默认每个 create 恰好对应一个 acknowledgment。真实 pipeline
+经常不满足这一假设：
+
+| Transformation | 必需合同 |
 | --- | --- |
-| Filter | Predicate determines zero or one successor obligation |
-| Fan-out | One input creates a known set or count of successor obligations |
-| Aggregation | A group of inputs creates one output obligation with group lineage |
-| Join | Output obligation depends on both input cohorts and join policy |
-| Replay | Replay generation must not collide with the original obligation |
-| Optional sink | Policy marks the obligation optional rather than silently weighting it down |
+| Filter | predicate 决定产生 0 个或 1 个 successor obligation |
+| Fan-out | 一个 input 产生已知集合或数量的 successor obligations |
+| Aggregation | 一组 inputs 产生一个带 group lineage 的 output obligation |
+| Join | output obligation 同时依赖两个 input cohorts 与 join policy |
+| Replay | replay generation 不能与原始 obligation 冲突 |
+| Optional sink | policy 显式标记 optional obligation，不能只靠低权重掩盖 |
 
-The general conservation unit is therefore a delivery obligation:
+因此，更通用的 conservation unit 是 delivery obligation：
 
 ```text
 root_obligation_id
@@ -185,189 +200,198 @@ sampling_randomness
 inclusion_probability
 ```
 
-This is an evidence ledger with explicit state inheritance. It can model
-payload-preserving segments as the simple one-to-one case while still handling
-split, merge, filter, and replay.
+这实际上是一份带显式状态继承的 evidence ledger。payload-preserving segment
+只是其中最简单的 one-to-one 情形；同一个模型还能表达 split、merge、filter
+与 replay。
 
-## 6. Branches Need Declared Semantics
+## 6. Branch 必须声明 Aggregation Semantics
 
-The article uses a volume-weighted average across parallel branches. That is a
-valid answer to:
+原文使用 volume-weighted average 合并 parallel branches。这个结果回答的是：
 
-> What fraction of expected delivery mass was acknowledged?
+> 预期 delivery mass 中有多少已经被 acknowledged？
 
-It is not necessarily an answer to:
+它不一定回答：
 
-> What fraction of source payloads reached every required sink?
+> 有多少 source payload 到达了所有 required sinks？
 
-The demo's counterexample contains 990 successful optional obligations and ten
-failed required obligations:
+Demo 的 counterexample 包含 990 个成功的 optional obligations，以及 10 个完全
+失败的 required obligations：
 
-```text
-delivery mass  = 990 / 1000 = 0.99
-required floor = min(0 / 10) = 0.00
-```
+$$
+C_{\mathrm{mass}}
+= \frac{990 + 0}{990 + 10}
+= 0.99
+$$
 
-A single 99 percent number would hide total loss of the required branch.
-Useful DAG policies include:
+$$
+C_{\mathrm{required}}
+= \min\left(\frac{0}{10}\right)
+= 0
+$$
 
-| Policy | Meaning |
+单独展示 $99\%$ 会掩盖 required branch 的完全失败。常见 DAG policy 包括：
+
+| Policy | 含义 |
 | --- | --- |
-| Weighted mass | Fraction of all expected deliveries observed |
-| Required floor | Worst required branch |
-| All-required | Fraction of roots for which every required obligation completed |
-| Per-sink vector | Completeness retained separately for each consumer |
+| Weighted mass | 所有 expected deliveries 中已观测到的比例 |
+| Required floor | 最差 required branch 的 completeness |
+| All-required | 所有 required obligations 均完成的 root 比例 |
+| Per-sink vector | 为每个 consumer 独立保留 completeness |
 
-The consumer, not the aggregation implementation, determines which policy is
-safe. Alerting and autoscaling often need a required-sink rule rather than a
-global weighted average.
+应该由 consumer 的决策语义选择 policy，而不是由 aggregation implementation
+擅自决定。alerting 与 autoscaling 通常需要 required-sink rule，而不是全局
+weighted average。
 
-## 7. Sampling Is Part of Correctness
+## 7. Sampling 是 Correctness 的一部分
 
-Sampling create and acknowledgment independently breaks pairing. In the
-deterministic local experiment, the underlying pipeline acknowledges every
-payload:
+独立采样 create 与 acknowledgment 会破坏 pairing。本地 deterministic
+experiment 中，底层 pipeline 实际 acknowledged 了全部 payload：
 
 | Sampling mode | Creates | Measured completeness | Ack without create |
 | --- | ---: | ---: | ---: |
 | Same propagated seed | 2,087 | 1.000000 | 0 |
 | Independent seeds | 1,938 | 0.128483 | 1,861 |
 
-The independent result is false loss caused solely by the observer.
+第二行的 incomplete result 完全由 observer 制造。
 
-A valid adaptive sampling contract needs:
+可靠的 adaptive sampling contract 至少需要：
 
-1. stable randomness or a propagated decision for the entire obligation;
-2. the effective inclusion probability recorded with sampled evidence;
-3. inverse-probability weighting when probabilities differ;
-4. confidence or error bounds, especially for low-volume customers;
-5. explicit handling of probability changes during an in-flight cohort;
-6. bucket-end flushing for accumulated unsampled weight;
-7. separate accounting for dropped observation traffic.
+1. 为整个 obligation 继承 stable randomness 或 propagated decision；
+2. sampled evidence 必须携带 effective inclusion probability；
+3. probability 不同时使用 inverse-probability weighting；
+4. 为低流量 customer 提供 confidence interval 或 error bound；
+5. 明确定义 in-flight cohort 中 probability 变化的处理方式；
+6. 处理 bucket 结束时尚未附着到下一条 sample 的 accumulated weight；
+7. 单独统计 observer 丢弃的 tracking traffic。
 
-OpenTelemetry's consistent probability-sampling design is relevant because it
-propagates common randomness and an effective threshold. Its adjusted count is
-the reciprocal of sampling probability. It is a useful reference contract, not
-evidence that Datadog uses the same algorithm.
+OpenTelemetry 的 consistent probability sampling 值得参考，因为它传播共同的
+randomness 与 effective threshold。其 adjusted count 为 sampling probability
+的倒数：
 
-## 8. Watermarks and Completeness Answer Different Questions
+$$
+\mathrm{adjusted\ count} = \frac{1}{p}
+$$
 
-The article says arbitrary delay prevents the watermark approach from providing
-its required guarantee. Apache Flink documentation agrees that arbitrarily late
-events may violate a watermark and that finite waiting limits determinism.
+这是一种可复用的 consistency contract，但不能据此推断 Datadog 使用了相同算法。
 
-The useful conclusion is not that watermarks are generally unusable:
+## 8. Watermark 与 Completeness 回答不同问题
 
-| Mechanism | Question answered |
+原文指出，任意延迟使 watermark 无法提供其所需保证。Apache Flink 文档同样明确：
+late event 可以在 watermark 之后到达，而有限等待会限制 determinism。
+
+正确结论不是“watermark 没有用”，而是这些机制回答不同问题：
+
+| Mechanism | 回答的问题 |
 | --- | --- |
-| Watermark | How far event-time processing is believed to have progressed |
-| Allowed lateness | How long results remain open to correction |
-| Create/ack evidence | Which declared delivery obligations have discharged |
-| Retention/finalization | When unresolved obligations become loss, expired, or unknown |
+| Watermark | event-time processing 被认为推进到了哪里 |
+| Allowed lateness | result 保持可修正状态多长时间 |
+| Create/ack evidence | 哪些声明过的 delivery obligations 已履行 |
+| Retention/finalization | 未履行 obligation 何时变为 loss、expired 或 unknown |
 
-Create/ack tracking still needs a finalization rule. Datadog reports a few hours
-of retention while allowing arbitrary customer delay. Because the root bucket
-is assigned only after intake, pre-intake customer delay is outside that
-retention problem. Once accepted, however, an acknowledgment arriving after
-eviction cannot repair the old state unless a late-correction path exists.
+Create/ack tracking 仍然需要 finalization rule。Datadog 表示 state 只保留数小时，
+同时 customer data 可以任意延迟。由于 `root_bucket` 在进入 intake 后才生成，
+pre-intake delay 不属于 retention 问题；但 payload 一旦被接受，晚于 eviction
+才到达的 acknowledgment 就无法修复旧 state，除非系统另有 late-correction path。
 
-The result should distinguish:
+最终结果至少应区分：
 
-- pending within the latency objective;
-- late but still correctable;
-- permanently missing after finalization;
-- unknown because evidence expired;
-- invalid because the observer was unhealthy.
+- latency objective 内的 pending；
+- late 但仍可修正；
+- finalization 后永久 missing；
+- evidence 已过期导致的 unknown；
+- observer 不健康导致的 invalid。
 
-## 9. The Observer Must Not Share the Failure
+## 9. Observer 不能与故障 Fate-share
 
-Datadog's strongest operational principle is:
+Datadog 最强的 operational principle 是：
 
-> The completeness system must outlive the outage it measures.
+> Completeness system 必须比它所观测的 outage 活得更久。
 
-The article applies this through direct intake/storage, minimal external
-dependencies, product tracks, two availability zones, different partitioning
-schemes, partition-aware shedding, and manual invalidation.
+文章通过 direct intake/storage、minimal external dependencies、product tracks、
+双 availability zones、不同 partitioning scheme、partition-aware shedding 与
+manual invalidation 实现这一原则。
 
-This is best understood as fate-sharing analysis:
+它本质上是一项 fate-sharing analysis：
 
 | Potential common cause | Required control |
 | --- | --- |
-| Monitored Kafka failure | Observer transport does not depend on that Kafka |
-| Hot customer | Per-partition shedding and different replica sharding |
-| Product traffic surge | Independent product tracks |
-| Deployment defect | Staggered versions across replicas |
-| Observer overload | Observer-health signal and scoped invalidation |
-| Client-library or schema defect | Version visibility, canaries, and independent validation |
-| Regional or control-plane fault | Explicitly accepted boundary or additional isolation |
+| Monitored Kafka failure | observer transport 不依赖该 Kafka |
+| Hot customer | per-partition shedding 与不同 replica sharding |
+| Product traffic surge | 独立 product tracks |
+| Deployment defect | replica 间 staggered versions |
+| Observer overload | observer-health signal 与 scoped invalidation |
+| Client-library 或 schema defect | version visibility、canary 与 independent validation |
+| Regional 或 control-plane fault | 显式接受边界，或增加隔离层级 |
 
-"No external dependencies" is not sufficient by itself. Shared instrumentation
-code, schemas, control bulletins, credentials, and regions can still correlate
-failure.
+仅仅声明“没有 external dependencies”并不充分。共享 instrumentation code、
+schema、control bulletin、credential 和 region 仍然会产生 correlated failure。
 
-## 10. Application to Existing Stream Work
+## 10. 对现有 Stream 工作的启示
 
-The existing stream-engine notes already distinguish:
+现有 stream-engine 笔记已经区分：
 
-```text
-highWatermarkOffset
-ackedOffset
-brokerCommittedOffset
-```
+- `highWatermarkOffset`；
+- `ackedOffset`；
+- `brokerCommittedOffset`。
 
-and derive:
+对应的 lag 定义可以写为：
 
-```text
-brokerLag = highWatermarkOffset - brokerCommittedOffset
-ackedLag  = highWatermarkOffset - ackedOffset
-commitGap = ackedOffset - brokerCommittedOffset
-```
+$$
+\begin{aligned}
+\mathrm{brokerLag}
+&= \mathrm{highWatermarkOffset}
+ - \mathrm{brokerCommittedOffset}, \\
+\mathrm{ackedLag}
+&= \mathrm{highWatermarkOffset}
+ - \mathrm{ackedOffset}, \\
+\mathrm{commitGap}
+&= \mathrm{ackedOffset}
+ - \mathrm{brokerCommittedOffset}.
+\end{aligned}
+$$
 
-That is a strong linear progress model. It prevents a broker-visible committed
-offset from being confused with locally processed data. The Datadog pattern
-extends the same discipline across service boundaries and branching topology.
+这是一套可靠的 linear progress model，避免把 broker-visible committed offset
+误认为本地已经处理的数据。Datadog pattern 将同样的口径纪律扩展到了跨 service
+boundary 与 branching topology。
 
-It should be adopted only when the required question becomes end-to-end:
+只有当系统确实需要回答下列 end-to-end 问题时，才值得引入这套机制：
 
-- Which accepted records reached the final serving or storage boundary?
-- Which segment owns the missing obligations?
-- Is the answer valid for this customer, partition, and topology version?
-- May an automated consumer act on the returned data?
+- 哪些 accepted records 到达了最终 serving 或 storage boundary？
+- 哪个 segment 对 missing obligations 负责？
+- 该结果对当前 customer、partition 与 topology version 是否有效？
+- automated consumer 是否可以基于这些数据采取行动？
 
-Adding per-record evidence to every stream path without those concrete
-questions would create cost without a defensible semantic contract.
+如果没有这些明确问题，就给每条 record 增加 evidence，只会制造成本，而得不到
+可辩护的 semantic contract。
 
-## 11. Recommended Engineering Contract
+## 11. 推荐的 Engineering Contract
 
-A production design should enforce these invariants:
+生产设计应强制满足以下 invariants：
 
-1. **Stable identity:** root obligation ID and bucket survive every hop.
-2. **Idempotent evidence:** duplicate and reordered events converge.
-3. **Explicit cardinality:** every transformation declares successor
-   obligations.
-4. **Cohort-safe composition:** invalid topology or count joins return unknown,
-   never a plausible scalar.
-5. **Consistent sampling:** selection identity and probability are inherited.
-6. **Statistical honesty:** estimate, sample size, and uncertainty travel
-   together.
-7. **Independent health:** measurement failure is distinguishable from data
-   failure.
-8. **Versioned topology:** historical evidence is evaluated against historical
-   routing.
-9. **Consumer policy:** weighted mass, required sinks, freshness, and fallback
-   behavior are explicit.
-10. **Fail-closed automation:** stale, invalid, undersampled, or unexplained
-    evidence cannot authorize an automated action.
+1. **Stable identity：** root obligation ID 与 bucket 必须跨 hop 继承。
+2. **Idempotent evidence：** duplicate 与 reordered events 必须收敛。
+3. **Explicit cardinality：** 每种 transformation 都要声明 successor
+   obligations。
+4. **Cohort-safe composition：** 非法 topology 或 count join 必须返回 unknown，
+   不能返回貌似合理的 scalar。
+5. **Consistent sampling：** selection identity 与 probability 必须继承。
+6. **Statistical honesty：** estimate、sample size 与 uncertainty 必须一起传递。
+7. **Independent health：** measurement failure 必须与 data failure 可区分。
+8. **Versioned topology：** 历史 evidence 必须使用历史 routing 解释。
+9. **Consumer policy：** weighted mass、required sink、freshness 与 fallback
+   behavior 必须显式定义。
+10. **Fail-closed automation：** stale、invalid、undersampled 或无法解释的
+    evidence 不得授权 automated action。
 
-## 12. Deliverables
+## 12. 交付物
 
-- `source.md`: source metadata, references, and evidence limitations.
-- `exploration.md`: hypotheses, test-first path, counterexamples, and toolchain
-  investigation.
-- `demo/`: C++20 reference model, scenario program, and 14-test suite.
-- `evidence/`: red test, sanitized test output, scenario output, environment,
-  and source digests.
-- `learning/sources/20260909-data-pipeline-completeness.md`: structured source
-  archive.
+- `source.md`：来源 metadata、reference 与 evidence limitation。
+- `exploration.md`：hypothesis、test-first 路径、counterexample 与 toolchain
+  investigation。
+- `demo/`：C++20 reference model、scenario program 与 14 项测试。
+- `evidence/`：red test、sanitized test output、scenario output、environment
+  与 source digests。
+- `learning/sources/20260909-data-pipeline-completeness.md`：结构化 source
+  archive。
 
-Build and run commands are in `demo/README.md`.
+构建与运行命令见 `demo/README.md`。
