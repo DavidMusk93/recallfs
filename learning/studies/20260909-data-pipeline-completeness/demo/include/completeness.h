@@ -103,10 +103,14 @@ struct DecisionSignal {
   MeasurementHealth health;
 };
 
+struct AutomationPolicy {
+  double minimum_completeness;
+  std::uint64_t minimum_samples;
+  std::uint64_t maximum_age_seconds;
+};
+
 [[nodiscard]] bool safe_for_automation(const DecisionSignal &signal,
-                                       double minimum_completeness,
-                                       std::uint64_t minimum_samples,
-                                       std::uint64_t maximum_age_seconds);
+                                       const AutomationPolicy &policy);
 
 } // namespace completeness
 

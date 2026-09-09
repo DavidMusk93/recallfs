@@ -186,18 +186,18 @@ bool stable_sample(std::uint64_t payload_id, std::uint64_t propagated_seed,
 }
 
 bool safe_for_automation(const DecisionSignal &signal,
-                         double minimum_completeness,
-                         std::uint64_t minimum_samples,
-                         std::uint64_t maximum_age_seconds) {
+                         const AutomationPolicy &policy) {
   const bool ratio_valid =
       std::isfinite(signal.completeness) && signal.completeness >= 0.0 &&
-      signal.completeness <= 1.0 && std::isfinite(minimum_completeness) &&
-      minimum_completeness >= 0.0 && minimum_completeness <= 1.0;
+      signal.completeness <= 1.0 &&
+      std::isfinite(policy.minimum_completeness) &&
+      policy.minimum_completeness >= 0.0 && policy.minimum_completeness <= 1.0;
 
   return ratio_valid && signal.health == MeasurementHealth::Healthy &&
-         signal.topology_known && signal.sampled_creates >= minimum_samples &&
-         signal.age_seconds <= maximum_age_seconds &&
-         signal.completeness >= minimum_completeness;
+         signal.topology_known &&
+         signal.sampled_creates >= policy.minimum_samples &&
+         signal.age_seconds <= policy.maximum_age_seconds &&
+         signal.completeness >= policy.minimum_completeness;
 }
 
 } // namespace completeness

@@ -11,6 +11,7 @@
 
 namespace {
 
+using completeness::AutomationPolicy;
 using completeness::BranchCount;
 using completeness::DecisionSignal;
 using completeness::EvidenceKey;
@@ -238,6 +239,11 @@ void independent_sampling_manufactures_incompleteness() {
 }
 
 void automation_requires_measurement_health() {
+  const AutomationPolicy policy{
+      .minimum_completeness = 0.99,
+      .minimum_samples = 1'000,
+      .maximum_age_seconds = 60,
+  };
   const DecisionSignal healthy{
       .completeness = 0.999,
       .sampled_creates = 2'000,
@@ -245,27 +251,27 @@ void automation_requires_measurement_health() {
       .topology_known = true,
       .health = MeasurementHealth::Healthy,
   };
-  require(completeness::safe_for_automation(healthy, 0.99, 1'000, 60),
+  require(completeness::safe_for_automation(healthy, policy),
           "healthy signal should pass");
 
   auto unsafe = healthy;
   unsafe.health = MeasurementHealth::Invalidated;
-  require(!completeness::safe_for_automation(unsafe, 0.99, 1'000, 60),
+  require(!completeness::safe_for_automation(unsafe, policy),
           "invalidated signal must fail closed");
 
   unsafe = healthy;
   unsafe.age_seconds = 61;
-  require(!completeness::safe_for_automation(unsafe, 0.99, 1'000, 60),
+  require(!completeness::safe_for_automation(unsafe, policy),
           "stale signal must fail closed");
 
   unsafe = healthy;
   unsafe.sampled_creates = 999;
-  require(!completeness::safe_for_automation(unsafe, 0.99, 1'000, 60),
+  require(!completeness::safe_for_automation(unsafe, policy),
           "undersampled signal must fail closed");
 
   unsafe = healthy;
   unsafe.topology_known = false;
-  require(!completeness::safe_for_automation(unsafe, 0.99, 1'000, 60),
+  require(!completeness::safe_for_automation(unsafe, policy),
           "unknown topology must fail closed");
 }
 
