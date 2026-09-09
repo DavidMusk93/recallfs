@@ -16,6 +16,10 @@ figures are images rather than selectable code blocks. The local archive
 transcribes the key SQL and summarizes the claims; raw Webflow HTML and
 third-party images are not committed.
 
+DBOS's current AI-assisted development prompt explicitly states that the brand
+name does not expand into other words:
+https://docs.dbos.dev/python/prompting
+
 ## PostgreSQL Sources
 
 - PostgreSQL wiki, “Loose indexscan,” revision accessed 2026-09-09:
