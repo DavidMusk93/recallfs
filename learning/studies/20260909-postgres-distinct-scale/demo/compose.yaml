@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: ${PG_IMAGE:-postgres:18.4-bookworm}
+    environment:
+      POSTGRES_DB: distinct_study
+      POSTGRES_PASSWORD: study
+      POSTGRES_USER: postgres
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - work_mem=128MB
+      - -c
+      - max_parallel_workers_per_gather=0
+      - -c
+      - jit=off
+      - -c
+      - track_io_timing=on
+    shm_size: 1gb
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - .:/study:ro
+
+volumes:
+  pgdata:

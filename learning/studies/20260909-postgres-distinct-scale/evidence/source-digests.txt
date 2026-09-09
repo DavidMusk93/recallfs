@@ -1,0 +1,15 @@
+Retrieved 2026-09-09 from:
+https://www.dbos.dev/blog/postgres-select-distinct-does-not-scale
+
+SHA-256
+0b986ec69aef49cfc5dfbc4eff4ff297c47c72c9acafe06051ca443e312325b7  article.html
+0a15b60253324da12944f8f60ab677dd2a3c1dee9a24d13dfe9ccfa928a3c1ad  01-query.png
+81966c43059f127124ea315d0adb4850b646bdaf8e398bca54c02359cd5d4d9a  02-index.png
+3f03b8a2ff5a68120c2b67ae48a1673b1fa9339bf9915eb0d8e09502d765013a  query-plan.png
+6e88998aef94b451537724a192803f80e4732f1aded8e265c6dbee2f0f265d48  benchmark.png
+e8a373a3e7d9e60add36a58f60ee876a8a90a290dbf78316e28a4e9eb3375dbe  05-explain.png
+b709fbcc2fc23284e2e311cff7c4a2ee494b4fe5cc948f164d3679e6f52b2c59  06-recursive-query.png
+00034cc3c704baa13ade50b3245c164f06998860edffd3a8336e93a3c3374e0d  07-loop.png
+81174914cf242115f5e25234b4ca396db8b32a7a81444752688a27f8ed9726d4  08-recursive-benchmark.png
+
+The files named above were retained only under repository-ignored `.tmp/`.

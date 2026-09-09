@@ -1,0 +1,22 @@
+captured_at_utc=2026-09-09T07:45:38Z
+host_uname=Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
+docker_client=26.1.4
+docker_server=29.5.2 os=Ubuntu 24.04.4 LTS arch=aarch64 cpus=4 memory=6197366784
+
+postgres_image=postgres:17.10-bookworm
+postgres_server_version=17.10 (Debian 17.10-1.pgdg12+1)
+block_size=8192
+jit=off
+max_parallel_workers_per_gather=0
+shared_buffers=131072
+track_io_timing=on
+work_mem=131072
+
+postgres_image=postgres:18.4-bookworm
+postgres_server_version=18.4 (Debian 18.4-1.pgdg12+1)
+block_size=8192
+jit=off
+max_parallel_workers_per_gather=0
+shared_buffers=131072
+track_io_timing=on
+work_mem=131072

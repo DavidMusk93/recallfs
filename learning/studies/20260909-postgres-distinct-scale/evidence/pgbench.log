@@ -1,0 +1,540 @@
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=1000 d=10 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.141 ms
+initial connection time = 0.820 ms
+tps = 7085.020243 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=1000 d=10 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.155 ms
+initial connection time = 0.670 ms
+tps = 6433.823529 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=10000 d=10 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.357 ms
+initial connection time = 0.744 ms
+tps = 2797.761791 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=10000 d=10 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.185 ms
+initial connection time = 0.801 ms
+tps = 5405.405405 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=100000 d=10 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 2.635 ms
+initial connection time = 0.940 ms
+tps = 379.465496 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=100000 d=10 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.169 ms
+initial connection time = 0.970 ms
+tps = 5927.180356 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=1000000 d=10 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 26.076 ms
+initial connection time = 0.762 ms
+tps = 38.349860 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=1000000 d=10 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.184 ms
+initial connection time = 0.782 ms
+tps = 5443.234837 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=10000000 d=10 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 255.515 ms
+initial connection time = 1.012 ms
+tps = 3.913665 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) depth n=10000000 d=10 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.214 ms
+initial connection time = 1.010 ms
+tps = 4676.018704 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=100 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 24.793 ms
+initial connection time = 0.873 ms
+tps = 40.334198 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=100 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.342 ms
+initial connection time = 0.888 ms
+tps = 2922.755741 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=1000 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 25.125 ms
+initial connection time = 0.741 ms
+tps = 39.800316 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=1000 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 1.830 ms
+initial connection time = 0.915 ms
+tps = 546.320144 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=10000 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 25.134 ms
+initial connection time = 0.711 ms
+tps = 39.786517 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=10000 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 14.787 ms
+initial connection time = 0.736 ms
+tps = 67.625663 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=100000 distinct]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 28.096 ms
+initial connection time = 0.946 ms
+tps = 35.592255 (without initial connection time)
+
+[17.10 (Debian 17.10-1.pgdg12+1) cardinality n=1000000 d=100000 loose-index-scan]
+pgbench (17.10 (Debian 17.10-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 227.077 ms
+initial connection time = 0.712 ms
+tps = 4.403801 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=1000 d=10 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.141 ms
+initial connection time = 0.731 ms
+tps = 7085.020243 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=1000 d=10 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.167 ms
+initial connection time = 0.742 ms
+tps = 5972.696246 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=10000 d=10 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.354 ms
+initial connection time = 0.875 ms
+tps = 2827.140549 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=10000 d=10 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.169 ms
+initial connection time = 0.756 ms
+tps = 5902.192243 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=100000 d=10 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 2.608 ms
+initial connection time = 0.890 ms
+tps = 383.435583 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=100000 d=10 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.192 ms
+initial connection time = 0.929 ms
+tps = 5208.333333 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=1000000 d=10 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 24.444 ms
+initial connection time = 0.714 ms
+tps = 40.909596 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=1000000 d=10 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.180 ms
+initial connection time = 0.730 ms
+tps = 5551.149881 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=10000000 d=10 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 244.272 ms
+initial connection time = 0.770 ms
+tps = 4.093802 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) depth n=10000000 d=10 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.185 ms
+initial connection time = 0.868 ms
+tps = 5392.912173 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=100 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 25.242 ms
+initial connection time = 0.741 ms
+tps = 39.616064 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=100 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 0.326 ms
+initial connection time = 0.748 ms
+tps = 3067.484663 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=1000 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 25.438 ms
+initial connection time = 0.732 ms
+tps = 39.310604 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=1000 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 1.742 ms
+initial connection time = 0.757 ms
+tps = 574.099893 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=10000 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 25.663 ms
+initial connection time = 0.754 ms
+tps = 38.966172 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=10000 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 14.107 ms
+initial connection time = 0.787 ms
+tps = 70.888230 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=100000 distinct]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/distinct.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 28.007 ms
+initial connection time = 0.749 ms
+tps = 35.705724 (without initial connection time)
+
+[18.4 (Debian 18.4-1.pgdg12+1) cardinality n=1000000 d=100000 loose-index-scan]
+pgbench (18.4 (Debian 18.4-1.pgdg12+1))
+transaction type: /study/sql/loose-index-scan.sql
+scaling factor: 1
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 7
+number of transactions actually processed: 7/7
+number of failed transactions: 0 (0.000%)
+latency average = 217.115 ms
+initial connection time = 0.723 ms
+tps = 4.605854 (without initial connection time)

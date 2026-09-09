@@ -1,0 +1,19 @@
+server_version,scenario,total_rows,ndv,symmetric_difference_count,ordinary_expected_difference_count,loose_expected_difference_count
+17.10 (Debian 17.10-1.pgdg12+1),depth,1000,10,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),depth,10000,10,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),depth,100000,10,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),depth,1000000,10,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),depth,10000000,10,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),cardinality,1000000,100,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),cardinality,1000000,1000,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),cardinality,1000000,10000,0,0,0
+17.10 (Debian 17.10-1.pgdg12+1),cardinality,1000000,100000,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),depth,1000,10,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),depth,10000,10,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),depth,100000,10,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),depth,1000000,10,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),depth,10000000,10,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),cardinality,1000000,100,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),cardinality,1000000,1000,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),cardinality,1000000,10000,0,0,0
+18.4 (Debian 18.4-1.pgdg12+1),cardinality,1000000,100000,0,0,0
