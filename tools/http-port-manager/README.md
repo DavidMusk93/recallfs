@@ -44,18 +44,27 @@ LaunchAgent **不能读** `~/Documents`。本工具策略：
 tools/http-port-manager/sync.sh
 ```
 
-可选：给 `/usr/bin/python3` 开「完全磁盘访问」，并去掉服务的 `force_mirror`，即可直读 `Documents`（无需 mirror）。
+网页 **不能** 给 python3 授予「完全磁盘访问」（TCC 绑的是进程，不是 localhost HTML）。
+
+管理台在新建失败 / `needs_grant` 时提供授权交互：
+
+1. **选择目录并写入镜像**（推荐）：浏览器文件选择器 = 用户手势授权，页面把文件 POST 到 `/api/services/{id}/seed-mirror`，写入 `mirrors/<id>/` 后启动。
+2. Terminal 跑 `sync.sh`（可读 Documents）。
+3. 可选：给该 python3 开「完全磁盘访问」，并去掉 `force_mirror`，才可直读 Documents。
 
 ## API
 
 | method | path | 说明 |
 | --- | --- | --- |
 | GET | `/api/healthz` | 健康检查 |
-| GET | `/api/services` | 服务列表 + metrics |
-| POST | `/api/services` | 创建（JSON: id,name,port,bind,root,auto_start） |
+| GET | `/api/access` | TCC 探测（Documents 是否可读、python 路径） |
+| GET | `/api/services` | 服务列表 + metrics（含 `needs_grant` / `grant`） |
+| POST | `/api/services` | 创建（JSON: id,name,port,bind,root,auto_start）。TCC 失败仍 201，服务进入 error + `needs_grant` |
 | POST | `/api/services/{id}/start` | 启动 |
 | POST | `/api/services/{id}/stop` | 停止 |
 | POST | `/api/services/{id}/restart` | 重启 |
+| POST | `/api/services/{id}/sync` | 尝试从 source rsync 到 mirror（LaunchAgent 下通常失败） |
+| POST | `/api/services/{id}/seed-mirror` | 浏览器授权上传：`{reset,done,files:[{path,data|text}]}` |
 | PATCH | `/api/services/{id}` | 更新配置 |
 | DELETE | `/api/services/{id}` | 删除 |
 | GET | `/api/events` | SSE：`event: update` / `: heartbeat` |

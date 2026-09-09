@@ -64,18 +64,29 @@ SSE 规则：状态签名变化才发 `event: update`；无变化发 `: heartbea
 
 ```text
 Terminal ./install.sh | ./sync.sh
-        |  (可读 Documents)
+        |  (readable Documents)
         v
   rsync root -> ~/Library/Application Support/.../mirrors/<id>
         |
         v
-  launchd python3 server.py
-        |  (不可读 Documents)
+  launchd / ssh-socks python3 server.py
+        |  (cannot read Documents)
         v
   ThreadingHTTPServer serves mirrors only
+
+Dashboard directory picker
+        |  (browser user gesture)
+        v
+  POST /api/services/{id}/seed-mirror
+        |
+        v
+  write mirrors/<id>/ then start worker
 ```
 
 UI 上 Sync 若源目录对 LaunchAgent 不可读，会提示改跑 `sync.sh`。
+新建服务若 source 不可读：**仍然落盘配置**，状态 `error` + `needs_grant`。
+Dashboard 用目录选择器把文件 POST 到 `seed-mirror`（浏览器有用户手势，LaunchAgent 没有 TCC）。
+网页不能给 python3 弹出系统「完全磁盘访问」对话框。
 
 ## 路径
 

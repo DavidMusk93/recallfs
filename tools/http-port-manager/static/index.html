@@ -130,6 +130,34 @@
     button.danger:hover { background: #991b1b; }
     button.ok { background: #166534; }
     button.ok:hover { background: #15803d; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .grant {
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid #7f1d1d;
+      background: #2a0a12;
+    }
+    .grant p { margin: 0; font-size: 0.82rem; line-height: 1.45; }
+    .grant .lead { color: #f9a8d4; }
+    .grant .why { color: var(--muted); }
+    .grant-progress {
+      min-height: 1.1em;
+      font-size: 0.78rem;
+      color: var(--accent2);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .hint {
+      margin: 0.15rem 0 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button:active { transform: none; }
+    }
     .svc {
       display: grid;
       gap: 0.75rem;
@@ -193,6 +221,7 @@
       color: var(--err);
       min-height: 1.1em;
     }
+    .msg.warn { color: var(--warn); }
     footer {
       color: var(--muted);
       font-size: 0.75rem;
@@ -232,6 +261,7 @@
         </label>
         <label style="grid-column: 1 / -1">目录 root
           <input name="root" required placeholder="/path/to/dir" />
+          <span class="hint">Documents / Desktop / Downloads 对 LaunchAgent 不可读。创建后可在卡片上「选择目录」写入镜像；网页无法给 python3 开完全磁盘访问。</span>
         </label>
         <label>自动启动
           <input name="auto_start" type="checkbox" checked style="width:auto;justify-self:start" />
@@ -262,8 +292,11 @@
     </section>
   </main>
 
+  <input id="grantPicker" type="file" webkitdirectory directory multiple hidden />
+
   <footer>
     Manager PID <code id="mgrPid">—</code> · 更新于 <code id="updatedAt">—</code>
+    · <span id="accessHint">—</span>
   </footer>
 
   <script>
@@ -277,6 +310,12 @@
 
     let lastSig = '';
     let es = null;
+    let pendingGrantId = null;
+    const grantPicker = document.getElementById('grantPicker');
+    const SKIP_DIR = new Set(['.git', 'target', '.tmp', '__pycache__', 'node_modules']);
+    const SKIP_FILE = new Set(['.DS_Store']);
+    const GRANT_MAX_BYTES = 80 * 1024 * 1024;
+    const GRANT_BATCH_BYTES = 2 * 1024 * 1024;
 
     function fmtBytes(n) {
       if (n == null) return '0 B';
@@ -338,6 +377,7 @@
               <div style="grid-column:1/-1">root <b><code>${escapeHtml(s.root)}</code></b></div>
               <div style="grid-column:1/-1">serve <b><code>${escapeHtml(s.serve_root || m.serve_root || '—')}</code></b></div>
             </div>
+            ${s.needs_grant ? grantPanel(s) : ''}
           </div>`;
       }).join('');
     }
@@ -350,6 +390,164 @@
         .replaceAll('"', '&quot;');
     }
     function escapeAttr(s) { return escapeHtml(s).replaceAll("'", '&#39;'); }
+
+    function grantPanel(s) {
+      const g = s.grant || {};
+      const cmd = g.sync_cmd || 'tools/http-port-manager/sync.sh';
+      return `
+            <div class="grant" data-grant-id="${escapeAttr(s.id)}">
+              <p class="lead">需要授权才能提供此目录（macOS TCC）</p>
+              <p class="why">网页不能给 <code>${escapeHtml(g.python || 'python3')}</code> 弹出「完全磁盘访问」。请在本页选择该目录：浏览器读取后写入镜像 <code>${escapeHtml(g.mirror || '')}</code>，LaunchAgent 即可对外服务。</p>
+              <div class="actions">
+                <button type="button" class="ok" data-act="grant" data-id="${escapeAttr(s.id)}">选择目录并写入镜像</button>
+                <button type="button" class="ghost" data-act="copy-sync" data-cmd="${escapeAttr(cmd)}">复制 sync.sh</button>
+              </div>
+              <div class="grant-progress" aria-live="polite"></div>
+            </div>`;
+    }
+
+    function shouldSkipName(name) {
+      return SKIP_DIR.has(name) || SKIP_FILE.has(name) || name.endsWith('.pyc');
+    }
+
+    function fileToB64(buf) {
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(bin);
+    }
+
+    async function walkDirectoryHandle(handle, prefix) {
+      const out = [];
+      for await (const [name, child] of handle.entries()) {
+        if (shouldSkipName(name)) continue;
+        const rel = prefix ? prefix + '/' + name : name;
+        if (child.kind === 'directory') {
+          out.push(...await walkDirectoryHandle(child, rel));
+        } else {
+          out.push({ path: rel, file: await child.getFile() });
+        }
+      }
+      return out;
+    }
+
+    function filesFromInput(list) {
+      const out = [];
+      for (const f of list) {
+        const parts = String(f.webkitRelativePath || f.name).split('/').filter(Boolean);
+        if (parts.some(shouldSkipName)) continue;
+        const rel = parts.length > 1 ? parts.slice(1).join('/') : parts[0];
+        if (!rel) continue;
+        out.push({ path: rel, file: f });
+      }
+      return out;
+    }
+
+    function setGrantProgress(id, text) {
+      document.querySelectorAll('[data-grant-id]').forEach((el) => {
+        if (el.getAttribute('data-grant-id') !== id) return;
+        const p = el.querySelector('.grant-progress');
+        if (p) p.textContent = text || '';
+      });
+    }
+
+    async function uploadGrant(id, items) {
+      const total = items.reduce((s, x) => s + (x.file.size || 0), 0);
+      if (!items.length) throw new Error('目录是空的');
+      if (total > GRANT_MAX_BYTES) {
+        throw new Error(`目录 ${fmtBytes(total)} 超过网页授权上限，请在 Terminal 运行 sync.sh`);
+      }
+      let sent = 0;
+      let batch = [];
+      let batchBytes = 0;
+      let reset = true;
+      const flush = async (done) => {
+        if (!batch.length && !done) return {};
+        const files = [];
+        for (const it of batch) {
+          const buf = await it.file.arrayBuffer();
+          files.push({ path: it.path, data: fileToB64(buf) });
+        }
+        const r = await fetch(`/api/services/${encodeURIComponent(id)}/seed-mirror`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reset, done, files }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.statusText);
+        reset = false;
+        batch = [];
+        batchBytes = 0;
+        return j;
+      };
+      for (const it of items) {
+        const sz = it.file.size || 0;
+        if (batch.length && batchBytes + sz > GRANT_BATCH_BYTES) {
+          await flush(false);
+          setGrantProgress(id, `已上传 ${fmtBytes(sent)} / ${fmtBytes(total)}`);
+        }
+        batch.push(it);
+        batchBytes += sz;
+        sent += sz;
+      }
+      const j = await flush(true);
+      setGrantProgress(id, `镜像已写入，服务已尝试启动`);
+      return j;
+    }
+
+    async function pickAndGrant(id) {
+      try {
+        let items = null;
+        if (window.showDirectoryPicker) {
+          try {
+            const dir = await window.showDirectoryPicker();
+            items = await walkDirectoryHandle(dir, '');
+          } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            items = null;
+          }
+        }
+        if (!items) {
+          pendingGrantId = id;
+          grantPicker.value = '';
+          grantPicker.click();
+          return;
+        }
+        setGrantProgress(id, `正在写入 ${items.length} 个文件…`);
+        await uploadGrant(id, items);
+      } catch (e) {
+        const msg = e.message || String(e);
+        setGrantProgress(id, msg);
+        formMsg.textContent = msg;
+      }
+    }
+
+    grantPicker.addEventListener('change', async () => {
+      const id = pendingGrantId;
+      pendingGrantId = null;
+      if (!id || !grantPicker.files || !grantPicker.files.length) return;
+      try {
+        const items = filesFromInput(grantPicker.files);
+        setGrantProgress(id, `正在写入 ${items.length} 个文件…`);
+        await uploadGrant(id, items);
+      } catch (e) {
+        const msg = e.message || String(e);
+        setGrantProgress(id, msg);
+        alert(msg);
+      }
+    });
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    }
 
     function setConn(ok, text) {
       connDot.className = 'dot ' + (ok ? 'ok' : 'err');
@@ -387,6 +585,16 @@
       const act = btn.dataset.act;
       btn.disabled = true;
       try {
+        if (act === 'grant') {
+          await pickAndGrant(id);
+          return;
+        }
+        if (act === 'copy-sync') {
+          const cmd = btn.dataset.cmd || 'tools/http-port-manager/sync.sh';
+          const ok = await copyText(cmd);
+          setGrantProgress(id, ok ? `已复制：${cmd}` : cmd);
+          return;
+        }
         if (act === 'delete') {
           if (!confirm(`删除服务 ${id}？`)) return;
           const r = await fetch(`/api/services/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -407,6 +615,7 @@
 
     document.getElementById('createForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      formMsg.className = 'msg';
       formMsg.textContent = '';
       const fd = new FormData(ev.target);
       const body = {
@@ -428,12 +637,32 @@
         ev.target.reset();
         ev.target.bind.value = '0.0.0.0';
         ev.target.auto_start.checked = true;
+        if (j.needs_grant) {
+          formMsg.className = 'msg warn';
+          formMsg.textContent = '服务已创建，但 LaunchAgent 读不了该目录。请在下方卡片选择目录写入镜像。';
+        } else {
+          formMsg.className = 'msg';
+        }
       } catch (e) {
         formMsg.textContent = e.message || String(e);
       }
     });
 
+    async function loadAccess() {
+      const el = document.getElementById('accessHint');
+      try {
+        const r = await fetch('/api/access');
+        const j = await r.json();
+        el.textContent = j.tcc_blocked
+          ? `Documents TCC blocked · python ${j.python || ''}`
+          : `Documents readable · python ${j.python || ''}`;
+      } catch {
+        el.textContent = 'access probe failed';
+      }
+    }
+
     connectSSE();
+    loadAccess();
 
     async function loadLabSessions() {
       const el = document.getElementById('labSessions');

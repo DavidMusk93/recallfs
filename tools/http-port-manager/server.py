@@ -11,6 +11,7 @@ unreadable, content is rsync-mirrored into APP_DIR/mirrors/<id>/ for serving.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -36,6 +37,10 @@ MIRRORS_DIR = APP_DIR / "mirrors"
 LAB_TELEMETRY_DIR = APP_DIR / "lab_telemetry"
 ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
 RSYNC_EXCLUDES = [".git", "target", ".tmp", "__pycache__", ".DS_Store", "*.pyc"]
+TCC_HOME_DIRS = ("Documents", "Desktop", "Downloads", "Movies", "Pictures")
+MAX_MIRROR_FILES = 4000
+MAX_MIRROR_BYTES = 80 * 1024 * 1024
+MAX_MIRROR_BODY = 110 * 1024 * 1024
 
 
 def utc_now_iso() -> str:
@@ -65,6 +70,84 @@ def path_readable(path: Path) -> bool:
         return True
     except OSError:
         return False
+
+
+def tcc_sensitive_path(path: Path) -> bool:
+    """True for dirs LaunchAgents typically cannot read without Full Disk Access."""
+    try:
+        resolved = str(path.expanduser())
+    except OSError:
+        resolved = str(path)
+    home = str(Path.home())
+    for name in TCC_HOME_DIRS:
+        prefix = str(Path(home) / name)
+        if resolved == prefix or resolved.startswith(prefix + os.sep):
+            return True
+    if "Library/Mobile Documents" in resolved or "/CloudStorage/" in resolved:
+        return True
+    return False
+
+
+def safe_mirror_relpath(raw: str) -> Path:
+    text = (raw or "").replace("\\", "/").strip()
+    if not text or text.endswith("/"):
+        raise ValueError(f"invalid path: {raw!r}")
+    parts = [p for p in text.split("/") if p and p != "."]
+    if not parts or any(p == ".." for p in parts):
+        raise ValueError(f"invalid path: {raw!r}")
+    return Path(*parts)
+
+
+def decode_upload_bytes(item: dict[str, Any]) -> bytes:
+    if not isinstance(item, dict):
+        raise ValueError("file entry must be an object")
+    if item.get("text") is not None:
+        return str(item["text"]).encode("utf-8")
+    data = item.get("data")
+    if not data:
+        return b""
+    try:
+        return base64.b64decode(data)
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"invalid base64 for {item.get('path')}: {e}") from e
+
+
+def access_snapshot() -> dict[str, Any]:
+    docs = Path.home() / "Documents"
+    readable = path_readable(docs)
+    return {
+        "python": sys.executable,
+        "app_dir": str(APP_DIR),
+        "mirrors_dir": str(MIRRORS_DIR),
+        "documents_readable": readable,
+        "tcc_blocked": not readable,
+        "sync_cmd": str(APP_DIR / "sync.sh"),
+        "hint": (
+            "A webpage cannot grant Full Disk Access to this python3. "
+            "Pick the directory in the dashboard to seed a mirror, or run "
+            "sync.sh from Terminal."
+        ),
+    }
+
+
+def grant_payload(sid: str, source: Path, dest: Path) -> dict[str, Any]:
+    source_readable = path_readable(source)
+    mirror_ready = dest.is_dir() and path_readable(dest)
+    kind = "tcc" if (not source_readable and tcc_sensitive_path(source)) else "unreadable"
+    return {
+        "kind": kind,
+        "source_readable": source_readable,
+        "mirror_ready": mirror_ready,
+        "source": str(source),
+        "mirror": str(dest),
+        "python": sys.executable,
+        "sync_cmd": str(APP_DIR / "sync.sh"),
+        "hint": (
+            "网页不能给 LaunchAgent/python3 授予「完全磁盘访问」。"
+            "请在本页选择该目录，把文件写入镜像后再启动；"
+            f"或在 Terminal 运行 {APP_DIR / 'sync.sh'}。"
+        ),
+    }
 
 
 def mirror_root(source: Path, dest: Path) -> None:
@@ -308,6 +391,76 @@ class StaticWorker:
             f"source not readable and no mirror at {dest}. Run sync.sh from Terminal."
         )
 
+    def seed_from_upload(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Write a browser-authorized directory tree into mirrors/<id>/.
+
+        The LaunchAgent still cannot read ~/Documents. The dashboard File Picker
+        runs in the browser (user gesture), then POSTs bytes here.
+        """
+        files = body.get("files")
+        if files is None:
+            files = []
+        if not isinstance(files, list):
+            raise ValueError("files must be a list")
+        if len(files) > MAX_MIRROR_FILES:
+            raise ValueError(f"too many files (>{MAX_MIRROR_FILES})")
+        dest = MIRRORS_DIR / self.id
+        reset = bool(body.get("reset", True))
+        if not files:
+            if reset or not (dest.is_dir() and path_readable(dest)):
+                raise ValueError("files must be a non-empty list")
+            self.cfg["force_mirror"] = True
+            self._mirrored = True
+            self._serve_root = dest
+            self.metrics.set_serve_info(str(dest), True, synced=True)
+            return {
+                "written": 0,
+                "bytes": 0,
+                "total_bytes": int(getattr(self, "_seed_bytes", 0) or 0),
+                "serve_root": str(dest),
+                "mirrored": True,
+            }
+        if reset:
+            if dest.exists():
+                shutil.rmtree(dest)
+            dest.mkdir(parents=True, exist_ok=True)
+            self._seed_bytes = 0
+        else:
+            dest.mkdir(parents=True, exist_ok=True)
+            self._seed_bytes = int(getattr(self, "_seed_bytes", 0) or 0)
+
+        written = 0
+        batch_bytes = 0
+        for item in files:
+            rel = safe_mirror_relpath(str((item or {}).get("path") or ""))
+            raw = decode_upload_bytes(item)
+            batch_bytes += len(raw)
+            if self._seed_bytes + batch_bytes > MAX_MIRROR_BYTES:
+                raise ValueError(f"mirror payload exceeds {MAX_MIRROR_BYTES} bytes")
+            out = dest / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(raw)
+            written += 1
+
+        self._seed_bytes += batch_bytes
+        self.cfg["force_mirror"] = True
+        self._mirrored = True
+        self._serve_root = dest
+        self.metrics.set_serve_info(str(dest), True, synced=True)
+        with self.metrics._lock:
+            self.metrics.note = (
+                "mirror seeded from dashboard directory picker "
+                f"({self._seed_bytes} bytes)"
+            )
+            self.metrics.last_error = None
+        return {
+            "written": written,
+            "bytes": batch_bytes,
+            "total_bytes": self._seed_bytes,
+            "serve_root": str(dest),
+            "mirrored": True,
+        }
+
     def _start_sync_loop(self) -> None:
         # No auto-pull from Documents under launchd (TCC). Mirror is refreshed
         # by sync.sh / install.sh from a TCC-capable Terminal session.
@@ -411,15 +564,30 @@ class StaticWorker:
             status = "error"
         uptime = int(time.time() - started) if started and status == "running" else 0
         m = self.metrics.snapshot()
+        source = Path(cfg["root"]).expanduser()
+        dest = MIRRORS_DIR / cfg["id"]
+        effective_root = serve_root or m.get("serve_root")
+        source_readable = path_readable(source)
+        mirror_ready = dest.is_dir() and path_readable(dest)
+        can_serve = bool(
+            (effective_root and path_readable(Path(str(effective_root))))
+            or mirror_ready
+            or (source_readable and not bool(cfg.get("force_mirror")))
+        )
+        needs_grant = (not can_serve) and (
+            tcc_sensitive_path(source) or not source_readable
+        )
+        grant = grant_payload(cfg["id"], source, dest) if (needs_grant or not source_readable) else None
         return {
             "id": cfg["id"],
             "name": cfg.get("name") or cfg["id"],
             "port": port,
             "bind": bind,
             "root": cfg["root"],
-            "serve_root": serve_root or m.get("serve_root"),
+            "serve_root": effective_root,
             "mirrored": mirrored or bool(m.get("mirrored")),
             "auto_start": bool(cfg.get("auto_start", True)),
+            "force_mirror": bool(cfg.get("force_mirror", False)),
             "sync_interval_sec": float(cfg.get("sync_interval_sec") or 5),
             "status": status,
             "running": status == "running" and thread_alive,
@@ -432,6 +600,9 @@ class StaticWorker:
                 if started
                 else None
             ),
+            "source_readable": source_readable,
+            "needs_grant": needs_grant,
+            "grant": grant,
             "metrics": m,
             "url": f"http://{('127.0.0.1' if bind == '0.0.0.0' else bind)}:{port}/",
         }
@@ -513,6 +684,10 @@ class ServiceRegistry:
         bind = body.get("bind") or "0.0.0.0"
         name = body.get("name") or sid
         auto_start = bool(body.get("auto_start", True))
+        if "force_mirror" in body:
+            force_mirror = bool(body.get("force_mirror"))
+        else:
+            force_mirror = tcc_sensitive_path(Path(root))
         cfg = {
             "id": sid,
             "name": name,
@@ -520,6 +695,7 @@ class ServiceRegistry:
             "bind": bind,
             "root": root,
             "auto_start": auto_start,
+            "force_mirror": force_mirror,
             "sync_interval_sec": float(body.get("sync_interval_sec") or 5),
         }
         with self._lock:
@@ -532,7 +708,11 @@ class ServiceRegistry:
             self.workers[sid] = worker
         self.save()
         if auto_start:
-            worker.start()
+            try:
+                worker.start()
+            except PermissionError as e:
+                # Persist the service; UI can seed a mirror via directory picker.
+                worker.metrics.set_error(str(e))
         return worker.status_dict()
 
     def update(self, sid: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -541,7 +721,7 @@ class ServiceRegistry:
             if not worker:
                 raise KeyError(sid)
             cfg = dict(worker.cfg)
-            for key in ("name", "bind", "root", "auto_start", "port", "sync_interval_sec"):
+            for key in ("name", "bind", "root", "auto_start", "port", "sync_interval_sec", "force_mirror"):
                 if key in body:
                     cfg[key] = body[key]
             cfg["port"] = int(cfg["port"])
@@ -587,6 +767,7 @@ class ServiceRegistry:
                     "root": r["root"],
                     "serve_root": r.get("serve_root"),
                     "mirrored": r.get("mirrored"),
+                    "needs_grant": r.get("needs_grant"),
                     "uptime_sec": r["uptime_sec"],
                     "metrics": r["metrics"],
                 }
@@ -939,6 +1120,8 @@ class ControlHandler(SimpleHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0:
             return {}
+        if length > MAX_MIRROR_BODY:
+            raise ValueError(f"payload too large ({length} > {MAX_MIRROR_BODY})")
         raw = self.rfile.read(length)
         if not raw:
             return {}
@@ -956,6 +1139,10 @@ class ControlHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/healthz":
             self._send_json(200, {"ok": True, "pid": os.getpid(), "time": utc_now_iso()})
+            return
+
+        if path == "/api/access":
+            self._send_json(200, {"ok": True, **access_snapshot(), "time": utc_now_iso()})
             return
 
         if path == "/api/services":
@@ -1029,6 +1216,9 @@ class ControlHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json(400, {"error": "invalid json"})
             return
+        except ValueError as e:
+            self._send_json(400, {"error": str(e)})
+            return
 
         try:
             if path == "/api/lab/events":
@@ -1038,10 +1228,18 @@ class ControlHandler(SimpleHTTPRequestHandler):
 
             if path == "/api/services":
                 st = self.registry.create(body)
-                self._send_json(201, st)
+                code = 201
+                if st.get("needs_grant"):
+                    # Created, but LaunchAgent cannot read root yet.
+                    st = dict(st)
+                    st["ok"] = True
+                    st["created"] = True
+                self._send_json(code, st)
                 return
 
-            m = re.fullmatch(r"/api/services/([^/]+)/(start|stop|restart|sync)", path)
+            m = re.fullmatch(
+                r"/api/services/([^/]+)/(start|stop|restart|sync|seed-mirror)", path
+            )
             if m:
                 sid, action = m.group(1), m.group(2)
                 w = self.registry.get(sid)
@@ -1057,6 +1255,25 @@ class ControlHandler(SimpleHTTPRequestHandler):
                 elif action == "restart":
                     w.restart()
                     self._send_json(200, w.status_dict())
+                elif action == "seed-mirror":
+                    was_running = bool(w.status_dict().get("running"))
+                    if body.get("reset", True) and was_running:
+                        w.stop()
+                    result = w.seed_from_upload(body)
+                    self.registry.save()
+                    started = False
+                    if body.get("done", True):
+                        w.start()
+                        started = True
+                    self._send_json(
+                        200,
+                        {
+                            "ok": True,
+                            **result,
+                            "started": started,
+                            "service": w.status_dict(),
+                        },
+                    )
                 else:
                     result = w.sync()
                     self._send_json(200, {"ok": True, **result, "service": w.status_dict()})
