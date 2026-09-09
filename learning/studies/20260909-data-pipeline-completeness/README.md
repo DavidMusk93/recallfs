@@ -364,11 +364,10 @@ A production design should enforce these invariants:
 - `source.md`: source metadata, references, and evidence limitations.
 - `exploration.md`: hypotheses, test-first path, counterexamples, and toolchain
   investigation.
-- `demo/`: C++20 reference model, scenario program, and 13-test suite.
+- `demo/`: C++20 reference model, scenario program, and 14-test suite.
 - `evidence/`: red test, sanitized test output, scenario output, environment,
   and source digests.
 - `learning/sources/20260909-data-pipeline-completeness.md`: structured source
   archive.
 
 Build and run commands are in `demo/README.md`.
-

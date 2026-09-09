@@ -14,6 +14,7 @@ CTest:
   100% tests passed, 0 tests failed out of 1
 
 Direct test output:
+  PASS near_assertion_rejects_nan
   PASS create_then_ack_is_idempotent
   PASS ack_before_create_converges
   PASS every_short_event_sequence_converges
@@ -27,8 +28,7 @@ Direct test output:
   PASS propagated_sampling_decision_preserves_pairs
   PASS independent_sampling_manufactures_incompleteness
   PASS automation_requires_measurement_health
-  PASS all 13 tests
+  PASS all 14 tests
 
 Sanitizer result:
   No AddressSanitizer or UndefinedBehaviorSanitizer diagnostics.
-

@@ -3,4 +3,4 @@
 e5963649e182780e406c07d09aa90b95260f98ee2bbd39fa1876dfba7e274c5c  learning/studies/20260909-data-pipeline-completeness/demo/include/completeness.h
 afba2527c199d4930ef6c487a1ecbe200d226a528e31d6b26f67cac0e1bb6e80  learning/studies/20260909-data-pipeline-completeness/demo/src/completeness.cpp
 617ff0bcbca6f2df1e9bd6ca5cc327a2ae3d35e936eb440e99001074a209cc3c  learning/studies/20260909-data-pipeline-completeness/demo/src/main.cpp
-ba79251f43dc1389fb0b67b6a3c97c661dc52ef99f4e61abc33ba0c6aee2fc45  learning/studies/20260909-data-pipeline-completeness/demo/tests/completeness_test.cpp
+f4c98f4ccfb28e2c164f5b08af01b0f688342138d2daf7efd475aeab58c9ed0d  learning/studies/20260909-data-pipeline-completeness/demo/tests/completeness_test.cpp

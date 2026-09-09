@@ -4,6 +4,7 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -27,10 +28,22 @@ void require(bool condition, const std::string &message) {
 }
 
 void require_near(double actual, double expected, double tolerance) {
-  if (std::abs(actual - expected) > tolerance) {
+  if (!std::isfinite(actual) || !std::isfinite(expected) ||
+      !std::isfinite(tolerance) || tolerance < 0.0 ||
+      std::abs(actual - expected) > tolerance) {
     throw std::runtime_error("expected " + std::to_string(expected) + ", got " +
                              std::to_string(actual));
   }
+}
+
+void near_assertion_rejects_nan() {
+  bool rejected = false;
+  try {
+    require_near(std::numeric_limits<double>::quiet_NaN(), 1.0, 1e-12);
+  } catch (const std::runtime_error &) {
+    rejected = true;
+  }
+  require(rejected, "NaN must never satisfy a numeric assertion");
 }
 
 void create_then_ack_is_idempotent() {
@@ -254,10 +267,37 @@ void automation_requires_measurement_health() {
   require(completeness::safe_for_automation(healthy, policy),
           "healthy signal should pass");
 
+  auto boundary = healthy;
+  boundary.completeness = policy.minimum_completeness;
+  boundary.sampled_creates = policy.minimum_samples;
+  boundary.age_seconds = policy.maximum_age_seconds;
+  require(completeness::safe_for_automation(boundary, policy),
+          "inclusive policy boundaries should pass");
+
   auto unsafe = healthy;
   unsafe.health = MeasurementHealth::Invalidated;
   require(!completeness::safe_for_automation(unsafe, policy),
           "invalidated signal must fail closed");
+
+  unsafe = healthy;
+  unsafe.health = MeasurementHealth::ObserverDegraded;
+  require(!completeness::safe_for_automation(unsafe, policy),
+          "degraded observer must fail closed");
+
+  unsafe = healthy;
+  unsafe.completeness = 0.98;
+  require(!completeness::safe_for_automation(unsafe, policy),
+          "below-threshold completeness must fail closed");
+
+  unsafe = healthy;
+  unsafe.completeness = std::numeric_limits<double>::quiet_NaN();
+  require(!completeness::safe_for_automation(unsafe, policy),
+          "non-finite completeness must fail closed");
+
+  unsafe = healthy;
+  unsafe.completeness = 1.01;
+  require(!completeness::safe_for_automation(unsafe, policy),
+          "out-of-range completeness must fail closed");
 
   unsafe = healthy;
   unsafe.age_seconds = 61;
@@ -279,6 +319,7 @@ void automation_requires_measurement_health() {
 
 int main() {
   const std::vector<std::pair<std::string, std::function<void()>>> tests{
+      {"near_assertion_rejects_nan", near_assertion_rejects_nan},
       {"create_then_ack_is_idempotent", create_then_ack_is_idempotent},
       {"ack_before_create_converges", ack_before_create_converges},
       {"every_short_event_sequence_converges",

@@ -48,19 +48,20 @@ and produces an executable with no usable `LC_RPATH`.
 
 The test executable covers:
 
-1. create then acknowledgment, including duplicates;
-2. acknowledgment before create;
-3. every create/ack sequence up to eight events;
-4. root-bucket isolation;
-5. the undefined empty-segment ratio;
-6. valid sequential cohort composition;
-7. rejection of adjacent cohort mismatch;
-8. rejection of acknowledgments greater than creates;
-9. delivery-mass versus required-branch semantics;
-10. invalid branch counts;
-11. consistent sampling across create and acknowledgment;
-12. independent sampling as a false-loss counterexample;
-13. health, freshness, sample-size, and topology automation gates.
+1. the numeric assertion helper rejects `NaN`;
+2. create then acknowledgment, including duplicates;
+3. acknowledgment before create;
+4. every create/ack sequence up to eight events;
+5. root-bucket isolation;
+6. the undefined empty-segment ratio;
+7. valid sequential cohort composition;
+8. rejection of adjacent cohort mismatch;
+9. rejection of acknowledgments greater than creates;
+10. delivery-mass versus required-branch semantics;
+11. invalid branch counts;
+12. consistent sampling across create and acknowledgment;
+13. independent sampling as a false-loss counterexample;
+14. completeness, health, freshness, sample-size, and topology automation gates.
 
 ## Observed Scenario Output
 
@@ -80,4 +81,3 @@ independent_sampling.early_acks=1861
 
 The sampling scenario is deterministic. It is a counterexample, not a
 statistical accuracy benchmark.
-

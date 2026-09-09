@@ -213,3 +213,11 @@ The exact verified command is in `evidence/local-environment.txt`.
 - The tests establish necessary contracts and counterexamples. They do not
   prove that these contracts are sufficient for every data transformation.
 
+## 11. Review Correction
+
+The final review found that the original `require_near` helper accepted `NaN`:
+`abs(NaN - expected) > tolerance` is false. A dedicated test reproduced the
+silent pass before the helper was changed to reject non-finite operands and a
+negative tolerance. The same test unit now directly exercises completeness
+threshold, `ObserverDegraded`, non-finite value, out-of-range value, and exact
+policy-boundary behavior. The sanitized suite increased from 13 to 14 tests.
