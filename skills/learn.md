@@ -118,6 +118,22 @@ macOS notes:
 - `demo/` contains a runnable standard project, including build files and source directories.
 - `evidence/` contains logs, outputs, screenshots, and benchmark data.
 
+### Language and Mathematical Notation
+
+- Write the final study report in `README.md` in Chinese unless the user
+  explicitly requests another language.
+- Keep established technical terms, protocol names, API names, identifiers,
+  and code symbols in English. Do not force awkward Chinese translations for
+  domain vocabulary.
+- Use Markdown LaTeX for mathematical notation: `$...$` for inline expressions
+  and `$$...$$` for displayed equations or derivations.
+- Do not put equations in `text` or code fences, and do not emulate subscripts,
+  fractions, products, or arrows with plain-text underscores and ASCII.
+- Reserve `text` fences for actual ASCII architecture, topology, state-machine,
+  or control-flow diagrams.
+- `source.md` may preserve original titles and quotations. `exploration.md` and
+  `evidence/` may preserve raw tool output in its original language.
+
 ## 7. Agent Checklist
 
 - Is the study name date-prefixed and descriptive?
@@ -132,3 +148,6 @@ macOS notes:
 - Are commands and results reproducible?
 - Are macOS pitfalls and toolchain details recorded when relevant?
 - Are conclusions separated from exploration notes?
+- Is the final report Chinese while established technical terms remain English?
+- Are mathematical definitions and derivations rendered with Markdown LaTeX
+  rather than plain-text code blocks?
