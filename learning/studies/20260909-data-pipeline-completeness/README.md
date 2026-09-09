@@ -17,7 +17,7 @@ distributed pipeline 的 correctness control plane。本研究通过本地模型
 核心 idempotency 机制，并证明了文章未展开的若干工程合同为什么不可缺失。
 
 但这篇文章不能直接作为完整设计照搬。公开内容没有定义 statistical
-estimator、confidence interval、late bucket finalization、transformation
+estimator、confidence bounds、late bucket finalization、transformation
 cardinality 和 measurement-health protocol。缺少这些合同，一个看似合理的
 completeness percentage 可能在数学上无效，在操作上也不安全。
 
@@ -149,7 +149,7 @@ $$
 90
 \xrightarrow{90\%}
 81
-\xrightarrow{88.89\%}
+\xrightarrow{\frac{8}{9}\approx 88.89\%}
 72
 $$
 
