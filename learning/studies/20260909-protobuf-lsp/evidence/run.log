@@ -1,0 +1,89 @@
+## Environment
+UTC 2026-09-09T06:52:39Z
+Darwin 25.6.0 arm64
+Node.js v24.3.0
+Buf 1.72.0
+Buf SHA-256: 5176f23a6118b9978de1340c3e3301a4ed0d48e16a669510be44b4c355170d57
+Buf source: 7d6f05675219fa077f776e9f05b7c7d1a9882e0c
+VS Code Buf source: a8fa1136bf5ec763bcd4b8893330343becbf13c7
+
+## Disk-based gates
+buf build: PASS
+buf lint: PASS
+
+## LSP probe
+{
+  "serverInfo": {
+    "name": "buf-lsp",
+    "version": "1.72.0"
+  },
+  "advertisedCapabilities": [
+    "codeActionProvider",
+    "codeLensProvider",
+    "completionProvider",
+    "definitionProvider",
+    "documentFormattingProvider",
+    "documentHighlightProvider",
+    "documentLinkProvider",
+    "documentSymbolProvider",
+    "executeCommandProvider",
+    "foldingRangeProvider",
+    "hoverProvider",
+    "referencesProvider",
+    "renameProvider",
+    "semanticTokensProvider",
+    "textDocumentSync",
+    "typeDefinitionProvider",
+    "workspaceSymbolProvider"
+  ],
+  "initialDiagnosticCount": 0,
+  "definition": [
+    {
+      "uri": "file:///Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260909-protobuf-lsp/demo/workspace/acme/v1/types.proto",
+      "range": {
+        "start": {
+          "line": 4,
+          "character": 8
+        },
+        "end": {
+          "line": 4,
+          "character": 16
+        }
+      }
+    }
+  ],
+  "unsavedInvalidEdit": {
+    "diagnosticLatencyMs": 0.776,
+    "diagnostics": [
+      {
+        "message": "multiple modifiers on message field type",
+        "source": "buf-lsp",
+        "code": null,
+        "severity": 1,
+        "range": {
+          "start": {
+            "line": 11,
+            "character": 11
+          },
+          "end": {
+            "line": 11,
+            "character": 19
+          }
+        }
+      }
+    ]
+  },
+  "unsavedRepair": {
+    "diagnosticLatencyMs": 0.703,
+    "diagnosticCount": 0
+  }
+}
+
+## Repeat smoke-test observations
+run 1: invalid 0.853 ms, repair 0.800 ms
+run 2: invalid 0.806 ms, repair 1.473 ms
+run 3: invalid 0.776 ms, repair 0.703 ms
+run 4: invalid 2.217 ms, repair 1.578 ms
+
+These timings are functional observations on a two-file workspace, not a
+benchmark result.

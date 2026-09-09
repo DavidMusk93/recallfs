@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package acme.v1;
+
+import "acme/v1/types.proto";
+
+message GetCustomerRequest {
+  string id = 1;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+}
+
+service CustomerService {
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+}

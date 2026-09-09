@@ -1,0 +1,8 @@
+{
+  "name": "protobuf-lsp-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "probe": "node src/lsp_probe.mjs"
+  }
+}
