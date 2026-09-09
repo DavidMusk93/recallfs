@@ -1,0 +1,22 @@
+Test-first observation: 2026-09-09
+
+Command:
+  cmake -S . -B build -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+  cmake --build build --parallel
+
+Expected result:
+  Configuration and compilation succeeded, but linking completeness_tests
+  failed because the public model declarations had no implementation.
+
+Representative linker failures:
+  Undefined symbols for architecture arm64:
+    completeness::stable_sample(...)
+    completeness::SegmentTracker::observe_create(...)
+    completeness::SegmentTracker::observe_acknowledgment(...)
+    completeness::compose_sequential(...)
+    completeness::summarize_branches(...)
+    completeness::safe_for_automation(...)
+  clang++: error: linker command failed with exit code 1
+
+This failure occurred before completeness.cpp contained behavior.
+

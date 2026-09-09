@@ -1,0 +1,34 @@
+Sanitized verification: 2026-09-09
+
+Configuration:
+  CMAKE_CXX_COMPILER=/usr/bin/clang++
+  CMAKE_CXX_FLAGS=-isysroot <active macOS SDK>
+  CMAKE_EXE_LINKER_FLAGS=-L<active macOS SDK>/usr/lib
+  ENABLE_SANITIZERS=ON
+
+CTest:
+  Test project .../demo/build
+      Start 1: completeness_model
+  1/1 Test #1: completeness_model ............... Passed
+
+  100% tests passed, 0 tests failed out of 1
+
+Direct test output:
+  PASS create_then_ack_is_idempotent
+  PASS ack_before_create_converges
+  PASS every_short_event_sequence_converges
+  PASS root_bucket_is_part_of_identity
+  PASS empty_segment_has_no_ratio
+  PASS conserved_sequential_chain_composes
+  PASS cohort_mismatch_rejects_naive_multiplication
+  PASS impossible_segment_count_is_rejected
+  PASS branch_mass_does_not_hide_required_floor
+  PASS invalid_branch_count_is_rejected
+  PASS propagated_sampling_decision_preserves_pairs
+  PASS independent_sampling_manufactures_incompleteness
+  PASS automation_requires_measurement_health
+  PASS all 13 tests
+
+Sanitizer result:
+  No AddressSanitizer or UndefinedBehaviorSanitizer diagnostics.
+

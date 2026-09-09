@@ -1,0 +1,35 @@
+Recorded: 2026-09-09
+
+Host:
+  OS: macOS 26.6.2 (build 25G83)
+  Architecture: arm64
+  CPU: Apple M5 Pro
+
+Tools:
+  CMake: 4.0.3
+  Apple Clang: 21.0.0 (clang-2100.1.1.101)
+  Homebrew GCC: 15.1.0
+
+Verified sanitizer commands:
+  SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+  cmake -S . -B build \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+    -DCMAKE_CXX_FLAGS="-isysroot $SDKROOT" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L$SDKROOT/usr/lib" \
+    -DENABLE_SANITIZERS=ON
+  cmake --build build --parallel
+  ctest --test-dir build --output-on-failure
+  ./build/completeness_demo
+
+Toolchain issue:
+  The first Apple Clang build linked libc++.1.dylib as
+  @rpath/libc++.1.dylib and had no LC_RPATH. The cause was a
+  /usr/local/lib/libc++.1.dylib shadowing the macOS SDK stub. Supplying the
+  active SDK library directory before /usr/local/lib produced the expected
+  /usr/lib/libc++.1.dylib install name.
+
+Additional portability check:
+  Homebrew GCC 15.1.0 built and passed the test suite without sanitizers.
+  Its macOS package did not include a linkable libasan, so sanitizer evidence
+  comes from Apple Clang.
+

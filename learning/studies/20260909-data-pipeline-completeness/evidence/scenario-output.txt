@@ -1,0 +1,23 @@
+Scenario run: 2026-09-09
+
+Command:
+  ./build/completeness_demo
+
+Output:
+  conserved_chain.valid=true
+  conserved_chain.ratio=0.720000
+  mismatched_chain.valid=false
+  mismatched_chain.reason=adjacent segments do not conserve the same cohort
+  branches.delivery_mass=0.990000
+  branches.required_floor=0.000000
+  stable_sampling.creates=2087
+  stable_sampling.completeness=1.000000
+  independent_sampling.creates=1938
+  independent_sampling.completeness=0.128483
+  independent_sampling.early_acks=1861
+
+Interpretation:
+  - Conservation makes sequential composition well-defined.
+  - A scalar delivery-mass ratio can hide total failure of a required branch.
+  - Independent create/ack sampling creates false loss and unmatched early acks.
+
