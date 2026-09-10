@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-    echo "usage: $0 <forwarder-binary> <output-directory>" >&2
+if [[ $# -ne 3 ]]; then
+    echo "usage: $0 <coroutine-forwarder> <epoll-forwarder> <output-directory>" >&2
     exit 2
 fi
 
-forwarder=$1
-output_dir=$2
+coroutine_forwarder=$1
+epoll_forwarder=$2
+output_dir=$3
 runs=${RUNS:-5}
 duration=${DURATION:-3}
 parallel=${PARALLEL:-4}
@@ -133,8 +134,10 @@ capture_cpu_frequency_policy() {
     gcc --version
     perf --version
     numactl --show
-    printf 'forwarder_sha256='
-    sha256sum "$forwarder" | awk '{print $1}'
+    printf 'coroutine_forwarder_sha256='
+    sha256sum "$coroutine_forwarder" | awk '{print $1}'
+    printf 'epoll_forwarder_sha256='
+    sha256sum "$epoll_forwarder" | awk '{print $1}'
     printf 'runs=%s duration=%s parallel=%s\n' "$runs" "$duration" "$parallel"
     printf 'proxy_cpu=%s server_cpu=%s client_cpu=%s numa_node=%s\n' \
         "$proxy_cpu" "$server_cpu" "$client_cpu" "$numa_node"
@@ -146,7 +149,14 @@ capture_cpu_frequency_policy() {
 run_sample() {
     local mode=$1
     local run=$2
-    local backend_port=$((base_port + run * 4))
+    local mode_offset
+    case "$mode" in
+        direct) mode_offset=0 ;;
+        coroutine) mode_offset=2 ;;
+        epoll) mode_offset=4 ;;
+        *) echo "unknown benchmark mode: $mode" >&2; exit 1 ;;
+    esac
+    local backend_port=$((base_port + run * 10 + mode_offset))
     local proxy_port=$((backend_port + 1))
     local server_json="$output_dir/${mode}-${run}-server.json"
     local client_json="$output_dir/${mode}-${run}-client.json"
@@ -161,7 +171,11 @@ run_sample() {
     fi
 
     local target_port=$backend_port
-    if [[ "$mode" == proxy ]]; then
+    if [[ "$mode" != direct ]]; then
+        local forwarder=$coroutine_forwarder
+        if [[ "$mode" == epoll ]]; then
+            forwarder=$epoll_forwarder
+        fi
         numactl --physcpubind="$proxy_cpu" --membind="$numa_node" \
             "$forwarder" \
             --listen-host 127.0.0.1 \
@@ -193,7 +207,7 @@ run_sample() {
     wait "$server_pid"
     server_pid=
 
-    if [[ "$mode" == proxy ]]; then
+    if [[ "$mode" != direct ]]; then
         kill -TERM "$proxy_pid"
         wait "$proxy_pid"
         proxy_pid=
@@ -243,8 +257,8 @@ run_sample() {
     ' "$client_json" >>"$stream_csv"
 }
 
-for mode in direct proxy; do
-    for run in $(seq 1 "$runs"); do
+for run in $(seq 1 "$runs"); do
+    for mode in direct coroutine epoll; do
         run_sample "$mode" "$run"
     done
 done
@@ -259,14 +273,17 @@ with open(sys.argv[1], newline="") as source:
     for row in csv.DictReader(source):
         samples.setdefault(row["mode"], []).append(float(row["bits_per_second"]))
 
-for mode in ("direct", "proxy"):
+for mode in ("direct", "coroutine", "epoll"):
     values = samples[mode]
     median = statistics.median(values)
     print("{}_median_gbps={:.3f}".format(mode, median / 1e9))
 
 direct = statistics.median(samples["direct"])
-proxy = statistics.median(samples["proxy"])
-print("proxy_over_direct={:.3f}".format(proxy / direct))
+coroutine = statistics.median(samples["coroutine"])
+epoll = statistics.median(samples["epoll"])
+print("coroutine_over_direct={:.3f}".format(coroutine / direct))
+print("epoll_over_direct={:.3f}".format(epoll / direct))
+print("coroutine_over_epoll={:.3f}".format(coroutine / epoll))
 PY
 
 trap - EXIT
