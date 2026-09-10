@@ -99,6 +99,8 @@ Rules:
 
 - Archive the source before summarizing it.
 - Always record the source URL and access date.
+- Record the source revision, version, or digest when a claim depends on a
+  particular artifact state.
 - For technical blogs, reproduce the core mechanism with a demo when feasible.
 - A demo can be a fresh C++ prototype or an extracted module from an open-source project.
 - Every demo must be stored as a project folder, not as loose source files.
@@ -139,6 +141,10 @@ demo/
 | Record macOS issues | macOS toolchains often fail through SDK, RPATH, or `dyld` differences |
 | Save run logs in `evidence/` | Keeps validation separate from source |
 
+Demo source, fixtures, and tests are maintained evidence unless their subtree
+declares an explicit generation contract. Only local build products such as
+`demo/build/` are disposable by default.
+
 ## 6. Promotion Rules
 
 | Condition | Action |
@@ -152,6 +158,7 @@ demo/
 
 | Study | Topic |
 | --- | --- |
+| [Design docs as durable Agent context](studies/20260910-design-docs-as-source/README.md) | Agent-ready docs, dependency DAGs, worked examples, reconciliation anchors, and bounded generation |
 | [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack coroutine runtime and epoll TCP L4 forwarder |
 | [Fast time-of-day](studies/20260908-fast-time-of-day/README.md) | Dependency-chain restructuring and bounded fixed-point timestamp decomposition |
 | [Allocator provenance](studies/20260907-allocator-provenance/README.md) | C/Rust allocation lifetime, zero-state provenance, arena selection, and FIL-C verification |

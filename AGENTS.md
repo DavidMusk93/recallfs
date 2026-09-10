@@ -57,7 +57,30 @@
 - **格式化写入**：写入 nmem 前先组织标题、结论、背景、约束、证据和后续动作；复杂流程使用 `text` 代码块中的 ASCII graph，图内不得使用 CJK、全角符号或 Unicode box drawing。
 - **Immutable memory**：已写入的记忆不可原地改写或删除。新认识应创建为新记忆，并通过 `EVOLVES` 或显式语义关系（如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
 
-## 6. 行为
+## 6. Docs 作为 Agent Context
+
+复杂设计文档遵循 [`designs/agent-ready-docs.md`](designs/agent-ready-docs.md)。
+
+- **分型权威**：`AGENTS.md` 约束 policy，active design 描述目标行为，
+  source/schema/migration/tests 描述当前可执行行为，runtime evidence 描述带
+  revision 与环境的真实观察，历史 study/incident 只对其记录时点负责。冲突是
+  drift，必须调查，不得静默选择一方。
+- **显式 DAG**：新建或实质修改的复杂文档声明稳定 `doc_id`、`status`、
+  `authority`、`applies_to`、`depends_on` 和 `verified_by`。Agent 按显式依赖
+  拓扑读取；推断出的依赖只能作为漏边诊断。
+- **语义锚点**：行为文档必须包含 concrete worked example、边界/失败语义和
+  带稳定 ID 的 reconciliation anchors；能自动化的 anchor 应进入测试或探针，
+  关键行为至少保留一个不与实现同源生成的 oracle。
+- **受限生成**：只有显式声明 generated paths、clean regeneration、独立验收、
+  promotion 和禁止手改的子树，代码才可视为 disposable build product；其余
+  tracked code 均是 maintained source。
+- **薄 prompt**：提示 Agent 指向 governing doc 路径与执行协议，不复制完整
+  设计正文。交付应报告 `docs_read`、`anchor_results`、`ambiguities`、
+  `verification_evidence` 和 `successor_id`。
+- **边界**：nmem 是跨会话经验与决策的唯一权威记忆源；仓库 docs 是可版本化、
+  可 review、可随代码引用的项目 artifact，两者不能互相替代。
+
+## 7. 行为
 
 - 结论先行；复杂流程用 ASCII graph；对比用表格。
 - **Review 时限**：所有 review 必须在 10 分钟内完成。

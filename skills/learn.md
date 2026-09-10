@@ -76,6 +76,8 @@ learning/
 - Save the source content under `learning/sources/YYYYMMDD-short-topic.md` when possible.
 - Record the original URL in `source.md`.
 - Record access date and any fetch limitations.
+- Record the source revision, version, or digest when a claim depends on a
+  particular artifact state.
 - If the page cannot be fully archived, save a summary and note the limitation.
 
 ## 5. Technical Blog Reproduction
@@ -117,6 +119,12 @@ macOS notes:
 - `exploration.md` records the step-by-step path, including failed attempts.
 - `demo/` contains a runnable standard project, including build files and source directories.
 - `evidence/` contains logs, outputs, screenshots, and benchmark data.
+- Demo source, fixtures, and tests are maintained evidence unless their subtree
+  declares an explicit generation contract. Generated build output remains
+  disposable.
+- A behavior-bearing study must include reconciliation anchors: concrete
+  inputs, exact expected outputs or tolerances, and the command or probe that
+  verifies each anchor.
 
 ### Language and Mathematical Notation
 
@@ -138,6 +146,7 @@ macOS notes:
 
 - Is the study name date-prefixed and descriptive?
 - Is the original URL preserved?
+- Is the source revision, version, or digest recorded where relevant?
 - Is the source archived or limitation documented?
 - Is the core technical claim identified?
 - Is there a demo, or a clear reason why no demo is needed?
@@ -146,6 +155,7 @@ macOS notes:
 - Are important article-specific concepts explained in comments?
 - Does the demo include realistic data and baseline comparison?
 - Are commands and results reproducible?
+- Are behavior claims tied to explicit reconciliation anchors?
 - Are macOS pitfalls and toolchain details recorded when relevant?
 - Are conclusions separated from exploration notes?
 - Is the final report Chinese while established technical terms remain English?
