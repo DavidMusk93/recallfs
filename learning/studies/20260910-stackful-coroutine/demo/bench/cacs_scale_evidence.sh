@@ -516,7 +516,7 @@ numactl --physcpubind=0 --membind=0 \
         --runs 5 \
         --timeout-seconds 120
 
-RUNS=5 DURATION=3 PARALLEL=4 BASE_PORT=58000 \
+RUNS=5 DURATION=3 PARALLEL=4 BASE_PORT=61000 \
     "$source_root/bench/l4_bench.sh" \
     "$o3_build/rco_l4_forwarder" \
     "$o3_build/rco_l4_forwarder_epoll" \
