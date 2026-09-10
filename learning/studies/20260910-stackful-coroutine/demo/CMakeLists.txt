@@ -64,6 +64,11 @@ if(RCO_BUILD_EXAMPLES)
     rco_enable_c_warnings(rco_l4_forwarder)
 
     if(RCO_BUILD_TESTS)
+        add_executable(rco_l4_wait_test tests/l4_forwarder_test.c)
+        target_link_libraries(rco_l4_wait_test PRIVATE rco)
+        rco_enable_c_warnings(rco_l4_wait_test)
+        add_test(NAME rco_l4_wait_failure COMMAND rco_l4_wait_test)
+
         find_package(Python3 COMPONENTS Interpreter REQUIRED)
         add_test(
             NAME rco_l4_e2e

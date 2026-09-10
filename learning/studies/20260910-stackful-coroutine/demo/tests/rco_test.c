@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 static void check(bool condition, const char *expression, const char *file,
@@ -85,7 +86,7 @@ __attribute__((noinline)) static uint64_t recursive_yield(unsigned depth)
     if (depth == 0) {
         CHECK(rco_yield() == 0);
     } else {
-        CHECK(recursive_yield(depth - 1) != UINT64_MAX);
+        CHECK(recursive_yield(depth - 1) == 0);
     }
 
     uint64_t checksum = 0;
@@ -214,6 +215,96 @@ static void test_epoll_wakeup(void)
 
     CHECK(close(pipe_fds[0]) == 0);
     CHECK(close(pipe_fds[1]) == 0);
+    CHECK(rco_runtime_destroy(runtime) == 0);
+}
+
+struct ready_poll_case {
+    int read_fd;
+    volatile bool pipe_woke;
+    bool busy_observed_pipe_wake;
+    size_t busy_yields;
+    char observed;
+};
+
+static int ready_poll_waiter(void *argument)
+{
+    struct ready_poll_case *test_case = argument;
+    unsigned ready = 0;
+    CHECK(rco_wait_fd(test_case->read_fd, RCO_EVENT_READ, -1, &ready) == 0);
+    CHECK((ready & RCO_EVENT_READ) != 0);
+    CHECK(read(test_case->read_fd, &test_case->observed, 1) == 1);
+    test_case->pipe_woke = true;
+    return 0;
+}
+
+static int yielding_busy_worker(void *argument)
+{
+    struct ready_poll_case *test_case = argument;
+    while (!test_case->pipe_woke && test_case->busy_yields < 1024) {
+        test_case->busy_yields++;
+        CHECK(rco_yield() == 0);
+    }
+    test_case->busy_observed_pipe_wake = test_case->pipe_woke;
+    return 0;
+}
+
+static void test_ready_tasks_do_not_starve_epoll(void)
+{
+    int pipe_fds[2];
+    CHECK(pipe2(pipe_fds, O_NONBLOCK | O_CLOEXEC) == 0);
+    CHECK(write(pipe_fds[1], "x", 1) == 1);
+
+    struct rco_runtime *runtime = NULL;
+    CHECK(rco_runtime_create(NULL, &runtime) == 0);
+    struct ready_poll_case test_case = {
+        .read_fd = pipe_fds[0],
+    };
+
+    CHECK(rco_spawn(runtime, 0, ready_poll_waiter, &test_case, NULL) == 0);
+    CHECK(rco_spawn(runtime, 0, yielding_busy_worker, &test_case, NULL) == 0);
+    CHECK(rco_runtime_run(runtime) == 0);
+    CHECK(test_case.pipe_woke);
+    CHECK(test_case.busy_observed_pipe_wake);
+    CHECK(test_case.busy_yields < 1024);
+    CHECK(test_case.observed == 'x');
+
+    CHECK(close(pipe_fds[0]) == 0);
+    CHECK(close(pipe_fds[1]) == 0);
+    CHECK(rco_runtime_destroy(runtime) == 0);
+}
+
+struct combined_event_case {
+    int fd;
+    int result;
+    unsigned ready;
+};
+
+static int combined_event_waiter(void *argument)
+{
+    struct combined_event_case *test_case = argument;
+    test_case->result =
+        rco_wait_fd(test_case->fd, RCO_EVENT_READ | RCO_EVENT_WRITE, 1000,
+                    &test_case->ready);
+    return 0;
+}
+
+static void test_combined_wait_wakes_on_write_only(void)
+{
+    int sockets[2];
+    CHECK(socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0,
+                     sockets) == 0);
+
+    struct rco_runtime *runtime = NULL;
+    CHECK(rco_runtime_create(NULL, &runtime) == 0);
+    struct combined_event_case test_case = {.fd = sockets[0]};
+
+    CHECK(rco_spawn(runtime, 0, combined_event_waiter, &test_case, NULL) == 0);
+    CHECK(rco_runtime_run(runtime) == 0);
+    CHECK(test_case.result == 0);
+    CHECK(test_case.ready == RCO_EVENT_WRITE);
+
+    CHECK(close(sockets[0]) == 0);
+    CHECK(close(sockets[1]) == 0);
     CHECK(rco_runtime_destroy(runtime) == 0);
 }
 
@@ -408,11 +499,13 @@ int main(void)
     test_deep_stack_survives_suspend();
     test_cancel_before_first_resume();
     test_epoll_wakeup();
+    test_ready_tasks_do_not_starve_epoll();
+    test_combined_wait_wakes_on_write_only();
     test_timeout();
     test_floating_point_control_is_per_coroutine();
     test_callee_saved_registers_survive();
     test_stop_cancels_waiters();
     test_stack_cache_reuses_mapping();
-    puts("rco native tests passed: 10 suites");
+    puts("rco native tests passed: 12 suites");
     return 0;
 }

@@ -99,7 +99,7 @@ static void print_usage(FILE *stream, const char *program)
             "Usage: %s --upstream-host ADDRESS --upstream-port PORT [options]\n"
             "\n"
             "Options:\n"
-            "  --listen-host ADDRESS       Numeric bind address (default 0.0.0.0)\n"
+            "  --listen-host ADDRESS       Numeric bind address (default 127.0.0.1)\n"
             "  --listen-port PORT          Numeric listen port (default 9000)\n"
             "  --upstream-host ADDRESS     Required numeric backend address\n"
             "  --upstream-port PORT        Required numeric backend port\n"
@@ -142,7 +142,7 @@ static int parse_int(const char *text, int minimum, int maximum, int *out)
 static int parse_options(int argc, char **argv, struct l4_options *options)
 {
     *options = (struct l4_options){
-        .listen_host = "0.0.0.0",
+        .listen_host = "127.0.0.1",
         .listen_port = "9000",
         .max_connections = L4_DEFAULT_MAX_CONNECTIONS,
         .buffer_size = L4_DEFAULT_BUFFER_SIZE,
@@ -323,6 +323,15 @@ static void app_fail(struct l4_app *app, int error)
         app->fatal_error = error == 0 ? -EIO : error;
     }
     (void)rco_runtime_stop(app->runtime);
+}
+
+static int handle_listener_wait_error(struct l4_app *app, int error)
+{
+    if (app->draining || error == -ECANCELED || error == -EBADF) {
+        return 0;
+    }
+    app_fail(app, error);
+    return error;
 }
 
 static void connection_abort(struct l4_connection *connection)
@@ -632,7 +641,11 @@ static int accept_entry(void *argument)
                 app->options.max_connections) {
                 app->stats.rejected++;
                 (void)close(client);
-                continue;
+                int sleep_result = rco_sleep_ms(10);
+                if (sleep_result != 0) {
+                    return sleep_result;
+                }
+                break;
             }
             if (set_socket_options(client, app->options.tcp_nodelay) != 0) {
                 app->stats.rejected++;
@@ -676,9 +689,7 @@ static int accept_entry(void *argument)
         }
         int result = wait_for_event(app->listener_fd, RCO_EVENT_READ, -1);
         if (result != 0) {
-            return app->draining || result == -ECANCELED || result == -EBADF
-                       ? 0
-                       : result;
+            return handle_listener_wait_error(app, result);
         }
     }
     return 0;

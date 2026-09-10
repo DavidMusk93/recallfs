@@ -48,6 +48,7 @@
 #define RCO_DEFAULT_MAX_FDS ((size_t)65536)
 #define RCO_DEFAULT_STACK_CACHE_BYTES ((size_t)8 * 1024 * 1024)
 #define RCO_EPOLL_BATCH 128
+#define RCO_READY_DISPATCH_BUDGET ((size_t)64)
 #define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
 #define RCO_NO_TIMER SIZE_MAX
 
@@ -456,7 +457,7 @@ static int rco_watch_update(struct rco_runtime *runtime, int fd)
     if (watch == NULL) {
         return -EINVAL;
     }
-    uint32_t events = EPOLLRDHUP;
+    uint32_t events = EPOLLRDHUP | EPOLLONESHOT;
     if (watch->reader != NULL) {
         events |= EPOLLIN;
     }
@@ -537,6 +538,28 @@ static void rco_task_wake(struct rco_runtime *runtime,
     }
     rco_task_detach_wait(runtime, task);
     task->wait_result = result;
+    task->ready_events = ready_events;
+    task->state = RCO_TASK_READY;
+    rco_ready_push(runtime, task);
+}
+
+static void rco_task_wake_from_event(struct rco_runtime *runtime,
+                                     struct rco_fd_watch *watch,
+                                     struct rco_task *task,
+                                     unsigned ready_events)
+{
+    if (task == NULL || task->state != RCO_TASK_WAIT_IO) {
+        return;
+    }
+    rco_timer_remove(runtime, task);
+    if (watch->reader == task) {
+        watch->reader = NULL;
+    }
+    if (watch->writer == task) {
+        watch->writer = NULL;
+    }
+    task->wait_fd = -1;
+    task->wait_result = 0;
     task->ready_events = ready_events;
     task->state = RCO_TASK_READY;
     rco_ready_push(runtime, task);
@@ -641,15 +664,33 @@ static void rco_dispatch_event(struct rco_runtime *runtime,
     bool write_ready =
         (kernel_events & (EPOLLOUT | EPOLLHUP | EPOLLERR)) != 0;
 
-    if (reader != NULL && read_ready) {
-        unsigned ready = RCO_EVENT_READ;
-        if (writer == reader && write_ready) {
+    if (reader != NULL && writer == reader) {
+        unsigned ready = 0;
+        if (read_ready) {
+            ready |= RCO_EVENT_READ;
+        }
+        if (write_ready) {
             ready |= RCO_EVENT_WRITE;
         }
-        rco_task_wake(runtime, reader, 0, ready);
+        if (ready != 0) {
+            rco_task_wake_from_event(runtime, watch, reader, ready);
+        }
+    } else {
+        if (reader != NULL && read_ready) {
+            rco_task_wake_from_event(runtime, watch, reader, RCO_EVENT_READ);
+        }
+        if (writer != NULL && write_ready) {
+            rco_task_wake_from_event(runtime, watch, writer, RCO_EVENT_WRITE);
+        }
     }
-    if (writer != NULL && writer != reader && write_ready) {
-        rco_task_wake(runtime, writer, 0, RCO_EVENT_WRITE);
+
+    rco_watch_advance_generation(watch);
+    if (watch->reader != NULL || watch->writer != NULL) {
+        int result = rco_watch_update(runtime, fd);
+        if (result != 0) {
+            rco_record_fatal(runtime, result);
+            (void)rco_runtime_stop(runtime);
+        }
     }
 }
 
@@ -982,12 +1023,17 @@ int rco_runtime_run(struct rco_runtime *runtime)
     runtime->running = true;
     rco_tls_runtime = runtime;
     struct epoll_event events[RCO_EPOLL_BATCH];
+    size_t ready_dispatches = 0;
 
     while (runtime->stats.active != 0) {
         rco_expire_timers(runtime);
 
-        struct rco_task *task = rco_ready_pop(runtime);
+        struct rco_task *task = NULL;
+        if (ready_dispatches < RCO_READY_DISPATCH_BUDGET) {
+            task = rco_ready_pop(runtime);
+        }
         if (task != NULL) {
+            ready_dispatches++;
             if (task->cancel_requested && !task->started) {
                 task->state = RCO_TASK_CANCELLED;
                 rco_remove_task(runtime, task);
@@ -1021,9 +1067,11 @@ int rco_runtime_run(struct rco_runtime *runtime)
             continue;
         }
 
-        int timeout = rco_timeout_ms(runtime);
+        int timeout =
+            runtime->ready_head == NULL ? rco_timeout_ms(runtime) : 0;
         int count =
             epoll_wait(runtime->epoll_fd, events, RCO_EPOLL_BATCH, timeout);
+        ready_dispatches = 0;
         if (count < 0) {
             if (errno == EINTR) {
                 continue;

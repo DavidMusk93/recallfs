@@ -42,6 +42,15 @@ static int yield_worker(void *argument)
     return 0;
 }
 
+static uint64_t expected_worker_checksum(uint64_t iterations, uint64_t task_id)
+{
+    uint64_t checksum = 0;
+    for (uint64_t index = 0; index < iterations; ++index) {
+        checksum += (index ^ task_id) + 1;
+    }
+    return checksum;
+}
+
 static double run_coroutine_sample(uint64_t iterations)
 {
     struct rco_config config = {
@@ -53,9 +62,11 @@ static double run_coroutine_sample(uint64_t iterations)
     struct rco_runtime *runtime = NULL;
     struct worker_case first = {.iterations = iterations};
     struct worker_case second = {.iterations = iterations};
+    uint64_t first_id = 0;
+    uint64_t second_id = 0;
     if (rco_runtime_create(&config, &runtime) != 0 ||
-        rco_spawn(runtime, 0, yield_worker, &first, NULL) != 0 ||
-        rco_spawn(runtime, 0, yield_worker, &second, NULL) != 0) {
+        rco_spawn(runtime, 0, yield_worker, &first, &first_id) != 0 ||
+        rco_spawn(runtime, 0, yield_worker, &second, &second_id) != 0) {
         fputs("failed to initialize coroutine benchmark\n", stderr);
         exit(EXIT_FAILURE);
     }
@@ -63,7 +74,12 @@ static double run_coroutine_sample(uint64_t iterations)
     uint64_t start = now_ns();
     int result = rco_runtime_run(runtime);
     uint64_t elapsed = now_ns() - start;
-    if (result != 0 || first.checksum == 0 || second.checksum == 0) {
+    struct rco_stats stats;
+    if (rco_runtime_get_stats(runtime, &stats) != 0 || result != 0 ||
+        first.checksum != expected_worker_checksum(iterations, first_id) ||
+        second.checksum != expected_worker_checksum(iterations, second_id) ||
+        stats.spawned != 2 || stats.completed != 2 || stats.active != 0 ||
+        stats.context_switches != 4 * iterations + 4) {
         fputs("coroutine benchmark validation failed\n", stderr);
         exit(EXIT_FAILURE);
     }
@@ -142,6 +158,10 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
         samples = (size_t)parsed;
+    }
+    if (iterations > (UINT64_MAX - 4) / 4) {
+        fputs("iterations are too large\n", stderr);
+        return EXIT_FAILURE;
     }
 
     double *coroutine = calloc(samples, sizeof(*coroutine));

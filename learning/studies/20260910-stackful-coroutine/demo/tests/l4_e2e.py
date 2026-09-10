@@ -13,12 +13,14 @@ import time
 
 class EchoHandler(socketserver.BaseRequestHandler):
     def handle(self):
+        received = bytearray()
         while True:
             data = self.request.recv(65536)
             if not data:
-                self.request.shutdown(socket.SHUT_WR)
-                return
-            self.request.sendall(data)
+                break
+            received.extend(data)
+        self.request.sendall(received)
+        self.request.shutdown(socket.SHUT_WR)
 
 
 class EchoServer(socketserver.ThreadingTCPServer):
