@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "kache_version": "0.19.0",
+    "generated_at": "2026-09-10T09:30:34.565416+00:00",
+    "since_hours": 0,
+    "since_secs": 900,
+    "since": "15m"
+  },
+  "summary": {
+    "hit_rate_pct": 0.0,
+    "weighted_hit_rate_pct": null,
+    "time_saved_ms": 0,
+    "total_crates": 0,
+    "local_hits": 0,
+    "prefetch_hits": 0,
+    "remote_hits": 0,
+    "dups": 0,
+    "misses": 0,
+    "errors": 0,
+    "passthroughs": 44,
+    "probes": 0,
+    "skipped": 0,
+    "store_failures": 0,
+    "fallbacks": 0,
+    "total_duration_ms": 0,
+    "cache_efficiency_pct": 0.0
+  },
+  "bypass": [
+    {
+      "result": "passthrough",
+      "route": "direct",
+      "reason": "unsupported|cc link mode (whole-program caching) — not yet",
+      "count": 28,
+      "failures": 0,
+      "max_elapsed_ms": 50
+    },
+    {
+      "result": "passthrough",
+      "route": "direct",
+      "reason": "unsupported|cc unsupported flag(s): - — not yet; cc no source file — not yet",
+      "count": 10,
+      "failures": 0,
+      "max_elapsed_ms": 26
+    },
+    {
+      "result": "passthrough",
+      "route": "direct",
+      "reason": "unsupported|cc unsupported flag(s): -H — not yet",
+      "count": 4,
+      "failures": 0,
+      "max_elapsed_ms": 281
+    },
+    {
+      "result": "passthrough",
+      "route": "direct",
+      "reason": "unsupported|cc unsupported flag(s): -H -fdirectives-only — not yet; cc no source file — not yet",
+      "count": 2,
+      "failures": 0,
+      "max_elapsed_ms": 26
+    }
+  ],
+  "relevant_events": [
+    {
+      "crate_name": "answer.cpp",
+      "root": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/kache-build-cache-demo/blade/plain-a",
+      "result": "passthrough",
+      "reason": "unsupported|cc unsupported flag(s): -H — not yet",
+      "elapsed_ms": 280
+    },
+    {
+      "crate_name": "answer.cpp",
+      "root": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/kache-build-cache-demo/blade/plain-b",
+      "result": "passthrough",
+      "reason": "unsupported|cc unsupported flag(s): -H — not yet",
+      "elapsed_ms": 281
+    }
+  ]
+}
