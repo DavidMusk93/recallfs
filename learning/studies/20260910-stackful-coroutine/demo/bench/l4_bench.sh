@@ -21,9 +21,12 @@ numa_node=${NUMA_NODE:-0}
 mkdir -p "$output_dir"
 csv="$output_dir/throughput.csv"
 stream_csv="$output_dir/stream-throughput.csv"
+resource_csv="$output_dir/process-resources.csv"
 printf 'mode,run,bits_per_second\n' >"$csv"
 printf 'mode,run,stream,sender_socket,sender_bytes,sender_bits_per_second,receiver_socket,receiver_bytes,receiver_bits_per_second\n' \
     >"$stream_csv"
+printf 'mode,run,vm_peak_kb,vm_hwm_kb,user_ticks,system_ticks,voluntary_context_switches,nonvoluntary_context_switches\n' \
+    >"$resource_csv"
 
 server_pid=
 proxy_pid=
@@ -208,6 +211,28 @@ run_sample() {
     server_pid=
 
     if [[ "$mode" != direct ]]; then
+        if ! kill -0 "$proxy_pid" 2>/dev/null; then
+            cat "$proxy_log" >&2
+            exit 1
+        fi
+        local vm_peak_kb
+        local vm_hwm_kb
+        local user_ticks
+        local system_ticks
+        local voluntary_switches
+        local nonvoluntary_switches
+        vm_peak_kb=$(awk '/^VmPeak:/{print $2}' "/proc/$proxy_pid/status")
+        vm_hwm_kb=$(awk '/^VmHWM:/{print $2}' "/proc/$proxy_pid/status")
+        user_ticks=$(awk '{print $14}' "/proc/$proxy_pid/stat")
+        system_ticks=$(awk '{print $15}' "/proc/$proxy_pid/stat")
+        voluntary_switches=$(awk '/^voluntary_ctxt_switches:/{print $2}' \
+            "/proc/$proxy_pid/status")
+        nonvoluntary_switches=$(awk '/^nonvoluntary_ctxt_switches:/{print $2}' \
+            "/proc/$proxy_pid/status")
+        printf '%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$mode" "$run" "$vm_peak_kb" "$vm_hwm_kb" \
+            "$user_ticks" "$system_ticks" "$voluntary_switches" \
+            "$nonvoluntary_switches" >>"$resource_csv"
         kill -TERM "$proxy_pid"
         wait "$proxy_pid"
         proxy_pid=
