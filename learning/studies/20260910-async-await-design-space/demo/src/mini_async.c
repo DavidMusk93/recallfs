@@ -71,7 +71,15 @@ bool ma_executor_spawn(ma_executor *executor, ma_task *task, ma_future future) {
         .executor = executor,
         .future = future,
     };
+    if (executor->active_tasks >= MA_EXECUTOR_CAPACITY) {
+        ma_future_drop(&task->future);
+        task->complete = true;
+        return false;
+    }
+
+    executor->active_tasks += 1U;
     if (!ma_executor_enqueue(executor, task)) {
+        executor->active_tasks -= 1U;
         ma_future_drop(&task->future);
         task->complete = true;
         return false;
@@ -88,23 +96,28 @@ bool ma_executor_run_until_stalled(ma_executor *executor, unsigned max_polls) {
         ma_poll result;
         ma_task *task;
 
+        task = executor->queue[executor->head];
+        if (task->complete) {
+            executor->head = (executor->head + 1U) % MA_EXECUTOR_CAPACITY;
+            executor->length -= 1U;
+            task->queued = false;
+            continue;
+        }
         if (polls == max_polls) {
             return false;
         }
 
-        task = executor->queue[executor->head];
         executor->head = (executor->head + 1U) % MA_EXECUTOR_CAPACITY;
         executor->length -= 1U;
         task->queued = false;
 
-        if (task->complete) {
-            continue;
-        }
         if (task->cancel_requested) {
             /* Unaware cancellation drops the frame instead of resuming it. */
             ma_future_drop(&task->future);
             task->cancelled = true;
             task->complete = true;
+            assert(executor->active_tasks > 0U);
+            executor->active_tasks -= 1U;
             polls += 1U;
             continue;
         }
@@ -119,6 +132,8 @@ bool ma_executor_run_until_stalled(ma_executor *executor, unsigned max_polls) {
         if (result == MA_POLL_READY) {
             task->complete = true;
             ma_future_drop(&task->future);
+            assert(executor->active_tasks > 0U);
+            executor->active_tasks -= 1U;
         }
     }
 

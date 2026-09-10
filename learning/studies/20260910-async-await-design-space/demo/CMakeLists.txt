@@ -33,3 +33,24 @@ endforeach()
 
 enable_testing()
 add_test(NAME mini_async_semantics COMMAND mini_async_test)
+
+find_program(RUSTC_EXECUTABLE rustc)
+if(RUSTC_EXECUTABLE)
+    set(RUST_REFERENCE "${CMAKE_CURRENT_BINARY_DIR}/rust_reference")
+    add_custom_command(
+        OUTPUT "${RUST_REFERENCE}"
+        COMMAND
+            "${RUSTC_EXECUTABLE}"
+            --edition
+            2024
+            -D
+            warnings
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/rust_reference.rs"
+            -o
+            "${RUST_REFERENCE}"
+        DEPENDS tests/rust_reference.rs
+        VERBATIM
+    )
+    add_custom_target(rust_reference_build ALL DEPENDS "${RUST_REFERENCE}")
+    add_test(NAME rust_reference COMMAND "${RUST_REFERENCE}")
+endif()

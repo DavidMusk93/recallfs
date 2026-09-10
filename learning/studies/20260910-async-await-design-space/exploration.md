@@ -89,7 +89,7 @@ Five tests were written before the implementation:
 | Lazy | no body output at construction; `A` after first poll |
 | Dynamic await | ready child and parent finish as `AB` in one poll |
 | Wake | first poll is pending; two wakes produce one queued poll |
-| Detach | detached runtime-owned task still reaches `AB` |
+| Handle drop | releasing a join handle does not request cancellation |
 | Cancel | abort stops polling and synchronous drop produces `AD` |
 
 The first configure failed because `src/mini_async.c` and
@@ -98,7 +98,14 @@ implementation failure. After implementation, CTest passed all five anchors.
 
 A later simplification review added a sixth lifecycle check: when spawn fails
 because the ready queue is full, the rejected future is dropped exactly once.
-The five paper-facing semantics anchors remain unchanged.
+A code review added a seventh: a task that wakes itself and returns `Ready`
+must not falsely exhaust the exact poll budget. The five paper-facing
+semantics anchors remain unchanged.
+
+The detach claim was also narrowed after review. The C scenario keeps the task
+control block and future state in caller-owned storage, so it demonstrates
+handle-drop behavior but not Tokio's stronger runtime-owned cross-scope
+lifetime.
 
 ## 5. Optimized-Test Failure
 

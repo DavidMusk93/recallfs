@@ -1,7 +1,7 @@
-UTC: 2026-09-10T13:52:31Z
+UTC: 2026-09-10T14:26:40Z
 clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
 Target: aarch64-unknown-linux-gnu
 Thread model: posix
 InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-mini_async_test: 6/6 checks passed
+mini_async_test: 7/7 checks passed

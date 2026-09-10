@@ -188,7 +188,7 @@ static void event_signal(event_state *state, bool signal_twice) {
     }
 }
 
-static bool observe_event(aa_observation *observation, bool detach) {
+static bool observe_event(aa_observation *observation, bool drop_handle) {
     ma_executor executor;
     ma_join_handle handle;
     ma_task task;
@@ -205,7 +205,7 @@ static bool observe_event(aa_observation *observation, bool detach) {
     }
     handle = ma_task_join_handle(&task);
     observation->constructor_was_inert = observation->trace[0] == '\0';
-    if (detach) {
+    if (drop_handle) {
         ma_join_handle_drop(&handle);
     }
 
@@ -225,7 +225,7 @@ static bool observe_event(aa_observation *observation, bool detach) {
     observation->task_polls = task.poll_count;
     observation->wakeups_coalesced = ready_after_signal == 1U && task.poll_count == 2U;
     observation->completed = task.complete;
-    observation->detached = handle.task == NULL;
+    observation->handle_dropped = handle.task == NULL;
     return true;
 }
 
@@ -233,7 +233,7 @@ bool aa_observe_wake(aa_observation *observation) {
     return observe_event(observation, false);
 }
 
-bool aa_observe_detach(aa_observation *observation) {
+bool aa_observe_handle_drop(aa_observation *observation) {
     return observe_event(observation, true);
 }
 

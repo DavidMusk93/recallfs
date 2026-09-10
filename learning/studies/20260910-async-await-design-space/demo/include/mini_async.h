@@ -51,6 +51,7 @@ typedef struct ma_executor {
     ma_task *queue[MA_EXECUTOR_CAPACITY];
     size_t head;
     size_t length;
+    size_t active_tasks;
     bool overflowed;
 } ma_executor;
 

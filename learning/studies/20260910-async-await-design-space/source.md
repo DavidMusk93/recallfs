@@ -9,9 +9,8 @@ depends_on:
   - learning/sources/20260910-async-await-design-space-v1.pdf
 supersedes: []
 verified_by:
-  - PDF digest and metadata verification
-  - arXiv metadata
-  - OOPSLA publication page
+  - learning/studies/20260910-async-await-design-space/evidence/raw/paper.txt
+  - learning/studies/20260910-async-await-design-space/evidence/raw/doc-dag.txt
 ---
 
 # Sources

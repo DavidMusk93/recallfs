@@ -1,0 +1,288 @@
+{
+  "status": "complete",
+  "verdict": "Not ready",
+  "scope": {
+    "base": "107bbd6345cea81fad55467c6b570b25e54868c3",
+    "branch": "HEAD-detached",
+    "head_sha": "107bbd6345cea81fad55467c6b570b25e54868c3",
+    "pr_url": null,
+    "files_changed": 21
+  },
+  "intent": "Archive the OOPSLA 2026 async/await design-space paper, map its nine dimensions onto Rust Future and Tokio/Smol, and provide a C11 executable model with exact behavior anchors and a Rust oracle.",
+  "intent_confidence": "explicit",
+  "reviewers": [
+    "correctness",
+    "project-standards",
+    "testing",
+    "maintainability",
+    "reliability",
+    "adversarial"
+  ],
+  "findings": [
+    {
+      "#": 1,
+      "title": "Detach anchor overstates runtime ownership",
+      "severity": "P1",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c",
+      "line": 194,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Rename the C anchor to handle-drop-does-not-abort and state that caller-owned task/state storage remains alive; keep Tokio cross-scope detachment as an upstream-documented contract.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c:192-195 -- executor, handle, task, and event state are local variables in one stack frame.",
+      "why_it_matters": "The C trace stays green because task and future storage remain live in the caller's frame, not because the executor owns them across scopes. Narrowing the anchor prevents the study from claiming a Tokio lifetime property that the demo does not implement.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c:192-195 -- executor, handle, task, and event state are local variables in one stack frame.",
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:160 -- handle->task = NULL;",
+        "learning/studies/20260910-async-await-design-space/README.md:360 -- the original anchor claimed a runtime-owned task continued."
+      ],
+      "reviewers": [
+        "reliability",
+        "adversarial",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "reliability",
+        "adversarial",
+        "maintainability"
+      ]
+    },
+    {
+      "#": 3,
+      "title": "Cascade: saturated queue strands cancellation cleanup",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c",
+      "line": 136,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Bound active tasks to the ready-queue capacity so one queue slot is available for every live task, then add a saturation cleanup test.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:136 -- (void)ma_executor_enqueue(task->executor, task);",
+      "why_it_matters": "With more live tasks than queue slots, abort can set cancel_requested and lose the enqueue that is required to execute drop cleanup. Bounding active tasks to queue capacity removes that reachable state instead of asking callers to recover a lost wake.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:136 -- (void)ma_executor_enqueue(task->executor, task);",
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:12-14 -- a full queue returns false without queuing the task."
+      ],
+      "reviewers": [
+        "adversarial"
+      ],
+      "independent_reviewers": [
+        "adversarial"
+      ]
+    },
+    {
+      "#": 4,
+      "title": "Completed self-wake exhausts poll budget",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c",
+      "line": 91,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Discard completed queue entries before enforcing max_polls and add an exact-boundary self-wake regression test.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:91-101 -- the max_polls check precedes dequeuing and skipping completed tasks.",
+      "why_it_matters": "A legal wake followed by Ready leaves one stale queue entry. At the exact poll limit, the executor reports failure and leaves that entry queued even though the task completed; stale entries must be drained without consuming poll budget.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:91-101 -- the max_polls check precedes dequeuing and skipping completed tasks.",
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:118-121 -- Ready marks the task complete after a wake may already have queued it."
+      ],
+      "reviewers": [
+        "correctness",
+        "reliability"
+      ],
+      "independent_reviewers": [
+        "correctness",
+        "reliability"
+      ]
+    },
+    {
+      "#": 5,
+      "title": "Zig artifact checksum is not recorded",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt",
+      "line": 2,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Record and verify the official Zig 0.16.0 macOS ARM64 archive SHA-256, plus the installed compiler binary digest and complete flags.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt:2 -- 0.16.0",
+      "why_it_matters": "A version string alone cannot attest which downloaded LLVM frontend produced the evidence. Recording the platform artifact and digest satisfies the repository's compiler-provenance contract.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt:2 -- 0.16.0",
+        "AGENTS.md:53-55 -- the repository requires Zig version, downloaded-artifact SHA-256, and full compile flags."
+      ],
+      "reviewers": [
+        "project-standards"
+      ],
+      "independent_reviewers": [
+        "project-standards"
+      ]
+    }
+  ],
+  "actionable_findings": [
+    {
+      "#": 1,
+      "title": "Detach anchor overstates runtime ownership",
+      "severity": "P1",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c",
+      "line": 194,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Rename the C anchor to handle-drop-does-not-abort and state that caller-owned task/state storage remains alive; keep Tokio cross-scope detachment as an upstream-documented contract.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c:192-195 -- executor, handle, task, and event state are local variables in one stack frame.",
+      "why_it_matters": "The C trace stays green because task and future storage remain live in the caller's frame, not because the executor owns them across scopes.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/async_examples.c:192-195 -- executor, handle, task, and event state are local variables in one stack frame."
+      ],
+      "reviewers": [
+        "reliability",
+        "adversarial",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "reliability",
+        "adversarial",
+        "maintainability"
+      ]
+    },
+    {
+      "#": 3,
+      "title": "Cascade: saturated queue strands cancellation cleanup",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c",
+      "line": 136,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Bound active tasks to the ready-queue capacity so one queue slot is available for every live task, then add a saturation cleanup test.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:136 -- (void)ma_executor_enqueue(task->executor, task);",
+      "why_it_matters": "With more live tasks than queue slots, abort can lose the enqueue required for drop cleanup.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:136 -- (void)ma_executor_enqueue(task->executor, task);"
+      ],
+      "reviewers": [
+        "adversarial"
+      ],
+      "independent_reviewers": [
+        "adversarial"
+      ]
+    },
+    {
+      "#": 4,
+      "title": "Completed self-wake exhausts poll budget",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c",
+      "line": 91,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Discard completed queue entries before enforcing max_polls and add an exact-boundary self-wake regression test.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:91-101 -- the max_polls check precedes dequeuing and skipping completed tasks.",
+      "why_it_matters": "A stale wake can make a completed task report poll-budget failure.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/demo/src/mini_async.c:91-101 -- the max_polls check precedes dequeuing and skipping completed tasks."
+      ],
+      "reviewers": [
+        "correctness",
+        "reliability"
+      ],
+      "independent_reviewers": [
+        "correctness",
+        "reliability"
+      ]
+    },
+    {
+      "#": 5,
+      "title": "Zig artifact checksum is not recorded",
+      "severity": "P2",
+      "file": "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt",
+      "line": 2,
+      "confidence": 100,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Record and verify the official Zig 0.16.0 macOS ARM64 archive SHA-256, plus the installed compiler binary digest and complete flags.",
+      "first_evidence": "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt:2 -- 0.16.0",
+      "why_it_matters": "A version string alone cannot attest which downloaded LLVM frontend produced the evidence.",
+      "evidence": [
+        "learning/studies/20260910-async-await-design-space/evidence/raw/zig.txt:2 -- 0.16.0"
+      ],
+      "reviewers": [
+        "project-standards"
+      ],
+      "independent_reviewers": [
+        "project-standards"
+      ]
+    }
+  ],
+  "triage_groups": [
+    {
+      "title": "Executor lifecycle correctness",
+      "findings": [
+        3,
+        4
+      ],
+      "context": "Both findings arise from ready-queue lifecycle bookkeeping.",
+      "preferred_resolution": "Bound live tasks first (#3), then drain completed stale entries without poll budget (#4).",
+      "why": "The active-task invariant prevents lost cancellation wakes; the stale-entry rule makes exact budgets truthful."
+    }
+  ],
+  "pre_existing_findings": [],
+  "requirements_completeness": null,
+  "learnings": [],
+  "agent_native_gaps": [],
+  "deployment_notes": [],
+  "residual_risks": [
+    "The Rust oracle is not registered with CTest, so CTest-only runs do not cover it.",
+    "The stored C waker contains a caller-managed task pointer and has no cross-scope invalidation protocol.",
+    "The executor is a deterministic single-thread teaching model; concurrent wake races remain outside scope."
+  ],
+  "testing_gaps": [
+    "No dedicated max_polls exhaustion-and-resume test.",
+    "No late wake-after-completion test.",
+    "No cross-scope lifetime test because task/state storage is caller-owned."
+  ],
+  "coverage": {
+    "scope_mode": "standalone isolated review checkout",
+    "exec_lines": 714,
+    "uncounted_files": 16,
+    "cross_model_pass": "not run: host serving family could not be attested; in-process adversarial fallback ran",
+    "validator_batch": {
+      "selected": 5,
+      "validated": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "dropped": [
+        {
+          "#": 2,
+          "reason": "Validator judged verified_by prose labels acceptable; the caller may still choose stricter path-only metadata."
+        }
+      ]
+    },
+    "suppressed_findings": 0,
+    "mode_aware_demotions": 0,
+    "failed_reviewers": [],
+    "plan_discovery": "none; settlement suppression not evaluated"
+  },
+  "artifact_path": "/tmp/compound-engineering-501/ce-code-review/20260910-215626-11f43842",
+  "run_id": "20260910-215626-11f43842"
+}

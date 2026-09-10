@@ -37,7 +37,7 @@ C 适合把编译器隐藏的对象显式化：
 - `Context` / `Waker` 驱动的重新调度；
 - `.await` 在子 future 已就绪时不一定挂起；
 - drop future 即放弃 continuation 的 unaware cancellation；
-- executor 对 detached task 的独立所有权。
+- handle drop 不等于 task cancellation。
 
 C 不能等价表达或证明：
 
@@ -165,7 +165,7 @@ executor         -> drop parent -> drop child -> trace "AD"
 | `AA-LAZY-1` | construct is inert; final trace `A`; one poll | `mini_async_test` |
 | `AA-SUSPEND-1` | ready child yields trace `AB` in one parent poll | `mini_async_test` |
 | `AA-WAKE-1` | two wakes coalesce; final trace `AB`; two polls | `mini_async_test` |
-| `AA-DETACH-1` | detached task still reaches `AB`; two polls | `mini_async_test` |
+| `AA-HANDLE-DROP-1` | drop handle 后 task 在有效 storage 内仍到达 `AB` | `mini_async_test` |
 | `AA-CANCEL-1` | abort does not repoll body; drop produces `AD`; one poll | C and Rust tests |
 
 ### Evidence And Unknowns
@@ -321,8 +321,8 @@ Tokio 对 cancellation safety 的实用定义是：丢弃未完成 future 后重
 | --- | --- | --- | --- | --- |
 | Eagerness | lazy | `spawn` 后调度 task | `spawn` 后调度 task | construction inert |
 | Suspension | dynamic | dynamic | dynamic | ready child 在同一 poll 完成 |
-| Extent | 未定义 task | indefinite | indefinite，handle drop 呈现 dynamic-like 效果 | runtime task registry |
-| Reference Strength | 未定义 task | strong | weak-like ownership | detached task 仍由 executor 保存 |
+| Extent | 未定义 task | indefinite | indefinite，handle drop 呈现 dynamic-like 效果 | 只展示 queue lifetime |
+| Reference Strength | 未定义 task | strong | weak-like ownership | handle 与 task control 分离；storage 仍由 caller 持有 |
 | Destruction | drop future | shutdown 时 drop outstanding tasks | handle drop 默认 cancel | abort 后 drop |
 | Propagation | `Output` 可含 `Result` | 未 await 则结果丢失 | 未 await 则结果丢失 | 未建模 error channel |
 | Awareness | unaware drop | unaware abort/drop | unaware drop | body 不接收 cancel signal |
@@ -347,7 +347,7 @@ Tokio 对 cancellation safety 的实用定义是：丢弃未完成 future 后重
 | `ma_poll` | `Poll<T>` | 完成或暂不可推进 |
 | `ma_context.waker` | `Context::waker` | 请求 executor 以后再次 poll |
 | `ma_executor.queue` | executor ready queue | 保存可运行 task |
-| `ma_join_handle_drop` | dropped Tokio `JoinHandle` | handle 消失但 runtime ownership 仍在 |
+| `ma_join_handle_drop` | dropped Tokio `JoinHandle` | handle 消失不向 task 发出 cancel |
 | `ma_future_drop` | future `Drop` chain | 销毁 continuation 和嵌套 future |
 
 Demo 有五个场景：
@@ -357,7 +357,7 @@ Demo 有五个场景：
 | `lazy` | `A`, 1 poll | construction 不执行 body |
 | `dynamic-await` | `AB`, 1 poll | ready child 不强制 suspension |
 | `wake` | `AB`, 2 polls | `Pending` 后由 Waker 重新入队；重复 wake 合并 |
-| `detach` | `AB`, 2 polls | handle detached 后 runtime-owned task 继续 |
+| `handle-drop` | `AB`, 2 polls | handle drop 不会隐式请求 cancel |
 | `cancel` | `AD`, 1 poll | abort 后不再进入 body；drop chain 做同步 cleanup |
 
 其中 `wake` 是理解 Rust async 的核心。future 不是“等待线程”，而是一个被
@@ -382,7 +382,7 @@ event source -> wake -> enqueue task
 | Lazy evaluation | 可以，用 constructor 与 first poll 分离 | 与 Rust 行为一致 |
 | Dynamic suspension | 可以，parent 直接 poll child | 与 Rust 行为一致 |
 | Wake protocol | 可以，function pointer + context | 机制一致，线程安全未覆盖 |
-| Task ownership | 可以，独立 join handle 与 executor registry | 只模拟 Tokio slice |
+| Task ownership | 部分可以，handle 与 task control 分离 | caller 仍持有 task/state storage，不能证明跨 scope lifetime |
 | Unaware cancellation | 可以，停止 poll 后执行 drop callback | 与核心机制一致 |
 | Pin | 只能靠约定固定地址 | 不能证明 memory safety |
 | Borrow across await | 只能手工管理 pointer lifetime | 不能替代 borrow checker |

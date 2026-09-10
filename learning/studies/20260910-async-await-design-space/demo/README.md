@@ -47,12 +47,18 @@ ctest --test-dir ../../../.tmp/async-await-design-space/build \
 Expected scenario output:
 
 ```text
-lazy          trace=A  polls=1 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=no
-dynamic-await trace=AB polls=1 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=no
-wake          trace=AB polls=2 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=yes
-detach        trace=AB polls=2 inert=yes complete=yes cancelled=no detached=yes cleanup=no coalesced=yes
-cancel        trace=AD polls=1 inert=yes complete=yes cancelled=yes detached=no cleanup=yes coalesced=no
+lazy          trace=A  polls=1 inert=yes complete=yes cancelled=no handle-dropped=no cleanup=no coalesced=no
+dynamic-await trace=AB polls=1 inert=yes complete=yes cancelled=no handle-dropped=no cleanup=no coalesced=no
+wake          trace=AB polls=2 inert=yes complete=yes cancelled=no handle-dropped=no cleanup=no coalesced=yes
+handle-drop   trace=AB polls=2 inert=yes complete=yes cancelled=no handle-dropped=yes cleanup=no coalesced=yes
+cancel        trace=AD polls=1 inert=yes complete=yes cancelled=yes handle-dropped=no cleanup=yes coalesced=no
 ```
+
+The `handle-drop` scenario proves only that releasing the non-owning join
+handle does not request cancellation. The executor, task control block, and
+future state all remain in the scenario's stack frame. Tokio's stronger
+runtime-owned lifetime is an upstream API contract, not a property proved by
+this C program.
 
 ## Rust Oracle
 

@@ -1,7 +1,12 @@
-UTC: 2026-09-10T13:52:31Z
+UTC: 2026-09-10T14:27:24Z
+artifact_url: https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz
+artifact_expected_sha256: b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
+b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489  .tmp/zig/zig-aarch64-macos-0.16.0.tar.xz
+compiler_binary_sha256: e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec
 0.16.0
 clang version 21.1.0
 Target: aarch64-apple-macosx26.6.2-unknown
 Thread model: posix
 InstalledDir: /Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0
-mini_async_test: 6/6 checks passed
+compile_flags: -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror
+mini_async_test: 7/7 checks passed

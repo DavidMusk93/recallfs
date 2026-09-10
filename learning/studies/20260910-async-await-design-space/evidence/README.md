@@ -7,14 +7,22 @@ Validation date: 2026-09-10.
 | Gate | Toolchain | Result | Raw evidence |
 | --- | --- | --- | --- |
 | Paper identity | `pdfinfo`, SHA-256 | 28 pages; digest matches source index | [`paper.txt`](raw/paper.txt) |
-| Native build/test | Apple Clang 21.0.0, CMake 4.0.3 | five semantics anchors and overflow cleanup pass | [`native.txt`](raw/native.txt) |
-| C safety/UB | FIL-C 0.684 | six checks pass | [`filc.txt`](raw/filc.txt) |
-| LLVM optimized C | Zig 0.16.0, Clang 21.1.0, `-O2` | six checks pass | [`zig.txt`](raw/zig.txt) |
-| Sanitizers | Apple Clang ASan + UBSan | six checks pass | [`sanitizers.txt`](raw/sanitizers.txt) |
+| Document DAG | Ruby YAML parser | 4 unique IDs; all dependency/verifier paths resolve; no cycles | [`doc-dag.txt`](raw/doc-dag.txt) |
+| Native build/test | Apple Clang 21.0.0, CMake 4.0.3 | CTest 2/2; five semantics anchors and two lifecycle regressions pass | [`native.txt`](raw/native.txt) |
+| C safety/UB | FIL-C 0.684 | seven checks pass | [`filc.txt`](raw/filc.txt) |
+| LLVM optimized C | Zig 0.16.0, Clang 21.1.0, `-O2` | seven checks pass | [`zig.txt`](raw/zig.txt) |
+| Sanitizers | Apple Clang ASan + UBSan | seven checks pass | [`sanitizers.txt`](raw/sanitizers.txt) |
 | Rust oracle | rustc 1.97.0, LLVM 22.1.6 | exact traces `A`, `AB`, `AD` | [`rust-reference.txt`](raw/rust-reference.txt) |
+| Code review | six local lenses + validator | four validated findings resolved | [`review.md`](review.md) |
 
 FIL-C validates the executed C paths for memory safety and undefined behavior.
 It is not a proof of the model and is not used as performance evidence.
+
+The Zig run uses the official
+`zig-aarch64-macos-0.16.0.tar.xz` artifact with SHA-256
+`b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489`.
+The exact URL, installed compiler binary digest and complete compile flags are
+recorded in [`zig.txt`](raw/zig.txt).
 
 ## Reconciliation Results
 
@@ -23,13 +31,16 @@ It is not a proof of the model and is not used as performance evidence.
 | `AA-LAZY-1` | trace `A`, one poll, constructor inert | trace `A`, constructor inert | pass |
 | `AA-SUSPEND-1` | trace `AB`, one outer poll | trace `AB`, one outer poll | pass |
 | `AA-WAKE-1` | trace `AB`, two polls, two wakes coalesced | not modeled | pass in C |
-| `AA-DETACH-1` | trace `AB`, detached task completes | documented Tokio contract | pass in C |
+| `AA-HANDLE-DROP-1` | trace `AB`; handle drop does not request cancel | documented Tokio contract | pass in C within caller-owned storage lifetime |
 | `AA-CANCEL-1` | trace `AD`, one poll, drop cleanup | trace `AD` | pass |
 | Spawn overflow | rejected future is dropped exactly once | not applicable | pass in C |
+| Completed self-wake | exact one-poll budget succeeds and drains stale wake | not applicable | pass in C |
 
 The Rust oracle deliberately covers only behavior available from `std`.
-Tokio detached-task behavior is grounded in the upstream `spawn` and
-`JoinHandle` documentation recorded in [`../source.md`](../source.md).
+Tokio's stronger runtime-owned detached-task lifetime is grounded in the
+upstream `spawn` and `JoinHandle` documentation recorded in
+[`../source.md`](../source.md). The C anchor keeps task/state storage alive and
+tests only that handle release does not itself request cancellation.
 
 ## Commands
 

@@ -9,7 +9,7 @@ typedef struct aa_observation {
     bool constructor_was_inert;
     bool completed;
     bool cancelled;
-    bool detached;
+    bool handle_dropped;
     bool cleanup_ran;
     bool wakeups_coalesced;
 } aa_observation;
@@ -17,7 +17,7 @@ typedef struct aa_observation {
 bool aa_observe_lazy(aa_observation *observation);
 bool aa_observe_dynamic_await(aa_observation *observation);
 bool aa_observe_wake(aa_observation *observation);
-bool aa_observe_detach(aa_observation *observation);
+bool aa_observe_handle_drop(aa_observation *observation);
 bool aa_observe_cancel(aa_observation *observation);
 
 #endif
