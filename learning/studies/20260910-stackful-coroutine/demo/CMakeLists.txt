@@ -10,6 +10,7 @@ endif()
 
 option(RCO_BUILD_TESTS "Build native correctness tests" ON)
 option(RCO_BUILD_BENCHMARKS "Build context-switch benchmarks" ON)
+option(RCO_BUILD_EXAMPLES "Build production-oriented examples" ON)
 
 add_library(rco
     src/rco.c
@@ -72,6 +73,31 @@ if(RCO_BUILD_BENCHMARKS)
             -Werror
             -fno-omit-frame-pointer
     )
+endif()
+
+if(RCO_BUILD_EXAMPLES)
+    add_executable(rco_l4_forwarder examples/l4_forwarder.c)
+    target_link_libraries(rco_l4_forwarder PRIVATE rco)
+    target_compile_options(
+        rco_l4_forwarder
+        PRIVATE
+            -Wall
+            -Wextra
+            -Werror
+            -fno-omit-frame-pointer
+    )
+
+    if(RCO_BUILD_TESTS)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_test(
+            NAME rco_l4_e2e
+            COMMAND
+                ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
+                $<TARGET_FILE:rco_l4_forwarder>
+        )
+        set_tests_properties(rco_l4_e2e PROPERTIES TIMEOUT 15)
+    endif()
 endif()
 
 include(GNUInstallDirs)
