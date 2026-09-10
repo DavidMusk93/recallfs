@@ -15,12 +15,20 @@
 #include <time.h>
 #include <unistd.h>
 
-#define BENCH_SCHEMA "rco-high-concurrency-v1"
+#define BENCH_SCHEMA "rco-high-concurrency-v2"
 #define MAX_TASKS UINT64_C(16384)
 #define MAX_STACK_BYTES (UINT64_C(512) * 1024)
 #define MAX_TOUCHED_BYTES (UINT64_C(512) * 1024 * 1024)
 #define MAX_TOTAL_YIELDS UINT64_C(20000000)
 #define STACK_HEADROOM_BYTES UINT64_C(8192)
+
+#if defined(RCO_CACS_PRESERVE_NONE)
+#define BENCH_BACKEND_IDENTITY "cacs-preserve-none"
+#elif defined(RCO_CACS)
+#define BENCH_BACKEND_IDENTITY "cacs"
+#else
+#define BENCH_BACKEND_IDENTITY "sysv"
+#endif
 
 static volatile uint64_t benchmark_sink;
 
@@ -38,9 +46,14 @@ struct benchmark_state {
     volatile uint64_t validated;
     volatile bool stop_claimed;
     volatile bool measurement_started;
+    volatile uint64_t end_barrier_arrivals;
+    volatile uint64_t barrier_yields;
+    volatile bool measurement_ended;
     volatile int worker_error;
     struct rusage usage_start;
+    struct rusage usage_end;
     uint64_t wall_start_ns;
+    uint64_t wall_end_ns;
 };
 
 struct worker {
@@ -258,6 +271,18 @@ static void record_worker_error(struct benchmark_state *state, int error)
     }
 }
 
+static void end_measurement(struct benchmark_state *state)
+{
+    state->wall_end_ns = now_ns();
+    if (state->wall_end_ns == 0) {
+        record_worker_error(state, -EIO);
+    }
+    if (getrusage(RUSAGE_SELF, &state->usage_end) != 0) {
+        record_worker_error(state, -errno);
+    }
+    state->measurement_ended = true;
+}
+
 __attribute__((noinline)) static int high_concurrency_worker(void *argument)
 {
     struct worker *worker = argument;
@@ -334,6 +359,22 @@ __attribute__((noinline)) static int high_concurrency_worker(void *argument)
         checksum += observed;
     }
     worker->checksum = checksum;
+    state->end_barrier_arrivals++;
+    if (state->end_barrier_arrivals == state->options.tasks) {
+        end_measurement(state);
+    } else {
+        while (!state->measurement_ended) {
+            state->barrier_yields++;
+            if (rco_yield() != 0) {
+                record_worker_error(state, -ECANCELED);
+                return -ECANCELED;
+            }
+            if (validate_sentinels(sentinels, worker) == UINT64_MAX) {
+                record_worker_error(state, -EILSEQ);
+                return -EILSEQ;
+            }
+        }
+    }
     return 0;
 }
 
@@ -415,9 +456,6 @@ static int run_benchmark(const struct options *options, uint64_t page_size)
     }
 
     result = rco_runtime_run(runtime);
-    uint64_t wall_end_ns = now_ns();
-    struct rusage usage_end;
-    int usage_result = getrusage(RUSAGE_SELF, &usage_end);
     struct rco_stats stats;
     int stats_result = rco_runtime_get_stats(runtime, &stats);
 
@@ -426,29 +464,36 @@ static int run_benchmark(const struct options *options, uint64_t page_size)
         checksum += workers[index].checksum;
     }
     uint64_t expected = expected_checksum(options, page_size);
-    uint64_t total_yields = options->tasks * options->yields_per_task;
+    uint64_t requested_yields =
+        options->tasks * options->yields_per_task;
+    uint64_t measured_yields =
+        requested_yields + state.barrier_yields;
     uint64_t expected_switches =
-        options->tasks * (2 * options->yields_per_task + 6);
+        options->tasks * (2 * options->yields_per_task + 6) +
+        2 * state.barrier_yields;
     struct usage_delta delta = {0};
     int delta_result =
-        usage_result == 0
-            ? usage_delta(&state.usage_start, &usage_end, &delta)
-            : -errno;
+        usage_delta(&state.usage_start, &state.usage_end, &delta);
 
     bool valid =
         result == 0 && state.worker_error == 0 &&
-        state.measurement_started && wall_end_ns > state.wall_start_ns &&
-        usage_result == 0 && delta_result == 0 && stats_result == 0 &&
+        state.measurement_started && state.measurement_ended &&
+        state.end_barrier_arrivals == options->tasks &&
+        state.wall_end_ns > state.wall_start_ns &&
+        state.barrier_yields == options->tasks - 1 &&
+        delta_result == 0 && stats_result == 0 &&
         checksum == expected && stats.spawned == options->tasks &&
         stats.completed == options->tasks && stats.peak_active == options->tasks &&
         stats.active == 0 && stats.context_switches == expected_switches;
     if (!valid) {
         fprintf(stderr,
-                "benchmark validation failed: run=%d worker=%d usage=%d "
-                "delta=%d stats=%d checksum=%" PRIu64 "/%" PRIu64
+                "benchmark validation failed: run=%d worker=%d delta=%d "
+                "stats=%d checksum=%" PRIu64 "/%" PRIu64
+                " barrier=%" PRIu64 " arrivals=%" PRIu64
                 " switches=%" PRIu64 "/%" PRIu64 "\n",
-                result, state.worker_error, usage_result, delta_result,
-                stats_result, checksum, expected,
+                result, state.worker_error, delta_result, stats_result,
+                checksum, expected, state.barrier_yields,
+                state.end_barrier_arrivals,
                 stats_result == 0 ? stats.context_switches : 0,
                 expected_switches);
         (void)rco_runtime_destroy(runtime);
@@ -458,10 +503,14 @@ static int run_benchmark(const struct options *options, uint64_t page_size)
 
     benchmark_sink = checksum | UINT64_C(1);
     printf(
-        "{\"schema\":\"%s\",\"tasks\":%" PRIu64
+        "{\"schema\":\"%s\",\"backend_identity\":\"%s\""
+        ",\"tasks\":%" PRIu64
         ",\"stack_bytes\":%" PRIu64 ",\"touch_bytes\":%" PRIu64
         ",\"page_size\":%" PRIu64 ",\"sentinels_per_task\":%" PRIu64
-        ",\"yields_per_task\":%" PRIu64 ",\"total_yields\":%" PRIu64
+        ",\"yields_per_task\":%" PRIu64
+        ",\"requested_yields\":%" PRIu64
+        ",\"barrier_yields\":%" PRIu64
+        ",\"measured_yields\":%" PRIu64
         ",\"checksum\":%" PRIu64 ",\"expected_checksum\":%" PRIu64
         ",\"runtime_switches\":%" PRIu64
         ",\"expected_runtime_switches\":%" PRIu64
@@ -472,11 +521,14 @@ static int run_benchmark(const struct options *options, uint64_t page_size)
         ",\"involuntary_context_switches_delta\":%" PRIu64
         ",\"spawned\":%" PRIu64 ",\"completed\":%" PRIu64
         ",\"peak_active\":%zu}\n",
-        BENCH_SCHEMA, options->tasks, options->stack_bytes,
+        BENCH_SCHEMA, BENCH_BACKEND_IDENTITY, options->tasks,
+        options->stack_bytes,
         options->touch_bytes, page_size, options->touch_bytes / page_size,
-        options->yields_per_task, total_yields, checksum, expected,
+        options->yields_per_task, requested_yields, state.barrier_yields,
+        measured_yields, checksum, expected,
         stats.context_switches, expected_switches,
-        wall_end_ns - state.wall_start_ns, delta.user_us, delta.system_us,
+        state.wall_end_ns - state.wall_start_ns, delta.user_us,
+        delta.system_us,
         delta.minor_faults, delta.major_faults, delta.voluntary_switches,
         delta.involuntary_switches, stats.spawned, stats.completed,
         stats.peak_active);

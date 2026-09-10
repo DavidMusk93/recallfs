@@ -3,6 +3,7 @@
 import argparse
 import csv
 from dataclasses import dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ import subprocess
 import time
 
 
-RESULT_SCHEMA = "rco-high-concurrency-v1"
+RESULT_SCHEMA = "rco-high-concurrency-v2"
 MODE_NAMES = ("sysv", "cacs", "cacs-preserve-none")
 MAX_TASKS = 16384
 MAX_STACK_BYTES = 512 * 1024
@@ -32,13 +33,17 @@ SAMPLE_FIELDS = (
     "run",
     "position",
     "mode",
+    "backend_identity",
+    "binary_sha256",
     "tasks",
     "stack_bytes",
     "touch_bytes",
     "page_size",
     "sentinels_per_task",
     "yields_per_task",
-    "total_yields",
+    "requested_yields",
+    "barrier_yields",
+    "measured_yields",
     "checksum",
     "expected_checksum",
     "runtime_switches",
@@ -73,19 +78,23 @@ SUMMARY_FIELDS = (
     "schema",
     "case",
     "mode",
+    "backend_identity",
+    "binary_sha256",
     "samples",
     "tasks",
     "stack_bytes",
     "touch_bytes",
     "yields_per_task",
-    "total_yields",
+    "requested_yields",
+    "barrier_yields",
+    "measured_yields",
     "checksum",
     "runtime_switches",
     "median_wall_ns",
     "median_user_us",
     "median_system_us",
-    "median_wall_ns_per_yield",
-    "median_cpu_ns_per_yield",
+    "median_wall_ns_per_measured_yield",
+    "median_cpu_ns_per_measured_yield",
     "paired_wall_ratio_vs_sysv",
     "paired_cpu_ratio_vs_sysv",
     "median_setup_minor_faults",
@@ -149,6 +158,14 @@ def expected_checksum(case, page_size):
         )
         checksum += sentinel_sum * (case.yields_per_task + 1)
     return checksum
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def validate_case(case, page_size):
@@ -315,7 +332,25 @@ def parse_result(stdout):
     return result
 
 
-def run_sample(mode, case, run, position, timeout_seconds):
+def run_sample(
+    mode,
+    case,
+    run,
+    position,
+    timeout_seconds,
+    binary_sha256=None,
+):
+    if mode.name not in MODE_NAMES:
+        raise BenchmarkError("unknown benchmark mode: {}".format(mode.name))
+    observed_sha256 = sha256_file(mode.executable)
+    if (
+        binary_sha256 is not None
+        and observed_sha256 != binary_sha256
+    ):
+        raise BenchmarkError(
+            "{} changed after matrix validation".format(mode.executable)
+        )
+    binary_sha256 = observed_sha256
     command = [
         str(mode.executable),
         "--tasks",
@@ -360,6 +395,21 @@ def run_sample(mode, case, run, position, timeout_seconds):
                 "benchmark wrote unexpected stderr: {!r}".format(stderr)
             )
         result = parse_result(stdout)
+        if result.get("backend_identity") != mode.name:
+            raise BenchmarkError(
+                "{} backend identity is {!r}, expected {!r}".format(
+                    mode.executable,
+                    result.get("backend_identity"),
+                    mode.name,
+                )
+            )
+        if sha256_file(mode.executable) != binary_sha256:
+            raise BenchmarkError(
+                "{} changed while its sample was running".format(
+                    mode.executable
+                )
+            )
+        result["binary_sha256"] = binary_sha256
         result.update(resources)
         result.update(
             {
@@ -408,6 +458,8 @@ def validate_samples(rows, cases, runs):
     }
     observed_keys = set()
     observed_positions = set()
+    sha_by_mode = {}
+    mode_by_sha = {}
     host_page_size = os.sysconf("SC_PAGE_SIZE")
     positive_fields = (
         "tasks",
@@ -416,7 +468,8 @@ def validate_samples(rows, cases, runs):
         "page_size",
         "sentinels_per_task",
         "yields_per_task",
-        "total_yields",
+        "requested_yields",
+        "measured_yields",
         "checksum",
         "expected_checksum",
         "runtime_switches",
@@ -438,6 +491,7 @@ def validate_samples(rows, cases, runs):
     nonnegative_fields = (
         "user_us",
         "system_us",
+        "barrier_yields",
         "minor_faults_delta",
         "major_faults_delta",
         "voluntary_context_switches_delta",
@@ -465,6 +519,29 @@ def validate_samples(rows, cases, runs):
         mode = row["mode"]
         if case_name not in case_by_name or mode not in MODE_NAMES:
             raise BenchmarkError("sample has an unknown case or mode")
+        if row["backend_identity"] != mode:
+            raise BenchmarkError("sample backend identity does not match its mode")
+        binary_sha256 = row["binary_sha256"]
+        if (
+            not isinstance(binary_sha256, str)
+            or len(binary_sha256) != 64
+            or binary_sha256 != binary_sha256.lower()
+            or any(character not in "0123456789abcdef"
+                   for character in binary_sha256)
+        ):
+            raise BenchmarkError("sample has an invalid binary SHA-256")
+        previous_sha = sha_by_mode.setdefault(mode, binary_sha256)
+        if previous_sha != binary_sha256:
+            raise BenchmarkError(
+                "mode {} has inconsistent binary SHA-256 values".format(mode)
+            )
+        previous_mode = mode_by_sha.setdefault(binary_sha256, mode)
+        if previous_mode != mode:
+            raise BenchmarkError(
+                "duplicate benchmark binaries for {} and {}".format(
+                    previous_mode, mode
+                )
+            )
         run = integer_field(row, "run")
         position = integer_field(row, "position")
         if run < 1 or run > runs or position < 1 or position > len(MODE_NAMES):
@@ -501,15 +578,24 @@ def validate_samples(rows, cases, runs):
             or values["yields_per_task"] != case.yields_per_task
         ):
             raise BenchmarkError("sample configuration does not match its case")
-        total_yields = case.tasks * case.yields_per_task
+        requested_yields = case.tasks * case.yields_per_task
+        barrier_yields = case.tasks - 1
+        measured_yields = requested_yields + barrier_yields
         checksum = expected_checksum(case, values["page_size"])
-        switches = case.tasks * (2 * case.yields_per_task + 6)
+        switches = (
+            case.tasks * (2 * case.yields_per_task + 6)
+            + 2 * barrier_yields
+        )
         if values["sentinels_per_task"] != (
             case.touch_bytes // values["page_size"]
         ):
             raise BenchmarkError("sentinel count is inconsistent")
-        if values["total_yields"] != total_yields:
-            raise BenchmarkError("total yield count is inconsistent")
+        if (
+            values["requested_yields"] != requested_yields
+            or values["barrier_yields"] != barrier_yields
+            or values["measured_yields"] != measured_yields
+        ):
+            raise BenchmarkError("measured yield counts are inconsistent")
         if (
             values["checksum"] != checksum
             or values["expected_checksum"] != checksum
@@ -543,6 +629,8 @@ def validate_samples(rows, cases, runs):
                 sorted(missing_keys), sorted(extra_keys)
             )
         )
+    if set(sha_by_mode) != set(MODE_NAMES):
+        raise BenchmarkError("sample matrix is missing binary identities")
 
 
 def median(rows, field):
@@ -564,17 +652,18 @@ def summarize(rows, cases):
                 for row in rows
                 if row["case"] == case.name and row["mode"] == mode
             ]
-            total_yields = case.tasks * case.yields_per_task
-            wall_per_yield = [
-                integer_field(row, "wall_ns") / total_yields for row in group
+            wall_per_measured_yield = [
+                integer_field(row, "wall_ns")
+                / integer_field(row, "measured_yields")
+                for row in group
             ]
-            cpu_per_yield = [
+            cpu_per_measured_yield = [
                 (
                     integer_field(row, "user_us")
                     + integer_field(row, "system_us")
                 )
                 * 1000
-                / total_yields
+                / integer_field(row, "measured_yields")
                 for row in group
             ]
             paired_wall_ratios = []
@@ -606,12 +695,22 @@ def summarize(rows, cases):
                     "schema": RESULT_SCHEMA,
                     "case": case.name,
                     "mode": mode,
+                    "backend_identity": group[0]["backend_identity"],
+                    "binary_sha256": group[0]["binary_sha256"],
                     "samples": len(group),
                     "tasks": case.tasks,
                     "stack_bytes": case.stack_bytes,
                     "touch_bytes": case.touch_bytes,
                     "yields_per_task": case.yields_per_task,
-                    "total_yields": case.tasks * case.yields_per_task,
+                    "requested_yields": integer_field(
+                        group[0], "requested_yields"
+                    ),
+                    "barrier_yields": integer_field(
+                        group[0], "barrier_yields"
+                    ),
+                    "measured_yields": integer_field(
+                        group[0], "measured_yields"
+                    ),
                     "checksum": integer_field(group[0], "checksum"),
                     "runtime_switches": integer_field(
                         group[0], "runtime_switches"
@@ -619,11 +718,11 @@ def summarize(rows, cases):
                     "median_wall_ns": median(group, "wall_ns"),
                     "median_user_us": median(group, "user_us"),
                     "median_system_us": median(group, "system_us"),
-                    "median_wall_ns_per_yield": statistics.median(
-                        wall_per_yield
+                    "median_wall_ns_per_measured_yield": statistics.median(
+                        wall_per_measured_yield
                     ),
-                    "median_cpu_ns_per_yield": statistics.median(
-                        cpu_per_yield
+                    "median_cpu_ns_per_measured_yield": statistics.median(
+                        cpu_per_measured_yield
                     ),
                     "paired_wall_ratio_vs_sysv": statistics.median(
                         paired_wall_ratios
@@ -670,6 +769,30 @@ def write_csv(path, fieldnames, rows):
         writer.writerows(rows)
 
 
+def validate_mode_binaries(modes):
+    digests = {}
+    modes_by_digest = {}
+    for mode in modes:
+        if not mode.executable.is_file() or not os.access(
+            str(mode.executable), os.X_OK
+        ):
+            raise BenchmarkError(
+                "{} executable is not runnable: {}".format(
+                    mode.name, mode.executable
+                )
+            )
+        digest = sha256_file(mode.executable)
+        duplicate = modes_by_digest.setdefault(digest, mode.name)
+        if duplicate != mode.name:
+            raise BenchmarkError(
+                "duplicate benchmark binaries for {} and {}".format(
+                    duplicate, mode.name
+                )
+            )
+        digests[mode.name] = digest
+    return digests
+
+
 def run_matrix(modes, cases, runs, timeout_seconds, output_dir):
     if tuple(mode.name for mode in modes) != MODE_NAMES:
         raise BenchmarkError("modes must use the canonical three-mode order")
@@ -688,16 +811,7 @@ def run_matrix(modes, cases, runs, timeout_seconds, output_dir):
         raise BenchmarkError(
             "case count must be in [1, {}]".format(MAX_CASES)
         )
-    for mode in modes:
-        if not mode.executable.is_file() or not os.access(
-            str(mode.executable), os.X_OK
-        ):
-            raise BenchmarkError(
-                "{} executable is not runnable: {}".format(
-                    mode.name, mode.executable
-                )
-            )
-
+    binary_sha256_by_mode = validate_mode_binaries(modes)
     rows = []
     for run in range(1, runs + 1):
         for case_index, case in enumerate(cases):
@@ -706,7 +820,12 @@ def run_matrix(modes, cases, runs, timeout_seconds, output_dir):
             for position, mode in enumerate(order, start=1):
                 rows.append(
                     run_sample(
-                        mode, case, run, position, timeout_seconds
+                        mode,
+                        case,
+                        run,
+                        position,
+                        timeout_seconds,
+                        binary_sha256_by_mode[mode.name],
                     )
                 )
 

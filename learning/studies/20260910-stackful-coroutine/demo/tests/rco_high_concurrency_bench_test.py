@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import hashlib
 import importlib.util
 from pathlib import Path
 import stat
@@ -10,6 +11,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 
 def load_harness(path):
@@ -32,6 +34,14 @@ def independent_checksum(tasks, touch_bytes, page_size, yields_per_task):
         )
         checksum += sentinel_sum * (yields_per_task + 1)
     return checksum
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class ArgumentBoundsTests(unittest.TestCase):
@@ -157,19 +167,25 @@ class CsvValidationTests(unittest.TestCase):
             "run": 1,
             "position": position,
             "mode": mode,
+            "backend_identity": mode,
+            "binary_sha256": hashlib.sha256(
+                mode.encode("ascii")
+            ).hexdigest(),
             "tasks": 2,
             "stack_bytes": 32768,
             "touch_bytes": 4096,
             "page_size": 4096,
             "sentinels_per_task": 1,
             "yields_per_task": 3,
-            "total_yields": 6,
+            "requested_yields": 6,
+            "barrier_yields": 1,
+            "measured_yields": 7,
             "checksum": checksum,
             "expected_checksum": checksum,
-            "runtime_switches": 24,
-            "expected_runtime_switches": 24,
-            "wall_ns": 1,
-            "user_us": 0,
+            "runtime_switches": 26,
+            "expected_runtime_switches": 26,
+            "wall_ns": 14,
+            "user_us": 7,
             "system_us": 0,
             "minor_faults_delta": 0,
             "major_faults_delta": 0,
@@ -201,7 +217,23 @@ class CsvValidationTests(unittest.TestCase):
         ]
 
     def test_accepts_complete_consistent_rows(self):
-        HARNESS.validate_samples(self.valid_rows(), [self.case], runs=1)
+        rows = self.valid_rows()
+        HARNESS.validate_samples(rows, [self.case], runs=1)
+        summaries = HARNESS.summarize(rows, [self.case])
+        self.assertEqual(
+            {
+                summary["median_wall_ns_per_measured_yield"]
+                for summary in summaries
+            },
+            {2.0},
+        )
+        self.assertEqual(
+            {
+                summary["median_cpu_ns_per_measured_yield"]
+                for summary in summaries
+            },
+            {1000.0},
+        )
 
     def test_rejects_duplicate_missing_nonpositive_and_inconsistent_rows(self):
         mutations = []
@@ -224,9 +256,27 @@ class CsvValidationTests(unittest.TestCase):
         inconsistent[0]["runtime_switches"] += 2
         mutations.append(inconsistent)
 
+        inconsistent_yields = self.valid_rows()
+        inconsistent_yields[0]["measured_yields"] += 1
+        mutations.append(inconsistent_yields)
+
         cross_mode = self.valid_rows()
         cross_mode[0]["checksum"] += 1
         mutations.append(cross_mode)
+
+        swapped_identity = self.valid_rows()
+        swapped_identity[0]["backend_identity"] = "cacs"
+        mutations.append(swapped_identity)
+
+        duplicate_binary = self.valid_rows()
+        duplicate_binary[1]["binary_sha256"] = duplicate_binary[0][
+            "binary_sha256"
+        ]
+        mutations.append(duplicate_binary)
+
+        invalid_digest = self.valid_rows()
+        invalid_digest[0]["binary_sha256"] = "not-a-sha256"
+        mutations.append(invalid_digest)
 
         extra = self.valid_rows()
         extra[0]["unexpected"] = 1
@@ -245,6 +295,45 @@ class CsvValidationTests(unittest.TestCase):
                 with self.assertRaises(HARNESS.BenchmarkError):
                     HARNESS.validate_samples(rows, [self.case], runs=1)
 
+    def test_rejects_swapped_and_duplicate_mode_binaries(self):
+        swapped = [
+            HARNESS.Mode("sysv", BINARIES["cacs"]),
+            HARNESS.Mode("cacs", BINARIES["sysv"]),
+            HARNESS.Mode(
+                "cacs-preserve-none",
+                BINARIES["cacs-preserve-none"],
+            ),
+        ]
+        duplicate = [
+            HARNESS.Mode("sysv", BINARIES["sysv"]),
+            HARNESS.Mode("cacs", BINARIES["sysv"]),
+            HARNESS.Mode(
+                "cacs-preserve-none",
+                BINARIES["cacs-preserve-none"],
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(
+                HARNESS.BenchmarkError, "backend identity"
+            ):
+                HARNESS.run_matrix(
+                    modes=swapped,
+                    cases=[self.case],
+                    runs=1,
+                    timeout_seconds=10,
+                    output_dir=Path(temporary) / "swapped",
+                )
+            with self.assertRaisesRegex(
+                HARNESS.BenchmarkError, "duplicate benchmark binaries"
+            ):
+                HARNESS.run_matrix(
+                    modes=duplicate,
+                    cases=[self.case],
+                    runs=1,
+                    timeout_seconds=10,
+                    output_dir=Path(temporary) / "duplicate",
+                )
+
 
 class OracleChecksumTests(unittest.TestCase):
     def test_real_sample_matches_independent_checksum_and_switch_oracles(self):
@@ -259,8 +348,51 @@ class OracleChecksumTests(unittest.TestCase):
         expected_checksum = independent_checksum(2, 4096, 4096, 3)
         self.assertEqual(row["checksum"], expected_checksum)
         self.assertEqual(row["expected_checksum"], expected_checksum)
-        self.assertEqual(row["runtime_switches"], 2 * (2 * 3 + 6))
-        self.assertEqual(row["expected_runtime_switches"], 2 * (2 * 3 + 6))
+        self.assertEqual(row["backend_identity"], "sysv")
+        self.assertEqual(
+            row["binary_sha256"], sha256_file(BINARIES["sysv"])
+        )
+        self.assertEqual(row["requested_yields"], 2 * 3)
+        self.assertEqual(row["barrier_yields"], 2 - 1)
+        self.assertEqual(row["measured_yields"], 2 * 3 + (2 - 1))
+        expected_switches = 2 * (2 * 3 + 6) + 2 * (2 - 1)
+        self.assertEqual(row["runtime_switches"], expected_switches)
+        self.assertEqual(row["expected_runtime_switches"], expected_switches)
+
+    def test_rejects_executable_replacement_during_sample(self):
+        case = HARNESS.BenchmarkCase("changed", 1, 32768, 4096, 1)
+        expected_digest = sha256_file(BINARIES["sysv"])
+        with mock.patch.object(
+            HARNESS,
+            "sha256_file",
+            side_effect=(expected_digest, "0" * 64),
+        ):
+            with self.assertRaisesRegex(
+                HARNESS.BenchmarkError, "changed while its sample was running"
+            ):
+                HARNESS.run_sample(
+                    HARNESS.Mode("sysv", BINARIES["sysv"]),
+                    case,
+                    run=1,
+                    position=1,
+                    timeout_seconds=10,
+                    binary_sha256=expected_digest,
+                )
+
+    def test_single_task_reports_no_end_barrier_yield(self):
+        case = HARNESS.BenchmarkCase("single", 1, 32768, 4096, 1)
+        row = HARNESS.run_sample(
+            HARNESS.Mode("sysv", BINARIES["sysv"]),
+            case,
+            run=1,
+            position=1,
+            timeout_seconds=10,
+        )
+        self.assertEqual(row["requested_yields"], 1)
+        self.assertEqual(row["barrier_yields"], 0)
+        self.assertEqual(row["measured_yields"], 1)
+        self.assertEqual(row["runtime_switches"], 8)
+        self.assertEqual(row["expected_runtime_switches"], 8)
 
 
 class TimeoutCleanupTests(unittest.TestCase):
@@ -383,9 +515,56 @@ class RealProcessIntegrationTests(unittest.TestCase):
         )
         expected = independent_checksum(3, 4096, 4096, 4)
         self.assertEqual({int(row["checksum"]) for row in samples}, {expected})
+        self.assertEqual(
+            {row["backend_identity"] for row in samples},
+            set(HARNESS.MODE_NAMES),
+        )
+        self.assertEqual(
+            {
+                row["mode"]: row["backend_identity"]
+                for row in samples
+            },
+            {name: name for name in HARNESS.MODE_NAMES},
+        )
+        self.assertEqual(
+            len({row["binary_sha256"] for row in samples}),
+            len(HARNESS.MODE_NAMES),
+        )
+        self.assertEqual(
+            {int(row["requested_yields"]) for row in samples}, {12}
+        )
+        self.assertEqual(
+            {int(row["barrier_yields"]) for row in samples}, {2}
+        )
+        self.assertEqual(
+            {int(row["measured_yields"]) for row in samples}, {14}
+        )
+        self.assertEqual(
+            {int(row["runtime_switches"]) for row in samples}, {46}
+        )
         self.assertEqual({int(row["spawned"]) for row in samples}, {3})
         self.assertEqual({int(row["completed"]) for row in samples}, {3})
         self.assertEqual({int(row["peak_active"]) for row in samples}, {3})
+        self.assertEqual(
+            {
+                row["mode"]: row["backend_identity"]
+                for row in summary
+            },
+            {name: name for name in HARNESS.MODE_NAMES},
+        )
+        self.assertEqual(
+            len({row["binary_sha256"] for row in summary}),
+            len(HARNESS.MODE_NAMES),
+        )
+        self.assertEqual(
+            {int(row["requested_yields"]) for row in summary}, {12}
+        )
+        self.assertEqual(
+            {int(row["barrier_yields"]) for row in summary}, {2}
+        )
+        self.assertEqual(
+            {int(row["measured_yields"]) for row in summary}, {14}
+        )
         self.assertEqual(
             [row["mode"] for row in samples],
             [
