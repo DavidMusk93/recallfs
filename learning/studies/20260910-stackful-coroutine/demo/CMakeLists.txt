@@ -249,6 +249,22 @@ if(RCO_BUILD_EXAMPLES)
     target_compile_features(rco_l4_forwarder_epoll PRIVATE c_std_11)
     rco_enable_c_warnings(rco_l4_forwarder_epoll)
 
+    if(RCO_BUILD_CACS)
+        add_executable(rco_l4_forwarder_cacs examples/l4_forwarder.c)
+        target_link_libraries(rco_l4_forwarder_cacs PRIVATE rco_cacs)
+        rco_enable_c_warnings(rco_l4_forwarder_cacs)
+
+        add_executable(
+            rco_l4_forwarder_cacs_preserve_none
+            examples/l4_forwarder.c
+        )
+        target_link_libraries(
+            rco_l4_forwarder_cacs_preserve_none
+            PRIVATE rco_cacs_preserve_none
+        )
+        rco_enable_c_warnings(rco_l4_forwarder_cacs_preserve_none)
+    endif()
+
     if(RCO_BUILD_TESTS)
         add_executable(
             rco_l4_epoll_test
@@ -289,6 +305,22 @@ if(RCO_BUILD_EXAMPLES)
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                 $<TARGET_FILE:rco_l4_forwarder_epoll>
         )
+        if(RCO_BUILD_CACS)
+            add_test(
+                NAME cacs_l4_e2e
+                COMMAND
+                    ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
+                    $<TARGET_FILE:rco_l4_forwarder_cacs>
+            )
+            add_test(
+                NAME cacs_preserve_none_l4_e2e
+                COMMAND
+                    ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
+                    $<TARGET_FILE:rco_l4_forwarder_cacs_preserve_none>
+            )
+        endif()
         add_test(
             NAME epoll_l4_rlimit
             COMMAND
@@ -297,6 +329,13 @@ if(RCO_BUILD_EXAMPLES)
                 $<TARGET_FILE:rco_l4_forwarder_epoll>
         )
         set_tests_properties(rco_l4_e2e epoll_l4_e2e PROPERTIES TIMEOUT 15)
+        if(RCO_BUILD_CACS)
+            set_tests_properties(
+                cacs_l4_e2e
+                cacs_preserve_none_l4_e2e
+                PROPERTIES TIMEOUT 15
+            )
+        endif()
         set_tests_properties(
             epoll_l4_rlimit
             PROPERTIES
