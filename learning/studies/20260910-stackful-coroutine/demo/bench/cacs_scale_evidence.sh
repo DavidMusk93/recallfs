@@ -434,6 +434,13 @@ docker run --rm --pull=never --network none \
 configure_and_build "$o3_build" o3 Release "$o3_flags" '-flto'
 ctest --test-dir "$o3_build" --output-on-failure \
     2>&1 | tee "$clean_root/native-tests.txt"
+python3 "$source_root/tests/rco_high_concurrency_bench_test.py" \
+    --harness "$source_root/bench/rco_high_concurrency_bench.py" \
+    --sysv "$o3_build/rco_high_concurrency_bench_sysv" \
+    --cacs "$o3_build/rco_high_concurrency_bench_cacs" \
+    --cacs-preserve-none \
+        "$o3_build/rco_high_concurrency_bench_cacs_preserve_none" \
+    all 2>&1 | tee "$clean_root/high-concurrency-focused-tests.txt"
 
 configure_and_build "$o0_build" o0 Debug "$o0_flags" ''
 {
@@ -744,6 +751,14 @@ for profile, options in profile_options.items():
 ctest_count("native-tests.txt", (25,))
 ctest_count("optimization-matrix.txt", (16, 16))
 ctest_count("sanitizer-tests.txt", (22,))
+focused_text = (
+    root / "high-concurrency-focused-tests.txt"
+).read_text(encoding="utf-8")
+if (
+    re.search(r"Ran 19 tests in [0-9.]+s", focused_text) is None
+    or "\nOK\n" not in focused_text
+):
+    fail("high-concurrency focused evidence is not 19/19")
 filc_text = (root / "filc.txt").read_text(encoding="utf-8")
 for marker in (
     "FIL-C high-concurrency parser/bounds PASS",
@@ -1174,6 +1189,7 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
     emit("zig_o2_focused_ctest", "16/16")
     emit("zig_o3_full_ctest", "25/25")
     emit("zig_asan_ubsan_ctest", "22/22")
+    emit("high_concurrency_focused_tests", "19/19")
     emit("gcc_cacs_negative_gate", "PASS")
     emit("compile_command_profiles", "o0,o2,o3,asan")
     emit("compile_and_link_target_binding", "PASS")
