@@ -1,3 +1,24 @@
+---
+doc_id: recallfs-study-stackful-coroutine-v1
+kind: study
+status: active
+authority: design
+applies_to:
+  - learning/studies/20260910-stackful-coroutine/demo
+depends_on:
+  - recallfs-agent-ready-docs-v1
+  - learning/studies/20260910-stackful-coroutine/source.md
+supersedes: []
+verified_by:
+  - CORO-RA-1
+  - CORO-RA-2
+  - CORO-RA-3
+  - CORO-RA-4
+  - CORO-RA-5
+  - CORO-RA-6
+  - CORO-RA-7
+---
+
 # Stackful Coroutine 与 L4 Forwarder Study
 
 > 主文：Huiba Li 等，[Stackful Coroutine Made Fast](papers/stackful-coroutine-made-fast.pdf)。
@@ -5,6 +26,116 @@
 > 目标环境：`ssh d2`，Linux x86-64，Intel Xeon Platinum 8457C。
 >
 > 本文区分作者报告值、本地复现值和未验证推论。
+
+## Contract
+
+### Decision
+
+在 Linux x86-64 上，以遵守完整 System V AMD64 callee-saved contract 的
+stackful coroutine runtime 作为可复用执行层；以同语义的非 coroutine
+`epoll` state machine 作为 A/B baseline。L4 数据面是否采用 coroutine 不由
+微基准决定，而由真实 workload 下的吞吐、资源上界和控制流复杂度共同决定。
+
+### Scope
+
+- `learning/studies/20260910-stackful-coroutine/demo/include/rco.h` 的单线程
+  cooperative coroutine API；
+- `learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c`
+  的 coroutine L4 forwarder；
+- `learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c`
+  的 non-coroutine A/B baseline；
+- d2 上的 FIL-C、native、sanitizer、ABI 与 benchmark evidence；
+- 文献中 CACS、stackful/stackless 和 cooperative task model 的适用边界。
+
+### Non-goals
+
+- 不实现论文依赖 compiler liveness 的 CACS 或 `preserve_none`；
+- 不实现多线程 scheduler、work stealing、preemption 或 stack migration；
+- 不实现 TLS/`errno` 虚拟化、blocking syscall hook、dynamic stack；
+- 不把 loopback throughput 外推为真实 NIC line rate 或 p99 latency；
+- 不以 L4 benchmark 决定所有服务都应采用 coroutine。
+
+### Inputs And Outputs
+
+| Boundary | Input | Output |
+| --- | --- | --- |
+| Runtime | task entry、argument、stack size、FD wait、deadline | task completion、ready event 或负 `errno` |
+| Coroutine forwarder | client TCP byte stream、numeric upstream address | 保序的双向 TCP byte stream |
+| Epoll baseline | 与 coroutine forwarder 完全相同的 CLI 和流量 | 同样的 byte stream 与 shutdown counters |
+| A/B harness | 两个 binary、run count、duration、CPU/NUMA placement | aggregate throughput、per-stream progress、VM/CPU process metrics |
+
+### Interfaces And Ownership
+
+- runtime 创建线程拥有 runtime、task、stack cache、timer heap 和 FD watch；
+- task finalizer 在 scheduler stack 上 exactly once；
+- coroutine forwarder 的两个 pump 各持有一个 connection reference；
+- epoll baseline 的 event loop 独占 connection list、timer heap 和 FD table；
+- 两种 forwarder 的最后一个 owner 都执行双 FD close 和 connection free；
+- benchmark 只读取已生成 binary，不修改 tracked source。
+
+### Invariants
+
+- 单线程内最多一个 coroutine 为 `RUNNING`；
+- ready task 不能无限饿死 epoll waiter；
+- 每个方向最多持有一个 `buffer_size` payload；
+- FIN 只在对应方向 buffer 排空后传播；
+- stale `fd + generation` event 不命中新对象；
+- 两个 forwarding direction 各有独立的 1 MiB dispatch budget，且每个
+  payload byte 只在成功 `send()` 后计入一次；
+- 每条 benchmark stream 的 sender/receiver bytes 和 bitrate 都必须大于 0；
+- FIL-C、sanitizer 和 benchmark 结果不能互相替代。
+
+### Failure Semantics
+
+- 初始化或 event infrastructure 失败导致进程非零退出；
+- 单连接 connect、reset 或 I/O error 只关闭该连接并计数；
+- 第一次 termination signal 停止 accept 并进入 grace drain；
+- deadline 或第二次 signal 强制关闭剩余连接；
+- allocation/FD cap 拒绝新连接，不破坏已有连接；
+- 无法取得 PMU 或 CPU frequency policy 时显式记录 unavailable。
+
+### Worked Examples
+
+**CORO-WE-1: half-close 后返回响应。**
+
+输入为 256 KiB request。backend 必须先读到 EOF，之后才发送完整 response。
+client 发送后执行 `shutdown(SHUT_WR)`。两个 forwarder 都先把 request buffer
+排空，再向 upstream 传播 FIN；reverse direction 继续接收并返回精确的
+262,144 bytes。该例证明不能把一侧 EOF 误实现成双向 close。
+
+**CORO-WE-2: write side backpressure。**
+
+当 destination `send()` 返回 `EAGAIN` 时，coroutine 版本保留普通 C
+`send_all()` call stack 并 suspend；epoll baseline 必须显式保存
+`offset/length`，关闭 source read interest，并在 `EPOLLOUT` 后恢复。两者的
+最大未发送 payload 都是一个 direction buffer。
+
+**CORO-WE-3: runnable 与 I/O 同时存在。**
+
+一个 task 连续 `rco_yield()`，另一个 task 等待已可读 pipe。scheduler 最多
+执行 64 次 READY dispatch 后以 timeout 0 poll epoll，pipe waiter 必须在
+busy task 完成 1024 次 yield 前恢复。
+
+### Reconciliation Anchors
+
+| Anchor | Input or condition | Exact expected result | Verification |
+| --- | --- | --- | --- |
+| `CORO-RA-1` | Native runtime build | 12 runtime suites、guard page 和 accept failure test 通过 | `ctest --test-dir .tmp/rco-ab-build --output-on-failure` |
+| `CORO-RA-2` | 同一 EOF-delayed backend 与 32 concurrent clients | 两个 forwarder 各返回精确 8,720,449 bytes，完成 78 次 half-close | `learning/studies/20260910-stackful-coroutine/demo/tests/l4_e2e.py <binary>` |
+| `CORO-RA-3` | 5 runs x 4 iperf streams | direct/coroutine/epoll 共 60 个 sender/receiver stream 全部非零 | `learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh` |
+| `CORO-RA-4` | 1,000,000 yield iterations | checksum、task count、active count 和 exact switch count 一致 | `rco_bench 1000000 11` |
+| `CORO-RA-5` | 文档 frontmatter DAG | doc ID 唯一、依赖存在、图无环 | manual DAG validation + local-link check |
+| `CORO-RA-6` | 固定 Zig 0.16.0 | `zig cc` 的 O0/O2/O3 与 ASan/UBSan 路径通过 | `learning/studies/20260910-stackful-coroutine/evidence/raw/ab/zig-validation.txt` |
+| `CORO-RA-7` | client FD 同时可读写，两个方向各有 4 KiB work | 两个方向都转发 4 KiB；同一 byte 不在 recv/send 重复扣 budget | `epoll_l4_state_machine` |
+
+### Evidence And Unknowns
+
+已观察证据位于
+[`learning/studies/20260910-stackful-coroutine/evidence/`](evidence/)。
+当前未知项是跨机真实 NIC 的
+throughput/p99、长稳 RSS、生产 stack high-water 和 overload SLO。A/B 的
+5 次样本只能支持“两个 forwarding model 在此 workload 下没有可分辨的吞吐
+优势”，不能支持普遍性能排序。
 
 ## 1. 结论先行
 
@@ -16,13 +147,17 @@ coroutine library，以及一个真实可运行的 TCP L4 forwarder：
 - L4 forwarder 对每条连接使用两个单向 pump coroutine，支持 nonblocking
   connect、partial I/O、backpressure、TCP half-close、peer reset、连接上限和
   `signalfd` graceful shutdown；
-- C 代码先通过 FIL-C；真实切栈再通过 GCC/Clang、LTO、ASan/UBSan、ABI
+- non-coroutine baseline 用显式 connection/direction state machine 实现同样
+  的 socket、buffer、timeout、half-close 和 shutdown contract；
+- C 代码先通过 FIL-C；真实切栈再通过 GCC/Zig `zig cc`、LTO、
+  ASan/UBSan、ABI
   canary、guard-page fault 和真实 TCP E2E；
 - d2 上 `rco_yield` 的 5 次 run-level median 中位数为
-  `35.335 ns/operation`。一次 operation 包含 scheduler 工作和两次底层
+  `35.141 ns/operation`。一次 operation 包含 scheduler 工作和两次底层
   context switch，不能与论文的 CACS 单次切换数字直接比较；
-- 单 proxy core、4 条 loopback TCP 流下，L4 median 为
-  `24.666 Gbit/s`；direct loopback median 为 `74.476 Gbit/s`。
+- 单 proxy core、4 条 loopback TCP 流下，coroutine median 为
+  `24.904 Gbit/s`，epoll state machine median 为 `25.007 Gbit/s`，两者
+  没有可分辨的吞吐差异；direct loopback median 为 `74.093 Gbit/s`。
 
 这里没有复现论文的 CACS。CACS 依赖 compiler 在每个调用点掌握 register
 liveness，并配合 `preserve_none` calling convention。普通 C11 与独立汇编
@@ -39,16 +174,18 @@ correctness bug。
 | --- | --- | --- |
 | 文献 | 主稿、appendix、coroutine 语义、C++ fibers 争论、USENIX task model、mTCP | 已归档 8 份 PDF，并记录 SHA-256 |
 | C safety | FIL-C 0.684 | 生命周期、配置、stack mapping 和 CLI 路径通过 |
-| ABI | GCC/Clang 的 O0/O2/O3/LTO、register canary、FP control test、反汇编 | SysV callee-saved 与 FP control state 保持 |
+| ABI | GCC/Zig O0/O2/O3、register canary、FP control test、反汇编 | SysV callee-saved 与 FP control state 保持 |
 | VM | 上下 guard page 子进程测试 | stack overflow 以 `SIGSEGV` fail-fast |
-| Runtime | queue、timer、cancel、pipe/epoll、stack cache tests | 10 个 native suites 通过 |
-| Network | Python TCP backend + 32 concurrent clients | 8,720,449 bytes 双向精确一致，78 次 half-close |
+| Runtime | queue、timer、cancel、pipe/epoll、stack cache tests | 12 个 runtime suites；完整 CTest 7/7 通过 |
+| Network | EOF-delayed TCP backend + 32 concurrent clients | 两种 forwarder 均为 8,720,449 bytes、78 次 half-close |
 | Shutdown | 保持连接跨越 grace deadline | 100 ms 到期后强制取消并退出 |
 | Sanitizer | ASan + UBSan + fiber switch hooks | 完整 L4 E2E 通过 |
-| Performance | CPU/NUMA pinning + wall time + iperf3 | context 与 L4 数据见第 9 节 |
+| Performance | CPU/NUMA pinning + wall time + iperf3 | direct/coroutine/epoll A/B 见第 9 节 |
 
-原始日志在 [`evidence/raw/`](evidence/raw/)，汇总与限制见
-[`evidence/README.md`](evidence/README.md)。
+原始日志在
+[`learning/studies/20260910-stackful-coroutine/evidence/raw/`](evidence/raw/)，
+汇总与限制见
+[`learning/studies/20260910-stackful-coroutine/evidence/README.md`](evidence/README.md)。
 
 ## 3. 论文到底证明了什么
 
@@ -241,6 +378,51 @@ $$
 $32\,MiB$。两个 coroutine stack 的 usable virtual space 上界约为
 $64\,MiB$，但 private anonymous pages 按需进入 RSS。
 
+### 6.1 A/B：同一协议，两种控制流
+
+non-coroutine 版本不调用 `rco`。它在一个 `epoll` loop 中显式保存：
+
+- upstream connect state 和 deadline heap slot；
+- 两个方向的 `offset/length/source_eof/destination_shutdown`；
+- client/upstream interest mask、one-shot armed state 和 FD generation；
+- 每个 event 后应继续 read、write、shutdown 还是 rearm。
+
+coroutine 版本把这些 continuation state 放在 C call stack 上：
+
+```text
+coroutine path                 event-loop path
+--------------                 ---------------
+recv                           state.read_ready
+send_all                       state.offset/length
+rco_wait_fd                    epoll interest/rearm
+return from wait               explicit dispatch branch
+normal local variables         persistent connection fields
+```
+
+两种实现都使用一个 connection allocation 和两个固定 buffer。代码规模是：
+
+| Surface | Lines | Function definitions |
+| --- | ---: | ---: |
+| Coroutine L4 application | 884 | 28 |
+| Non-coroutine epoll application | 1,375 | 53 |
+| Reusable `rco` runtime | 1,244 | 29 |
+
+这组数字只描述当前实现，不是通用复杂度度量。它说明：
+
+- 如果已有多个网络服务共享 `rco`，单个业务的 control-flow surface 更小；
+- 如果只实现这一个简单 forwarder，event-loop 版本没有 coroutine runtime
+  和 ABI assembly 依赖，总代码与部署组件更少；
+- coroutine 的主要价值是 nested suspend、普通局部变量和 reusable blocking
+  style API，不是这次 benchmark 中的吞吐提升；
+- event-loop 的主要价值是更低 virtual-memory footprint、无自定义 stack/ABI
+  风险，以及更直接的 event batch 控制。
+
+因此本次 A/B 的工程结论是：
+
+> 在 kernel TCP copy 主导的单核 L4 workload 中，两种模型吞吐持平。选择
+> coroutine 的理由是复杂调用链的可组合性和业务代码可读性；选择显式
+> state machine 的理由是更小运行时边界和更低 per-connection VM 成本。
+
 ## 7. Shutdown 与失败语义
 
 启动时阻塞 `SIGINT`/`SIGTERM`，由 `signalfd` coroutine 接收：
@@ -256,16 +438,15 @@ $64\,MiB$，但 private anonymous pages 按需进入 RSS。
 
 ## 8. Correctness 结果
 
-目标 code commit：`ecda6780273a57adcde8e6c94754563f61671e64`。
+目标 code/benchmark commit：`463126cb7ab3e40df6f214803695dd200a4f0ef4`。
 
 | Gate | Result |
 | --- | --- |
 | Proof-first | API test 首次链接因缺少 `rco_*` symbols 按预期失败 |
-| FIL-C 0.684 | 3 个 lifecycle suites；L4 全量 C 编译与 CLI smoke 通过 |
-| GCC/Clang matrix | 两个 compiler 的 O0/O2/O3 与 O3+LTO 全通过 |
-| Native CTest | coroutine、guard page、L4 failure、L4 E2E 共 4 targets 全通过 |
-| ASan + UBSan | 32 并发连接、half-close、forced drain 全通过 |
-| Static analyzer | Clang analyzer 无 finding |
+| FIL-C 0.684 | 3 个 lifecycle suites；两条 L4 C 路径和 focused state-machine test 通过 |
+| GCC/Zig matrix | GCC native benchmark；Zig 0.16.0 `zig cc` O0/O2/O3 全通过 |
+| Native CTest | runtime、guard page、focused tests、双实现 E2E 共 7/7 targets 通过 |
+| ASan + UBSan | 两种 forwarder 的 32 并发、half-close、forced drain 全通过 |
 | Executable stack | `GNU_STACK` 为 `RW`，不是 `RWE` |
 
 FIL-C 不执行自定义 stack-switch assembly，因此不能证明 register save、stack
@@ -288,13 +469,13 @@ alignment、CET 或真实 epoll 时序。对应缺口由 native ABI canary、FP 
 
 | Operation | Run-level medians, ns | Median |
 | --- | --- | ---: |
-| `rco_yield` | 35.276, 35.449, 35.296, 35.385, 35.335 | `35.335` |
-| noinline function call | 1.649, 1.649, 1.646, 1.639, 1.637 | `1.646` |
-| Linux `sched_yield` | 229.240, 229.749, 228.634, 228.870, 228.082 | `228.870` |
+| `rco_yield` | 35.141, 35.406, 35.122, 35.092, 35.340 | `35.141` |
+| noinline function call | 1.638, 1.643, 1.648, 1.636, 1.639 | `1.639` |
+| Linux `sched_yield` | 229.449, 227.847, 227.739, 227.739, 228.330 | `227.847` |
 
 `rco_yield` 是完整 scheduler operation，含两次 assembly transfer、queue
 操作、状态更新和每 64 次 dispatch 一次的 I/O fairness poll。它比本机
-`sched_yield` 低约 84.6%，但约为测试中 noinline function call 的 21.5 倍。
+`sched_yield` 低约 84.6%，但约为测试中 noinline function call 的 21.4 倍。
 论文报告的约 1.52 ns CACS yield 使用
 不同实现、compiler 和 benchmark，不能与这里做同口径结论。
 
@@ -305,13 +486,27 @@ alignment、CET 或真实 epoll 时序。对应缺口由 native ABI canary、FP 
 
 | Path | Gbit/s samples | Median |
 | --- | --- | ---: |
-| direct loopback | 74.475, 75.461, 74.476, 77.154, 73.826 | `74.476` |
-| via one-core proxy | 24.660, 24.900, 24.517, 24.666, 24.765 | `24.666` |
+| direct loopback | 73.710, 73.836, 75.391, 74.598, 74.093 | `74.093` |
+| coroutine forwarder | 24.471, 24.848, 24.904, 25.058, 25.023 | `24.904` |
+| epoll state machine | 23.946, 25.037, 25.007, 25.167, 24.852 | `25.007` |
 
-proxy/direct median ratio 为 `0.331`。20 个 proxy stream 都有非零发送与
-接收，单次 run 内各流吞吐接近。这个结果证明 demo 能持续执行真实 TCP
-数据面，并不证明跨机 line rate，也不包含 p99 latency。loopback 结果受
-kernel copy、KVM 和共享宿主噪声影响；生产评估仍需增加运行时长和真实 NIC。
+coroutine/epoll 的 ratio-of-medians 为 `0.996`，按轮配对 ratio 的中位数为
+`0.996`、均值为 `1.003`，且 5 轮中有 3 轮 epoll 更快。因此结论是吞吐
+**持平**，不是 epoll 快 0.4%。60 个 sender/receiver stream 全部有非零
+进展，单次 run 内各流吞吐接近。
+
+进程级资源中位数：
+
+| Metric | Coroutine | Epoll state machine | Interpretation |
+| --- | ---: | ---: | --- |
+| `VmPeak` | 4,720 KiB | 2,948 KiB | coroutine 为每个 pump 保留独立 virtual stack |
+| `VmHWM` | 2,016 KiB | 1,760 KiB | demand paging 后实际 RSS 差距较小 |
+| user ticks | 3 | 3 | 采样粒度不足，不能判断优劣 |
+| system ticks | 398 | 397 | 基本相同，主要成本在 kernel TCP 数据搬运 |
+
+这个结果证明两个 demo 都能持续执行真实 TCP 数据面，并不证明跨机 line rate，
+也不包含 p99 latency。loopback 结果受 kernel copy、KVM 和共享宿主噪声影响；
+生产评估仍需增加运行时长和真实 NIC。
 
 d2 的 `perf` 对 `cycles`、`instructions`、`branches`、
 `branch-misses`、`cache-misses` 全部返回 `<not supported>`。因此本报告只把
@@ -343,7 +538,8 @@ d2 的 `perf` 对 `cycles`、`instructions`、`branches`、
 
 ## 11. 运行
 
-完整命令和参数见 [`demo/README.md`](demo/README.md)。
+完整命令和参数见
+[`learning/studies/20260910-stackful-coroutine/demo/README.md`](demo/README.md)。
 
 ```bash
 cmake -S learning/studies/20260910-stackful-coroutine/demo \

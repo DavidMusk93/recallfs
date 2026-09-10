@@ -1,4 +1,81 @@
+---
+doc_id: recallfs-study-stackful-coroutine-exploration-v1
+kind: study
+status: archived
+authority: evidence
+applies_to:
+  - learning/studies/20260910-stackful-coroutine
+depends_on:
+  - recallfs-study-stackful-coroutine-v1
+  - learning/studies/20260910-stackful-coroutine/source.md
+supersedes: []
+verified_by:
+  - learning/studies/20260910-stackful-coroutine/evidence/raw/ab
+---
+
 # Exploration Log
+
+## Contract
+
+### Decision
+
+Preserve failed approaches, discovered defects, environment constraints, and
+superseded measurements as historical evidence. Current behavioral truth lives
+in source/tests; current target behavior lives in the parent study.
+
+### Scope
+
+This log covers paper acquisition, d2 environment setup, runtime/L4 debugging,
+review findings, and the progression to the final A/B evidence.
+
+### Non-goals
+
+It is not a runbook, current benchmark summary, or authority over the active
+design.
+
+### Inputs And Outputs
+
+Investigation observations enter this log; durable fixes, tests, and raw
+evidence leave it in
+`learning/studies/20260910-stackful-coroutine/demo/`,
+`learning/studies/20260910-stackful-coroutine/README.md`, and
+`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`.
+
+### Interfaces And Ownership
+
+Historical entries are append-only in meaning. Later evidence may supersede a
+measurement but must not rewrite why an earlier run failed.
+
+### Invariants
+
+- failed runs are not presented as successful evidence;
+- measurements identify the source revision and environment;
+- FIL-C limitations and native results remain separate;
+- superseded A/B values are explicitly superseded.
+
+### Failure Semantics
+
+An unexplained mismatch between this log, tracked source, and current raw
+evidence is documentation drift and blocks a performance claim.
+
+### Worked Example
+
+The first A/B result was discarded after the epoll baseline was found to count
+the same payload at both `recv` and `send` and to share one budget across both
+directions. A focused test failed before the fix and passed afterward; only the
+post-fix five-run data is current evidence.
+
+### Reconciliation Anchors
+
+The parent study defines `CORO-RA-1` through `CORO-RA-7`; this log records the
+debugging path that produced those anchors.
+
+### Evidence And Unknowns
+
+Current raw evidence is
+[`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`](evidence/raw/ab/).
+Historical intermediate measurements are not retained as performance
+conclusions.
 
 ## 1. 研究范围
 
@@ -33,7 +110,7 @@ copy 页面可访问，但 PDF endpoint 返回 HTTP 403，因此只记录 DOI，
 | CPU | 2 sockets, 64 cores, Intel Xeon Platinum 8457C |
 | NUMA | 2 nodes; CPUs 0-31 on node 0 |
 | GCC | 8.3.0 |
-| Clang | 11.0.1 |
+| Zig | 0.16.0; `zig cc` reports Clang 21.1.0 |
 | glibc | 2.28 |
 | `perf` | 5.15.198 |
 
@@ -55,6 +132,17 @@ The minimal image lacked `ld`. A slow package-install image build was aborted;
 the successful adapter mounted d2's `x86_64-linux-gnu-ld.bfd` and matching
 `libbfd` read-only into the newer userspace. FIL-C compilation and execution
 then succeeded entirely on d2.
+
+Zig 0.16.0 was downloaded from the official release URL after d2's direct
+download stalled. The local proxy path retrieved the artifact, both local and
+d2 SHA-256 checks matched:
+
+```text
+70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+```
+
+All new LLVM-frontend validation used `zig cc`; native performance binaries
+continued to use GCC with the production flags.
 
 ## 3. Proof-First
 
@@ -155,6 +243,38 @@ with `EPOLL_CTL_MOD` rearm, propagated unexpected acceptor wait failures to
 process shutdown, and made the iperf harness reject any zero-progress stream.
 All 20 proxy streams in the final five-run evidence made progress.
 
+### 4.7 Non-coroutine A/B baseline
+
+The A/B baseline was intentionally implemented as a separate state machine,
+not as a coroutine runtime with yields removed. Its first proof was the
+expected CMake failure while `l4_forwarder_epoll.c` was absent. After
+implementation, the existing E2E suite ran unchanged against both binaries.
+
+The first three-way benchmark attempt failed because an old port range was
+still unavailable. The harness's LISTEN probe rejected the run before any
+sample was recorded. A later pre-fix run used `BASE_PORT=47000`; it was
+superseded by the fairness fix and is not final evidence.
+
+The baseline made continuation state explicit: direction offsets and lengths,
+source EOF, destination shutdown, upstream connect state, FD generation and
+deadline heap membership. This is the state that the coroutine version keeps
+in ordinary C frames and locals.
+
+### 4.8 A/B fairness and resource parser
+
+Review found two coupled fairness bugs in the baseline: `drive_direction()`
+deducted bytes at both `recv()` and `send()`, and both directions shared one
+1 MiB event budget. A real `socketpair` test made one client FD simultaneously
+readable and writable with 4 KiB queued in each direction. It failed before
+the fix, then proved both directions transfer 4 KiB with independent budgets.
+FIL-C executed the same focused state-machine test.
+
+The first process CPU sampler also read `/proc/<pid>/stat` with fixed `awk`
+fields. Since field 2 `comm` may contain spaces and `)`, that can shift
+`utime/stime`. The replacement strips through the final `) ` delimiter and
+parses `stat` plus `status` in one `awk` process. Its fixture uses
+`(worker ) with spaces)` and verifies exact fields 14 and 15.
+
 ## 5. Validation Progression
 
 ```text
@@ -185,9 +305,11 @@ optimized binary inspection
 CPU/NUMA-pinned benchmarks
 ```
 
-The final validation was rerun from a fresh clone of pushed `master` at commit
-`ecda6780273a57adcde8e6c94754563f61671e64`, not from the rsync working tree
-used during development.
+The final validation used an isolated d2 copy of source files whose hashes
+matched pushed `master` commit
+`463126cb7ab3e40df6f214803695dd200a4f0ef4`. Generated binaries and logs stayed
+under `/root/recallfs/.tmp/rco-ab` until the complete evidence set passed
+validation.
 
 ## 6. Performance Notes
 
@@ -195,21 +317,29 @@ The context benchmark first established a nonzero observable sink and
 inspected the final binary. Five run-level medians produced:
 
 ```text
-rco_yield:    35.276 35.449 35.296 35.385 35.335 ns
-function:      1.649  1.649  1.646  1.639  1.637 ns
-sched_yield: 229.240 229.749 228.634 228.870 228.082 ns
+rco_yield:    35.141 35.406 35.122 35.092 35.340 ns
+function:      1.638  1.643  1.648  1.636  1.639 ns
+sched_yield: 229.449 227.847 227.739 227.739 228.330 ns
 ```
 
 The L4 benchmark used independent pinned CPUs on NUMA node 0:
 
 ```text
-CPU 0: coroutine L4 proxy
+CPU 0: selected L4 proxy
 CPU 1: iperf3 server
 CPU 2: iperf3 client
 ```
 
-Five direct and five proxied samples yielded medians of 74.476 and
-24.666 Gbit/s. Every one of the 20 proxy streams made progress. PMU events
-were attempted, but d2's KVM returned
+Five interleaved runs with `BASE_PORT=52000` yielded medians of
+74.093 Gbit/s direct, 24.904 Gbit/s coroutine, and 25.007 Gbit/s epoll state
+machine. Every one of
+the 40 proxied streams made progress. Coroutine/epoll paired ratios changed
+direction across runs, so the result is parity rather than a throughput win.
+
+The coroutine process had median `VmPeak`/`VmHWM` of 4,720/2,016 KiB; the
+epoll process had 2,948/1,760 KiB. The virtual gap reflects independent
+coroutine stacks, while demand paging kept the resident gap much smaller.
+
+PMU events were attempted, but d2's KVM returned
 `<not supported>` for cycles, instructions, branches, branch misses, and cache
 misses. No substitute instruction count was presented as hardware evidence.

@@ -80,6 +80,12 @@ if(RCO_BUILD_EXAMPLES)
             COMMAND bash
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_bench_process_resources_test.sh
         )
+        add_test(
+            NAME l4_bench_harness
+            COMMAND bash
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_bench_harness_test.sh
+        )
+        set_tests_properties(l4_bench_harness PROPERTIES TIMEOUT 15)
 
         add_executable(rco_l4_wait_test tests/l4_forwarder_test.c)
         target_link_libraries(rco_l4_wait_test PRIVATE rco)
@@ -101,7 +107,20 @@ if(RCO_BUILD_EXAMPLES)
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                 $<TARGET_FILE:rco_l4_forwarder_epoll>
         )
+        add_test(
+            NAME epoll_l4_rlimit
+            COMMAND
+                ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_epoll_resource_limit.py
+                $<TARGET_FILE:rco_l4_forwarder_epoll>
+        )
         set_tests_properties(rco_l4_e2e epoll_l4_e2e PROPERTIES TIMEOUT 15)
+        set_tests_properties(
+            epoll_l4_rlimit
+            PROPERTIES
+                SKIP_RETURN_CODE 77
+                TIMEOUT 10
+        )
     endif()
 endif()
 

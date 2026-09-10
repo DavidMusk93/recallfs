@@ -26,6 +26,7 @@
 #define L4_DEFAULT_CONNECT_TIMEOUT_MS 3000
 #define L4_DEFAULT_GRACE_MS 30000
 #define L4_EPOLL_BATCH 256
+#define L4_FD_WATCH_CHUNK_SIZE ((size_t)256)
 #ifndef L4_IO_BUDGET_BYTES
 #define L4_IO_BUDGET_BYTES ((size_t)1024 * 1024)
 #endif
@@ -111,8 +112,9 @@ struct l4_app {
     socklen_t upstream_length;
     struct l4_options options;
     struct l4_stats stats;
-    struct l4_fd_watch *watches;
-    size_t watch_count;
+    struct l4_fd_watch **watch_chunks;
+    size_t watch_chunk_count;
+    size_t max_fds;
     struct l4_connection **connect_heap;
     size_t connect_heap_count;
     struct l4_connection *connections;
@@ -401,6 +403,75 @@ static void app_fail(struct l4_app *app, int error)
     app->stopping = true;
 }
 
+static bool accept_error_is_connection_local(int error)
+{
+    switch (error) {
+    case ECONNABORTED:
+    case ENETDOWN:
+    case EPROTO:
+    case ENOPROTOOPT:
+    case EHOSTDOWN:
+    case ENONET:
+    case EHOSTUNREACH:
+    case EOPNOTSUPP:
+    case ENETUNREACH:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool accept_error_needs_retry(int error)
+{
+    return error == EMFILE || error == ENFILE || error == ENOBUFS ||
+           error == ENOMEM;
+}
+
+static int schedule_listener_retry(struct l4_app *app)
+{
+    uint64_t now = 0;
+    int result = monotonic_now_ns(&now);
+    if (result != 0) {
+        return result;
+    }
+    app->listener_retry_deadline_ns =
+        deadline_after_ms(now, L4_LISTENER_RETRY_MS);
+    return 0;
+}
+
+static struct l4_fd_watch *watch_get(struct l4_app *app,
+                                     int fd,
+                                     bool create)
+{
+    if (fd < 0 || (size_t)fd >= app->max_fds ||
+        app->watch_chunks == NULL) {
+        return NULL;
+    }
+    size_t chunk_index = (size_t)fd / L4_FD_WATCH_CHUNK_SIZE;
+    size_t item_index = (size_t)fd % L4_FD_WATCH_CHUNK_SIZE;
+    struct l4_fd_watch *chunk = app->watch_chunks[chunk_index];
+    if (chunk == NULL && create) {
+        chunk = calloc(L4_FD_WATCH_CHUNK_SIZE, sizeof(*chunk));
+        if (chunk == NULL) {
+            return NULL;
+        }
+        app->watch_chunks[chunk_index] = chunk;
+    }
+    return chunk == NULL ? NULL : &chunk[item_index];
+}
+
+static void watch_table_destroy(struct l4_app *app)
+{
+    if (app->watch_chunks == NULL) {
+        return;
+    }
+    for (size_t index = 0; index < app->watch_chunk_count; ++index) {
+        free(app->watch_chunks[index]);
+    }
+    free(app->watch_chunks);
+    app->watch_chunks = NULL;
+}
+
 static void watch_advance_generation(struct l4_fd_watch *watch)
 {
     watch->generation++;
@@ -419,10 +490,13 @@ static int watch_bind(struct l4_app *app,
                       enum l4_fd_role role,
                       struct l4_connection *connection)
 {
-    if (fd < 0 || (size_t)fd >= app->watch_count) {
+    if (fd < 0 || (size_t)fd >= app->max_fds) {
         return -EMFILE;
     }
-    struct l4_fd_watch *watch = &app->watches[fd];
+    struct l4_fd_watch *watch = watch_get(app, fd, true);
+    if (watch == NULL) {
+        return -ENOMEM;
+    }
     if (watch->role != L4_FD_NONE || watch->registered) {
         return -EBUSY;
     }
@@ -433,11 +507,8 @@ static int watch_bind(struct l4_app *app,
 
 static int watch_arm(struct l4_app *app, int fd, uint32_t events)
 {
-    if (fd < 0 || (size_t)fd >= app->watch_count) {
-        return -EINVAL;
-    }
-    struct l4_fd_watch *watch = &app->watches[fd];
-    if (watch->role == L4_FD_NONE) {
+    struct l4_fd_watch *watch = watch_get(app, fd, false);
+    if (watch == NULL || watch->role == L4_FD_NONE) {
         return -EINVAL;
     }
 
@@ -475,10 +546,10 @@ static int watch_arm(struct l4_app *app, int fd, uint32_t events)
 
 static void watch_unbind(struct l4_app *app, int fd)
 {
-    if (fd < 0 || (size_t)fd >= app->watch_count) {
+    struct l4_fd_watch *watch = watch_get(app, fd, false);
+    if (watch == NULL) {
         return;
     }
-    struct l4_fd_watch *watch = &app->watches[fd];
     watch->connection = NULL;
     watch->events = 0;
     watch->role = L4_FD_NONE;
@@ -978,7 +1049,6 @@ static int connection_start(struct l4_connection *connection,
 static int maybe_arm_listener(struct l4_app *app)
 {
     if (app->stopping || app->draining || app->listener_fd < 0 ||
-        app->stats.active_connections >= app->options.max_connections ||
         app->listener_retry_deadline_ns != 0) {
         return 0;
     }
@@ -987,37 +1057,48 @@ static int maybe_arm_listener(struct l4_app *app)
 
 static void handle_listener_event(struct l4_app *app)
 {
-    size_t accepted_this_event = 0;
+    size_t attempts_this_event = 0;
     while (!app->stopping && !app->draining &&
-           accepted_this_event < L4_ACCEPT_BUDGET &&
-           app->stats.active_connections < app->options.max_connections) {
+           attempts_this_event < L4_ACCEPT_BUDGET) {
+        attempts_this_event++;
         int client = accept4(app->listener_fd, NULL, NULL,
                              SOCK_NONBLOCK | SOCK_CLOEXEC);
         if (client < 0) {
-            if (errno == EINTR) {
+            int error = errno;
+            if (error == EINTR) {
                 continue;
             }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (error == EAGAIN || error == EWOULDBLOCK) {
                 break;
             }
-            if (errno == EMFILE || errno == ENFILE) {
-                uint64_t now = 0;
-                int result = monotonic_now_ns(&now);
+            if (accept_error_is_connection_local(error)) {
+                app->stats.rejected++;
+                continue;
+            }
+            if (accept_error_needs_retry(error)) {
+                int result = schedule_listener_retry(app);
                 if (result != 0) {
                     app_fail(app, result);
                     return;
                 }
                 app->stats.rejected++;
-                app->listener_retry_deadline_ns =
-                    deadline_after_ms(now, L4_LISTENER_RETRY_MS);
                 return;
             }
-            app_fail(app, negative_errno());
+            app_fail(app, -error);
             return;
         }
-        accepted_this_event++;
         app->stats.accepted++;
 
+        if (app->stats.active_connections >=
+            app->options.max_connections) {
+            app->stats.rejected++;
+            (void)close(client);
+            int result = schedule_listener_retry(app);
+            if (result != 0) {
+                app_fail(app, result);
+            }
+            return;
+        }
         if (set_socket_options(client, app->options.tcp_nodelay) != 0) {
             app->stats.rejected++;
             (void)close(client);
@@ -1192,11 +1273,8 @@ static void dispatch_event(struct l4_app *app,
 {
     int fd = (int)(uint32_t)event->data.u64;
     uint32_t generation = (uint32_t)(event->data.u64 >> 32);
-    if (fd < 0 || (size_t)fd >= app->watch_count) {
-        return;
-    }
-    struct l4_fd_watch *watch = &app->watches[fd];
-    if (!watch->registered || !watch->armed ||
+    struct l4_fd_watch *watch = watch_get(app, fd, false);
+    if (watch == NULL || !watch->registered || !watch->armed ||
         watch->generation != generation) {
         return;
     }
@@ -1302,21 +1380,31 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    app.watch_count = app_max_fds(app.options.max_connections);
-    if (app.watch_count == 0 ||
-        app.watch_count > SIZE_MAX / sizeof(*app.watches)) {
+    app.max_fds = app_max_fds(app.options.max_connections);
+    if (app.max_fds == 0) {
         fputs("RLIMIT_NOFILE is too small for max-connections\n", stderr);
         (void)close(app.signal_fd);
         (void)close(app.listener_fd);
         return EXIT_FAILURE;
     }
-    app.watches = calloc(app.watch_count, sizeof(*app.watches));
+    app.watch_chunk_count =
+        app.max_fds / L4_FD_WATCH_CHUNK_SIZE +
+        (app.max_fds % L4_FD_WATCH_CHUNK_SIZE != 0);
+    if (app.watch_chunk_count >
+        SIZE_MAX / sizeof(*app.watch_chunks)) {
+        fputs("forwarder watch table is too large\n", stderr);
+        (void)close(app.signal_fd);
+        (void)close(app.listener_fd);
+        return EXIT_FAILURE;
+    }
+    app.watch_chunks =
+        calloc(app.watch_chunk_count, sizeof(*app.watch_chunks));
     app.connect_heap =
         calloc(app.options.max_connections, sizeof(*app.connect_heap));
-    if (app.watches == NULL || app.connect_heap == NULL) {
+    if (app.watch_chunks == NULL || app.connect_heap == NULL) {
         fputs("forwarder state allocation failed\n", stderr);
         free(app.connect_heap);
-        free(app.watches);
+        watch_table_destroy(&app);
         (void)close(app.signal_fd);
         (void)close(app.listener_fd);
         return EXIT_FAILURE;
@@ -1326,7 +1414,7 @@ int main(int argc, char **argv)
     if (app.epoll_fd < 0) {
         fprintf(stderr, "epoll setup failed: %s\n", strerror(errno));
         free(app.connect_heap);
-        free(app.watches);
+        watch_table_destroy(&app);
         (void)close(app.signal_fd);
         (void)close(app.listener_fd);
         return EXIT_FAILURE;
@@ -1347,7 +1435,7 @@ int main(int argc, char **argv)
         close_watched_fd(&app, &app.listener_fd);
         (void)close(app.epoll_fd);
         free(app.connect_heap);
-        free(app.watches);
+        watch_table_destroy(&app);
         return EXIT_FAILURE;
     }
 
@@ -1365,7 +1453,7 @@ int main(int argc, char **argv)
     (void)close(app.epoll_fd);
     print_summary(&app);
     free(app.connect_heap);
-    free(app.watches);
+    watch_table_destroy(&app);
 
     if (result != 0 || app.fatal_error != 0) {
         fprintf(stderr, "forwarder failed: app=%d\n", app.fatal_error);

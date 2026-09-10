@@ -26,6 +26,7 @@
 #define L4_DEFAULT_CONNECT_TIMEOUT_MS 3000
 #define L4_DEFAULT_GRACE_MS 30000
 #define L4_IO_BUDGET_BYTES ((size_t)1024 * 1024)
+#define L4_LISTENER_RETRY_MS 10
 
 struct l4_options {
     const char *listen_host;
@@ -325,6 +326,42 @@ static void app_fail(struct l4_app *app, int error)
     (void)rco_runtime_stop(app->runtime);
 }
 
+static bool accept_error_is_connection_local(int error)
+{
+    switch (error) {
+    case ECONNABORTED:
+    case ENETDOWN:
+    case EPROTO:
+    case ENOPROTOOPT:
+    case EHOSTDOWN:
+    case ENONET:
+    case EHOSTUNREACH:
+    case EOPNOTSUPP:
+    case ENETUNREACH:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool accept_error_needs_retry(int error)
+{
+    return error == EMFILE || error == ENFILE || error == ENOBUFS ||
+           error == ENOMEM;
+}
+
+static int wait_before_listener_retry(struct l4_app *app)
+{
+    int result = rco_sleep_ms(L4_LISTENER_RETRY_MS);
+    if (result == -ECANCELED && app->draining) {
+        return 0;
+    }
+    if (result != 0) {
+        app_fail(app, result);
+    }
+    return result;
+}
+
 static int handle_listener_wait_error(struct l4_app *app, int error)
 {
     if (app->draining || error == -ECANCELED || error == -EBADF) {
@@ -612,38 +649,46 @@ static int accept_entry(void *argument)
 {
     struct l4_app *app = argument;
     while (!app->draining) {
-        size_t accepted_this_turn = 0;
-        while (accepted_this_turn < L4_ACCEPT_BUDGET && !app->draining) {
+        size_t attempts_this_turn = 0;
+        while (attempts_this_turn < L4_ACCEPT_BUDGET && !app->draining) {
+            attempts_this_turn++;
             int client = accept4(app->listener_fd, NULL, NULL,
                                  SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (client < 0) {
-                if (errno == EINTR) {
+                int error = errno;
+                if (error == EINTR) {
                     continue;
                 }
-                if (errno == EAGAIN) {
+                if (error == EAGAIN || error == EWOULDBLOCK) {
                     break;
                 }
-                if (app->draining && errno == EBADF) {
+                if (app->draining && error == EBADF) {
                     return 0;
                 }
-                if (errno == EMFILE || errno == ENFILE) {
+                if (accept_error_is_connection_local(error)) {
                     app->stats.rejected++;
-                    (void)rco_sleep_ms(10);
+                    continue;
+                }
+                if (accept_error_needs_retry(error)) {
+                    app->stats.rejected++;
+                    int result = wait_before_listener_retry(app);
+                    if (result != 0) {
+                        return result;
+                    }
                     break;
                 }
-                app_fail(app, negative_errno());
+                app_fail(app, -error);
                 return app->fatal_error;
             }
-            accepted_this_turn++;
             app->stats.accepted++;
 
             if (app->stats.active_connections >=
                 app->options.max_connections) {
                 app->stats.rejected++;
                 (void)close(client);
-                int sleep_result = rco_sleep_ms(10);
-                if (sleep_result != 0) {
-                    return sleep_result;
+                int result = wait_before_listener_retry(app);
+                if (result != 0) {
+                    return result;
                 }
                 break;
             }
@@ -680,7 +725,7 @@ static int accept_entry(void *argument)
         if (app->draining) {
             break;
         }
-        if (accepted_this_turn == L4_ACCEPT_BUDGET) {
+        if (attempts_this_turn == L4_ACCEPT_BUDGET) {
             int result = rco_yield();
             if (result != 0) {
                 return result;

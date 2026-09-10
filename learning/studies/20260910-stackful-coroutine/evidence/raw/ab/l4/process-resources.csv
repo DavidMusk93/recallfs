@@ -1,0 +1,11 @@
+mode,run,vm_peak_kb,vm_hwm_kb,user_ticks,system_ticks,voluntary_context_switches,nonvoluntary_context_switches
+coroutine,1,4720,1904,3,397,18,22
+epoll,1,2948,1760,3,397,18,37
+coroutine,2,4720,2136,4,397,18,28
+epoll,2,2948,1768,2,398,18,27
+coroutine,3,4720,2016,2,399,18,20
+epoll,3,2948,1760,3,396,18,20
+coroutine,4,4720,1896,3,398,18,23
+epoll,4,2948,1736,2,397,18,28
+coroutine,5,4720,2072,2,399,18,26
+epoll,5,2948,1740,3,397,18,25

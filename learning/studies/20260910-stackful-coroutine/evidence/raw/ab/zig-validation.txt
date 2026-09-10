@@ -1,0 +1,3 @@
+zig cc -O0 runtime+coroutine+epoll PASS
+zig cc -O2 runtime+coroutine+epoll PASS
+zig cc -O3 runtime+coroutine+epoll PASS

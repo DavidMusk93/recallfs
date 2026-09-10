@@ -1,0 +1,20 @@
+Internal ctest changing into directory: /root/recallfs/.tmp/rco-ab/final/cmake
+Test project /root/recallfs/.tmp/rco-ab/final/cmake
+    Start 1: rco_native
+1/7 Test #1: rco_native .......................   Passed    0.01 sec
+    Start 2: rco_guard_page
+2/7 Test #2: rco_guard_page ...................   Passed    0.05 sec
+    Start 3: epoll_l4_state_machine
+3/7 Test #3: epoll_l4_state_machine ...........   Passed    0.00 sec
+    Start 4: l4_bench_process_resources
+4/7 Test #4: l4_bench_process_resources .......   Passed    0.01 sec
+    Start 5: rco_l4_wait_failure
+5/7 Test #5: rco_l4_wait_failure ..............   Passed    0.00 sec
+    Start 6: rco_l4_e2e
+6/7 Test #6: rco_l4_e2e .......................   Passed    1.14 sec
+    Start 7: epoll_l4_e2e
+7/7 Test #7: epoll_l4_e2e .....................   Passed    1.16 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Total Test time (real) =   2.37 sec

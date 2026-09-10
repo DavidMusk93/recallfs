@@ -1,0 +1,19 @@
+source_commit=463126cb7ab3e40df6f214803695dd200a4f0ef4
+host=n37-125-152
+compiler=gcc (Debian 8.3.0-6) 8.3.0
+flags=-std=c11 -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch 
+zig_version=0.16.0
+zig_cc=clang version 21.1.0
+zig_archive_sha256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+filc_archive_sha256=eefb594bcbc1261a18dfa8b50041674635f53df2b5fe067915b5652adaed4e3f
+filc_container=debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
+f496cac01206d510a1c2ae25a1d4d0ea262808a33e6da41d623a360d557fbf51  /root/recallfs/.tmp/rco-ab/source/demo/src/rco.c
+42b906658f44801887a1903288766fae96d19f0e5db8137a703b2e590bc955e5  /root/recallfs/.tmp/rco-ab/source/demo/src/rco_context_x86_64.S
+9de36e4eec8f819d3bbfe2cc7d70bf7a9c1365e93bc94f384f41564bd2c0dcbc  /root/recallfs/.tmp/rco-ab/source/demo/bench/rco_bench.c
+c5e2aabbe0b5a2bf46b116442045a1bd543b5708af97caa2cb253b8459ef0e37  /root/recallfs/.tmp/rco-ab/source/demo/examples/l4_forwarder.c
+28fad64cd3ac0e8acad97842ae86109d48efa9209996f594e3185eacaefa6ae6  /root/recallfs/.tmp/rco-ab/source/demo/examples/l4_forwarder_epoll.c
+e05f7d4470bb963a1c04162910a851f400325b2e84b5535b5f02f4c8179b25e1  /root/recallfs/.tmp/rco-ab/source/demo/bench/l4_bench.sh
+0cab7e84c4d7376b11f6a0ccb15ff3db8c60de359dabe435e2e7606594bef6ea  /root/recallfs/.tmp/rco-ab/source/demo/bench/process_resources.sh
+a7d8c0c651f90a68144ae1e1c268f31c982746a0ed0036c1419192ebf1892cde  /root/recallfs/.tmp/rco-ab/final/rco-bench
+61f526568e0f8234af40a0ca0acf212802dffcd24793c89f9e6f04df880bb8e7  /root/recallfs/.tmp/rco-ab/final/l4-coroutine
+a6226d362004b22b777418f2d8a95fa5b8a8d8d3fd0fc5463fecfe2f2d728c90  /root/recallfs/.tmp/rco-ab/final/l4-epoll

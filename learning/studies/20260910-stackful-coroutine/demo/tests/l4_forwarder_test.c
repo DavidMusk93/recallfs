@@ -17,9 +17,39 @@ static int never_run(void *argument)
     return 0;
 }
 
+static int test_accept_error_classification(void)
+{
+    const int connection_errors[] = {
+        ECONNABORTED,
+        ENETDOWN,
+        EPROTO,
+        ENOPROTOOPT,
+        EHOSTDOWN,
+        ENONET,
+        EHOSTUNREACH,
+        EOPNOTSUPP,
+        ENETUNREACH,
+    };
+    for (size_t index = 0;
+         index < sizeof(connection_errors) / sizeof(connection_errors[0]);
+         ++index) {
+        CHECK(accept_error_is_connection_local(connection_errors[index]));
+        CHECK(!accept_error_needs_retry(connection_errors[index]));
+    }
+
+    CHECK(accept_error_needs_retry(EMFILE));
+    CHECK(accept_error_needs_retry(ENFILE));
+    CHECK(accept_error_needs_retry(ENOBUFS));
+    CHECK(accept_error_needs_retry(ENOMEM));
+    CHECK(!accept_error_is_connection_local(EBADF));
+    CHECK(!accept_error_needs_retry(EBADF));
+    return 0;
+}
+
 int main(void)
 {
     struct l4_app app = {0};
+    CHECK(test_accept_error_classification() == 0);
     CHECK(rco_runtime_create(NULL, &app.runtime) == 0);
 
     app.draining = true;

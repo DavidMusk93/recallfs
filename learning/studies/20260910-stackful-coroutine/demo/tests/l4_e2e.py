@@ -2,6 +2,8 @@
 
 import argparse
 import concurrent.futures
+import re
+import select
 import signal
 import socket
 import socketserver
@@ -13,20 +15,52 @@ import time
 
 class EchoHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        received = bytearray()
-        while True:
-            data = self.request.recv(65536)
-            if not data:
-                break
-            received.extend(data)
-        self.request.sendall(received)
-        self.request.shutdown(socket.SHUT_WR)
+        self.server.connection_opened()
+        try:
+            received = bytearray()
+            while True:
+                data = self.request.recv(65536)
+                if not data:
+                    break
+                received.extend(data)
+            self.request.sendall(received)
+            self.request.shutdown(socket.SHUT_WR)
+        finally:
+            self.server.connection_closed()
 
 
 class EchoServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
     request_queue_size = 512
+
+    def __init__(self, server_address, handler):
+        super().__init__(server_address, handler)
+        self.active_condition = threading.Condition()
+        self.active_connections = 0
+
+    def connection_opened(self):
+        with self.active_condition:
+            self.active_connections += 1
+            self.active_condition.notify_all()
+
+    def connection_closed(self):
+        with self.active_condition:
+            self.active_connections -= 1
+            self.active_condition.notify_all()
+
+    def wait_for_active(self, expected, timeout=2):
+        deadline = time.monotonic() + timeout
+        with self.active_condition:
+            while self.active_connections != expected:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError(
+                        "backend active connections stayed at {}, expected {}".format(
+                            self.active_connections, expected
+                        )
+                    )
+                self.active_condition.wait(remaining)
 
 
 def reserve_port():
@@ -50,7 +84,20 @@ def wait_for_listener(port, process):
     raise RuntimeError("forwarder did not listen within five seconds")
 
 
-def forwarder_command(binary, proxy_port, backend_port, grace_ms):
+def wait_for_startup_output(process):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError("forwarder exited before reporting startup")
+        readable, _, _ = select.select([process.stdout], [], [], 0.1)
+        if readable and process.stdout.readline().startswith("listening="):
+            return
+    raise RuntimeError("forwarder did not report startup within five seconds")
+
+
+def forwarder_command(
+    binary, proxy_port, backend_port, grace_ms, max_connections=256
+):
     return [
         binary,
         "--listen-host",
@@ -62,7 +109,7 @@ def forwarder_command(binary, proxy_port, backend_port, grace_ms):
         "--upstream-port",
         str(backend_port),
         "--max-connections",
-        "256",
+        str(max_connections),
         "--buffer-size",
         "32768",
         "--connect-timeout-ms",
@@ -141,6 +188,65 @@ def main():
             raise AssertionError("forwarder summary is missing counters")
         print("l4 e2e passed: {} concurrent payload bytes".format(total))
         print(stdout.strip())
+
+        capacity_port = reserve_port()
+        process = subprocess.Popen(
+            forwarder_command(
+                args.forwarder,
+                capacity_port,
+                backend_port,
+                1000,
+                max_connections=1,
+            ),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        process_collected = False
+        wait_for_startup_output(process)
+        held_connection = socket.create_connection(
+            ("127.0.0.1", capacity_port), timeout=2
+        )
+        held_connection.settimeout(2)
+        held_connection.sendall(b"held")
+        backend.wait_for_active(1)
+        with socket.create_connection(
+            ("127.0.0.1", capacity_port), timeout=2
+        ) as excess_connection:
+            excess_connection.settimeout(1)
+            try:
+                excess_data = excess_connection.recv(1)
+            except ConnectionResetError:
+                excess_data = b""
+            if excess_data:
+                raise AssertionError("excess connection received unexpected data")
+        held_connection.shutdown(socket.SHUT_WR)
+        held_response = bytearray()
+        while True:
+            chunk = held_connection.recv(16)
+            if not chunk:
+                break
+            held_response.extend(chunk)
+        held_connection.close()
+        if held_response != b"held":
+            raise AssertionError("established connection did not survive rejection")
+        backend.wait_for_active(0)
+        process.send_signal(signal.SIGTERM)
+        capacity_stdout, capacity_stderr = process.communicate(timeout=5)
+        process_collected = True
+        if process.returncode != 0:
+            raise RuntimeError(
+                "capacity forwarder exited {}:\n{}\n{}".format(
+                    process.returncode, capacity_stdout, capacity_stderr
+                )
+            )
+        summaries = re.findall(r"^accepted=.*$", capacity_stdout, re.MULTILINE)
+        if len(summaries) != 1:
+            raise AssertionError("capacity run emitted {} summaries".format(len(summaries)))
+        rejected_match = re.search(r"\brejected=(\d+)\b", summaries[0])
+        if rejected_match is None or int(rejected_match.group(1)) < 1:
+            raise AssertionError("capacity run did not count rejection")
+        print("l4 capacity rejection passed")
 
         forced_port = reserve_port()
         process = subprocess.Popen(

@@ -1,8 +1,85 @@
+---
+doc_id: recallfs-runbook-rco-demo-v1
+kind: runbook
+status: active
+authority: design
+applies_to:
+  - learning/studies/20260910-stackful-coroutine/demo
+depends_on:
+  - recallfs-study-stackful-coroutine-v1
+supersedes: []
+verified_by:
+  - CORO-RA-1
+  - CORO-RA-2
+  - CORO-RA-3
+  - CORO-RA-4
+  - CORO-RA-6
+  - CORO-RA-7
+---
+
 # rco Demo
 
 `rco` is a C11 stackful coroutine runtime for one Linux x86-64 thread. The
-same project builds correctness tests, a context-switch benchmark, and a TCP
-layer-4 forwarder.
+same project builds correctness tests, a context-switch benchmark, a coroutine
+TCP layer-4 forwarder, and a non-coroutine epoll baseline.
+
+## Contract
+
+### Decision
+
+Build and validate both forwarders from the same source tree on Linux x86-64.
+Use FIL-C for executed C paths, Zig as the pinned LLVM frontend, native GCC for
+target-machine performance, and the same E2E/benchmark inputs for both models.
+
+### Scope
+
+This runbook owns build, correctness, sanitizer, launch, and benchmark commands
+for `learning/studies/20260910-stackful-coroutine/demo/`; the parent study owns
+interpretation.
+
+### Non-goals
+
+These commands do not provision a service, tune a host, or establish real-NIC
+capacity and tail-latency SLOs.
+
+### Inputs And Outputs
+
+| Input | Output |
+| --- | --- |
+| Linux x86-64 source tree and pinned compilers | runtime, tests, two forwarders |
+| Two forwarder binaries and CPU/NUMA settings | aggregate, per-stream, and process-resource CSV |
+
+### Interfaces And Ownership
+
+CMake owns development builds; explicit GCC commands own performance binaries;
+the A/B script owns child processes, ports, cleanup, and generated evidence.
+
+### Invariants
+
+- both forwarders receive identical CLI limits and traffic;
+- every benchmark stream must make positive sender and receiver progress;
+- build/test artifacts stay under the repository-local `.tmp` workspace;
+- performance results come from native GCC binaries, never FIL-C.
+
+### Failure Semantics
+
+Any failed build, CTest, sanitizer, listener probe, stream check, or child
+process aborts the run. PMU and frequency-control unavailability is recorded
+without fabricating substitute counters.
+
+### Worked Example
+
+`RUNS=5 DURATION=3` executes `direct -> coroutine -> epoll` for each run,
+producing 15 aggregate rows and 60 per-stream rows when `PARALLEL=4`.
+
+### Reconciliation Anchors
+
+See `CORO-RA-1` through `CORO-RA-7` in [`../README.md`](../README.md).
+
+### Evidence And Unknowns
+
+The latest observed outputs are under [`../evidence/raw/ab/`](../evidence/raw/ab/).
+Real-NIC and long-duration behavior remain outside this runbook.
 
 ## Platform Contract
 
@@ -41,14 +118,16 @@ The CTest targets cover:
 - timer timeout and nonblocking pipe wakeup;
 - callee-saved GPR and floating-point control preservation;
 - stack cache reuse and guard-page overflow;
-- concurrent TCP forwarding, exact payloads, half-close, graceful drain, and
-  forced shutdown.
+- epoll bidirectional budget, half-close, and generation state;
+- `/proc/<pid>/stat` parsing with spaces and `)` in `comm`;
+- the same concurrent TCP forwarding, exact payload, half-close, graceful
+  drain, and forced-shutdown suite against both forwarders.
 
 ## FIL-C
 
 FIL-C 0.684 on d2 runs inside a pinned Debian bookworm container because the
 d2 host glibc 2.28 is older than the compiler binary requirement. The compiler
-distribution remains under `.tmp/fil-c/`.
+distribution remains under `/root/recallfs/.tmp/fil-c`.
 
 `rco_context_filc.c` replaces only the assembly boundary. Its switch function
 aborts if called, so the FIL-C test cannot accidentally claim to validate
@@ -60,19 +139,41 @@ docker run --rm --network none \
   -v /usr/bin/x86_64-linux-gnu-ld.bfd:/usr/bin/ld:ro \
   -v /lib/x86_64-linux-gnu/libbfd-2.31.1-system.so:\
 /lib/x86_64-linux-gnu/libbfd-2.31.1-system.so:ro \
-  -w /root/recallfs debian:bookworm-slim sh -ceu '
+  -w /root/recallfs \
+  debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 \
+  sh -ceu '
     src=learning/studies/20260910-stackful-coroutine/demo
-    .tmp/fil-c/bin/filcc -DRCO_FILC -std=c11 -O2 -g \
+    filcc=.tmp/fil-c/bin/filcc
+    filrun=.tmp/fil-c/bin/filrun
+    $filcc -DRCO_FILC -std=c11 -O2 -g \
       -Wall -Wextra -Werror -I "$src/include" -I "$src/src" \
       "$src/src/rco.c" "$src/tests/rco_context_filc.c" \
       "$src/tests/rco_filc_test.c" -o .tmp/rco-filc-test
-    .tmp/fil-c/bin/filrun .tmp/rco-filc-test
+    $filrun .tmp/rco-filc-test
+    $filcc -std=c11 -O2 -g -Wall -Wextra -Werror \
+      "$src/tests/l4_forwarder_epoll_test.c" -o .tmp/l4-epoll-filc-test
+    $filrun .tmp/l4-epoll-filc-test
   '
 ```
 
 The unusual linker mounts are only a compatibility adapter for the pinned
 minimal container. They do not affect generated-code performance because
 FIL-C results are never used as benchmark data.
+
+## Zig LLVM Frontend
+
+The pinned d2 cross-check compiler is Zig 0.16.0:
+
+```text
+archive: zig-x86_64-linux-0.16.0.tar.xz
+sha256:  70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+driver:  .tmp/zig/dist/zig cc
+LLVM:    Clang 21.1.0
+```
+
+`zig cc` builds both forwarders and the runtime tests at O0/O2/O3. The
+ASan/UBSan E2E binaries also use `zig cc`. Performance binaries deliberately
+use native GCC instead.
 
 ## Library Example
 
@@ -126,6 +227,9 @@ explicitly with `--listen-host 0.0.0.0` or `--listen-host ::`.
   --grace-ms 30000
 ```
 
+Use `.tmp/rco-build/rco_l4_forwarder_epoll` with the same arguments to run the
+non-coroutine state-machine baseline.
+
 Operational controls:
 
 | Option | Meaning |
@@ -158,6 +262,10 @@ gcc $flags -I "$src/include" -I "$src/src" \
 gcc $flags -I "$src/include" -I "$src/src" \
   "$src/src/rco.c" "$src/src/rco_context_x86_64.S" \
   "$src/examples/l4_forwarder.c" -o .tmp/rco-l4-forwarder
+
+gcc $flags \
+  "$src/examples/l4_forwarder_epoll.c" \
+  -o .tmp/rco-l4-forwarder-epoll
 ```
 
 Context benchmark:
@@ -172,11 +280,15 @@ L4 direct-versus-proxy benchmark:
 ```bash
 RUNS=5 DURATION=3 \
   "$src/bench/l4_bench.sh" \
-  .tmp/rco-l4-forwarder .tmp/rco-l4-results
+  .tmp/rco-l4-forwarder \
+  .tmp/rco-l4-forwarder-epoll \
+  .tmp/rco-l4-results
 ```
 
 The L4 script requires `iperf3`, `jq`, `numactl`, and Python 3. It pins proxy,
-server, and client to CPUs 0, 1, and 2 on NUMA node 0. It rejects a run unless
-every requested sender and receiver stream transfers data, and writes
-per-stream results to `stream-throughput.csv`. Do not compare its loopback
-numbers with a real-NIC result.
+server, and client to CPUs 0, 1, and 2 on NUMA node 0. Each run interleaves
+direct, coroutine, and epoll-state-machine paths. It rejects a run unless every
+requested sender and receiver stream transfers data, writes per-stream results
+to `stream-throughput.csv`, and records process VM/CPU counters in
+`process-resources.csv`. Do not compare its loopback numbers with a real-NIC
+result.
