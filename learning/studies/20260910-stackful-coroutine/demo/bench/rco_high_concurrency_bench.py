@@ -21,6 +21,10 @@ MAX_TOTAL_YIELDS = 20_000_000
 MAX_RUNS = 10
 MAX_CASES = 10
 MAX_TIMEOUT_SECONDS = 600.0
+CLD_EXITED = getattr(os, "CLD_EXITED", 1)
+CLD_KILLED = getattr(os, "CLD_KILLED", 2)
+CLD_DUMPED = getattr(os, "CLD_DUMPED", 3)
+CLD_STOPPED = getattr(os, "CLD_STOPPED", 5)
 
 SAMPLE_FIELDS = (
     "schema",
@@ -280,12 +284,12 @@ def wait_until_stopped(process, deadline):
             )
         except ChildProcessError:
             event = None
-        if event is not None and event.si_code == os.CLD_STOPPED:
+        if event is not None and event.si_code == CLD_STOPPED:
             return
         if event is not None and event.si_code in (
-            os.CLD_EXITED,
-            os.CLD_KILLED,
-            os.CLD_DUMPED,
+            CLD_EXITED,
+            CLD_KILLED,
+            CLD_DUMPED,
         ):
             stdout, stderr = process.communicate()
             raise BenchmarkError(
