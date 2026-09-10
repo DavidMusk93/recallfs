@@ -118,6 +118,9 @@ static void test_deep_stack_survives_suspend(void)
 
 struct cancel_case {
     bool entered;
+    bool finalized;
+    int owned_fd;
+    int close_result;
 };
 
 static int cancelled_worker(void *argument)
@@ -127,18 +130,40 @@ static int cancelled_worker(void *argument)
     return 0;
 }
 
+static void cancelled_worker_finalizer(void *argument)
+{
+    struct cancel_case *test_case = argument;
+    test_case->close_result = rco_close_fd(test_case->owned_fd);
+    test_case->finalized = true;
+}
+
 static void test_cancel_before_first_resume(void)
 {
     struct rco_runtime *runtime = NULL;
     CHECK(rco_runtime_create(NULL, &runtime) == 0);
 
-    struct cancel_case test_case = {0};
+    int pipe_fds[2];
+    CHECK(pipe2(pipe_fds, O_NONBLOCK | O_CLOEXEC) == 0);
+    struct cancel_case test_case = {
+        .owned_fd = pipe_fds[1],
+        .close_result = -1,
+    };
     uint64_t task_id = 0;
-    CHECK(rco_spawn(runtime, 0, cancelled_worker, &test_case, &task_id) == 0);
+    const struct rco_task_spec spec = {
+        .entry = cancelled_worker,
+        .argument = &test_case,
+        .finalizer = cancelled_worker_finalizer,
+    };
+    CHECK(rco_spawn_task(runtime, &spec, &task_id) == 0);
     CHECK(task_id != 0);
     CHECK(rco_cancel(runtime, task_id) == 0);
     CHECK(rco_runtime_run(runtime) == 0);
     CHECK(!test_case.entered);
+    CHECK(test_case.finalized);
+    CHECK(test_case.close_result == 0);
+    CHECK(fcntl(pipe_fds[1], F_GETFD) == -1);
+    CHECK(errno == EBADF);
+    CHECK(close(pipe_fds[0]) == 0);
 
     struct rco_stats stats;
     CHECK(rco_runtime_get_stats(runtime, &stats) == 0);

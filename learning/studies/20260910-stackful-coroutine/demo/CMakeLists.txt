@@ -12,6 +12,14 @@ option(RCO_BUILD_TESTS "Build native correctness tests" ON)
 option(RCO_BUILD_BENCHMARKS "Build context-switch benchmarks" ON)
 option(RCO_BUILD_EXAMPLES "Build production-oriented examples" ON)
 
+function(rco_enable_c_warnings target)
+    target_compile_options(
+        ${target}
+        PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:-Wall;-Wextra;-Werror;-fno-omit-frame-pointer>
+    )
+endfunction()
+
 add_library(rco
     src/rco.c
     src/rco_context_x86_64.S
@@ -27,65 +35,33 @@ target_include_directories(
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_compile_options(
-    rco
-    PRIVATE
-        $<$<COMPILE_LANGUAGE:C>:-Wall;-Wextra;-Werror;-fno-omit-frame-pointer>
-        $<$<COMPILE_LANGUAGE:ASM>:-fcf-protection=branch>
-)
+rco_enable_c_warnings(rco)
+target_compile_options(rco PRIVATE $<$<COMPILE_LANGUAGE:ASM>:-fcf-protection=branch>)
 
 if(RCO_BUILD_TESTS)
     enable_testing()
 
     add_executable(rco_test tests/rco_test.c)
     target_link_libraries(rco_test PRIVATE rco m)
-    target_compile_options(
-        rco_test
-        PRIVATE
-            -Wall
-            -Wextra
-            -Werror
-            -fno-omit-frame-pointer
-    )
+    rco_enable_c_warnings(rco_test)
     add_test(NAME rco_native COMMAND rco_test)
 
     add_executable(rco_guard_test tests/rco_guard_test.c)
     target_link_libraries(rco_guard_test PRIVATE rco)
-    target_compile_options(
-        rco_guard_test
-        PRIVATE
-            -Wall
-            -Wextra
-            -Werror
-            -fno-omit-frame-pointer
-    )
+    rco_enable_c_warnings(rco_guard_test)
     add_test(NAME rco_guard_page COMMAND rco_guard_test)
 endif()
 
 if(RCO_BUILD_BENCHMARKS)
     add_executable(rco_bench bench/rco_bench.c)
     target_link_libraries(rco_bench PRIVATE rco)
-    target_compile_options(
-        rco_bench
-        PRIVATE
-            -Wall
-            -Wextra
-            -Werror
-            -fno-omit-frame-pointer
-    )
+    rco_enable_c_warnings(rco_bench)
 endif()
 
 if(RCO_BUILD_EXAMPLES)
     add_executable(rco_l4_forwarder examples/l4_forwarder.c)
     target_link_libraries(rco_l4_forwarder PRIVATE rco)
-    target_compile_options(
-        rco_l4_forwarder
-        PRIVATE
-            -Wall
-            -Wextra
-            -Werror
-            -fno-omit-frame-pointer
-    )
+    rco_enable_c_warnings(rco_l4_forwarder)
 
     if(RCO_BUILD_TESTS)
         find_package(Python3 COMPONENTS Interpreter REQUIRED)

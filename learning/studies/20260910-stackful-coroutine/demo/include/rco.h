@@ -24,6 +24,14 @@ enum rco_event {
 struct rco_runtime;
 
 typedef int (*rco_entry_fn)(void *argument);
+typedef void (*rco_finalizer_fn)(void *argument);
+
+struct rco_task_spec {
+    size_t stack_size;
+    rco_entry_fn entry;
+    void *argument;
+    rco_finalizer_fn finalizer;
+};
 
 struct rco_config {
     size_t default_stack_size;
@@ -47,8 +55,8 @@ struct rco_stats {
 };
 
 /*
- * The runtime is single-threaded and cooperative. A runtime and its tasks must
- * remain on the thread that calls rco_runtime_run().
+ * The runtime is single-threaded and cooperative. The thread that creates a
+ * runtime owns it and must perform every subsequent operation.
  */
 int rco_runtime_create(const struct rco_config *config,
                        struct rco_runtime **out_runtime);
@@ -61,7 +69,14 @@ int rco_runtime_get_stats(const struct rco_runtime *runtime,
 /*
  * A zero stack_size selects the configured default. Task identifiers are
  * monotonically increasing runtime-local handles and are never raw pointers.
+ * A task finalizer runs exactly once on the scheduler stack after completion
+ * or cancellation. It must not call a coroutine suspension function. When
+ * rco_spawn_task() fails, ownership remains with the caller and the finalizer
+ * is not called.
  */
+int rco_spawn_task(struct rco_runtime *runtime,
+                   const struct rco_task_spec *spec,
+                   uint64_t *out_task_id);
 int rco_spawn(struct rco_runtime *runtime,
               size_t stack_size,
               rco_entry_fn entry,
@@ -70,7 +85,8 @@ int rco_spawn(struct rco_runtime *runtime,
 int rco_cancel(struct rco_runtime *runtime, uint64_t task_id);
 
 /*
- * The following functions are valid only inside a running coroutine.
+ * Yield, wait, sleep, cancellation status, and current ID are valid only
+ * inside a running coroutine.
  * timeout_ms < 0 means no timeout. rco_wait_fd() writes the ready event mask
  * on success and returns -ETIMEDOUT, -ECANCELED, or another negative errno on
  * failure.
@@ -81,6 +97,7 @@ int rco_wait_fd(int fd,
                 int timeout_ms,
                 unsigned *out_ready_events);
 int rco_sleep_ms(uint64_t delay_ms);
+/* Also valid from a task finalizer while the runtime is running. */
 int rco_close_fd(int fd);
 bool rco_cancelled(void);
 uint64_t rco_current_id(void);

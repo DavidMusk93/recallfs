@@ -22,7 +22,7 @@
 
 #define L4_ACCEPT_BUDGET 64
 #define L4_DEFAULT_BUFFER_SIZE ((size_t)64 * 1024)
-#define L4_DEFAULT_MAX_CONNECTIONS ((size_t)1024)
+#define L4_DEFAULT_MAX_CONNECTIONS ((size_t)256)
 #define L4_DEFAULT_CONNECT_TIMEOUT_MS 3000
 #define L4_DEFAULT_GRACE_MS 30000
 #define L4_IO_BUDGET_BYTES ((size_t)1024 * 1024)
@@ -103,7 +103,7 @@ static void print_usage(FILE *stream, const char *program)
             "  --listen-port PORT          Numeric listen port (default 9000)\n"
             "  --upstream-host ADDRESS     Required numeric backend address\n"
             "  --upstream-port PORT        Required numeric backend port\n"
-            "  --max-connections N         Concurrent connection cap (default 1024)\n"
+            "  --max-connections N         Concurrent connection cap (default 256)\n"
             "  --buffer-size BYTES         Buffer per direction, 4K..1M (default 64K)\n"
             "  --connect-timeout-ms N      Backend connect deadline (default 3000)\n"
             "  --grace-ms N                SIGTERM drain deadline (default 30000)\n"
@@ -367,6 +367,17 @@ static void connection_release(struct l4_connection *connection)
     }
 }
 
+static void session_finalizer(void *argument)
+{
+    connection_release(argument);
+}
+
+static void pump_finalizer(void *argument)
+{
+    struct l4_pump *pump = argument;
+    connection_release(pump->connection);
+}
+
 static int wait_for_event(int fd, unsigned events, int timeout_ms)
 {
     unsigned ready = 0;
@@ -428,7 +439,7 @@ static int send_all(int fd,
         if (written < 0 && errno == EINTR) {
             continue;
         }
-        if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        if (written < 0 && errno == EAGAIN) {
             int result = wait_for_event(fd, RCO_EVENT_WRITE, -1);
             if (result != 0) {
                 return result;
@@ -487,7 +498,7 @@ static int pump_entry(void *argument)
         if (errno == EINTR) {
             continue;
         }
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        if (errno == EAGAIN) {
             result = wait_for_event(pump->source_fd, RCO_EVENT_READ, -1);
             if (result != 0) {
                 break;
@@ -510,7 +521,6 @@ static int pump_entry(void *argument)
     if (result != 0) {
         connection_abort(connection);
     }
-    connection_release(connection);
     return result;
 }
 
@@ -523,7 +533,6 @@ static int session_entry(void *argument)
     if (result != 0) {
         app->stats.connect_errors++;
         connection_abort(connection);
-        connection_release(connection);
         return result;
     }
     app->stats.connected++;
@@ -543,25 +552,30 @@ static int session_entry(void *argument)
         .buffer = connection->buffers + app->options.buffer_size,
     };
 
-    result =
-        rco_spawn(app->runtime, 0, pump_entry, &connection->pumps[0], NULL);
+    const struct rco_task_spec first_pump = {
+        .entry = pump_entry,
+        .argument = &connection->pumps[0],
+        .finalizer = pump_finalizer,
+    };
+    result = rco_spawn_task(app->runtime, &first_pump, NULL);
     if (result != 0) {
         connection_abort(connection);
-        connection_release(connection);
         return result;
     }
     connection_retain(connection);
 
-    result =
-        rco_spawn(app->runtime, 0, pump_entry, &connection->pumps[1], NULL);
+    const struct rco_task_spec second_pump = {
+        .entry = pump_entry,
+        .argument = &connection->pumps[1],
+        .finalizer = pump_finalizer,
+    };
+    result = rco_spawn_task(app->runtime, &second_pump, NULL);
     if (result != 0) {
         connection_abort(connection);
-        connection_release(connection);
         return result;
     }
     connection_retain(connection);
 
-    connection_release(connection);
     return 0;
 }
 
@@ -597,7 +611,7 @@ static int accept_entry(void *argument)
                 if (errno == EINTR) {
                     continue;
                 }
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (errno == EAGAIN) {
                     break;
                 }
                 if (app->draining && errno == EBADF) {
@@ -614,9 +628,13 @@ static int accept_entry(void *argument)
             accepted_this_turn++;
             app->stats.accepted++;
 
-            if (set_socket_options(client, app->options.tcp_nodelay) != 0 ||
-                app->stats.active_connections >=
-                    app->options.max_connections) {
+            if (app->stats.active_connections >=
+                app->options.max_connections) {
+                app->stats.rejected++;
+                (void)close(client);
+                continue;
+            }
+            if (set_socket_options(client, app->options.tcp_nodelay) != 0) {
                 app->stats.rejected++;
                 (void)close(client);
                 continue;
@@ -634,8 +652,12 @@ static int accept_entry(void *argument)
                 app->stats.peak_connections =
                     app->stats.active_connections;
             }
-            int result =
-                rco_spawn(app->runtime, 0, session_entry, connection, NULL);
+            const struct rco_task_spec session = {
+                .entry = session_entry,
+                .argument = connection,
+                .finalizer = session_finalizer,
+            };
+            int result = rco_spawn_task(app->runtime, &session, NULL);
             if (result != 0) {
                 app->stats.rejected++;
                 connection_release(connection);
@@ -673,7 +695,7 @@ static int read_signal(int fd)
         if (count < 0 && errno == EINTR) {
             continue;
         }
-        if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        if (count < 0 && errno == EAGAIN) {
             return 0;
         }
         return count < 0 ? negative_errno() : -EIO;

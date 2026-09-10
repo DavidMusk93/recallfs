@@ -48,6 +48,7 @@
 #define RCO_DEFAULT_MAX_FDS ((size_t)65536)
 #define RCO_DEFAULT_STACK_CACHE_BYTES ((size_t)8 * 1024 * 1024)
 #define RCO_EPOLL_BATCH 128
+#define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
 #define RCO_NO_TIMER SIZE_MAX
 
 enum rco_task_state {
@@ -72,15 +73,14 @@ struct rco_task {
     struct rco_runtime *runtime;
     struct rco_stack stack;
     rco_entry_fn entry;
+    rco_finalizer_fn finalizer;
     void *argument;
     uint64_t id;
-    int result;
     enum rco_task_state state;
     bool started;
     bool cancel_requested;
     bool queued;
     int wait_fd;
-    unsigned wait_events;
     unsigned ready_events;
     int wait_result;
     uint64_t deadline_ns;
@@ -90,6 +90,7 @@ struct rco_task {
 #endif
     struct rco_task *ready_next;
     struct rco_task *all_next;
+    struct rco_task **all_previous_next;
 };
 
 struct rco_fd_watch {
@@ -109,7 +110,8 @@ struct rco_runtime {
     struct rco_task *all_tasks;
     struct rco_task **timer_heap;
     size_t timer_count;
-    struct rco_fd_watch *fd_watches;
+    struct rco_fd_watch **fd_watch_chunks;
+    size_t fd_watch_chunk_count;
     struct rco_stack *stack_cache;
     uint64_t next_id;
     long owner_tid;
@@ -420,10 +422,41 @@ static uint64_t rco_watch_token(int fd, uint32_t generation)
     return ((uint64_t)generation << 32) | (uint32_t)fd;
 }
 
+static struct rco_fd_watch *rco_watch_get(struct rco_runtime *runtime,
+                                          int fd,
+                                          bool create)
+{
+    if (fd < 0 || (size_t)fd >= runtime->config.max_fds) {
+        return NULL;
+    }
+    size_t chunk_index = (size_t)fd / RCO_FD_WATCH_CHUNK_SIZE;
+    size_t item_index = (size_t)fd % RCO_FD_WATCH_CHUNK_SIZE;
+    struct rco_fd_watch *chunk = runtime->fd_watch_chunks[chunk_index];
+    if (chunk == NULL && create) {
+        chunk = calloc(RCO_FD_WATCH_CHUNK_SIZE, sizeof(*chunk));
+        if (chunk == NULL) {
+            return NULL;
+        }
+        runtime->fd_watch_chunks[chunk_index] = chunk;
+    }
+    return chunk == NULL ? NULL : &chunk[item_index];
+}
+
+static void rco_watch_advance_generation(struct rco_fd_watch *watch)
+{
+    watch->generation++;
+    if (watch->generation == 0) {
+        watch->generation = 1;
+    }
+}
+
 static int rco_watch_update(struct rco_runtime *runtime, int fd)
 {
-    struct rco_fd_watch *watch = &runtime->fd_watches[fd];
-    uint32_t events = EPOLLERR | EPOLLHUP | EPOLLRDHUP;
+    struct rco_fd_watch *watch = rco_watch_get(runtime, fd, false);
+    if (watch == NULL) {
+        return -EINVAL;
+    }
+    uint32_t events = EPOLLRDHUP;
     if (watch->reader != NULL) {
         events |= EPOLLIN;
     }
@@ -438,10 +471,7 @@ static int rco_watch_update(struct rco_runtime *runtime, int fd)
             return rco_neg_errno();
         }
         watch->registered = false;
-        watch->generation++;
-        if (watch->generation == 0) {
-            watch->generation = 1;
-        }
+        rco_watch_advance_generation(watch);
         return 0;
     }
 
@@ -476,7 +506,12 @@ static void rco_task_detach_wait(struct rco_runtime *runtime,
     }
 
     int fd = task->wait_fd;
-    struct rco_fd_watch *watch = &runtime->fd_watches[fd];
+    struct rco_fd_watch *watch = rco_watch_get(runtime, fd, false);
+    if (watch == NULL) {
+        task->wait_fd = -1;
+        rco_record_fatal(runtime, -EPROTO);
+        return;
+    }
     if (watch->reader == task) {
         watch->reader = NULL;
     }
@@ -514,7 +549,10 @@ static void rco_watch_invalidate(struct rco_runtime *runtime,
     if (fd < 0 || (size_t)fd >= runtime->config.max_fds) {
         return;
     }
-    struct rco_fd_watch *watch = &runtime->fd_watches[fd];
+    struct rco_fd_watch *watch = rco_watch_get(runtime, fd, false);
+    if (watch == NULL) {
+        return;
+    }
     struct rco_task *reader = watch->reader;
     struct rco_task *writer = watch->writer;
     watch->reader = NULL;
@@ -526,10 +564,7 @@ static void rco_watch_invalidate(struct rco_runtime *runtime,
         rco_record_fatal(runtime, rco_neg_errno());
     }
     watch->registered = false;
-    watch->generation++;
-    if (watch->generation == 0) {
-        watch->generation = 1;
-    }
+    rco_watch_advance_generation(watch);
 
     if (reader != NULL) {
         reader->wait_fd = -1;
@@ -562,6 +597,10 @@ static int rco_timeout_ms(const struct rco_runtime *runtime)
 
 static void rco_expire_timers(struct rco_runtime *runtime)
 {
+    if (runtime->timer_count == 0) {
+        return;
+    }
+
     uint64_t now = 0;
     int result = rco_now_ns(&now);
     if (result != 0) {
@@ -586,7 +625,10 @@ static void rco_dispatch_event(struct rco_runtime *runtime,
         return;
     }
 
-    struct rco_fd_watch *watch = &runtime->fd_watches[fd];
+    struct rco_fd_watch *watch = rco_watch_get(runtime, fd, false);
+    if (watch == NULL) {
+        return;
+    }
     if (!watch->registered || watch->generation != generation) {
         return;
     }
@@ -614,12 +656,9 @@ static void rco_dispatch_event(struct rco_runtime *runtime,
 static void rco_remove_task(struct rco_runtime *runtime,
                             struct rco_task *task)
 {
-    struct rco_task **link = &runtime->all_tasks;
-    while (*link != NULL && *link != task) {
-        link = &(*link)->all_next;
-    }
-    if (*link == task) {
-        *link = task->all_next;
+    *task->all_previous_next = task->all_next;
+    if (task->all_next != NULL) {
+        task->all_next->all_previous_next = task->all_previous_next;
     }
 
     rco_task_detach_wait(runtime, task);
@@ -628,6 +667,9 @@ static void rco_remove_task(struct rco_runtime *runtime,
     runtime->stats.completed++;
     if (task->state == RCO_TASK_CANCELLED) {
         runtime->stats.cancelled++;
+    }
+    if (task->finalizer != NULL) {
+        task->finalizer(task->argument);
     }
     free(task);
 }
@@ -663,10 +705,9 @@ RCO_NO_ASAN __attribute__((noreturn)) static void rco_task_trampoline(void)
 #endif
 
     if (task->cancel_requested || runtime->stop_requested) {
-        task->result = -ECANCELED;
         task->state = RCO_TASK_CANCELLED;
     } else {
-        task->result = task->entry(task->argument);
+        (void)task->entry(task->argument);
         task->state = task->cancel_requested ? RCO_TASK_CANCELLED : RCO_TASK_DONE;
     }
 #if defined(RCO_WITH_ASAN)
@@ -715,13 +756,17 @@ int rco_runtime_create(const struct rco_config *config,
     runtime->owner_tid = syscall(SYS_gettid);
     runtime->next_id = 1;
 
-    runtime->fd_watches =
-        calloc(validated.max_fds, sizeof(*runtime->fd_watches));
+    runtime->fd_watch_chunk_count =
+        (validated.max_fds + RCO_FD_WATCH_CHUNK_SIZE - 1) /
+        RCO_FD_WATCH_CHUNK_SIZE;
+    runtime->fd_watch_chunks =
+        calloc(runtime->fd_watch_chunk_count,
+               sizeof(*runtime->fd_watch_chunks));
     runtime->timer_heap =
         calloc(validated.max_coroutines, sizeof(*runtime->timer_heap));
-    if (runtime->fd_watches == NULL || runtime->timer_heap == NULL) {
+    if (runtime->fd_watch_chunks == NULL || runtime->timer_heap == NULL) {
         free(runtime->timer_heap);
-        free(runtime->fd_watches);
+        free(runtime->fd_watch_chunks);
         free(runtime);
         return -ENOMEM;
     }
@@ -730,7 +775,7 @@ int rco_runtime_create(const struct rco_config *config,
     if (runtime->epoll_fd < 0) {
         result = rco_neg_errno();
         free(runtime->timer_heap);
-        free(runtime->fd_watches);
+        free(runtime->fd_watch_chunks);
         free(runtime);
         return result;
     }
@@ -749,14 +794,22 @@ int rco_runtime_destroy(struct rco_runtime *runtime)
         return -EBUSY;
     }
 
-    if (runtime->epoll_fd >= 0) {
-        (void)close(runtime->epoll_fd);
-    }
+    rco_tls_runtime = runtime;
     while (runtime->all_tasks != NULL) {
         struct rco_task *task = runtime->all_tasks;
         runtime->all_tasks = task->all_next;
+        if (runtime->all_tasks != NULL) {
+            runtime->all_tasks->all_previous_next = &runtime->all_tasks;
+        }
+        if (task->finalizer != NULL) {
+            task->finalizer(task->argument);
+        }
         rco_stack_unmap(&task->stack);
         free(task);
+    }
+    rco_tls_runtime = NULL;
+    if (runtime->epoll_fd >= 0) {
+        (void)close(runtime->epoll_fd);
     }
     while (runtime->stack_cache != NULL) {
         struct rco_stack *stack = runtime->stack_cache;
@@ -765,7 +818,10 @@ int rco_runtime_destroy(struct rco_runtime *runtime)
         free(stack);
     }
     free(runtime->timer_heap);
-    free(runtime->fd_watches);
+    for (size_t index = 0; index < runtime->fd_watch_chunk_count; ++index) {
+        free(runtime->fd_watch_chunks[index]);
+    }
+    free(runtime->fd_watch_chunks);
     free(runtime);
     return 0;
 }
@@ -780,13 +836,11 @@ int rco_runtime_get_stats(const struct rco_runtime *runtime,
     return 0;
 }
 
-int rco_spawn(struct rco_runtime *runtime,
-              size_t stack_size,
-              rco_entry_fn entry,
-              void *argument,
-              uint64_t *out_task_id)
+int rco_spawn_task(struct rco_runtime *runtime,
+                   const struct rco_task_spec *spec,
+                   uint64_t *out_task_id)
 {
-    if (runtime == NULL || entry == NULL) {
+    if (runtime == NULL || spec == NULL || spec->entry == NULL) {
         return -EINVAL;
     }
     if (runtime->owner_tid != syscall(SYS_gettid)) {
@@ -803,7 +857,8 @@ int rco_spawn(struct rco_runtime *runtime,
     }
 
     size_t requested =
-        stack_size == 0 ? runtime->config.default_stack_size : stack_size;
+        spec->stack_size == 0 ? runtime->config.default_stack_size
+                              : spec->stack_size;
     struct rco_task *task = calloc(1, sizeof(*task));
     if (task == NULL) {
         return -ENOMEM;
@@ -818,8 +873,9 @@ int rco_spawn(struct rco_runtime *runtime,
     }
 
     task->runtime = runtime;
-    task->entry = entry;
-    task->argument = argument;
+    task->entry = spec->entry;
+    task->finalizer = spec->finalizer;
+    task->argument = spec->argument;
     task->id = runtime->next_id++;
     task->state = RCO_TASK_READY;
     rco_context_capture_fp(&task->context);
@@ -832,7 +888,11 @@ int rco_spawn(struct rco_runtime *runtime,
     initial_stack[1] = (uintptr_t)rco_task_returned;
     task->context.rsp = (uintptr_t)initial_stack;
 
+    task->all_previous_next = &runtime->all_tasks;
     task->all_next = runtime->all_tasks;
+    if (task->all_next != NULL) {
+        task->all_next->all_previous_next = &task->all_next;
+    }
     runtime->all_tasks = task;
     rco_ready_push(runtime, task);
     runtime->stats.spawned++;
@@ -844,6 +904,20 @@ int rco_spawn(struct rco_runtime *runtime,
         *out_task_id = task->id;
     }
     return 0;
+}
+
+int rco_spawn(struct rco_runtime *runtime,
+              size_t stack_size,
+              rco_entry_fn entry,
+              void *argument,
+              uint64_t *out_task_id)
+{
+    const struct rco_task_spec spec = {
+        .stack_size = stack_size,
+        .entry = entry,
+        .argument = argument,
+    };
+    return rco_spawn_task(runtime, &spec, out_task_id);
 }
 
 int rco_cancel(struct rco_runtime *runtime, uint64_t task_id)
@@ -916,7 +990,6 @@ int rco_runtime_run(struct rco_runtime *runtime)
         if (task != NULL) {
             if (task->cancel_requested && !task->started) {
                 task->state = RCO_TASK_CANCELLED;
-                task->result = -ECANCELED;
                 rco_remove_task(runtime, task);
                 continue;
             }
@@ -1009,14 +1082,16 @@ int rco_wait_fd(int fd,
     if (task->cancel_requested || runtime->stop_requested) {
         return -ECANCELED;
     }
-    struct rco_fd_watch *watch = &runtime->fd_watches[fd];
+    struct rco_fd_watch *watch = rco_watch_get(runtime, fd, true);
+    if (watch == NULL) {
+        return -ENOMEM;
+    }
     if (((events & RCO_EVENT_READ) != 0 && watch->reader != NULL) ||
         ((events & RCO_EVENT_WRITE) != 0 && watch->writer != NULL)) {
         return -EBUSY;
     }
 
     task->wait_fd = fd;
-    task->wait_events = events;
     task->ready_events = 0;
     task->wait_result = 0;
     if ((events & RCO_EVENT_READ) != 0) {
@@ -1091,7 +1166,7 @@ int rco_sleep_ms(uint64_t delay_ms)
 int rco_close_fd(int fd)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
-    if (runtime == NULL || runtime->current == NULL) {
+    if (runtime == NULL) {
         return -EPERM;
     }
     if (fd < 0 || (size_t)fd >= runtime->config.max_fds) {

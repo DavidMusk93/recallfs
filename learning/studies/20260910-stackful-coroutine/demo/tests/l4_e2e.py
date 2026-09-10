@@ -2,7 +2,6 @@
 
 import argparse
 import concurrent.futures
-import os
 import signal
 import socket
 import socketserver
@@ -19,10 +18,7 @@ class EchoHandler(socketserver.BaseRequestHandler):
             if not data:
                 self.request.shutdown(socket.SHUT_WR)
                 return
-            view = memoryview(data)
-            while view:
-                sent = self.request.send(view)
-                view = view[sent:]
+            self.request.sendall(data)
 
 
 class EchoServer(socketserver.ThreadingTCPServer):

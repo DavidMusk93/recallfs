@@ -21,6 +21,12 @@ static int never_run(void *argument)
     abort();
 }
 
+static void count_finalizer(void *argument)
+{
+    size_t *count = argument;
+    (*count)++;
+}
+
 static void test_public_guards_outside_runtime(void)
 {
     unsigned ready = 0;
@@ -44,8 +50,14 @@ static void test_allocation_limits_and_teardown(void)
     CHECK(rco_runtime_create(&config, &runtime) == 0);
 
     uint64_t ids[8] = {0};
+    size_t finalized = 0;
+    const struct rco_task_spec spec = {
+        .entry = never_run,
+        .argument = &finalized,
+        .finalizer = count_finalizer,
+    };
     for (size_t index = 0; index < 8; ++index) {
-        CHECK(rco_spawn(runtime, 0, never_run, NULL, &ids[index]) == 0);
+        CHECK(rco_spawn_task(runtime, &spec, &ids[index]) == 0);
         CHECK(ids[index] == index + 1);
     }
     CHECK(rco_spawn(runtime, 0, never_run, NULL, NULL) == -EAGAIN);
@@ -61,6 +73,7 @@ static void test_allocation_limits_and_teardown(void)
     CHECK(stats.stacks_reused == 0);
 
     CHECK(rco_runtime_destroy(runtime) == 0);
+    CHECK(finalized == 8);
 }
 
 static void test_repeated_create_destroy(void)
