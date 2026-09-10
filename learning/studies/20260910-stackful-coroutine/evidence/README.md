@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Target | `ssh d2` / host `n37-125-152` |
-| Code commit | `1a824544d6a487d32dec3949b0e90deb1dd8b602` |
+| Code commit | `ecda6780273a57adcde8e6c94754563f61671e64` |
 | Kernel | Linux `5.15.198.bsk.1-amd64` |
 | CPU | Intel Xeon Platinum 8457C, 2 sockets, 64 cores, no SMT |
 | Native compiler | GCC 8.3.0 |
@@ -19,17 +19,19 @@ ran in the pinned Linux container on d2. Native tests and all performance
 measurements ran directly on the d2 host.
 
 Full environment: [`raw/environment.txt`](raw/environment.txt).
+Review receipt and closure: [`review.md`](review.md).
 
 ## 2. Source And Binary Identity
 
 | Artifact | SHA-256 |
 | --- | --- |
-| `src/rco.c` | `e73c0089cdffef4dafccd666a659ec7da3a202107d9127efd7d7593d2820ca9b` |
+| `src/rco.c` | `f496cac01206d510a1c2ae25a1d4d0ea262808a33e6da41d623a360d557fbf51` |
 | `src/rco_context_x86_64.S` | `42b906658f44801887a1903288766fae96d19f0e5db8137a703b2e590bc955e5` |
-| `bench/rco_bench.c` | `d12ffdfa9707d209e01f8c9afea49ea5e79ec3d6b784bd4b31a96a3287b1e6b2` |
-| `examples/l4_forwarder.c` | `9d09062b14a242e77eeaec0aefb26ba7890e65ce9ad355fc1e1e9233ad1f3baa` |
-| optimized context benchmark | `19ec079208299acfc31be1e58fe40d2f6bb18565228c9d08d9ba43bcefaf52be` |
-| optimized L4 forwarder | `aaa3a1c0aa43c54a8d0329937a03abdce7d4bee7ba1f5c879ae0cc0a9d9311e1` |
+| `bench/rco_bench.c` | `9de36e4eec8f819d3bbfe2cc7d70bf7a9c1365e93bc94f384f41564bd2c0dcbc` |
+| `examples/l4_forwarder.c` | `c5e2aabbe0b5a2bf46b116442045a1bd543b5708af97caa2cb253b8459ef0e37` |
+| `bench/l4_bench.sh` | `141ab559ffb4c72341aca760b1bce28e437bf23576998b7f82a3ac316c8b61cd` |
+| optimized context benchmark | `a7d8c0c651f90a68144ae1e1c268f31c982746a0ed0036c1419192ebf1892cde` |
+| optimized L4 forwarder | `61f526568e0f8234af40a0ca0acf212802dffcd24793c89f9e6f04df880bb8e7` |
 
 Build flags:
 
@@ -48,7 +50,7 @@ Raw record: [`raw/build-info.txt`](raw/build-info.txt).
 | Proof-first native link | Expected undefined `rco_*` symbols | [`../exploration.md`](../exploration.md) |
 | FIL-C lifecycle | 3 suites passed | [`raw/filc.txt`](raw/filc.txt) |
 | FIL-C L4 source | Full C compile and CLI smoke passed | [`raw/filc.txt`](raw/filc.txt) |
-| Native CTest | 3/3 targets passed | [`raw/native-tests.txt`](raw/native-tests.txt) |
+| Native CTest | 4/4 targets passed | [`raw/native-tests.txt`](raw/native-tests.txt) |
 | GCC/Clang optimization matrix | O0/O2/O3 and O3+LTO passed | [`raw/optimization-matrix.txt`](raw/optimization-matrix.txt) |
 | ASan + UBSan | Concurrent L4 and forced drain passed | [`raw/sanitizers.txt`](raw/sanitizers.txt) |
 | Clang static analyzer | No findings | [`raw/static-analysis.txt`](raw/static-analysis.txt) |
@@ -66,9 +68,9 @@ iterations, pinned to CPU 0 and NUMA node 0:
 
 | Operation | Median |
 | --- | ---: |
-| `rco_yield` | `33.952 ns` |
-| noinline function call | `1.638 ns` |
-| Linux `sched_yield` | `228.380 ns` |
+| `rco_yield` | `35.335 ns` |
+| noinline function call | `1.646 ns` |
+| Linux `sched_yield` | `228.870 ns` |
 
 `rco_yield` includes scheduler bookkeeping and two assembly transfers. Every
 sample retained a nonzero observable sink. Raw samples:
@@ -89,11 +91,13 @@ runs:   5
 
 | Path | Median | Range |
 | --- | ---: | ---: |
-| direct loopback | `75.328 Gbit/s` | `74.140-77.944` |
-| one-core L4 proxy | `26.484 Gbit/s` | `24.887-27.077` |
+| direct loopback | `74.476 Gbit/s` | `73.826-77.154` |
+| one-core L4 proxy | `24.666 Gbit/s` | `24.517-24.900` |
 
-The median proxy/direct ratio is `0.352`. Full iperf client/server JSON,
-forwarder counters, environment, and CSV are under [`raw/l4/`](raw/l4/).
+The median proxy/direct ratio is `0.331`. The benchmark now rejects a sample
+unless all four sender and receiver streams make progress. Full per-stream
+CSV, iperf client/server JSON, forwarder counters, and environment are under
+[`raw/l4/`](raw/l4/).
 
 The benchmark is loopback, not a real-NIC result. It demonstrates sustained
 TCP data movement and a reproducible comparison baseline, not line-rate or
@@ -111,3 +115,8 @@ d2's KVM returned `<not supported>` for every event. The fallback evidence is
 recorded CPU/NUMA topology, fixed affinity, source/binary digests, complete
 flags, repeated wall-time samples, and observable sinks. See
 [`raw/perf-stat.txt`](raw/perf-stat.txt).
+
+The KVM exposes no cpufreq policy directories, `intel_pstate/no_turbo`, or
+generic cpufreq boost control. Both context and L4 environment records state
+that frequency policy and turbo state are unavailable instead of silently
+omitting them.

@@ -1,5 +1,5 @@
 l4 e2e passed: 8388608 concurrent payload bytes
-listening=127.0.0.1:51043 upstream=127.0.0.1:35529 max_connections=256 buffer_size=32768
-accepted=39 rejected=0 connected=39 connect_errors=0 peer_resets=0 io_errors=0 half_closes=78 bytes_client_to_upstream=8720449 bytes_upstream_to_client=8720449 peak_connections=20 forced_shutdown=false
-coroutines_spawned=119 context_switches=852 stacks_mapped=25 stacks_reused=94
+listening=127.0.0.1:53857 upstream=127.0.0.1:21945 max_connections=256 buffer_size=32768
+accepted=39 rejected=0 connected=39 connect_errors=0 peer_resets=0 io_errors=0 half_closes=78 bytes_client_to_upstream=8720449 bytes_upstream_to_client=8720449 peak_connections=11 forced_shutdown=false
+coroutines_spawned=119 context_switches=626 stacks_mapped=20 stacks_reused=99
 l4 forced-drain passed

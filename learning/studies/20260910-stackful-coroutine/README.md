@@ -19,10 +19,10 @@ coroutine library，以及一个真实可运行的 TCP L4 forwarder：
 - C 代码先通过 FIL-C；真实切栈再通过 GCC/Clang、LTO、ASan/UBSan、ABI
   canary、guard-page fault 和真实 TCP E2E；
 - d2 上 `rco_yield` 的 5 次 run-level median 中位数为
-  `33.952 ns/operation`。一次 operation 包含 scheduler 工作和两次底层
+  `35.335 ns/operation`。一次 operation 包含 scheduler 工作和两次底层
   context switch，不能与论文的 CACS 单次切换数字直接比较；
 - 单 proxy core、4 条 loopback TCP 流下，L4 median 为
-  `26.484 Gbit/s`；direct loopback median 为 `75.328 Gbit/s`。
+  `24.666 Gbit/s`；direct loopback median 为 `74.476 Gbit/s`。
 
 这里没有复现论文的 CACS。CACS 依赖 compiler 在每个调用点掌握 register
 liveness，并配合 `preserve_none` calling convention。普通 C11 与独立汇编
@@ -164,6 +164,10 @@ NEW -> READY -> RUNNING -> READY
 - timeout、I/O、cancel 统一走一次性 wake；
 - `epoll_event.data.u64` 编码 `fd + generation`，FD reuse 后的旧事件不会命中
   新 waiter；
+- 最多执行 64 次 READY dispatch 就进行一次 nonblocking epoll poll，持续
+  runnable 的 coroutine 不能无限饿死 I/O waiter；
+- `EPOLLONESHOT` registration 在普通 readiness 后保留，下一次 wait 用
+  `EPOLL_CTL_MOD` rearm；cancel、timeout 和 close 才执行删除；
 - 已启动的 coroutine 被 cancel 后必须恢复到取消点执行清理；只有从未启动
   的 task 可以不进入用户函数直接回收；
 - task finalizer 无论正常完成、已启动取消还是未启动取消都 exactly once；
@@ -252,14 +256,14 @@ $64\,MiB$，但 private anonymous pages 按需进入 RSS。
 
 ## 8. Correctness 结果
 
-目标 code commit：`1a824544d6a487d32dec3949b0e90deb1dd8b602`。
+目标 code commit：`ecda6780273a57adcde8e6c94754563f61671e64`。
 
 | Gate | Result |
 | --- | --- |
 | Proof-first | API test 首次链接因缺少 `rco_*` symbols 按预期失败 |
 | FIL-C 0.684 | 3 个 lifecycle suites；L4 全量 C 编译与 CLI smoke 通过 |
 | GCC/Clang matrix | 两个 compiler 的 O0/O2/O3 与 O3+LTO 全通过 |
-| Native CTest | coroutine、guard page、L4 E2E 共 3 targets 全通过 |
+| Native CTest | coroutine、guard page、L4 failure、L4 E2E 共 4 targets 全通过 |
 | ASan + UBSan | 32 并发连接、half-close、forced drain 全通过 |
 | Static analyzer | Clang analyzer 无 finding |
 | Executable stack | `GNU_STACK` 为 `RW`，不是 `RWE` |
@@ -284,13 +288,14 @@ alignment、CET 或真实 epoll 时序。对应缺口由 native ABI canary、FP 
 
 | Operation | Run-level medians, ns | Median |
 | --- | --- | ---: |
-| `rco_yield` | 33.952, 33.777, 34.029, 33.854, 33.999 | `33.952` |
-| noinline function call | 1.639, 1.634, 1.642, 1.635, 1.638 | `1.638` |
-| Linux `sched_yield` | 229.096, 231.198, 228.380, 227.298, 227.552 | `228.380` |
+| `rco_yield` | 35.276, 35.449, 35.296, 35.385, 35.335 | `35.335` |
+| noinline function call | 1.649, 1.649, 1.646, 1.639, 1.637 | `1.646` |
+| Linux `sched_yield` | 229.240, 229.749, 228.634, 228.870, 228.082 | `228.870` |
 
 `rco_yield` 是完整 scheduler operation，含两次 assembly transfer、queue
-操作和状态更新。它比本机 `sched_yield` 低约 85.1%，但约为测试中
-noinline function call 的 20.7 倍。论文报告的约 1.52 ns CACS yield 使用
+操作、状态更新和每 64 次 dispatch 一次的 I/O fairness poll。它比本机
+`sched_yield` 低约 84.6%，但约为测试中 noinline function call 的 21.5 倍。
+论文报告的约 1.52 ns CACS yield 使用
 不同实现、compiler 和 benchmark，不能与这里做同口径结论。
 
 ### 9.2 L4 throughput
@@ -300,17 +305,19 @@ noinline function call 的 20.7 倍。论文报告的约 1.52 ns CACS yield 使�
 
 | Path | Gbit/s samples | Median |
 | --- | --- | ---: |
-| direct loopback | 74.140, 77.944, 77.139, 75.328, 74.821 | `75.328` |
-| via one-core proxy | 26.484, 24.887, 25.901, 26.906, 27.077 | `26.484` |
+| direct loopback | 74.475, 75.461, 74.476, 77.154, 73.826 | `74.476` |
+| via one-core proxy | 24.660, 24.900, 24.517, 24.666, 24.765 | `24.666` |
 
-proxy/direct median ratio 为 `0.352`。这个结果证明 demo 能持续执行真实 TCP
+proxy/direct median ratio 为 `0.331`。20 个 proxy stream 都有非零发送与
+接收，单次 run 内各流吞吐接近。这个结果证明 demo 能持续执行真实 TCP
 数据面，并不证明跨机 line rate，也不包含 p99 latency。loopback 结果受
-kernel copy、KVM 和共享宿主噪声影响；5 次 proxy 样本的明显离散也要求生产
-评估增加隔离、运行时长和真实 NIC。
+kernel copy、KVM 和共享宿主噪声影响；生产评估仍需增加运行时长和真实 NIC。
 
 d2 的 `perf` 对 `cycles`、`instructions`、`branches`、
 `branch-misses`、`cache-misses` 全部返回 `<not supported>`。因此本报告只把
 固定拓扑与 wall time 作为性能证据，不用 VM 或 FIL-C 指令计数替代 PMU。
+该 KVM 也没有暴露 cpufreq policy、governor 或 turbo control；原始环境明确
+记录为 unavailable，而不是推测宿主频率策略。
 
 ## 10. 适用边界
 

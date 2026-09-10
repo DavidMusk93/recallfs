@@ -11,7 +11,7 @@ layer-4 forwarder.
 | OS | Linux |
 | Architecture | x86-64, System V AMD64 ABI |
 | Scheduler | One OS thread, cooperative, FIFO |
-| I/O | Level-triggered `epoll` |
+| I/O | Level-triggered `epoll` with `EPOLLONESHOT` rearm |
 | Stack | Fixed-size private `mmap`, one guard page on each side |
 | Cancellation | Cooperative at yield, wait, and sleep points |
 | Unsupported | Thread migration, preemption, dynamic stacks, CET shadow stack |
@@ -111,6 +111,8 @@ int main(void)
 
 The forwarder accepts numeric IPv4 or IPv6 addresses only. Avoiding runtime DNS
 prevents one blocking resolver call from stalling the cooperative scheduler.
+It binds `127.0.0.1` by default. A wildcard listener must be selected
+explicitly with `--listen-host 0.0.0.0` or `--listen-host ::`.
 
 ```bash
 .tmp/rco-build/rco_l4_forwarder \
@@ -174,5 +176,7 @@ RUNS=5 DURATION=3 \
 ```
 
 The L4 script requires `iperf3`, `jq`, `numactl`, and Python 3. It pins proxy,
-server, and client to CPUs 0, 1, and 2 on NUMA node 0. Do not compare its
-loopback numbers with a real-NIC result.
+server, and client to CPUs 0, 1, and 2 on NUMA node 0. It rejects a run unless
+every requested sender and receiver stream transfers data, and writes
+per-stream results to `stream-throughput.csv`. Do not compare its loopback
+numbers with a real-NIC result.

@@ -138,6 +138,23 @@ turn. Returning immediately when the timer heap is empty reduced the measured
 task unlink changed from a linear scan to an intrusive O(1) unlink, and the FD
 watch table changed from one dense allocation to lazy 256-entry chunks.
 
+### 4.6 Review-driven scheduler fairness
+
+The first benchmark evidence contained zero-byte sender streams despite a high
+aggregate throughput. Three independent review lenses traced the same cause:
+the scheduler only called `epoll_wait()` when the ready queue became empty, so
+a yielding hot task could keep I/O waiters asleep indefinitely.
+
+The scheduler now performs a nonblocking epoll poll after at most 64 READY
+dispatches. A deterministic pipe test keeps one coroutine runnable while
+another waits on an already-readable FD. A separate test covers a task waiting
+for `READ|WRITE` when only `EPOLLOUT` arrives.
+
+The same pass changed normal I/O registration to persistent `EPOLLONESHOT`
+with `EPOLL_CTL_MOD` rearm, propagated unexpected acceptor wait failures to
+process shutdown, and made the iperf harness reject any zero-progress stream.
+All 20 proxy streams in the final five-run evidence made progress.
+
 ## 5. Validation Progression
 
 ```text
@@ -169,7 +186,7 @@ CPU/NUMA-pinned benchmarks
 ```
 
 The final validation was rerun from a fresh clone of pushed `master` at commit
-`1a824544d6a487d32dec3949b0e90deb1dd8b602`, not from the rsync working tree
+`ecda6780273a57adcde8e6c94754563f61671e64`, not from the rsync working tree
 used during development.
 
 ## 6. Performance Notes
@@ -178,9 +195,9 @@ The context benchmark first established a nonzero observable sink and
 inspected the final binary. Five run-level medians produced:
 
 ```text
-rco_yield:    33.952 33.777 34.029 33.854 33.999 ns
-function:      1.639  1.634  1.642  1.635  1.638 ns
-sched_yield: 229.096 231.198 228.380 227.298 227.552 ns
+rco_yield:    35.276 35.449 35.296 35.385 35.335 ns
+function:      1.649  1.649  1.646  1.639  1.637 ns
+sched_yield: 229.240 229.749 228.634 228.870 228.082 ns
 ```
 
 The L4 benchmark used independent pinned CPUs on NUMA node 0:
@@ -191,7 +208,8 @@ CPU 1: iperf3 server
 CPU 2: iperf3 client
 ```
 
-Five direct and five proxied samples yielded medians of 75.328 and
-26.484 Gbit/s. PMU events were attempted, but d2's KVM returned
+Five direct and five proxied samples yielded medians of 74.476 and
+24.666 Gbit/s. Every one of the 20 proxy streams made progress. PMU events
+were attempted, but d2's KVM returned
 `<not supported>` for cycles, instructions, branches, branch misses, and cache
 misses. No substitute instruction count was presented as hardware evidence.

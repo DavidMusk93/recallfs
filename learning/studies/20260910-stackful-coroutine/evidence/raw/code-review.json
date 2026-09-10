@@ -1,0 +1,349 @@
+{
+  "status": "complete",
+  "verdict": "Ready with fixes",
+  "scope": {
+    "base": "501343f06a7d49022ddb774dbc1069e02dd7194a",
+    "branch": "master",
+    "head_sha": "b4bd61477b34d7e61da8c290811a51e3f63879ef",
+    "pr_url": null,
+    "files_changed": 69
+  },
+  "intent": "Implement and document a production-oriented C11 stackful coroutine library and an epoll-based TCP L4 forwarder for Linux x86-64 on ssh d2, with bounded ownership and reproducible correctness and performance evidence.",
+  "intent_confidence": "explicit",
+  "reviewers": [
+    "correctness",
+    "project-standards",
+    "testing",
+    "maintainability",
+    "security",
+    "performance",
+    "reliability",
+    "adversarial"
+  ],
+  "findings": [
+    {
+      "#": 1,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1021-1026: \"            continue;\\n        }\\n\\n        int timeout = rco_timeout_ms(runtime);\\n        int count =\\n            epoll_wait(runtime->epoll_fd, events, RCO_EPOLL_BATCH, timeout);\"",
+        "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:479-482: \"            budget += (size_t)received;\\n            if (budget >= L4_IO_BUDGET_BYTES) {\\n                budget = 0;\\n                result = rco_yield();\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/l4/proxy-4-client.json:363-369: socket 9 reports \"bytes\": 0 and \"bits_per_second\": 0 across the complete 3.000032-second sender result; its three measured intervals at lines 155-160, 218-223, and 281-286 are also all zero."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1021-1026: \"            continue;\\n        }\\n\\n        int timeout = rco_timeout_ms(runtime);\\n        int count =\\n            epoll_wait(runtime->epoll_fd, events, RCO_EPOLL_BATCH, timeout);\"",
+      "independent_reviewers": [
+        "performance",
+        "reliability",
+        "adversarial",
+        "correctness"
+      ],
+      "line": 1021,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "performance",
+        "reliability",
+        "adversarial",
+        "correctness"
+      ],
+      "severity": "P1",
+      "suggested_fix": "Add a bounded ready-task dispatch budget, poll epoll with timeout 0 when the budget is exhausted, and add a deterministic yielding-task versus readable-FD regression.",
+      "title": "Ready tasks can starve all I/O waiters",
+      "why_it_matters": "The scheduler polls file-descriptor readiness only after the ready queue becomes empty. A throughput coroutine that calls rco_yield() immediately requeues itself, so sustained runnable traffic can keep accept, signal, and other connection waiters asleep indefinitely. The checked-in four-flow benchmark already records one proxied flow sending zero bytes for the full three-second measurement, so this is an observed fairness and tail-latency failure rather than a theoretical optimization."
+    },
+    {
+      "#": 5,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:108-116: \"    local error\\n    error=$(jq -r '.error // empty' \\\"$client_json\\\")\\n    if [[ -n \\\"$error\\\" ]]; then\\n        echo \\\"iperf3 failed: $error\\\" >&2\\n        exit 1\\n    fi\\n    local throughput\\n    throughput=$(jq -r '.end.sum_sent.bits_per_second' \\\"$client_json\\\")\\n    printf '%s,%s,%s\\\\n' \\\"$mode\\\" \\\"$run\\\" \\\"$throughput\\\" >>\\\"$csv\\\"\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/l4/proxy-2-client.json:321-325: \"                    \\\"start\\\":    0,\\n                    \\\"end\\\":    2.9999499320983887,\\n                    \\\"seconds\\\":    2.9999499320983887,\\n                    \\\"bytes\\\":    0,\\n                    \\\"bits_per_second\\\":    0,\"",
+        "The supplied proxy-2, proxy-4, and proxy-5 client JSON files report end-of-run sender byte arrays [0,3111649280,3110338560,3110338560], [3363307520,3363307520,0,3363307520], and [3384279040,0,3385589760,3384279040], respectively."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:108-116: \"    local error\\n    error=$(jq -r '.error // empty' \\\"$client_json\\\")\\n    if [[ -n \\\"$error\\\" ]]; then\\n        echo \\\"iperf3 failed: $error\\\" >&2\\n        exit 1\\n    fi\\n    local throughput\\n    throughput=$(jq -r '.end.sum_sent.bits_per_second' \\\"$client_json\\\")\\n    printf '%s,%s,%s\\\\n' \\\"$mode\\\" \\\"$run\\\" \\\"$throughput\\\" >>\\\"$csv\\\"\"",
+      "independent_reviewers": [
+        "reliability",
+        "adversarial"
+      ],
+      "line": 115,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "reliability",
+        "adversarial"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Require exactly the requested stream count and nonzero bytes for every iperf sender and receiver before recording a sample.",
+      "title": "Benchmark accepts fully stalled streams",
+      "why_it_matters": "The benchmark treats a nonzero aggregate as a valid sample without checking individual parallel streams. Three of the five supplied proxy runs contain a sender that transferred zero bytes for the full measurement, yet all three contribute to the reported median, so the evidence gate can pass while 25% of flows are starved."
+    },
+    {
+      "#": 6,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:677-681: \"int result = wait_for_event(app->listener_fd, RCO_EVENT_READ, -1);\\n        if (result != 0) {\\n            return app->draining || result == -ECANCELED || result == -EBADF\\n                       ? 0\\n                       : result;\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:710-711: \"(void)task->entry(task->argument);\\n        task->state = task->cancel_requested ? RCO_TASK_CANCELLED : RCO_TASK_DONE;\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1085-1087: \"struct rco_fd_watch *watch = rco_watch_get(runtime, fd, true);\\n    if (watch == NULL) {\\n        return -ENOMEM;\"",
+        "Trigger chain: first watch allocation or listener epoll registration fails -> accept_entry returns the error -> trampoline discards it and removes the task -> signal task remains blocked -> runtime and process stay alive without an accept loop."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:677-681: \"int result = wait_for_event(app->listener_fd, RCO_EVENT_READ, -1);\\n        if (result != 0) {\\n            return app->draining || result == -ECANCELED || result == -EBADF\\n                       ? 0\\n                       : result;\"",
+      "independent_reviewers": [
+        "adversarial",
+        "reliability"
+      ],
+      "line": 679,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "adversarial",
+        "reliability"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Route unexpected listener wait errors through app_fail() and add injected registration-failure coverage.",
+      "title": "Accept failure leaves a live dead proxy",
+      "why_it_matters": "An unexpected listener wait failure terminates only the accept coroutine. The runtime discards task return values, so the signal coroutine keeps the process alive and the listening socket remains open; health checks can still connect into the backlog while no connection is ever accepted or forwarded."
+    },
+    {
+      "#": 7,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:651-652: \"if (writer != NULL && writer != reader && write_ready) {\\n        rco_task_wake(runtime, writer, 0, RCO_EVENT_WRITE);\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1097-1102: \"if ((events & RCO_EVENT_READ) != 0) {\\n        watch->reader = task;\\n    }\\n    if ((events & RCO_EVENT_WRITE) != 0) {\\n        watch->writer = task;\\n    }\"",
+        "Trigger chain: one task requests READ|WRITE -> it occupies both watch slots -> kernel reports EPOLLOUT without EPOLLIN -> read_ready is false and writer != reader is false -> no wake occurs."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:651-652: \"if (writer != NULL && writer != reader && write_ready) {\\n        rco_task_wake(runtime, writer, 0, RCO_EVENT_WRITE);\"",
+      "independent_reviewers": [
+        "adversarial"
+      ],
+      "line": 651,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "adversarial"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Handle reader == writer as a dedicated case: combine whichever requested readiness bits fired and wake the task once when the combined mask is nonzero. Add an EPOLLOUT-only socket test for RCO_EVENT_READ | RCO_EVENT_WRITE.",
+      "title": "Combined read/write wait misses write-only readiness",
+      "why_it_matters": "The public event mask accepts READ|WRITE, but when only EPOLLOUT arrives the same task is both reader and writer: the read branch is skipped and the write branch rejects writer == reader. The coroutine then hangs forever or times out even though its requested write event is ready."
+    },
+    {
+      "#": 8,
+      "autofix_class": "gated_auto",
+      "confidence": 75,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:110-113: d2's KVM returned `<not supported>` for every event. The fallback evidence is\nrecorded CPU/NUMA topology, fixed affinity, source/binary digests, complete\nflags, repeated wall-time samples, and observable sinks. See\n[`raw/perf-stat.txt`](raw/perf-stat.txt).",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:40-53 captures `uname`, `lscpu`, compiler/perf versions, `numactl --show`, hashes, run counts, affinity, and `perf_event_paranoid`, but no CPU frequency policy.",
+        "AGENTS.md section 5, C benchmark toolchain: \"测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数\"."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/evidence/README.md",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/evidence/README.md:110-113: d2's KVM returned `<not supported>` for every event. The fallback evidence is\nrecorded CPU/NUMA topology, fixed affinity, source/binary digests, complete\nflags, repeated wall-time samples, and observable sinks. See\n[`raw/perf-stat.txt`](raw/perf-stat.txt).",
+      "independent_reviewers": [
+        "project-standards"
+      ],
+      "line": 110,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "project-standards"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Extend the target-host environment capture to record the active CPU frequency policy (for example the scaling driver, governor, min/max limits, and turbo state, or an explicit unavailable reason), then rerun both benchmark suites and refresh their raw evidence and summaries.",
+      "title": "Benchmark evidence omits CPU frequency policy",
+      "why_it_matters": "The recorded context-switch and L4 throughput results cannot satisfy the repository's reproducibility gate because CPU frequency management can materially change timing and throughput between runs."
+    }
+  ],
+  "actionable_findings": [
+    {
+      "#": 1,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1021-1026: \"            continue;\\n        }\\n\\n        int timeout = rco_timeout_ms(runtime);\\n        int count =\\n            epoll_wait(runtime->epoll_fd, events, RCO_EPOLL_BATCH, timeout);\"",
+        "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:479-482: \"            budget += (size_t)received;\\n            if (budget >= L4_IO_BUDGET_BYTES) {\\n                budget = 0;\\n                result = rco_yield();\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/l4/proxy-4-client.json:363-369: socket 9 reports \"bytes\": 0 and \"bits_per_second\": 0 across the complete 3.000032-second sender result; its three measured intervals at lines 155-160, 218-223, and 281-286 are also all zero."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1021-1026: \"            continue;\\n        }\\n\\n        int timeout = rco_timeout_ms(runtime);\\n        int count =\\n            epoll_wait(runtime->epoll_fd, events, RCO_EPOLL_BATCH, timeout);\"",
+      "independent_reviewers": [
+        "performance",
+        "reliability",
+        "adversarial",
+        "correctness"
+      ],
+      "line": 1021,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "performance",
+        "reliability",
+        "adversarial",
+        "correctness"
+      ],
+      "severity": "P1",
+      "suggested_fix": "Add a bounded ready-task dispatch budget, poll epoll with timeout 0 when the budget is exhausted, and add a deterministic yielding-task versus readable-FD regression.",
+      "title": "Ready tasks can starve all I/O waiters",
+      "why_it_matters": "The scheduler polls file-descriptor readiness only after the ready queue becomes empty. A throughput coroutine that calls rco_yield() immediately requeues itself, so sustained runnable traffic can keep accept, signal, and other connection waiters asleep indefinitely. The checked-in four-flow benchmark already records one proxied flow sending zero bytes for the full three-second measurement, so this is an observed fairness and tail-latency failure rather than a theoretical optimization."
+    },
+    {
+      "#": 5,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:108-116: \"    local error\\n    error=$(jq -r '.error // empty' \\\"$client_json\\\")\\n    if [[ -n \\\"$error\\\" ]]; then\\n        echo \\\"iperf3 failed: $error\\\" >&2\\n        exit 1\\n    fi\\n    local throughput\\n    throughput=$(jq -r '.end.sum_sent.bits_per_second' \\\"$client_json\\\")\\n    printf '%s,%s,%s\\\\n' \\\"$mode\\\" \\\"$run\\\" \\\"$throughput\\\" >>\\\"$csv\\\"\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/l4/proxy-2-client.json:321-325: \"                    \\\"start\\\":    0,\\n                    \\\"end\\\":    2.9999499320983887,\\n                    \\\"seconds\\\":    2.9999499320983887,\\n                    \\\"bytes\\\":    0,\\n                    \\\"bits_per_second\\\":    0,\"",
+        "The supplied proxy-2, proxy-4, and proxy-5 client JSON files report end-of-run sender byte arrays [0,3111649280,3110338560,3110338560], [3363307520,3363307520,0,3363307520], and [3384279040,0,3385589760,3384279040], respectively."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:108-116: \"    local error\\n    error=$(jq -r '.error // empty' \\\"$client_json\\\")\\n    if [[ -n \\\"$error\\\" ]]; then\\n        echo \\\"iperf3 failed: $error\\\" >&2\\n        exit 1\\n    fi\\n    local throughput\\n    throughput=$(jq -r '.end.sum_sent.bits_per_second' \\\"$client_json\\\")\\n    printf '%s,%s,%s\\\\n' \\\"$mode\\\" \\\"$run\\\" \\\"$throughput\\\" >>\\\"$csv\\\"\"",
+      "independent_reviewers": [
+        "reliability",
+        "adversarial"
+      ],
+      "line": 115,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "reliability",
+        "adversarial"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Require exactly the requested stream count and nonzero bytes for every iperf sender and receiver before recording a sample.",
+      "title": "Benchmark accepts fully stalled streams",
+      "why_it_matters": "The benchmark treats a nonzero aggregate as a valid sample without checking individual parallel streams. Three of the five supplied proxy runs contain a sender that transferred zero bytes for the full measurement, yet all three contribute to the reported median, so the evidence gate can pass while 25% of flows are starved."
+    },
+    {
+      "#": 6,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:677-681: \"int result = wait_for_event(app->listener_fd, RCO_EVENT_READ, -1);\\n        if (result != 0) {\\n            return app->draining || result == -ECANCELED || result == -EBADF\\n                       ? 0\\n                       : result;\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:710-711: \"(void)task->entry(task->argument);\\n        task->state = task->cancel_requested ? RCO_TASK_CANCELLED : RCO_TASK_DONE;\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1085-1087: \"struct rco_fd_watch *watch = rco_watch_get(runtime, fd, true);\\n    if (watch == NULL) {\\n        return -ENOMEM;\"",
+        "Trigger chain: first watch allocation or listener epoll registration fails -> accept_entry returns the error -> trampoline discards it and removes the task -> signal task remains blocked -> runtime and process stay alive without an accept loop."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c:677-681: \"int result = wait_for_event(app->listener_fd, RCO_EVENT_READ, -1);\\n        if (result != 0) {\\n            return app->draining || result == -ECANCELED || result == -EBADF\\n                       ? 0\\n                       : result;\"",
+      "independent_reviewers": [
+        "adversarial",
+        "reliability"
+      ],
+      "line": 679,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "adversarial",
+        "reliability"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Route unexpected listener wait errors through app_fail() and add injected registration-failure coverage.",
+      "title": "Accept failure leaves a live dead proxy",
+      "why_it_matters": "An unexpected listener wait failure terminates only the accept coroutine. The runtime discards task return values, so the signal coroutine keeps the process alive and the listening socket remains open; health checks can still connect into the backlog while no connection is ever accepted or forwarded."
+    },
+    {
+      "#": 7,
+      "autofix_class": "gated_auto",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:651-652: \"if (writer != NULL && writer != reader && write_ready) {\\n        rco_task_wake(runtime, writer, 0, RCO_EVENT_WRITE);\"",
+        "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:1097-1102: \"if ((events & RCO_EVENT_READ) != 0) {\\n        watch->reader = task;\\n    }\\n    if ((events & RCO_EVENT_WRITE) != 0) {\\n        watch->writer = task;\\n    }\"",
+        "Trigger chain: one task requests READ|WRITE -> it occupies both watch slots -> kernel reports EPOLLOUT without EPOLLIN -> read_ready is false and writer != reader is false -> no wake occurs."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/src/rco.c:651-652: \"if (writer != NULL && writer != reader && write_ready) {\\n        rco_task_wake(runtime, writer, 0, RCO_EVENT_WRITE);\"",
+      "independent_reviewers": [
+        "adversarial"
+      ],
+      "line": 651,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "adversarial"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Handle reader == writer as a dedicated case: combine whichever requested readiness bits fired and wake the task once when the combined mask is nonzero. Add an EPOLLOUT-only socket test for RCO_EVENT_READ | RCO_EVENT_WRITE.",
+      "title": "Combined read/write wait misses write-only readiness",
+      "why_it_matters": "The public event mask accepts READ|WRITE, but when only EPOLLOUT arrives the same task is both reader and writer: the read branch is skipped and the write branch rejects writer == reader. The coroutine then hangs forever or times out even though its requested write event is ready."
+    },
+    {
+      "#": 8,
+      "autofix_class": "gated_auto",
+      "confidence": 75,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:110-113: d2's KVM returned `<not supported>` for every event. The fallback evidence is\nrecorded CPU/NUMA topology, fixed affinity, source/binary digests, complete\nflags, repeated wall-time samples, and observable sinks. See\n[`raw/perf-stat.txt`](raw/perf-stat.txt).",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:40-53 captures `uname`, `lscpu`, compiler/perf versions, `numactl --show`, hashes, run counts, affinity, and `perf_event_paranoid`, but no CPU frequency policy.",
+        "AGENTS.md section 5, C benchmark toolchain: \"测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数\"."
+      ],
+      "file": "learning/studies/20260910-stackful-coroutine/evidence/README.md",
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/evidence/README.md:110-113: d2's KVM returned `<not supported>` for every event. The fallback evidence is\nrecorded CPU/NUMA topology, fixed affinity, source/binary digests, complete\nflags, repeated wall-time samples, and observable sinks. See\n[`raw/perf-stat.txt`](raw/perf-stat.txt).",
+      "independent_reviewers": [
+        "project-standards"
+      ],
+      "line": 110,
+      "owner": "downstream-resolver",
+      "pre_existing": false,
+      "requires_verification": true,
+      "reviewers": [
+        "project-standards"
+      ],
+      "severity": "P2",
+      "suggested_fix": "Extend the target-host environment capture to record the active CPU frequency policy (for example the scaling driver, governor, min/max limits, and turbo state, or an explicit unavailable reason), then rerun both benchmark suites and refresh their raw evidence and summaries.",
+      "title": "Benchmark evidence omits CPU frequency policy",
+      "why_it_matters": "The recorded context-switch and L4 throughput results cannot satisfy the repository's reproducibility gate because CPU frequency management can materially change timing and throughput between runs."
+    }
+  ],
+  "triage_groups": [
+    {
+      "title": "Scheduler fairness and measurement fidelity",
+      "findings": [
+        1,
+        5
+      ],
+      "context": "The scheduler starvation bug is visible in zero-byte iperf streams that the benchmark accepted.",
+      "preferred_resolution": "Fix #1 and its regression first, then harden the per-stream gate in #5 and rerun evidence.",
+      "why": "One runtime defect and one silent-pass guard share the same observed symptom."
+    }
+  ],
+  "pre_existing_findings": [],
+  "requirements_completeness": null,
+  "learnings": [],
+  "agent_native_gaps": [],
+  "deployment_notes": [],
+  "residual_risks": [
+    "Normal readiness cycles delete and re-add epoll registrations; EPOLLONESHOT rearming may reduce hot-path epoll_ctl calls but needs a dedicated benchmark.",
+    "Connection-cap rejection can consume CPU under a sustained accept flood; no overload benchmark exists yet.",
+    "A CLOCK_MONOTONIC failure can leave timer waiters spinning; this narrow failure path lacks fault injection.",
+    "The generic TCP proxy has no established-connection idle timeout; operators must choose whether indefinite connections are part of their protocol contract."
+  ],
+  "testing_gaps": [
+    "Strengthen the deep-stack checksum at every recursion level.",
+    "Add an EOF-delayed backend half-close test.",
+    "Add stale numeric-FD reuse coverage for generation rejection.",
+    "Make the context benchmark verify exact task and switch counts."
+  ],
+  "coverage": {
+    "scope_note": "Reviewed learning/ changes only; unrelated projects/clipvault gitlink excluded.",
+    "cross_model": "not run: host serving family could not be attested; local adversarial fallback completed",
+    "validator": "one independent batch checked 8 findings; 5 validated and 3 dropped as unsupported contract or preference",
+    "semantic_duplicates_merged": 5,
+    "soft_bucket_demotions": 7,
+    "malformed_findings": 0,
+    "failed_reviewers": []
+  },
+  "artifact_path": "/tmp/compound-engineering-501/ce-code-review/20260910-155329-04cb4f1c",
+  "run_id": "20260910-155329-04cb4f1c"
+}

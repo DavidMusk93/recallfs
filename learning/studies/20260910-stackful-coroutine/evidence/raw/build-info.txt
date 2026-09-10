@@ -1,11 +1,12 @@
-git_commit=1a824544d6a487d32dec3949b0e90deb1dd8b602
+git_commit=ecda6780273a57adcde8e6c94754563f61671e64
 compiler=gcc (Debian 8.3.0-6) 8.3.0
 flags=-std=c11 -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
 filc_archive_sha256=eefb594bcbc1261a18dfa8b50041674635f53df2b5fe067915b5652adaed4e3f
 filc_container=debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
-e73c0089cdffef4dafccd666a659ec7da3a202107d9127efd7d7593d2820ca9b  learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+f496cac01206d510a1c2ae25a1d4d0ea262808a33e6da41d623a360d557fbf51  learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 42b906658f44801887a1903288766fae96d19f0e5db8137a703b2e590bc955e5  learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
-d12ffdfa9707d209e01f8c9afea49ea5e79ec3d6b784bd4b31a96a3287b1e6b2  learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
-9d09062b14a242e77eeaec0aefb26ba7890e65ce9ad355fc1e1e9233ad1f3baa  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
-19ec079208299acfc31be1e58fe40d2f6bb18565228c9d08d9ba43bcefaf52be  .tmp/rco-bench-final
-aaa3a1c0aa43c54a8d0329937a03abdce7d4bee7ba1f5c879ae0cc0a9d9311e1  .tmp/rco-l4-final
+9de36e4eec8f819d3bbfe2cc7d70bf7a9c1365e93bc94f384f41564bd2c0dcbc  learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+c5e2aabbe0b5a2bf46b116442045a1bd543b5708af97caa2cb253b8459ef0e37  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+141ab559ffb4c72341aca760b1bce28e437bf23576998b7f82a3ac316c8b61cd  learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh
+a7d8c0c651f90a68144ae1e1c268f31c982746a0ed0036c1419192ebf1892cde  .tmp/rco-bench-final
+61f526568e0f8234af40a0ca0acf212802dffcd24793c89f9e6f04df880bb8e7  .tmp/rco-l4-final

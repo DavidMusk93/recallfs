@@ -1,6 +1,6 @@
-date_utc=2026-09-10T07:47:08Z
+date_utc=2026-09-10T08:45:57Z
 hostname=n37-125-152
-git_commit=1a824544d6a487d32dec3949b0e90deb1dd8b602
+git_commit=ecda6780273a57adcde8e6c94754563f61671e64
 Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
 glibc 2.28
 gcc (Debian 8.3.0-6) 8.3.0
@@ -9,6 +9,8 @@ cmake version 3.28.3
 perf version 5.15.198.bsk.1.gb7579367b7bf
 nofile=1024
 perf_event_paranoid=2
+cpufreq=unavailable: no policy directories exposed by kernel/hypervisor
+turbo=unavailable: no intel_pstate/no_turbo or cpufreq boost control exposed
 filc=clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/llvm-project-deluge.git 0f06037def80573162db5cfcda000af31006720e)
 filc_container=debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
 Architecture:        x86_64
