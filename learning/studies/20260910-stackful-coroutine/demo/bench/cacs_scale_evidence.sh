@@ -380,7 +380,7 @@ readonly zig_cc="$zig;cc"
 readonly common_flags='-march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch'
 readonly o0_flags="-O0 -g $common_flags"
 readonly o2_flags="-O2 -g $common_flags"
-readonly o3_flags="-O3 -DNDEBUG -flto -fno-ipa-icf $common_flags"
+readonly o3_flags="-O3 -DNDEBUG -flto $common_flags"
 readonly sanitizer_flags="-O1 -g -fsanitize=address,undefined $common_flags"
 
 readonly o3_build="$work_root/o3-build"
