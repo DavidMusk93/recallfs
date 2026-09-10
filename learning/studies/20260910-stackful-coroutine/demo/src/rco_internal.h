@@ -10,6 +10,7 @@ struct rco_context {
     uintptr_t rsp;
 #if defined(RCO_CACS)
     uintptr_t rbp;
+    uintptr_t reserved_gprs[5];
     uint32_t mxcsr;
     uint16_t x87_control;
     uint16_t reserved;
@@ -29,10 +30,10 @@ struct rco_context {
 _Static_assert(offsetof(struct rco_context, rsp) == 0, "rsp ABI offset");
 #if defined(RCO_CACS)
 _Static_assert(offsetof(struct rco_context, rbp) == 8, "rbp ABI offset");
-_Static_assert(offsetof(struct rco_context, mxcsr) == 16, "mxcsr ABI offset");
-_Static_assert(offsetof(struct rco_context, x87_control) == 20,
+_Static_assert(offsetof(struct rco_context, mxcsr) == 56, "mxcsr ABI offset");
+_Static_assert(offsetof(struct rco_context, x87_control) == 60,
                "x87 control ABI offset");
-_Static_assert(sizeof(struct rco_context) == 24, "CACS context ABI size");
+_Static_assert(sizeof(struct rco_context) == 64, "CACS context ABI size");
 #else
 _Static_assert(offsetof(struct rco_context, rbx) == 8, "rbx ABI offset");
 _Static_assert(offsetof(struct rco_context, rbp) == 16, "rbp ABI offset");
@@ -75,10 +76,10 @@ rco_context_switch(struct rco_context *from, const struct rco_context *to)
         "pushq %%rax\n\t"
         "movq %%rsp, 0(%0)\n\t"
         "movq %%rbp, 8(%0)\n\t"
-        "stmxcsr 16(%0)\n\t"
-        "fnstcw 20(%0)\n\t"
-        "ldmxcsr 16(%1)\n\t"
-        "fldcw 20(%1)\n\t"
+        "stmxcsr 56(%0)\n\t"
+        "fnstcw 60(%0)\n\t"
+        "ldmxcsr 56(%1)\n\t"
+        "fldcw 60(%1)\n\t"
         "movq 8(%1), %%rbp\n\t"
         "movq 0(%1), %%rsp\n\t"
         "popq %%rax\n\t"

@@ -5,8 +5,8 @@
 rco_context_capture_fp:
     .cfi_startproc
     endbr64
-    stmxcsr 16(%rdi)
-    fnstcw 20(%rdi)
+    stmxcsr 56(%rdi)
+    fnstcw 60(%rdi)
     ret
     .cfi_endproc
     .size rco_context_capture_fp, .-rco_context_capture_fp

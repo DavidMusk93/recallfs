@@ -17,7 +17,7 @@
 #error "the plain CACS target unexpectedly enabled preserve_none"
 #endif
 
-_Static_assert(sizeof(struct rco_context) == 24, "compact CACS context");
+_Static_assert(sizeof(struct rco_context) == 64, "matched CACS context");
 _Static_assert(RCO_CONTEXT_BOOTSTRAP_WORDS == 2, "CACS bootstrap words");
 
 static void check(int condition, const char *expression, int line)
