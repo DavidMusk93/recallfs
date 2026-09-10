@@ -1,5 +1,5 @@
 foreach(required IN ITEMS RCO_COMPILER RCO_SOURCE_DIR RCO_BINARY_DIR
-                          RCO_LIBRARY RCO_LIBRARY_TARGET RCO_OBJDUMP RCO_NM
+                          RCO_EXECUTABLE RCO_LIBRARY_TARGET RCO_OBJDUMP RCO_NM
                           RCO_EXPECT_PRESERVE_NONE)
     if(NOT DEFINED ${required})
         message(FATAL_ERROR "missing ${required}")
@@ -111,7 +111,7 @@ elseif(runtime_llvm MATCHES "preserve_nonecc" OR
 endif()
 
 execute_process(
-    COMMAND "${RCO_NM}" -A "${RCO_LIBRARY}"
+    COMMAND "${RCO_NM}" -A "${RCO_EXECUTABLE}"
     RESULT_VARIABLE nm_result
     OUTPUT_VARIABLE nm_output
     ERROR_VARIABLE nm_error
@@ -124,7 +124,7 @@ if(nm_output MATCHES "[ \t]rco_context_switch(\n|$)")
 endif()
 
 execute_process(
-    COMMAND "${RCO_OBJDUMP}" -dr "${RCO_LIBRARY}"
+    COMMAND "${RCO_OBJDUMP}" -dr "${RCO_EXECUTABLE}"
     RESULT_VARIABLE objdump_result
     OUTPUT_VARIABLE disassembly
     ERROR_VARIABLE objdump_error

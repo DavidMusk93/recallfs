@@ -145,7 +145,7 @@ if(RCO_BUILD_TESTS)
                     -DRCO_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1}
                     -DRCO_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
                     -DRCO_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
-                    -DRCO_LIBRARY=$<TARGET_FILE:${library}>
+                    -DRCO_EXECUTABLE=$<TARGET_FILE:rco_cacs_test_${suffix}>
                     -DRCO_LIBRARY_TARGET=${library}
                     -DRCO_OBJDUMP=${CMAKE_OBJDUMP}
                     -DRCO_NM=${CMAKE_NM}
