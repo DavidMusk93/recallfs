@@ -349,10 +349,15 @@ done
 [[ "$(sha256sum -- "$zig_archive" | awk '{print $1}')" == \
    "$ZIG_ARCHIVE_SHA256" ]] ||
     die "pinned Zig archive digest mismatch: $ZIG_ARCHIVE_REL"
-for filc_tool in bin/filcc bin/filrun; do
-    [[ -x "$filc_root/$filc_tool" && ! -L "$filc_root/$filc_tool" ]] ||
-        die "pinned FIL-C tool is missing or unsafe: $FILC_ROOT_REL/$filc_tool"
-done
+[[ -x "$filc_root/bin/filcc" ]] ||
+    die "pinned FIL-C compiler is missing: $FILC_ROOT_REL/bin/filcc"
+filcc_real=$(realpath -- "$filc_root/bin/filcc")
+[[ "$filcc_real" == "$filc_root/"* ]] ||
+    die "pinned FIL-C compiler escapes its root: $FILC_ROOT_REL/bin/filcc"
+[[ -x "$filc_root/bin/filrun" ]] ||
+    die "pinned FIL-C runner is missing: $FILC_ROOT_REL/bin/filrun"
+[[ "$(realpath -- "$filc_root/bin/filrun")" == /usr/bin/env ]] ||
+    die "pinned FIL-C runner has an unexpected target: $FILC_ROOT_REL/bin/filrun"
 [[ -f "$filc_version_file" && ! -L "$filc_version_file" ]] ||
     die "pinned FIL-C version record is missing or unsafe: $FILC_VERSION_REL"
 grep -Fxq '# Fil-C 0.684' "$filc_version_file" ||
