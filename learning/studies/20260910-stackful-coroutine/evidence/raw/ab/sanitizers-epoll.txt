@@ -1,4 +1,5 @@
 l4 e2e passed: 8388608 concurrent payload bytes
-listening=127.0.0.1:11951 upstream=127.0.0.1:24645 max_connections=256 buffer_size=32768
-accepted=39 rejected=0 connected=39 connect_errors=0 peer_resets=0 io_errors=0 half_closes=78 bytes_client_to_upstream=8720449 bytes_upstream_to_client=8720449 peak_connections=10 forced_shutdown=false
+listening=127.0.0.1:55163 upstream=127.0.0.1:62359 max_connections=256 buffer_size=32768
+accepted=39 rejected=0 connected=39 connect_errors=0 peer_resets=0 io_errors=0 half_closes=78 bytes_client_to_upstream=8720449 bytes_upstream_to_client=8720449 peak_connections=13 forced_shutdown=false
+l4 capacity rejection passed
 l4 forced-drain passed

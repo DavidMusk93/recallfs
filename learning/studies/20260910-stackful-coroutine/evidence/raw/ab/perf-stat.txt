@@ -1,4 +1,4 @@
-# started on Thu Sep 10 18:29:44 2026
+# started on Thu Sep 10 19:45:22 2026
 
 
  Performance counter stats for 'numactl --physcpubind=0 --membind=0 /root/recallfs/.tmp/rco-ab/final/rco-bench 500000 3':
@@ -9,10 +9,10 @@
    <not supported>      branch-misses                                               
    <not supported>      cache-misses                                                
 
-       0.799290995 seconds time elapsed
+       0.798384678 seconds time elapsed
 
-       0.192045000 seconds user
-       0.607143000 seconds sys
+       0.183022000 seconds user
+       0.615076000 seconds sys
 
 
 

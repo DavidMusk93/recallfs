@@ -1,14 +1,28 @@
+---
+doc_id: recallfs-review-stackful-coroutine-v1
+kind: reference
+status: active
+authority: evidence
+applies_to:
+  - learning/studies/20260910-stackful-coroutine/demo
+depends_on:
+  - recallfs-evidence-stackful-coroutine-v1
+supersedes: []
+verified_by:
+  - review run 20260910-184406-b37f2090
+---
+
 # Code Review Closure
 
 | Field | Value |
 | --- | --- |
-| Run ID | `20260910-155329-04cb4f1c` |
-| Reviewed head | `b4bd61477b34d7e61da8c290811a51e3f63879ef` |
+| Review run | Initial runtime review; identity preserved in the raw receipt |
+| Reviewed head | Pre-A/B runtime snapshot; no longer reachable from `master` |
 | Review status | Complete |
 | Initial verdict | Ready with fixes |
 | Validated findings | 5 |
 | Fix commit | `ecda6780273a57adcde8e6c94754563f61671e64` |
-| Raw receipt | [`raw/code-review.json`](raw/code-review.json) |
+| Raw receipt | [`learning/studies/20260910-stackful-coroutine/evidence/raw/code-review.json`](raw/code-review.json) |
 
 ## Applied Findings
 
@@ -47,3 +61,39 @@ Additional test hardening from review:
 The cross-model adversarial route did not run because the host serving family
 could not be attested. A fresh in-process adversarial reviewer covered the
 lens, and an independent validator checked all eight primary candidates.
+
+## L4 A/B Review Closure
+
+| Field | Value |
+| --- | --- |
+| Review run | L4 A/B review; identity preserved in the raw receipt |
+| Reviewed head | `463126cb7ab3e40df6f214803695dd200a4f0ef4` plus staged docs/evidence |
+| Review status | Complete |
+| Initial verdict | Not ready |
+| Reviewers | correctness, standards, testing, maintainability, security, performance, API contract, reliability, adversarial |
+| Independent validation | 6 findings validated, 2 dropped |
+| Code fix commit | `ae0364683fc45e99847872a9f1fe32e5de98c1f4` |
+| Raw receipt | [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/code-review.json`](raw/ab/code-review.json) |
+
+Applied findings:
+
+| Finding | Resolution | Verification |
+| --- | --- | --- |
+| Transient accept errors killed the process | Both forwarders classify connection-local errors and back off on resource errors | FIL-C plus injected accept errors |
+| Saturated epoll listener queued clients | Bounded accept-and-close rejection now matches coroutine semantics | `max_connections=1` parity E2E |
+| Benchmark could hang or accept forced drain | Child deadlines escalate TERM to KILL; normal summary must be unique and non-forced | focused shell harness test |
+| Fixed mode order biased sub-percent comparison | Three positions rotate deterministically and are recorded in `run-order.csv` | six-run order fixture and final five-run evidence |
+| Epoll VM depended on `RLIMIT_NOFILE` | FD watches use lazy 256-entry chunks; soft/hard limits are recorded | 1,024 vs 1,048,576 startup test, 0 KiB growth |
+| Evidence promotion was not bounded | Clean/output roots are explicit and 59 payload paths have SHA-256 entries | `SHA256SUMS` verification |
+
+The validator rejected two structural suggestions as non-defects: file length
+alone did not justify a P1, and compiling the production C translation unit
+into a white-box focused test did not prove behavioral divergence. The review
+also rejected a compatibility requirement for the study-local benchmark
+script because no external caller exists and the documented invocation changed
+with the new A/B contract.
+
+Remaining test gaps are deterministic connect-deadline expiry and partial-send
+`EAGAIN` injection. The existing end-to-end suite exercises both paths under
+real sockets but cannot force their exact timing. They are residual coverage
+risk, not unresolved review findings.

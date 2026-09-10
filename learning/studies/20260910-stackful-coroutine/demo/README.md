@@ -119,6 +119,8 @@ The CTest targets cover:
 - callee-saved GPR and floating-point control preservation;
 - stack cache reuse and guard-page overflow;
 - epoll bidirectional budget, half-close, and generation state;
+- overload rejection, transient accept errors, and high-`RLIMIT_NOFILE`
+  startup memory;
 - `/proc/<pid>/stat` parsing with spaces and `)` in `comm`;
 - the same concurrent TCP forwarding, exact payload, half-close, graceful
   drain, and forced-shutdown suite against both forwarders.
@@ -287,8 +289,11 @@ RUNS=5 DURATION=3 \
 
 The L4 script requires `iperf3`, `jq`, `numactl`, and Python 3. It pins proxy,
 server, and client to CPUs 0, 1, and 2 on NUMA node 0. Each run interleaves
-direct, coroutine, and epoll-state-machine paths. It rejects a run unless every
-requested sender and receiver stream transfers data, writes per-stream results
-to `stream-throughput.csv`, and records process VM/CPU counters in
-`process-resources.csv`. Do not compare its loopback numbers with a real-NIC
-result.
+direct, coroutine, and epoll-state-machine paths with a deterministic
+three-position rotation recorded in `run-order.csv`. It rejects a run unless
+every requested sender and receiver stream transfers data, all child processes
+exit within bounded deadlines, and a normal proxy shutdown reports exactly one
+summary with `forced_shutdown=false`. It writes per-stream results to
+`stream-throughput.csv`, records process VM/CPU counters in
+`process-resources.csv`, and records soft/hard `RLIMIT_NOFILE` in
+`environment.txt`. Do not compare its loopback numbers with a real-NIC result.

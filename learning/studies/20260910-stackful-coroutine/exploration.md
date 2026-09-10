@@ -307,7 +307,7 @@ CPU/NUMA-pinned benchmarks
 
 The final validation used an isolated d2 copy of source files whose hashes
 matched pushed `master` commit
-`463126cb7ab3e40df6f214803695dd200a4f0ef4`. Generated binaries and logs stayed
+`ae0364683fc45e99847872a9f1fe32e5de98c1f4`. Generated binaries and logs stayed
 under `/root/recallfs/.tmp/rco-ab` until the complete evidence set passed
 validation.
 
@@ -317,9 +317,9 @@ The context benchmark first established a nonzero observable sink and
 inspected the final binary. Five run-level medians produced:
 
 ```text
-rco_yield:    35.141 35.406 35.122 35.092 35.340 ns
-function:      1.638  1.643  1.648  1.636  1.639 ns
-sched_yield: 229.449 227.847 227.739 227.739 228.330 ns
+rco_yield:    35.203 35.223 35.131 35.158 35.122 ns
+function:      1.637  1.638  1.637  1.635  1.649 ns
+sched_yield: 228.384 228.039 227.283 228.312 228.287 ns
 ```
 
 The L4 benchmark used independent pinned CPUs on NUMA node 0:
@@ -330,14 +330,14 @@ CPU 1: iperf3 server
 CPU 2: iperf3 client
 ```
 
-Five interleaved runs with `BASE_PORT=52000` yielded medians of
-74.093 Gbit/s direct, 24.904 Gbit/s coroutine, and 25.007 Gbit/s epoll state
+Five position-rotated runs with `BASE_PORT=52000` yielded medians of
+74.747 Gbit/s direct, 24.883 Gbit/s coroutine, and 25.012 Gbit/s epoll state
 machine. Every one of
 the 40 proxied streams made progress. Coroutine/epoll paired ratios changed
 direction across runs, so the result is parity rather than a throughput win.
 
-The coroutine process had median `VmPeak`/`VmHWM` of 4,720/2,016 KiB; the
-epoll process had 2,948/1,760 KiB. The virtual gap reflects independent
+The coroutine process had median `VmPeak`/`VmHWM` of 4,724/1,940 KiB; the
+epoll process had 2,948/1,828 KiB. The virtual gap reflects independent
 coroutine stacks, while demand paging kept the resident gap much smaller.
 
 PMU events were attempted, but d2's KVM returned
