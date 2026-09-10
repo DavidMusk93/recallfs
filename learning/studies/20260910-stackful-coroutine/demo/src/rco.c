@@ -52,6 +52,12 @@
 #define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
 #define RCO_NO_TIMER SIZE_MAX
 
+#if defined(RCO_CACS)
+#define RCO_CACS_INLINE __attribute__((always_inline)) inline
+#else
+#define RCO_CACS_INLINE
+#endif
+
 enum rco_task_state {
     RCO_TASK_READY,
     RCO_TASK_RUNNING,
@@ -715,7 +721,7 @@ static void rco_remove_task(struct rco_runtime *runtime,
     free(task);
 }
 
-static void rco_switch_to_root(struct rco_task *task)
+static RCO_CACS_INLINE void rco_switch_to_root(struct rco_task *task)
 {
     task->runtime->stats.context_switches++;
 #if defined(RCO_WITH_ASAN)
@@ -924,7 +930,8 @@ int rco_spawn_task(struct rco_runtime *runtime,
     uintptr_t stack_top =
         (uintptr_t)task->stack.base + task->stack.usable_size;
     uintptr_t *initial_stack =
-        (uintptr_t *)(stack_top - 2 * sizeof(uintptr_t));
+        (uintptr_t *)(stack_top -
+                      RCO_CONTEXT_BOOTSTRAP_WORDS * sizeof(uintptr_t));
     initial_stack[0] = (uintptr_t)rco_task_trampoline;
     initial_stack[1] = (uintptr_t)rco_task_returned;
     task->context.rsp = (uintptr_t)initial_stack;
@@ -1092,7 +1099,7 @@ int rco_runtime_run(struct rco_runtime *runtime)
     return result;
 }
 
-int rco_yield(void)
+RCO_SUSPEND_ABI int rco_yield(void)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
     if (runtime == NULL || runtime->current == NULL) {
@@ -1109,10 +1116,10 @@ int rco_yield(void)
     return task->cancel_requested || runtime->stop_requested ? -ECANCELED : 0;
 }
 
-int rco_wait_fd(int fd,
-                unsigned events,
-                int timeout_ms,
-                unsigned *out_ready_events)
+RCO_SUSPEND_ABI int rco_wait_fd(int fd,
+                                unsigned events,
+                                int timeout_ms,
+                                unsigned *out_ready_events)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
     if (runtime == NULL || runtime->current == NULL) {
@@ -1180,7 +1187,7 @@ int rco_wait_fd(int fd,
     return task->wait_result;
 }
 
-int rco_sleep_ms(uint64_t delay_ms)
+RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
     if (runtime == NULL || runtime->current == NULL) {

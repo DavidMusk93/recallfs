@@ -11,6 +11,7 @@ endif()
 option(RCO_BUILD_TESTS "Build native correctness tests" ON)
 option(RCO_BUILD_BENCHMARKS "Build context-switch benchmarks" ON)
 option(RCO_BUILD_EXAMPLES "Build production-oriented examples" ON)
+option(RCO_BUILD_CACS "Build experimental Clang 21 CACS variants" OFF)
 
 function(rco_enable_c_warnings target)
     target_compile_options(
@@ -20,23 +21,81 @@ function(rco_enable_c_warnings target)
     )
 endfunction()
 
+function(rco_configure_library target)
+    target_compile_features(${target} PUBLIC c_std_11)
+    target_include_directories(
+        ${target}
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    rco_enable_c_warnings(${target})
+    target_compile_options(
+        ${target}
+        PRIVATE $<$<COMPILE_LANGUAGE:ASM>:-fcf-protection=branch>
+    )
+endfunction()
+
 add_library(rco
     src/rco.c
     src/rco_context_x86_64.S
 )
 add_library(rco::rco ALIAS rco)
+rco_configure_library(rco)
 
-target_compile_features(rco PUBLIC c_std_11)
-target_include_directories(
-    rco
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-rco_enable_c_warnings(rco)
-target_compile_options(rco PRIVATE $<$<COMPILE_LANGUAGE:ASM>:-fcf-protection=branch>)
+if(RCO_BUILD_CACS)
+    if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang" OR
+       CMAKE_C_COMPILER_VERSION VERSION_LESS 21)
+        message(FATAL_ERROR
+                "RCO_BUILD_CACS requires Zig cc/Clang 21 or newer")
+    endif()
+
+    include(CheckCSourceCompiles)
+    check_c_source_compiles(
+        "
+        #if !defined(__has_attribute) || !__has_attribute(preserve_none)
+        #error preserve_none is unavailable
+        #endif
+        __attribute__((preserve_none)) static int probe(void) { return 0; }
+        int main(void) { return probe(); }
+        "
+        RCO_COMPILER_HAS_PRESERVE_NONE
+    )
+    if(NOT RCO_COMPILER_HAS_PRESERVE_NONE)
+        message(FATAL_ERROR
+                "RCO_BUILD_CACS requires compiler preserve_none support")
+    endif()
+
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+    function(rco_add_cacs_library target)
+        add_library(
+            ${target}
+            src/rco.c
+            src/rco_context_cacs_x86_64.S
+        )
+        rco_configure_library(${target})
+        target_compile_definitions(${target} PUBLIC RCO_CACS=1)
+        target_compile_options(
+            ${target}
+            PUBLIC
+                $<$<COMPILE_LANGUAGE:C>:-mno-red-zone;-fcf-protection=branch>
+        )
+    endfunction()
+
+    rco_add_cacs_library(rco_cacs)
+    add_library(rco::cacs ALIAS rco_cacs)
+
+    rco_add_cacs_library(rco_cacs_preserve_none)
+    add_library(rco::cacs_preserve_none ALIAS rco_cacs_preserve_none)
+    target_compile_definitions(
+        rco_cacs_preserve_none
+        PUBLIC
+            RCO_CACS_PRESERVE_NONE=1
+    )
+endif()
 
 if(RCO_BUILD_TESTS)
     enable_testing()
@@ -50,12 +109,74 @@ if(RCO_BUILD_TESTS)
     target_link_libraries(rco_guard_test PRIVATE rco)
     rco_enable_c_warnings(rco_guard_test)
     add_test(NAME rco_guard_page COMMAND rco_guard_test)
+
+    if(RCO_BUILD_CACS)
+        function(rco_add_cacs_tests suffix library expect_preserve_none)
+            add_executable(rco_test_${suffix} tests/rco_test.c)
+            target_link_libraries(rco_test_${suffix} PRIVATE ${library} m)
+            rco_enable_c_warnings(rco_test_${suffix})
+            add_test(NAME rco_native_${suffix} COMMAND rco_test_${suffix})
+
+            add_executable(rco_guard_test_${suffix} tests/rco_guard_test.c)
+            target_link_libraries(rco_guard_test_${suffix} PRIVATE ${library})
+            rco_enable_c_warnings(rco_guard_test_${suffix})
+            add_test(NAME rco_guard_page_${suffix}
+                     COMMAND rco_guard_test_${suffix})
+
+            add_executable(rco_cacs_test_${suffix} tests/rco_cacs_test.c)
+            target_link_libraries(rco_cacs_test_${suffix} PRIVATE ${library})
+            target_include_directories(
+                rco_cacs_test_${suffix}
+                PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+            )
+            target_compile_definitions(
+                rco_cacs_test_${suffix}
+                PRIVATE RCO_EXPECT_PRESERVE_NONE=${expect_preserve_none}
+            )
+            rco_enable_c_warnings(rco_cacs_test_${suffix})
+            add_test(NAME rco_cacs_abi_${suffix}
+                     COMMAND rco_cacs_test_${suffix})
+
+            add_test(
+                NAME rco_cacs_codegen_${suffix}
+                COMMAND
+                    ${CMAKE_COMMAND}
+                    -DRCO_COMPILER=${CMAKE_C_COMPILER}
+                    -DRCO_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1}
+                    -DRCO_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+                    -DRCO_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                    -DRCO_LIBRARY=$<TARGET_FILE:${library}>
+                    -DRCO_LIBRARY_TARGET=${library}
+                    -DRCO_OBJDUMP=${CMAKE_OBJDUMP}
+                    -DRCO_NM=${CMAKE_NM}
+                    -DRCO_EXPECT_PRESERVE_NONE=${expect_preserve_none}
+                    -P
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/rco_cacs_codegen_test.cmake
+            )
+        endfunction()
+
+        rco_add_cacs_tests(cacs rco_cacs 0)
+        rco_add_cacs_tests(cacs_preserve_none rco_cacs_preserve_none 1)
+    endif()
 endif()
 
 if(RCO_BUILD_BENCHMARKS)
     add_executable(rco_bench bench/rco_bench.c)
     target_link_libraries(rco_bench PRIVATE rco)
     rco_enable_c_warnings(rco_bench)
+
+    if(RCO_BUILD_CACS)
+        add_executable(rco_bench_cacs bench/rco_bench.c)
+        target_link_libraries(rco_bench_cacs PRIVATE rco_cacs)
+        rco_enable_c_warnings(rco_bench_cacs)
+
+        add_executable(rco_bench_cacs_preserve_none bench/rco_bench.c)
+        target_link_libraries(
+            rco_bench_cacs_preserve_none
+            PRIVATE rco_cacs_preserve_none
+        )
+        rco_enable_c_warnings(rco_bench_cacs_preserve_none)
+    endif()
 endif()
 
 if(RCO_BUILD_EXAMPLES)

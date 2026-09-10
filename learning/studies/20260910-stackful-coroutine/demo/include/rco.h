@@ -16,6 +16,21 @@ extern "C" {
 #define RCO_STACK_SIZE_DEFAULT ((size_t)128 * 1024)
 #define RCO_STACK_SIZE_MIN ((size_t)16 * 1024)
 
+#if defined(RCO_CACS_PRESERVE_NONE)
+#if !defined(RCO_CACS)
+#error "RCO_CACS_PRESERVE_NONE requires RCO_CACS"
+#elif !defined(__clang__)
+#error "RCO_CACS_PRESERVE_NONE requires Clang preserve_none support"
+#elif !defined(__has_attribute)
+#error "RCO_CACS_PRESERVE_NONE requires __has_attribute"
+#elif !__has_attribute(preserve_none)
+#error "RCO_CACS_PRESERVE_NONE requires the preserve_none attribute"
+#endif
+#define RCO_SUSPEND_ABI __attribute__((preserve_none))
+#else
+#define RCO_SUSPEND_ABI
+#endif
+
 enum rco_event {
     RCO_EVENT_READ = 1u << 0,
     RCO_EVENT_WRITE = 1u << 1,
@@ -91,12 +106,12 @@ int rco_cancel(struct rco_runtime *runtime, uint64_t task_id);
  * on success and returns -ETIMEDOUT, -ECANCELED, or another negative errno on
  * failure.
  */
-int rco_yield(void);
-int rco_wait_fd(int fd,
-                unsigned events,
-                int timeout_ms,
-                unsigned *out_ready_events);
-int rco_sleep_ms(uint64_t delay_ms);
+RCO_SUSPEND_ABI int rco_yield(void);
+RCO_SUSPEND_ABI int rco_wait_fd(int fd,
+                                unsigned events,
+                                int timeout_ms,
+                                unsigned *out_ready_events);
+RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms);
 /* Also valid from a task finalizer while the runtime is running. */
 int rco_close_fd(int fd);
 bool rco_cancelled(void);

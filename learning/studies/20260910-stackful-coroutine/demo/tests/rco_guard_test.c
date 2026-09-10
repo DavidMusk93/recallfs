@@ -13,7 +13,8 @@ __attribute__((noinline)) static uint64_t consume_stack(uint64_t depth)
     for (size_t index = 0; index < sizeof(frame); ++index) {
         frame[index] = (unsigned char)(depth + index);
     }
-    uint64_t child = consume_stack(depth + 1);
+    uint64_t (*volatile recurse)(uint64_t) = consume_stack;
+    uint64_t child = recurse(depth + 1);
     return child + frame[depth % sizeof(frame)];
 }
 
