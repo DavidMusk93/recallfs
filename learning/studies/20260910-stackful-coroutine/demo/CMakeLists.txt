@@ -75,6 +75,11 @@ if(RCO_BUILD_EXAMPLES)
         target_compile_features(rco_l4_epoll_test PRIVATE c_std_11)
         rco_enable_c_warnings(rco_l4_epoll_test)
         add_test(NAME epoll_l4_state_machine COMMAND rco_l4_epoll_test)
+        add_test(
+            NAME l4_bench_process_resources
+            COMMAND bash
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_bench_process_resources_test.sh
+        )
 
         add_executable(rco_l4_wait_test tests/l4_forwarder_test.c)
         target_link_libraries(rco_l4_wait_test PRIVATE rco)
