@@ -140,10 +140,35 @@ def round_trip(port, seed, size):
     return len(received)
 
 
+def check_backend_identity(binary, expected):
+    result = subprocess.run(
+        [binary, "--backend-identity"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        timeout=2,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            "backend identity query exited {}: {}".format(
+                result.returncode, result.stderr
+            )
+        )
+    if result.stdout != expected + "\n" or result.stderr:
+        raise AssertionError(
+            "backend identity query returned stdout={!r} stderr={!r}, "
+            "expected {!r}".format(result.stdout, result.stderr, expected)
+        )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("forwarder")
+    parser.add_argument("expected_backend_identity", nargs="?")
     args = parser.parse_args()
+    if args.expected_backend_identity is not None:
+        check_backend_identity(args.forwarder, args.expected_backend_identity)
 
     backend_port = reserve_port()
     proxy_port = reserve_port()

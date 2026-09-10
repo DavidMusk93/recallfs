@@ -16,10 +16,13 @@ test_pids=()
 test_cleanup() {
     local pid
 
-    for pid in "${test_pids[@]}"; do
-        kill -KILL "$pid" 2>/dev/null || true
-        wait "$pid" 2>/dev/null || true
-    done
+    if (( ${#test_pids[@]} > 0 )); then
+        for pid in "${test_pids[@]}"; do
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+        done
+    fi
+    chmod -R u+rwX "$fixture_root" 2>/dev/null || true
     rm -rf "$fixture_root"
 }
 trap test_cleanup EXIT
@@ -48,6 +51,14 @@ assert_equals() {
     fi
 }
 
+file_mode() {
+    stat -c '%a' -- "$1" 2>/dev/null || stat -f '%Lp' "$1"
+}
+
+file_owner() {
+    stat -c '%u' -- "$1" 2>/dev/null || stat -f '%u' "$1"
+}
+
 assert_dead() {
     local pid=$1
 
@@ -66,7 +77,11 @@ forget_pid() {
             retained+=("$tracked_pid")
         fi
     done
-    test_pids=("${retained[@]}")
+    if (( ${#retained[@]} == 0 )); then
+        test_pids=()
+    else
+        test_pids=("${retained[@]}")
+    fi
 }
 
 start_term_ignoring_child() {
@@ -84,6 +99,42 @@ start_term_ignoring_child() {
     fail "TERM-ignoring child did not become ready"
 }
 
+make_identity_forwarder() {
+    local identity=$2
+    local marker=$3
+    local path=$1
+
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'if [[ $# -eq 1 && $1 == --backend-identity ]]; then\n'
+        printf "    printf '%%s\\\\n' '%s'\n" "$identity"
+        printf '    exit 0\n'
+        printf 'fi\n'
+        printf 'exit 64\n'
+        printf '# %s\n' "$marker"
+    } >"$path"
+    chmod 700 "$path"
+}
+
+make_basename_identity_forwarder() {
+    local path=$1
+
+    cat >"$path" <<'EOF'
+#!/usr/bin/env bash
+if [[ $# -ne 1 || $1 != --backend-identity ]]; then
+    exit 64
+fi
+case "${0##*/}" in
+    *cacs-preserve-none*) printf '%s\n' cacs-preserve-none ;;
+    *cacs*) printf '%s\n' cacs ;;
+    *sysv*) printf '%s\n' coroutine-sysv ;;
+    *epoll*) printf '%s\n' epoll ;;
+    *) exit 65 ;;
+esac
+EOF
+    chmod 700 "$path"
+}
+
 configure_benchmark legacy-sysv legacy-epoll legacy-output
 assert_equals legacy-sysv "$coroutine_forwarder" "legacy coroutine binary"
 assert_equals legacy-epoll "$epoll_forwarder" "legacy epoll binary"
@@ -96,19 +147,29 @@ assert_equals legacy-sysv "$(forwarder_for_mode coroutine)" \
     "legacy coroutine mode"
 assert_equals legacy-epoll "$(forwarder_for_mode epoll)" "legacy epoll mode"
 
-for name in sysv epoll cacs cacs-preserve-none; do
-    printf '%s\n' "$name-binary" >"$fixture_root/$name"
-done
+make_identity_forwarder \
+    "$fixture_root/sysv" coroutine-sysv unique-sysv
+make_identity_forwarder "$fixture_root/epoll" epoll unique-epoll
+make_identity_forwarder "$fixture_root/cacs" cacs unique-cacs
+make_identity_forwarder \
+    "$fixture_root/cacs-preserve-none" cacs-preserve-none unique-cacs-pn
 configure_benchmark \
     "$fixture_root/sysv" \
     "$fixture_root/epoll" \
     "$fixture_root/legacy-output"
+prepare_forwarders
 write_binary_hashes >"$fixture_root/legacy-hashes"
 {
+    printf 'coroutine_forwarder_backend_identity=coroutine-sysv\n'
     printf 'coroutine_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/sysv" | awk '{print $1}')"
+    printf 'coroutine_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode coroutine)"
+    printf 'epoll_forwarder_backend_identity=epoll\n'
     printf 'epoll_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/epoll" | awk '{print $1}')"
+    printf 'epoll_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode epoll)"
 } >"$fixture_root/expected-legacy-hashes"
 assert_file_equals \
     "$fixture_root/expected-legacy-hashes" "$fixture_root/legacy-hashes"
@@ -125,6 +186,9 @@ assert_equals "$fixture_root/cacs" "$cacs_forwarder" \
     "five-mode CACS binary"
 assert_equals "$fixture_root/cacs-preserve-none" \
     "$cacs_preserve_none_forwarder" "five-mode CACS+PN binary"
+assert_equals "$fixture_root/sysv" \
+    "$(configured_forwarder_for_mode coroutine-sysv)" \
+    "five-mode configured SysV path"
 printf '%s\n' "${benchmark_modes[@]}" >"$fixture_root/five-modes"
 printf '%s\n' \
     direct coroutine-sysv cacs cacs-preserve-none epoll \
@@ -138,6 +202,28 @@ assert_equals "$fixture_root/cacs-preserve-none" \
     "$(forwarder_for_mode cacs-preserve-none)" "five-mode CACS+PN mode"
 assert_equals "$fixture_root/epoll" "$(forwarder_for_mode epoll)" \
     "five-mode epoll mode"
+
+prepare_forwarders
+if [[ "$(forwarder_for_mode coroutine-sysv)" == "$fixture_root/sysv" ]]; then
+    fail "five-mode SysV forwarder did not use a private copy"
+fi
+assert_equals 500 "$(file_mode "$private_forwarder_dir")" \
+    "private forwarder directory mode"
+assert_equals "$(id -u)" "$(file_owner "$private_forwarder_dir")" \
+    "private forwarder directory owner"
+for mode in coroutine-sysv cacs cacs-preserve-none epoll; do
+    private_path=$(forwarder_for_mode "$mode")
+    [[ -x "$private_path" ]] \
+        || fail "$mode private forwarder is not executable"
+    assert_equals 500 "$(file_mode "$private_path")" \
+        "$mode private forwarder mode"
+    assert_equals "$(id -u)" "$(file_owner "$private_path")" \
+        "$mode private forwarder owner"
+    case "$private_path" in
+        "$output_dir"/.l4-forwarders.*/*) ;;
+        *) fail "$mode private forwarder is outside the output root" ;;
+    esac
+done
 
 if configure_benchmark one two three four 2>"$fixture_root/usage.log"; then
     fail "four-argument CLI was accepted"
@@ -156,17 +242,144 @@ grep -Fq \
 
 write_binary_hashes >"$fixture_root/five-hashes"
 {
+    printf 'coroutine_sysv_forwarder_backend_identity=coroutine-sysv\n'
     printf 'coroutine_sysv_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/sysv" | awk '{print $1}')"
+    printf 'coroutine_sysv_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode coroutine-sysv)"
+    printf 'cacs_forwarder_backend_identity=cacs\n'
     printf 'cacs_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/cacs" | awk '{print $1}')"
+    printf 'cacs_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode cacs)"
+    printf 'cacs_preserve_none_forwarder_backend_identity=cacs-preserve-none\n'
     printf 'cacs_preserve_none_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/cacs-preserve-none" | awk '{print $1}')"
+    printf 'cacs_preserve_none_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode cacs-preserve-none)"
+    printf 'epoll_forwarder_backend_identity=epoll\n'
     printf 'epoll_forwarder_sha256=%s\n' \
         "$(sha256sum "$fixture_root/epoll" | awk '{print $1}')"
+    printf 'epoll_forwarder_private_path=%s\n' \
+        "$(forwarder_for_mode epoll)"
 } >"$fixture_root/expected-five-hashes"
 assert_file_equals \
     "$fixture_root/expected-five-hashes" "$fixture_root/five-hashes"
+
+configure_benchmark \
+    "$fixture_root/cacs" \
+    "$fixture_root/epoll" \
+    "$fixture_root/swapped-output" \
+    "$fixture_root/sysv" \
+    "$fixture_root/cacs-preserve-none"
+if prepare_forwarders 2>"$fixture_root/swapped.log"; then
+    fail "swapped SysV and CACS forwarders were accepted"
+fi
+grep -Fq 'forwarder identity mismatch' "$fixture_root/swapped.log" \
+    || fail "swapped forwarders did not report an identity mismatch"
+
+make_identity_forwarder \
+    "$fixture_root/duplicate-identity-cacs" coroutine-sysv duplicate-identity
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/duplicate-identity-output" \
+    "$fixture_root/duplicate-identity-cacs" \
+    "$fixture_root/cacs-preserve-none"
+if prepare_forwarders 2>"$fixture_root/duplicate-identity.log"; then
+    fail "duplicate backend identities were accepted"
+fi
+grep -Fq 'duplicate backend identity' "$fixture_root/duplicate-identity.log" \
+    || fail "duplicate backend identity was not diagnosed"
+
+mkdir -p "$fixture_root/duplicate-digest"
+make_basename_identity_forwarder "$fixture_root/duplicate-digest/sysv"
+cp "$fixture_root/duplicate-digest/sysv" \
+    "$fixture_root/duplicate-digest/cacs"
+cp "$fixture_root/duplicate-digest/sysv" \
+    "$fixture_root/duplicate-digest/cacs-preserve-none"
+cp "$fixture_root/duplicate-digest/sysv" \
+    "$fixture_root/duplicate-digest/epoll"
+configure_benchmark \
+    "$fixture_root/duplicate-digest/sysv" \
+    "$fixture_root/duplicate-digest/epoll" \
+    "$fixture_root/duplicate-digest-output" \
+    "$fixture_root/duplicate-digest/cacs" \
+    "$fixture_root/duplicate-digest/cacs-preserve-none"
+if prepare_forwarders 2>"$fixture_root/duplicate-digest.log"; then
+    fail "duplicate forwarder digests were accepted"
+fi
+grep -Fq 'duplicate forwarder SHA-256' "$fixture_root/duplicate-digest.log" \
+    || fail "duplicate forwarder digest was not diagnosed"
+
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/source-replacement-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+prepare_forwarders
+make_identity_forwarder \
+    "$fixture_root/sysv-replacement" coroutine-sysv replaced-source
+mv "$fixture_root/sysv-replacement" "$fixture_root/sysv"
+if verify_forwarder_artifacts \
+    coroutine-sysv post-sample 2>"$fixture_root/source-replacement.log"; then
+    fail "source forwarder replacement was accepted"
+fi
+grep -Fq 'source forwarder SHA-256 changed' \
+    "$fixture_root/source-replacement.log" \
+    || fail "source forwarder replacement was not diagnosed"
+
+make_identity_forwarder \
+    "$fixture_root/sysv" coroutine-sysv unique-sysv
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/private-replacement-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+prepare_forwarders
+private_cacs=$(forwarder_for_mode cacs)
+make_identity_forwarder \
+    "$fixture_root/cacs-replacement" cacs replaced-private-copy
+chmod 700 "$private_forwarder_dir"
+mv "$fixture_root/cacs-replacement" "$private_cacs"
+if verify_forwarder_artifacts \
+    cacs post-sample 2>"$fixture_root/private-replacement.log"; then
+    fail "private forwarder replacement was accepted"
+fi
+grep -Fq 'private-copy forwarder SHA-256 changed' \
+    "$fixture_root/private-replacement.log" \
+    || fail "private forwarder replacement was not diagnosed"
+
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/identity-columns-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+prepare_forwarders
+csv="$fixture_root/identity-throughput.csv"
+stream_csv="$fixture_root/identity-stream.csv"
+resource_csv="$fixture_root/identity-resources.csv"
+initialize_result_files
+append_throughput_row direct 1 123
+append_throughput_row cacs 1 456
+append_resource_row cacs 1 10 20 30 40 50 60
+cacs_digest=$(sha256sum "$fixture_root/cacs" | awk '{print $1}')
+cat >"$fixture_root/expected-identity-throughput.csv" <<EOF
+mode,run,backend_identity,binary_sha256,bits_per_second
+direct,1,direct,not-applicable,123
+cacs,1,cacs,$cacs_digest,456
+EOF
+cat >"$fixture_root/expected-identity-resources.csv" <<EOF
+mode,run,backend_identity,binary_sha256,vm_peak_kb,vm_hwm_kb,user_ticks,system_ticks,voluntary_context_switches,nonvoluntary_context_switches
+cacs,1,cacs,$cacs_digest,10,20,30,40,50,60
+EOF
+assert_file_equals \
+    "$fixture_root/expected-identity-throughput.csv" "$csv"
+assert_file_equals \
+    "$fixture_root/expected-identity-resources.csv" "$resource_csv"
 
 # shellcheck disable=SC2034
 base_port=43000
@@ -278,15 +491,21 @@ coroutine,2,10000000000
 epoll,2,9000000000
 EOF
 configure_benchmark legacy-sysv legacy-epoll legacy-output
-summarize_throughput "$fixture_root/legacy-throughput.csv" \
+summarize_throughput "$fixture_root/legacy-throughput.csv" 2 \
     >"$fixture_root/legacy-summary"
 cat >"$fixture_root/expected-legacy-summary" <<'EOF'
 direct_median_gbps=11.000
 coroutine_median_gbps=9.000
 epoll_median_gbps=8.000
-coroutine_over_direct=0.818
-epoll_over_direct=0.727
-coroutine_over_epoll=1.125
+coroutine_over_direct_ratio_of_medians=0.818
+coroutine_over_direct_median_paired_ratio=0.817
+coroutine_over_direct=0.817
+epoll_over_direct_ratio_of_medians=0.727
+epoll_over_direct_median_paired_ratio=0.725
+epoll_over_direct=0.725
+coroutine_over_epoll_ratio_of_medians=1.125
+coroutine_over_epoll_median_paired_ratio=1.127
+coroutine_over_epoll=1.127
 EOF
 assert_file_equals \
     "$fixture_root/expected-legacy-summary" "$fixture_root/legacy-summary"
@@ -310,7 +529,7 @@ configure_benchmark \
     "$fixture_root/five-output" \
     "$fixture_root/cacs" \
     "$fixture_root/cacs-preserve-none"
-summarize_throughput "$fixture_root/five-throughput.csv" \
+summarize_throughput "$fixture_root/five-throughput.csv" 2 \
     >"$fixture_root/five-summary"
 cat >"$fixture_root/expected-five-summary" <<'EOF'
 direct_median_gbps=11.000
@@ -318,16 +537,92 @@ coroutine_sysv_median_gbps=9.000
 cacs_median_gbps=10.000
 cacs_preserve_none_median_gbps=11.000
 epoll_median_gbps=8.000
-coroutine_sysv_over_direct=0.818
-cacs_over_direct=0.909
+coroutine_sysv_over_direct_ratio_of_medians=0.818
+coroutine_sysv_over_direct_median_paired_ratio=0.817
+coroutine_sysv_over_direct=0.817
+cacs_over_direct_ratio_of_medians=0.909
+cacs_over_direct_median_paired_ratio=0.908
+cacs_over_direct=0.908
+cacs_preserve_none_over_direct_ratio_of_medians=1.000
+cacs_preserve_none_over_direct_median_paired_ratio=1.000
 cacs_preserve_none_over_direct=1.000
-epoll_over_direct=0.727
-coroutine_sysv_over_epoll=1.125
-cacs_over_coroutine_sysv=1.111
-cacs_preserve_none_over_coroutine_sysv=1.222
+epoll_over_direct_ratio_of_medians=0.727
+epoll_over_direct_median_paired_ratio=0.725
+epoll_over_direct=0.725
+coroutine_sysv_over_epoll_ratio_of_medians=1.125
+coroutine_sysv_over_epoll_median_paired_ratio=1.127
+coroutine_sysv_over_epoll=1.127
+cacs_over_coroutine_sysv_ratio_of_medians=1.111
+cacs_over_coroutine_sysv_median_paired_ratio=1.113
+cacs_over_coroutine_sysv=1.113
+cacs_preserve_none_over_coroutine_sysv_ratio_of_medians=1.222
+cacs_preserve_none_over_coroutine_sysv_median_paired_ratio=1.225
+cacs_preserve_none_over_coroutine_sysv=1.225
 EOF
 assert_file_equals \
     "$fixture_root/expected-five-summary" "$fixture_root/five-summary"
+
+cat >"$fixture_root/divergent-ratios.csv" <<'EOF'
+mode,run,bits_per_second
+direct,1,1000000000
+coroutine,1,1000000000
+epoll,1,1000000000
+direct,2,100000000000
+coroutine,2,2000000000
+epoll,2,100000000000
+direct,3,100000000000
+coroutine,3,100000000000
+epoll,3,100000000000
+EOF
+configure_benchmark legacy-sysv legacy-epoll legacy-output
+summarize_throughput "$fixture_root/divergent-ratios.csv" 3 \
+    >"$fixture_root/divergent-ratios-summary"
+grep -Fxq 'coroutine_over_direct_ratio_of_medians=0.020' \
+    "$fixture_root/divergent-ratios-summary" \
+    || fail "ratio-of-medians was not reported independently"
+grep -Fxq 'coroutine_over_direct_median_paired_ratio=1.000' \
+    "$fixture_root/divergent-ratios-summary" \
+    || fail "median paired ratio was not indexed by run"
+grep -Fxq 'coroutine_over_direct=1.000' \
+    "$fixture_root/divergent-ratios-summary" \
+    || fail "stated comparison did not use the paired ratio"
+
+sed '/^epoll,3,/d' "$fixture_root/divergent-ratios.csv" \
+    >"$fixture_root/missing-run.csv"
+if summarize_throughput \
+    "$fixture_root/missing-run.csv" 3 \
+    >"$fixture_root/missing-run-summary" \
+    2>"$fixture_root/missing-run-error"; then
+    fail "incomplete mode/run matrix was accepted"
+fi
+grep -Fq 'mode epoll has runs [1, 2], expected [1, 2, 3]' \
+    "$fixture_root/missing-run-error" \
+    || fail "incomplete mode/run matrix was not diagnosed"
+
+sed 's/^coroutine,2,2000000000$/coroutine,2,0/' \
+    "$fixture_root/divergent-ratios.csv" >"$fixture_root/nonpositive.csv"
+if summarize_throughput \
+    "$fixture_root/nonpositive.csv" 3 \
+    >"$fixture_root/nonpositive-summary" \
+    2>"$fixture_root/nonpositive-error"; then
+    fail "nonpositive throughput was accepted"
+fi
+grep -Fq 'throughput must be positive' "$fixture_root/nonpositive-error" \
+    || fail "nonpositive throughput was not diagnosed"
+
+{
+    cat "$fixture_root/divergent-ratios.csv"
+    printf 'coroutine,2,2000000000\n'
+} >"$fixture_root/duplicate-run.csv"
+if summarize_throughput \
+    "$fixture_root/duplicate-run.csv" 3 \
+    >"$fixture_root/duplicate-run-summary" \
+    2>"$fixture_root/duplicate-run-error"; then
+    fail "duplicate mode/run throughput was accepted"
+fi
+grep -Fq 'duplicate sample for mode coroutine run 2' \
+    "$fixture_root/duplicate-run-error" \
+    || fail "duplicate mode/run throughput was not diagnosed"
 
 cat >"$fixture_root/normal.log" <<'EOF'
 listening=127.0.0.1:43001 upstream=127.0.0.1:43000

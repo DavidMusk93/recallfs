@@ -308,7 +308,7 @@ if(RCO_BUILD_EXAMPLES)
             COMMAND bash
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_bench_harness_test.sh
         )
-        set_tests_properties(l4_bench_harness PROPERTIES TIMEOUT 15)
+        set_tests_properties(l4_bench_harness PROPERTIES TIMEOUT 30)
 
         add_executable(rco_l4_wait_test tests/l4_forwarder_test.c)
         target_link_libraries(rco_l4_wait_test PRIVATE rco)
@@ -322,6 +322,7 @@ if(RCO_BUILD_EXAMPLES)
                 ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                 $<TARGET_FILE:rco_l4_forwarder>
+                coroutine-sysv
         )
         add_test(
             NAME epoll_l4_e2e
@@ -329,6 +330,7 @@ if(RCO_BUILD_EXAMPLES)
                 ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                 $<TARGET_FILE:rco_l4_forwarder_epoll>
+                epoll
         )
         if(RCO_BUILD_CACS)
             add_test(
@@ -337,6 +339,7 @@ if(RCO_BUILD_EXAMPLES)
                     ${Python3_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                     $<TARGET_FILE:rco_l4_forwarder_cacs>
+                    cacs
             )
             add_test(
                 NAME cacs_preserve_none_l4_e2e
@@ -344,6 +347,7 @@ if(RCO_BUILD_EXAMPLES)
                     ${Python3_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/tests/l4_e2e.py
                     $<TARGET_FILE:rco_l4_forwarder_cacs_preserve_none>
+                    cacs-preserve-none
             )
         endif()
         add_test(

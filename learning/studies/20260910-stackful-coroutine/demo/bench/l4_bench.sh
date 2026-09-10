@@ -13,6 +13,14 @@ child_poll_interval=${CHILD_POLL_INTERVAL_SECONDS:-0.02}
 kill_wait_timeout_seconds=${KILL_WAIT_TIMEOUT_SECONDS:-1}
 cleanup_term_timeout_seconds=${CLEANUP_TERM_TIMEOUT_SECONDS:-2}
 benchmark_modes=()
+validated_forwarder_modes=()
+validated_forwarder_sources=()
+validated_forwarder_paths=()
+validated_forwarder_identities=()
+validated_forwarder_digests=()
+private_forwarder_dir=
+inspected_forwarder_identity=
+inspected_forwarder_digest=
 
 print_usage() {
     printf 'usage: %s <coroutine-forwarder> <epoll-forwarder> <output-directory>\n' \
@@ -46,13 +54,19 @@ configure_benchmark() {
     output_dir=$3
     cacs_forwarder=
     cacs_preserve_none_forwarder=
+    validated_forwarder_modes=()
+    validated_forwarder_sources=()
+    validated_forwarder_paths=()
+    validated_forwarder_identities=()
+    validated_forwarder_digests=()
+    private_forwarder_dir=
     if (( $# == 5 )); then
         cacs_forwarder=$4
         cacs_preserve_none_forwarder=$5
     fi
 }
 
-forwarder_for_mode() {
+configured_forwarder_for_mode() {
     local mode=$1
 
     case "$mode" in
@@ -65,6 +79,71 @@ forwarder_for_mode() {
             return 1
             ;;
     esac
+}
+
+validated_forwarder_index() {
+    local index
+    local mode=$1
+
+    for index in "${!validated_forwarder_modes[@]}"; do
+        if [[ "${validated_forwarder_modes[$index]}" == "$mode" ]]; then
+            printf '%s\n' "$index"
+            return 0
+        fi
+    done
+    return 1
+}
+
+forwarder_for_mode() {
+    local index
+    local mode=$1
+
+    if index=$(validated_forwarder_index "$mode"); then
+        printf '%s\n' "${validated_forwarder_paths[$index]}"
+        return 0
+    fi
+    configured_forwarder_for_mode "$mode"
+}
+
+expected_backend_identity() {
+    case "$1" in
+        coroutine|coroutine-sysv) printf 'coroutine-sysv\n' ;;
+        cacs) printf 'cacs\n' ;;
+        cacs-preserve-none) printf 'cacs-preserve-none\n' ;;
+        epoll) printf 'epoll\n' ;;
+        *)
+            printf 'benchmark mode has no backend identity: %s\n' "$1" >&2
+            return 1
+            ;;
+    esac
+}
+
+backend_identity_for_mode() {
+    local index
+
+    if [[ "$1" == direct ]]; then
+        printf 'direct\n'
+        return 0
+    fi
+    index=$(validated_forwarder_index "$1") || {
+        printf 'benchmark mode is not validated: %s\n' "$1" >&2
+        return 1
+    }
+    printf '%s\n' "${validated_forwarder_identities[$index]}"
+}
+
+binary_digest_for_mode() {
+    local index
+
+    if [[ "$1" == direct ]]; then
+        printf 'not-applicable\n'
+        return 0
+    fi
+    index=$(validated_forwarder_index "$1") || {
+        printf 'benchmark mode is not validated: %s\n' "$1" >&2
+        return 1
+    }
+    printf '%s\n' "${validated_forwarder_digests[$index]}"
 }
 
 mode_index() {
@@ -92,9 +171,203 @@ ports_for_sample() {
     printf '%s %s\n' "$backend_port" "$((backend_port + 1))"
 }
 
-write_binary_hashes() {
+inspect_forwarder() {
+    local digest_after
+    local digest_before
+    local forwarder=$1
+    local identity
+
+    if [[ ! -f "$forwarder" || ! -x "$forwarder" ]]; then
+        printf 'forwarder is not a runnable regular file: %s\n' \
+            "$forwarder" >&2
+        return 1
+    fi
+    digest_before=$(sha256sum -- "$forwarder" | awk '{print $1}') || return
+    if ! identity=$("$forwarder" --backend-identity); then
+        printf 'backend identity query failed: %s\n' "$forwarder" >&2
+        return 1
+    fi
+    digest_after=$(sha256sum -- "$forwarder" | awk '{print $1}') || return
+    if [[ "$digest_before" != "$digest_after" ]]; then
+        printf 'forwarder changed during identity query: %s\n' \
+            "$forwarder" >&2
+        return 1
+    fi
+    inspected_forwarder_identity=$identity
+    inspected_forwarder_digest=$digest_before
+}
+
+verify_forwarder_path() {
+    local expected_digest=$4
+    local expected_identity=$3
+    local kind=$2
+    local mode=$1
+    local observed_digest
+    local path=$5
+
+    if [[ ! -f "$path" || ! -x "$path" ]]; then
+        printf '%s %s forwarder is not runnable: %s\n' \
+            "$mode" "$kind" "$path" >&2
+        return 1
+    fi
+    observed_digest=$(sha256sum -- "$path" | awk '{print $1}') || return
+    if [[ "$observed_digest" != "$expected_digest" ]]; then
+        printf '%s %s forwarder SHA-256 changed: expected %s, got %s\n' \
+            "$mode" "$kind" "$expected_digest" "$observed_digest" >&2
+        return 1
+    fi
+    if ! inspect_forwarder "$path"; then
+        printf '%s %s forwarder failed verification: %s\n' \
+            "$mode" "$kind" "$path" >&2
+        return 1
+    fi
+    if [[ "$inspected_forwarder_identity" != "$expected_identity" ]]; then
+        printf '%s %s forwarder identity changed: expected %s, got %s\n' \
+            "$mode" "$kind" "$expected_identity" \
+            "$inspected_forwarder_identity" >&2
+        return 1
+    fi
+    if [[ "$inspected_forwarder_digest" != "$expected_digest" ]]; then
+        printf '%s %s forwarder SHA-256 changed: expected %s, got %s\n' \
+            "$mode" "$kind" "$expected_digest" \
+            "$inspected_forwarder_digest" >&2
+        return 1
+    fi
+}
+
+validate_output_root() {
+    local owner
+
+    mkdir -p -- "$output_dir" || return
+    if [[ ! -d "$output_dir" || -L "$output_dir" ]]; then
+        printf 'output root must be a real directory: %s\n' "$output_dir" >&2
+        return 1
+    fi
+    if ! owner=$(stat -c '%u' -- "$output_dir" 2>/dev/null); then
+        owner=$(stat -f '%u' "$output_dir") || return
+    fi
+    if [[ "$owner" != "$(id -u)" ]]; then
+        printf 'output root is not owned by the current user: %s\n' \
+            "$output_dir" >&2
+        return 1
+    fi
+}
+
+prepare_forwarders() {
     local digest
-    local forwarder
+    local expected_identity
+    local existing_index
+    local identity
+    local index
+    local mode
+    local private_path
+    local source
+
+    validate_output_root || return
+    private_forwarder_dir=
+    validated_forwarder_modes=()
+    validated_forwarder_sources=()
+    validated_forwarder_paths=()
+    validated_forwarder_identities=()
+    validated_forwarder_digests=()
+
+    for mode in "${benchmark_modes[@]}"; do
+        if [[ "$mode" == direct ]]; then
+            continue
+        fi
+        source=$(configured_forwarder_for_mode "$mode") || return
+        inspect_forwarder "$source" || return
+        identity=$inspected_forwarder_identity
+        digest=$inspected_forwarder_digest
+
+        for existing_index in "${!validated_forwarder_modes[@]}"; do
+            if [[ "${validated_forwarder_identities[$existing_index]}" == \
+                  "$identity" ]]; then
+                printf 'duplicate backend identity for %s and %s: %s\n' \
+                    "${validated_forwarder_modes[$existing_index]}" \
+                    "$mode" "$identity" >&2
+                return 1
+            fi
+            if [[ "${validated_forwarder_digests[$existing_index]}" == \
+                  "$digest" ]]; then
+                printf 'duplicate forwarder SHA-256 for %s and %s: %s\n' \
+                    "${validated_forwarder_modes[$existing_index]}" \
+                    "$mode" "$digest" >&2
+                return 1
+            fi
+        done
+
+        expected_identity=$(expected_backend_identity "$mode") || return
+        if [[ "$identity" != "$expected_identity" ]]; then
+            printf '%s forwarder identity mismatch: expected %s, got %s\n' \
+                "$mode" "$expected_identity" "$identity" >&2
+            return 1
+        fi
+        validated_forwarder_modes+=("$mode")
+        validated_forwarder_sources+=("$source")
+        validated_forwarder_paths+=("")
+        validated_forwarder_identities+=("$identity")
+        validated_forwarder_digests+=("$digest")
+    done
+
+    private_forwarder_dir=$(mktemp -d \
+        "$output_dir/.l4-forwarders.XXXXXX") || return
+    chmod 700 "$private_forwarder_dir" || return
+    for index in "${!validated_forwarder_modes[@]}"; do
+        mode=${validated_forwarder_modes[$index]}
+        source=${validated_forwarder_sources[$index]}
+        identity=${validated_forwarder_identities[$index]}
+        digest=${validated_forwarder_digests[$index]}
+        private_path="$private_forwarder_dir/${mode}-forwarder"
+
+        verify_forwarder_path \
+            "$mode" source "$identity" "$digest" "$source" || return
+        cp -- "$source" "$private_path" || return
+        chmod 500 "$private_path" || return
+        verify_forwarder_path \
+            "$mode" source "$identity" "$digest" "$source" || return
+        verify_forwarder_path \
+            "$mode" private-copy "$identity" "$digest" "$private_path" \
+            || return
+        validated_forwarder_paths[$index]=$private_path
+    done
+    chmod 500 "$private_forwarder_dir" || return
+}
+
+verify_forwarder_artifacts() {
+    local digest
+    local identity
+    local index
+    local mode=$1
+    local phase=$2
+
+    if [[ "$mode" == direct ]]; then
+        return 0
+    fi
+    index=$(validated_forwarder_index "$mode") || {
+        printf '%s sample has no validated forwarder\n' "$mode" >&2
+        return 1
+    }
+    identity=${validated_forwarder_identities[$index]}
+    digest=${validated_forwarder_digests[$index]}
+    verify_forwarder_path \
+        "$mode" "$phase source" "$identity" "$digest" \
+        "${validated_forwarder_sources[$index]}" || return
+    verify_forwarder_path \
+        "$mode" "$phase private-copy" "$identity" "$digest" \
+        "${validated_forwarder_paths[$index]}"
+}
+
+verify_all_forwarder_artifacts() {
+    local mode
+    local phase=$1
+
+    for mode in "${validated_forwarder_modes[@]}"; do
+        verify_forwarder_artifacts "$mode" "$phase" || return
+    done
+}
+
+write_binary_hashes() {
     local key
     local mode
 
@@ -102,48 +375,104 @@ write_binary_hashes() {
         if [[ "$mode" == direct ]]; then
             continue
         fi
-        forwarder=$(forwarder_for_mode "$mode") || return
-        digest=$(sha256sum "$forwarder" | awk '{print $1}')
         key=${mode//-/_}_forwarder_sha256
-        printf '%s=%s\n' "$key" "$digest"
+        printf '%s_backend_identity=%s\n' \
+            "${mode//-/_}_forwarder" \
+            "$(backend_identity_for_mode "$mode")"
+        printf '%s=%s\n' "$key" "$(binary_digest_for_mode "$mode")"
+        printf '%s_private_path=%s\n' \
+            "${mode//-/_}_forwarder" "$(forwarder_for_mode "$mode")"
     done
 }
 
 summarize_throughput() {
     local throughput_csv=$1
+    local expected_runs=$2
 
-    python3 - "$throughput_csv" "${benchmark_modes[@]}" <<'PY'
+    python3 - "$throughput_csv" "$expected_runs" "${benchmark_modes[@]}" <<'PY'
 import csv
+import math
 import statistics
 import sys
 
-samples = {}
-with open(sys.argv[1], newline="") as source:
-    for row in csv.DictReader(source):
-        samples.setdefault(row["mode"], []).append(float(row["bits_per_second"]))
+path = sys.argv[1]
+expected_runs = int(sys.argv[2])
+modes = sys.argv[3:]
+samples = {mode: {} for mode in modes}
 
-modes = sys.argv[2:]
-medians = {mode: statistics.median(samples[mode]) for mode in modes}
+def fail(message):
+    raise SystemExit("invalid throughput CSV: {}".format(message))
+
+if expected_runs <= 0:
+    fail("expected run count must be positive")
+
+with open(path, newline="") as source:
+    reader = csv.DictReader(source)
+    required_fields = {"mode", "run", "bits_per_second"}
+    if reader.fieldnames is None or not required_fields.issubset(reader.fieldnames):
+        fail("missing required columns")
+    for line_number, row in enumerate(reader, start=2):
+        mode = row["mode"]
+        if mode not in samples:
+            fail("unknown mode {!r} on line {}".format(mode, line_number))
+        try:
+            run = int(row["run"])
+        except (TypeError, ValueError):
+            fail("invalid run on line {}".format(line_number))
+        if str(run) != row["run"] or not 1 <= run <= expected_runs:
+            fail("unexpected run {!r} on line {}".format(
+                row["run"], line_number))
+        try:
+            value = float(row["bits_per_second"])
+        except (TypeError, ValueError):
+            fail("invalid throughput on line {}".format(line_number))
+        if not math.isfinite(value) or value <= 0:
+            fail("throughput must be positive on line {}".format(line_number))
+        if run in samples[mode]:
+            fail("duplicate sample for mode {} run {}".format(mode, run))
+        samples[mode][run] = value
+
+expected_run_set = set(range(1, expected_runs + 1))
+for mode in modes:
+    observed_runs = set(samples[mode])
+    if observed_runs != expected_run_set:
+        fail("mode {} has runs {}, expected {}".format(
+            mode, sorted(observed_runs), sorted(expected_run_set)))
+
+medians = {
+    mode: statistics.median(samples[mode].values())
+    for mode in modes
+}
 
 def key(mode):
     return mode.replace("-", "_")
 
+def report_ratio(numerator, denominator):
+    prefix = "{}_over_{}".format(key(numerator), key(denominator))
+    ratio_of_medians = medians[numerator] / medians[denominator]
+    median_paired_ratio = statistics.median(
+        samples[numerator][run] / samples[denominator][run]
+        for run in range(1, expected_runs + 1)
+    )
+    print("{}_ratio_of_medians={:.3f}".format(
+        prefix, ratio_of_medians))
+    print("{}_median_paired_ratio={:.3f}".format(
+        prefix, median_paired_ratio))
+    # Preserve the historical key while making its value the stated
+    # per-run paired comparison.
+    print("{}={:.3f}".format(prefix, median_paired_ratio))
+
 for mode in modes:
     print("{}_median_gbps={:.3f}".format(key(mode), medians[mode] / 1e9))
 
-direct = medians["direct"]
 for mode in modes[1:]:
-    print("{}_over_direct={:.3f}".format(key(mode), medians[mode] / direct))
+    report_ratio(mode, "direct")
 
 sysv_mode = modes[1]
-print("{}_over_epoll={:.3f}".format(
-    key(sysv_mode), medians[sysv_mode] / medians["epoll"]))
+report_ratio(sysv_mode, "epoll")
 if "cacs" in medians:
-    print("cacs_over_{}={:.3f}".format(
-        key(sysv_mode), medians["cacs"] / medians[sysv_mode]))
-    print("cacs_preserve_none_over_{}={:.3f}".format(
-        key(sysv_mode),
-        medians["cacs-preserve-none"] / medians[sysv_mode]))
+    report_ratio("cacs", sysv_mode)
+    report_ratio("cacs-preserve-none", sysv_mode)
 PY
 }
 
@@ -248,13 +577,21 @@ cleanup() {
             printf -v "$pid_name" '%s' ''
         fi
     done
+    if [[ -n "$private_forwarder_dir" && -d "$private_forwarder_dir" ]]; then
+        chmod -R u+rwX -- "$private_forwarder_dir" 2>/dev/null || true
+        rm -rf -- "$private_forwarder_dir"
+        private_forwarder_dir=
+    fi
 }
 
 validate_forwarder_summary() {
+    local summary
     local proxy_log=$1
     local summaries=()
 
-    mapfile -t summaries < <(grep '^accepted=' "$proxy_log" || true)
+    while IFS= read -r summary; do
+        summaries+=("$summary")
+    done < <(grep '^accepted=' "$proxy_log" || true)
     if (( ${#summaries[@]} != 1 )); then
         printf 'expected exactly one forwarder summary in %s, found %s\n' \
             "$proxy_log" "${#summaries[@]}" >&2
@@ -276,6 +613,40 @@ mode_order_for_run() {
     for ((index = 0; index < count; index += 1)); do
         printf '%s\n' "${benchmark_modes[$(((start + index) % count))]}"
     done
+}
+
+initialize_result_files() {
+    printf 'mode,run,backend_identity,binary_sha256,bits_per_second\n' >"$csv"
+    printf 'mode,run,stream,sender_socket,sender_bytes,sender_bits_per_second,receiver_socket,receiver_bytes,receiver_bits_per_second\n' \
+        >"$stream_csv"
+    printf 'mode,run,backend_identity,binary_sha256,vm_peak_kb,vm_hwm_kb,user_ticks,system_ticks,voluntary_context_switches,nonvoluntary_context_switches\n' \
+        >"$resource_csv"
+}
+
+append_throughput_row() {
+    local identity
+    local digest
+    local mode=$1
+    local run=$2
+    local throughput=$3
+
+    identity=$(backend_identity_for_mode "$mode") || return
+    digest=$(binary_digest_for_mode "$mode") || return
+    printf '%s,%s,%s,%s,%s\n' \
+        "$mode" "$run" "$identity" "$digest" "$throughput" >>"$csv"
+}
+
+append_resource_row() {
+    local identity
+    local digest
+    local mode=$1
+    local run=$2
+    shift 2
+
+    identity=$(backend_identity_for_mode "$mode") || return
+    digest=$(binary_digest_for_mode "$mode") || return
+    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        "$mode" "$run" "$identity" "$digest" "$@" >>"$resource_csv"
 }
 
 run_all_samples() {
@@ -311,17 +682,13 @@ client_timeout_seconds=${CLIENT_TIMEOUT_SECONDS:-$((duration + 10))}
 server_exit_timeout_seconds=${SERVER_EXIT_TIMEOUT_SECONDS:-5}
 proxy_term_timeout_seconds=${PROXY_TERM_TIMEOUT_SECONDS:-5}
 
-mkdir -p "$output_dir"
+trap cleanup EXIT
+prepare_forwarders
 csv="$output_dir/throughput.csv"
 stream_csv="$output_dir/stream-throughput.csv"
 resource_csv="$output_dir/process-resources.csv"
 order_csv="$output_dir/run-order.csv"
-printf 'mode,run,bits_per_second\n' >"$csv"
-printf 'mode,run,stream,sender_socket,sender_bytes,sender_bits_per_second,receiver_socket,receiver_bytes,receiver_bits_per_second\n' \
-    >"$stream_csv"
-printf 'mode,run,vm_peak_kb,vm_hwm_kb,user_ticks,system_ticks,voluntary_context_switches,nonvoluntary_context_switches\n' \
-    >"$resource_csv"
-trap cleanup EXIT
+initialize_result_files
 
 wait_for_listener() {
     local pid=$1
@@ -438,13 +805,21 @@ run_sample() {
     local server_json="$output_dir/${mode}-${run}-server.json"
     local client_json="$output_dir/${mode}-${run}-client.json"
     local proxy_log="$output_dir/${mode}-${run}-forwarder.log"
+    local vm_peak_kb=
+    local vm_hwm_kb=
+    local user_ticks=
+    local system_ticks=
+    local voluntary_switches=
+    local nonvoluntary_switches=
+
+    verify_all_forwarder_artifacts pre-sample || return
 
     numactl --physcpubind="$server_cpu" --membind="$numa_node" \
         iperf3 -s -1 -p "$backend_port" --json >"$server_json" &
     server_pid=$!
     if ! wait_for_listener "$server_pid" "$backend_port"; then
         echo "iperf3 server did not listen on port $backend_port" >&2
-        exit 1
+        return 1
     fi
 
     local target_port=$backend_port
@@ -468,7 +843,7 @@ run_sample() {
             fi
             if ! kill -0 "$proxy_pid" 2>/dev/null; then
                 cat "$proxy_log" >&2
-                exit 1
+                return 1
             fi
             sleep 0.02
         done
@@ -510,21 +885,11 @@ run_sample() {
     if [[ "$mode" != direct ]]; then
         if ! kill -0 "$proxy_pid" 2>/dev/null; then
             cat "$proxy_log" >&2
-            exit 1
+            return 1
         fi
-        local vm_peak_kb
-        local vm_hwm_kb
-        local user_ticks
-        local system_ticks
-        local voluntary_switches
-        local nonvoluntary_switches
         IFS=, read -r vm_peak_kb vm_hwm_kb user_ticks system_ticks \
             voluntary_switches nonvoluntary_switches \
             < <(read_process_resources "$proxy_pid")
-        printf '%s,%s,%s,%s,%s,%s,%s,%s\n' \
-            "$mode" "$run" "$vm_peak_kb" "$vm_hwm_kb" \
-            "$user_ticks" "$system_ticks" "$voluntary_switches" \
-            "$nonvoluntary_switches" >>"$resource_csv"
         if terminate_and_reap_child \
             "$proxy_pid" "$proxy_term_timeout_seconds" "forwarder"; then
             child_status=0
@@ -544,11 +909,19 @@ run_sample() {
         fi
     fi
 
+    verify_all_forwarder_artifacts post-sample || return
+    if [[ "$mode" != direct ]]; then
+        append_resource_row \
+            "$mode" "$run" "$vm_peak_kb" "$vm_hwm_kb" \
+            "$user_ticks" "$system_ticks" "$voluntary_switches" \
+            "$nonvoluntary_switches"
+    fi
+
     local error
     error=$(jq -r '.error // empty' "$client_json")
     if [[ -n "$error" ]]; then
         echo "iperf3 failed: $error" >&2
-        exit 1
+        return 1
     fi
     if ! jq -e --argjson expected "$parallel" '
         (.end.streams | type == "array" and length == $expected) and
@@ -565,11 +938,11 @@ run_sample() {
     ' "$client_json" >/dev/null; then
         printf 'iperf3 invalid stream results for %s run %s: expected exactly %s streams with positive sender/receiver bytes and bits_per_second\n' \
             "$mode" "$run" "$parallel" >&2
-        exit 1
+        return 1
     fi
     local throughput
     throughput=$(jq -r '.end.sum_sent.bits_per_second' "$client_json")
-    printf '%s,%s,%s\n' "$mode" "$run" "$throughput" >>"$csv"
+    append_throughput_row "$mode" "$run" "$throughput"
     jq -r --arg mode "$mode" --arg run "$run" '
         .end.streams
         | to_entries[]
@@ -590,6 +963,7 @@ run_sample() {
 
 run_all_samples
 
-summarize_throughput "$csv"
+summarize_throughput "$csv" "$runs"
 
+cleanup
 trap - EXIT

@@ -31,6 +31,7 @@
 #define L4_IO_BUDGET_BYTES ((size_t)1024 * 1024)
 #endif
 #define L4_LISTENER_RETRY_MS 10
+#define L4_BACKEND_IDENTITY "epoll"
 
 enum l4_fd_role {
     L4_FD_NONE = 0,
@@ -152,6 +153,7 @@ static void print_usage(FILE *stream, const char *program)
             "  --grace-ms N                SIGTERM drain deadline (default 30000)\n"
             "  --reuse-port                Enable SO_REUSEPORT\n"
             "  --tcp-nodelay               Enable TCP_NODELAY on data sockets\n"
+            "  --backend-identity          Print the compiled backend and exit\n"
             "  --help                      Show this text\n",
             program);
 }
@@ -1349,6 +1351,11 @@ static void close_all_connections(struct l4_app *app)
 
 int main(int argc, char **argv)
 {
+    if (argc == 2 && strcmp(argv[1], "--backend-identity") == 0) {
+        puts(L4_BACKEND_IDENTITY);
+        return EXIT_SUCCESS;
+    }
+
     struct l4_app app = {
         .epoll_fd = -1,
         .listener_fd = -1,
