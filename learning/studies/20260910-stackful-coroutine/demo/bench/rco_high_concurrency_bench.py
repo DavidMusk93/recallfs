@@ -236,14 +236,12 @@ def read_setup_faults(pid):
     }
 
 
-def process_state(pid):
-    path = Path("/proc") / str(pid) / "status"
-    for line in path.read_text(encoding="ascii").splitlines():
-        if line.startswith("State:"):
-            parts = line.split()
-            if len(parts) >= 2:
-                return parts[1]
-    raise BenchmarkError("missing process state in {}".format(path))
+def process_group_exists(process_group):
+    try:
+        os.killpg(process_group, 0)
+    except ProcessLookupError:
+        return False
+    return True
 
 
 def terminate_process_group(process):
@@ -265,24 +263,35 @@ def terminate_process_group(process):
             raise BenchmarkError(
                 "process group {} survived SIGKILL".format(process.pid)
             )
+    if process_group_exists(process.pid):
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
 def wait_until_stopped(process, deadline):
     while time.monotonic() < deadline:
-        returncode = process.poll()
-        if returncode is not None:
+        try:
+            event = os.waitid(
+                os.P_PID,
+                process.pid,
+                os.WSTOPPED | os.WEXITED | os.WNOHANG | os.WNOWAIT,
+            )
+        except ChildProcessError:
+            event = None
+        if event is not None and event.si_code == os.CLD_STOPPED:
+            return
+        if event is not None and event.si_code in (
+            os.CLD_EXITED,
+            os.CLD_KILLED,
+            os.CLD_DUMPED,
+        ):
             stdout, stderr = process.communicate()
             raise BenchmarkError(
                 "benchmark exited before SIGSTOP with {}: stdout={!r} "
-                "stderr={!r}".format(returncode, stdout, stderr)
+                "stderr={!r}".format(process.returncode, stdout, stderr)
             )
-        try:
-            state = process_state(process.pid)
-        except FileNotFoundError:
-            time.sleep(0.01)
-            continue
-        if state in ("T", "t"):
-            return
         time.sleep(0.01)
     raise BenchmarkError("benchmark timed out before the residency barrier")
 

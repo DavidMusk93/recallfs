@@ -303,6 +303,50 @@ class TimeoutCleanupTests(unittest.TestCase):
             else:
                 self.fail(f"child process {child_pid} survived timeout cleanup")
 
+    def test_cleanup_kills_descendant_after_leader_exits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child_pid_path = root / "child.pid"
+            executable = root / "leader.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import subprocess\n"
+                "import sys\n"
+                "import time\n"
+                "child = subprocess.Popen([\n"
+                "    sys.executable, '-c',\n"
+                "    'import signal,time; signal.signal(signal.SIGTERM, "
+                "signal.SIG_IGN); time.sleep(30)'\n"
+                "])\n"
+                f"open({str(child_pid_path)!r}, 'w').write(str(child.pid))\n"
+                "time.sleep(30)\n",
+                encoding="ascii",
+            )
+            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            process = subprocess.Popen(
+                [str(executable)],
+                start_new_session=True,
+            )
+            deadline = time.monotonic() + 2
+            while not child_pid_path.exists():
+                if time.monotonic() >= deadline:
+                    self.fail("descendant pid was not published")
+                time.sleep(0.01)
+            child_pid = int(child_pid_path.read_text(encoding="ascii"))
+
+            HARNESS.terminate_process_group(process)
+
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                status_path = Path("/proc") / str(child_pid) / "status"
+                if not status_path.exists():
+                    break
+                if "\nState:\tZ" in status_path.read_text(encoding="ascii"):
+                    break
+                time.sleep(0.02)
+            else:
+                self.fail(f"descendant process {child_pid} survived cleanup")
+
 
 class RealProcessIntegrationTests(unittest.TestCase):
     def test_three_modes_emit_complete_csv_and_match_independent_oracle(self):
