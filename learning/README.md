@@ -158,6 +158,7 @@ declares an explicit generation contract. Only local build products such as
 
 | Study | Topic |
 | --- | --- |
+| [Kache build cache](studies/20260910-kache-build-cache/README.md) | Compiler-cache internals, Rust/C++ support boundaries, Blade compatibility, and Jenkins rollout |
 | [Design docs as durable Agent context](studies/20260910-design-docs-as-source/README.md) | Agent-ready docs, dependency DAGs, worked examples, reconciliation anchors, and bounded generation |
 | [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack coroutine runtime and epoll TCP L4 forwarder |
 | [Fast time-of-day](studies/20260908-fast-time-of-day/README.md) | Dependency-chain restructuring and bounded fixed-point timestamp decomposition |

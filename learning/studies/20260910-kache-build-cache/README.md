@@ -298,7 +298,7 @@ export CXX="kache c++"
 - toolchain 未指定 `prefix` 或绝对 `cc/cxx` 时，会从 PATH 解析 compiler，
   因而 Kache shims 能拦截；
 - compile rule 不使用 response file，但固定带 `-H`；
-- link rule使用 response file，不过 Kache 本来也不缓存 C/C++ link；
+- link rule 使用 response file，不过 Kache 本来也不缓存 C/C++ link；
 - `.kache.toml` allowlist `-H` 后，普通业务 TU 在 smoke test 中命中。
 
 对内部 Blade，先回答下面四个问题：
