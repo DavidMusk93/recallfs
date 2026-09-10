@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Fast Polynomial Evaluation：少乘法不等于更快</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f5f5f7;
+      --surface: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #606067;
+      --line: #d2d2d7;
+      --info: #075ca8;
+      --info-soft: #eaf3fb;
+      --success: #08783e;
+      --success-soft: #e8f7ee;
+      --warning: #8a4b08;
+      --warning-soft: #fff5df;
+      --danger: #a13232;
+      --danger-soft: #fbeaea;
+      --code: #16181d;
+      --code-ink: #e8eaf0;
+    }
+
+    * { box-sizing: border-box; }
+    html { max-width: 100%; overflow-x: hidden; }
+    body {
+      margin: 0;
+      min-width: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 44px 0 72px;
+    }
+    header {
+      padding-bottom: 34px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      max-width: 900px;
+      margin: 8px 0 14px;
+      font-size: 40px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+    p, li { max-width: 72ch; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    p code, dd code, td code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .eyebrow {
+      margin: 0;
+      color: var(--info);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      gap: 5px 16px;
+      max-width: 760px;
+      margin: 24px 0 0;
+      font-size: 14px;
+    }
+    .meta dt { color: var(--muted); }
+    .meta dd { min-width: 0; margin: 0; }
+    .conclusion {
+      max-width: 76ch;
+      margin-top: 24px;
+      padding: 16px 18px;
+      border: 1px solid #a9c9e4;
+      border-radius: 6px;
+      background: var(--info-soft);
+      color: #073f70;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    section {
+      min-width: 0;
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .mechanism {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 20px 0 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .mechanism svg {
+      display: block;
+      width: 900px;
+      max-width: none;
+      height: 310px;
+    }
+    .callout {
+      max-width: 76ch;
+      margin: 18px 0 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .callout.success { background: var(--success-soft); color: #064d29; }
+    .callout.warning { background: var(--warning-soft); color: #663806; }
+    .callout.danger { background: var(--danger-soft); color: #7a2020; }
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #ececf0;
+      color: #353539;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    th.measure, td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    .code-block {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 18px 0 0;
+      padding: 18px 0;
+      counter-reset: line;
+      border-radius: 8px;
+      background: var(--code);
+      color: var(--code-ink);
+      font: 13px/1.58 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .code-block code {
+      display: block;
+      min-width: max-content;
+    }
+    .code-line {
+      display: block;
+      padding-right: 18px;
+      white-space: pre;
+      counter-increment: line;
+    }
+    .code-line::before {
+      content: counter(line);
+      display: inline-block;
+      width: 3ch;
+      margin-right: 1.25rem;
+      color: #8e8e93;
+      text-align: right;
+      user-select: none;
+    }
+    .tok-keyword { color: #ff7ab2; }
+    .tok-type { color: #5ac8fa; }
+    .tok-number { color: #d0bf69; }
+    .tok-function { color: #b8a1ff; }
+    .tok-comment { color: #8b949e; }
+    .formula {
+      max-width: 72ch;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-x: auto;
+    }
+    footer {
+      padding-top: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (max-width: 700px) {
+      main {
+        width: min(100% - 24px, 1040px);
+        padding-top: 28px;
+      }
+      h1 { font-size: 32px; }
+      h2 { font-size: 21px; }
+      .meta { grid-template-columns: 1fr; gap: 2px; }
+      .meta dd { margin-bottom: 8px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .surface { background: var(--surface); backdrop-filter: none; }
+    }
+    @media (prefers-contrast: more) {
+      :root { --line: #707075; }
+      .metric, .table-wrap, .callout, .mechanism { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Polynomial evaluation / learning study</p>
+      <h1>Fast Polynomial Evaluation：少乘法不等于更快</h1>
+      <p class="lede">这项工作把固定多项式的系数变成另一组参数，再生成共享中间值的算术电路。理论上，它把 monic degree-n 多项式从 Horner 的 n-1 次乘法降到 floor(n/2)+1 次；工程上，收益取决于乘法成本、依赖链、FMA、额外加法和数值稳定性。</p>
+      <dl class="meta">
+        <dt>Date</dt><dd>2026-09-10</dd>
+        <dt>Input shape</dt><dd>concept</dd>
+        <dt>Subject</dt><dd>Fast Evaluation of Polynomials with Rational Preprocessing</dd>
+      </dl>
+      <aside class="conclusion"><strong>结论：</strong>它最适合有限域 hashing、coding 和 proof-system 内核等“乘法昂贵、参数可预处理、同一参数被反复求值”的场景。它不是任意浮点多项式的 Horner 替代品；对普通 <code>double</code>，FMA 和数值抵消甚至可能让 Horner 更快、更稳。</aside>
+      <div class="metrics" aria-label="关键数字">
+        <div class="metric"><strong>8 → 5</strong><span>degree-9 monic 乘法数</span></div>
+        <div class="metric"><strong>8 → 4</strong><span>示例 multiplicative depth</span></div>
+        <div class="metric"><strong>-19.9%</strong><span>目标 EPYC strict-FP 串行延迟</span></div>
+        <div class="metric"><strong>+29.9%</strong><span>同机八路吞吐时间，反而更慢</span></div>
+      </div>
+    </header>
+
+    <section>
+      <h2>先看结构：优化的是算术电路</h2>
+      <p>Horner 把每一步都接在前一步后面。预处理链用更多加减法构造两个 affine form，再让一次乘法同时生成多个系数贡献；共享的 <code>y</code>、<code>z</code> 又允许后续两支并行。它减少的是昂贵的 field multiplication 和最长乘法依赖链，不保证减少总指令。</p>
+      <div class="mechanism">
+        <svg viewBox="0 0 900 310" role="img" aria-labelledby="dag-title dag-desc">
+          <title id="dag-title">Horner 与预处理链的依赖结构</title>
+          <desc id="dag-desc">左侧 Horner 有八个串行乘法层。右侧预处理链有五个乘法，其中第三和第四个分支可并行，最长乘法深度为四。</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#606067"></path>
+            </marker>
+          </defs>
+          <text x="110" y="25" font-size="18" font-weight="700" fill="#1d1d1f">Horner</text>
+          <text x="560" y="25" font-size="18" font-weight="700" fill="#1d1d1f">Preprocessed chain</text>
+          <g fill="#ffffff" stroke="#075ca8" stroke-width="2">
+            <rect x="95" y="45" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="78" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="111" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="144" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="177" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="210" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="243" width="90" height="28" rx="5"></rect>
+            <rect x="95" y="276" width="90" height="28" rx="5"></rect>
+          </g>
+          <g text-anchor="middle" font-size="13" fill="#1d1d1f">
+            <text x="140" y="64">mul 1</text><text x="140" y="97">mul 2</text>
+            <text x="140" y="130">mul 3</text><text x="140" y="163">mul 4</text>
+            <text x="140" y="196">mul 5</text><text x="140" y="229">mul 6</text>
+            <text x="140" y="262">mul 7</text><text x="140" y="295">mul 8</text>
+          </g>
+          <g stroke="#606067" stroke-width="1.5" marker-end="url(#arrow)">
+            <path d="M140 73 V77"></path><path d="M140 106 V110"></path>
+            <path d="M140 139 V143"></path><path d="M140 172 V176"></path>
+            <path d="M140 205 V209"></path><path d="M140 238 V242"></path>
+            <path d="M140 271 V275"></path>
+          </g>
+          <g fill="#ffffff" stroke="#08783e" stroke-width="2">
+            <rect x="515" y="48" width="90" height="32" rx="5"></rect>
+            <rect x="515" y="105" width="90" height="32" rx="5"></rect>
+            <rect x="440" y="170" width="90" height="32" rx="5"></rect>
+            <rect x="590" y="170" width="90" height="32" rx="5"></rect>
+            <rect x="515" y="238" width="90" height="32" rx="5"></rect>
+          </g>
+          <g text-anchor="middle" font-size="13" fill="#1d1d1f">
+            <text x="560" y="69">y: mul 1</text>
+            <text x="560" y="126">z: mul 2</text>
+            <text x="485" y="191">t: mul 3</text>
+            <text x="635" y="191">u: mul 4</text>
+            <text x="560" y="259">v: mul 5</text>
+          </g>
+          <g stroke="#606067" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+            <path d="M560 80 V104"></path>
+            <path d="M550 137 C540 150 510 152 490 169"></path>
+            <path d="M570 137 C580 150 610 152 630 169"></path>
+            <path d="M485 202 C490 220 525 220 550 237"></path>
+          </g>
+          <text x="705" y="190" font-size="13" fill="#606067">t 与 u 可重叠执行</text>
+          <text x="330" y="298" font-size="13" fill="#606067">深度决定单次依赖延迟；总操作数和执行端口决定吞吐</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>数学上的核心</h2>
+      <p>预处理不是近似拟合，而是 coefficient space 的换坐标。对目标系数先求出参数 alpha，再固定一条 straight-line program；运行时只输入 x。degree 3 的暖身例子已经显示“一次乘法携带两个自由度”：</p>
+      <p class="formula">H2 = x*x; P3 = (x + alpha2) * (H2 + alpha1) + alpha0</p>
+      <p>展开后得到 <code>x^3 + alpha2*x^2 + alpha1*x + (alpha1*alpha2 + alpha0)</code>。因此可从目标系数依次恢复 <code>alpha2</code>、<code>alpha1</code>、<code>alpha0</code>。论文把这种 triangular decoding 扩展为递归的 compatible pairs，并证明在 characteristic 0 或 characteristic p &gt; n 的域上处处可解。</p>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,measure,measure,text">
+          <colgroup><col style="width:30%"><col style="width:15%"><col style="width:15%"><col style="width:17%"><col style="width:23%"></colgroup>
+          <thead><tr><th>degree-9 方法</th><th class="measure">乘法</th><th class="measure">加法</th><th class="measure">乘法深度</th><th>性质</th></tr></thead>
+          <tbody>
+            <tr><td>本文方法</td><td class="measure">5</td><td class="measure">20</td><td class="measure">4</td><td>exact rational preprocessing</td></tr>
+            <tr><td>Horner</td><td class="measure">8</td><td class="measure">9</td><td class="measure">8</td><td>顺序依赖</td></tr>
+            <tr><td>Estrin</td><td class="measure">11</td><td class="measure">9</td><td class="measure">4</td><td>并行友好，乘法更多</td></tr>
+            <tr><td>Rabin–Winograd</td><td class="measure">8</td><td class="measure">12</td><td class="measure">4</td><td>约 n/2 + O(log n)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>C 可以直接表达</h2>
+      <p>网页会生成 C。下面是 degree-9 reverse Bessel polynomial 的核心 evaluator；常数是系数预处理结果，不是运行时拟合参数。</p>
+      <pre class="code-block" data-language="c"><code><span class="code-line"><span class="tok-type">double</span> <span class="tok-function">eval_P</span>(<span class="tok-type">double</span> x) {</span><!--
+--><span class="code-line">    <span class="tok-type">double</span> y = (x + <span class="tok-number">11.0</span>) * x;</span><!--
+--><span class="code-line">    <span class="tok-type">double</span> z = (x + y - <span class="tok-number">21.5</span>) * (-x + y + <span class="tok-number">132.5</span>);</span><!--
+--><span class="code-line">    <span class="tok-type">double</span> t = (x + y + z + <span class="tok-number">12803.75</span>)</span><!--
+--><span class="code-line">             * (-x - y + z + <span class="tok-number">1254.75</span>);</span><!--
+--><span class="code-line">    <span class="tok-type">double</span> u = (y + z + <span class="tok-number">17266.75</span>)</span><!--
+--><span class="code-line">             * (-y + z + <span class="tok-number">1347.75</span>);</span><!--
+--><span class="code-line">    <span class="tok-type">double</span> v = (x + t + <span class="tok-number">32741929.0</span>) * x;</span><!--
+--><span class="code-line">    <span class="tok-keyword">return</span> u + v + <span class="tok-number">56100843.0</span>;</span><!--
+--><span class="code-line">}</span></code></pre>
+      <p>这段代码的价值不是手写技巧，而是 code generation：系数变化时必须重新运行受验证的 decoder/compiler，不能人工猜常数。有限域版本还需要正确的 modular reduction 或 carry-less multiplication kernel。</p>
+    </section>
+
+    <section>
+      <h2>最有趣的反直觉现象</h2>
+      <h3>1. 少乘法与快是两个命题</h3>
+      <p>目标机是 AMD EPYC 7Y83，GCC 12.2，固定 CPU 31 / NUMA 0。每个结果取 31 次样本中位数，再取三轮中位数。strict-FP 下，短依赖链改善 latency；八个独立输入已能填满乘法流水线，此时额外加减法拖慢 throughput。</p>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,measure,text">
+          <colgroup><col style="width:34%"><col style="width:20%"><col style="width:24%"><col style="width:22%"></colgroup>
+          <thead><tr><th>目标机模式</th><th class="measure">Horner ns/eval</th><th class="measure">预处理链 ns/eval</th><th>结论</th></tr></thead>
+          <tbody>
+            <tr><td>strict-FP，串行依赖</td><td class="measure">16.852</td><td class="measure">13.498</td><td>链快 19.9%</td></tr>
+            <tr><td>strict-FP，八路吞吐</td><td class="measure">2.837</td><td class="measure">3.684</td><td>链慢 29.9%</td></tr>
+            <tr><td>FMA，串行依赖</td><td class="measure">11.852</td><td class="measure">13.088</td><td>链慢 10.4%</td></tr>
+            <tr><td>FMA，八路吞吐</td><td class="measure">1.400</td><td class="measure">3.858</td><td>链慢 175.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>FMA 把 Horner 的 multiply-add 形状直接映射为八条 dependent <code>vfmadd</code>。预处理链虽然数学乘法更少，却有更多 affine-form 加减和更复杂的寄存器数据流。因此 operation count 只是成本模型，不是 wall-time 结论。</p>
+
+      <h3>2. 精确恒等不代表浮点稳定</h3>
+      <p>对 <code>P(x)=x^9</code>，五乘法链在有理数域完全正确，却需要非零 dyadic constants 彼此抵消来恢复八个零系数。C 测试在 <code>x=2^-10</code> 上得到 100% 相对误差，而普通乘法链精确得到 <code>2^-90</code>。</p>
+      <aside class="callout danger"><strong>边界：</strong>论文明确指出，对“给定任意 coefficients，再解码成新参数”的 floating-point 场景，放大因子可能无界；degree 31 的样本甚至溢出。Horner 和 Estrin 仍是通用数值计算的默认选择。</aside>
+
+      <h3>3. 同一个电路在另一种数据语义下可以稳定</h3>
+      <p>如果参数本身就是数据，例如随机 hash keys，那么不需要从任意目标系数反解出巨大、互相抵消的常数。有限域运算又是 exact 的。因此本文真正有说服力的应用不是普通 libm 多项式，而是 polynomial hashing、sketch、filter 和某些 prime-field evaluation kernels。</p>
+    </section>
+
+    <section>
+      <h2>工程收益在哪里</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text,text">
+          <colgroup><col style="width:28%"><col style="width:36%"><col style="width:36%"></colgroup>
+          <thead><tr><th>场景</th><th>收益条件</th><th>判断</th></tr></thead>
+          <tbody>
+            <tr><td>有限域 k-wise hashing</td><td>field multiply/reduction 昂贵；随机参数长期复用</td><td>强候选。论文 raw hash 报告最高约 2.15x。</td></tr>
+            <tr><td>hash table / sketch / filter</td><td>hash 仍占端到端成本的显著比例</td><td>有收益但被内存访问稀释，论文约 1.10x–1.76x。</td></tr>
+            <tr><td>固定 double 多项式</td><td>特定 x-domain、误差预算和目标 CPU 都验证过</td><td>只按实测采用；本次 FMA 结果支持 Horner。</td></tr>
+            <tr><td>动态 coefficients、少量求值</td><td>预处理不能摊销</td><td>通常不值得。</td></tr>
+            <tr><td>任意 coefficients 的高阶浮点</td><td>需要严格 backward/forward error 保证</td><td>默认拒绝，除非 guard 证明误差可接受并可回退。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="callout success"><strong>采用准则：</strong>先确认 field 和 coefficient semantics，再生成并验证 chain；最后在真实 caller、真实编译 flags、真实 CPU 上同时测 latency、throughput、codegen 和数值误差。只有这四项共同通过，乘法数下降才成为项目收益。</aside>
+    </section>
+
+    <section>
+      <h2>可信度与未覆盖范围</h2>
+      <p>本地 demo 已通过 FIL-C、Zig 0.16.0 的 O0/O2/O3 和 ASan/UBSan；目标机 GCC 12.2 的 strict-FP 与 FMA 构建均通过正确性检查。反汇编确认 strict-FP evaluator 分别保留 8 与 5 次 scalar multiply，轮数放大 4 倍时 wall time 放大约 3.97 倍。PMU 因目标机权限返回 <code>&lt;not counted&gt;</code>，因此本文没有硬件计数器结论。</p>
+      <p>本 study 没有独立复跑论文的 GF(2^64) 或 prime-field 应用 benchmark；相应加速数字是论文证据，不是本地复现。C demo 只复现 degree-9 binary64 evaluator 的语义和成本权衡。</p>
+    </section>
+
+    <footer>
+      <p>Sources: Fast Polynomial Evaluation chain compiler; Ahle and Knudsen, arXiv:2609.06022 v1; upstream revision 04c73a79a47f6107ed20ae1d4792e3e24ca6bc6f.</p>
+      <p>Composed 2026-09-10 by ce-explain</p>
+    </footer>
+  </main>
+</body>
+</html>
