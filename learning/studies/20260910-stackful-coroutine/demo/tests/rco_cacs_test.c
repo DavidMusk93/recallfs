@@ -1,6 +1,9 @@
 #include "rco.h"
 #include "rco_internal.h"
 
+#if defined(__AVX512F__)
+#include <immintrin.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +76,43 @@ static int fp_worker(void *argument)
     return 0;
 }
 
+#if defined(__AVX512F__)
+struct opmask_case {
+    __mmask16 expected;
+    __mmask16 observed;
+    int yield_result;
+};
+
+__attribute__((noinline)) static int opmask_holder(void *argument)
+{
+    struct opmask_case *test_case = argument;
+    __mmask16 mask = test_case->expected;
+    __asm__ volatile("" : "+k"(mask));
+    test_case->yield_result = rco_yield();
+    __asm__ volatile("" : "+k"(mask));
+    test_case->observed = mask;
+    return 0;
+}
+
+__attribute__((noinline)) static int opmask_scrubber(void *argument)
+{
+    unsigned mask = *(const uint16_t *)argument;
+    __asm__ volatile(
+        "kmovw %0, %%k0\n\t"
+        "kmovw %0, %%k1\n\t"
+        "kmovw %0, %%k2\n\t"
+        "kmovw %0, %%k3\n\t"
+        "kmovw %0, %%k4\n\t"
+        "kmovw %0, %%k5\n\t"
+        "kmovw %0, %%k6\n\t"
+        "kmovw %0, %%k7"
+        :
+        : "r"(mask)
+        : "k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7");
+    return rco_yield();
+}
+#endif
+
 struct bootstrap_case {
     uintptr_t entry_rsp_mod_16;
 };
@@ -103,12 +143,22 @@ int main(void)
             (uint16_t)((original_x87_control & ~0x0c00u) | 0x0400u),
     };
     struct bootstrap_case bootstrap = {0};
+#if defined(__AVX512F__)
+    struct opmask_case opmask = {
+        .expected = (__mmask16)0x5aa5u,
+    };
+    uint16_t scrubber_mask = 0xa55au;
+#endif
 
     struct rco_runtime *runtime = NULL;
     CHECK(rco_runtime_create(NULL, &runtime) == 0);
     CHECK(rco_spawn(runtime, 0, fp_worker, &first, NULL) == 0);
     CHECK(rco_spawn(runtime, 0, fp_worker, &second, NULL) == 0);
     CHECK(rco_spawn(runtime, 0, bootstrap_worker, &bootstrap, NULL) == 0);
+#if defined(__AVX512F__)
+    CHECK(rco_spawn(runtime, 0, opmask_holder, &opmask, NULL) == 0);
+    CHECK(rco_spawn(runtime, 0, opmask_scrubber, &scrubber_mask, NULL) == 0);
+#endif
     CHECK(rco_runtime_run(runtime) == 0);
 
     CHECK(first.observed_mxcsr == first.mxcsr);
@@ -118,6 +168,10 @@ int main(void)
     CHECK(read_mxcsr() == original_mxcsr);
     CHECK(read_x87_control() == original_x87_control);
     CHECK(bootstrap.entry_rsp_mod_16 == 8);
+#if defined(__AVX512F__)
+    CHECK(opmask.yield_result == 0);
+    CHECK(opmask.observed == opmask.expected);
+#endif
     CHECK(rco_runtime_destroy(runtime) == 0);
 
     puts("rco CACS ABI tests passed");

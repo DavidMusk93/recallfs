@@ -31,6 +31,12 @@ extern "C" {
 #define RCO_SUSPEND_ABI
 #endif
 
+#if defined(RCO_CACS_PRESERVE_NONE)
+#define rco_yield rco_yield_cacs_preserve_none
+#define rco_wait_fd rco_wait_fd_cacs_preserve_none
+#define rco_sleep_ms rco_sleep_ms_cacs_preserve_none
+#endif
+
 enum rco_event {
     RCO_EVENT_READ = 1u << 0,
     RCO_EVENT_WRITE = 1u << 1,

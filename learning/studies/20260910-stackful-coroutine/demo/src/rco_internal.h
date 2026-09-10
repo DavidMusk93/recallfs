@@ -55,12 +55,13 @@ void rco_context_capture_fp(struct rco_context *context);
 #endif
 
 #if defined(__AVX512F__)
-#define RCO_CACS_HIGH_XMM_CLOBBERS                                      \
+#define RCO_CACS_AVX512_CLOBBERS                                       \
     , "xmm16", "xmm17", "xmm18", "xmm19", "xmm20", "xmm21", "xmm22", \
         "xmm23", "xmm24", "xmm25", "xmm26", "xmm27", "xmm28",         \
-        "xmm29", "xmm30", "xmm31"
+        "xmm29", "xmm30", "xmm31", "k0", "k1", "k2", "k3", "k4",      \
+        "k5", "k6", "k7"
 #else
-#define RCO_CACS_HIGH_XMM_CLOBBERS
+#define RCO_CACS_AVX512_CLOBBERS
 #endif
 
 /*
@@ -92,7 +93,7 @@ rco_context_switch(struct rco_context *from, const struct rco_context *to)
           "r13", "r14", "r15", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4",
           "xmm5", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10", "xmm11",
           "xmm12", "xmm13", "xmm14", "xmm15"
-              RCO_CACS_HIGH_XMM_CLOBBERS,
+              RCO_CACS_AVX512_CLOBBERS,
           "st", "st(1)", "st(2)", "st(3)", "st(4)", "st(5)", "st(6)",
           "st(7)", "mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6",
           "mm7", "cc", "memory");

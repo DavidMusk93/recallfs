@@ -38,6 +38,10 @@ function(rco_configure_library target)
     )
 endfunction()
 
+if(RCO_BUILD_CACS)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
 add_library(rco
     src/rco.c
     src/rco_context_x86_64.S
@@ -68,7 +72,15 @@ if(RCO_BUILD_CACS)
                 "RCO_BUILD_CACS requires compiler preserve_none support")
     endif()
 
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    function(rco_enable_cacs_comparison_flags target)
+        target_compile_options(
+            ${target}
+            PUBLIC
+                $<$<COMPILE_LANGUAGE:C>:-mno-red-zone;-fcf-protection=branch>
+        )
+    endfunction()
+
+    rco_enable_cacs_comparison_flags(rco)
 
     function(rco_add_cacs_library target)
         add_library(
@@ -78,11 +90,7 @@ if(RCO_BUILD_CACS)
         )
         rco_configure_library(${target})
         target_compile_definitions(${target} PUBLIC RCO_CACS=1)
-        target_compile_options(
-            ${target}
-            PUBLIC
-                $<$<COMPILE_LANGUAGE:C>:-mno-red-zone;-fcf-protection=branch>
-        )
+        rco_enable_cacs_comparison_flags(${target})
     endfunction()
 
     rco_add_cacs_library(rco_cacs)
@@ -147,6 +155,7 @@ if(RCO_BUILD_TESTS)
                     -DRCO_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
                     -DRCO_EXECUTABLE=$<TARGET_FILE:rco_cacs_test_${suffix}>
                     -DRCO_LIBRARY_TARGET=${library}
+                    -DRCO_SYSV_LIBRARY_TARGET=rco
                     -DRCO_OBJDUMP=${CMAKE_OBJDUMP}
                     -DRCO_NM=${CMAKE_NM}
                     -DRCO_EXPECT_PRESERVE_NONE=${expect_preserve_none}
@@ -157,6 +166,22 @@ if(RCO_BUILD_TESTS)
 
         rco_add_cacs_tests(cacs rco_cacs 0)
         rco_add_cacs_tests(cacs_preserve_none rco_cacs_preserve_none 1)
+
+        add_test(
+            NAME rco_cacs_preserve_none_rejects_normal_caller
+            COMMAND
+                ${CMAKE_COMMAND}
+                -DRCO_NEGATIVE_NORMAL_LINK=ON
+                -DRCO_NORMAL_COMPILER=${CMAKE_C_COMPILER}
+                -DRCO_NORMAL_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1}
+                -DRCO_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+                -DRCO_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                -DRCO_COMPATIBLE_LIBRARY=$<TARGET_FILE:rco_cacs>
+                -DRCO_LIBRARY=$<TARGET_FILE:rco_cacs_preserve_none>
+                -DRCO_NM=${CMAKE_NM}
+                -P
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/rco_cacs_codegen_test.cmake
+        )
     endif()
 endif()
 
