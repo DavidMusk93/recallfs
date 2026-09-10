@@ -1,0 +1,24 @@
+UTC: 2026-09-10T13:39:40Z
+cd9156997914274ae0411d63496c6c5f29316e9cc9eee5d1dd06f3ffff6b5606  learning/sources/20260910-async-await-design-space-v1.pdf
+Title:           A Design Space Exploration of Async/Await
+Subject:         -  Theory of computation  ->  Program semantics.Concurrency.
+Keywords:        asynchronous programming, async/await, structured concurrency
+Author:          Gavin Gray; Shriram Krishnamurthi; Will Crichton
+Creator:         arXiv GenPDF (tex2pdf:4af3385)
+Producer:        pikepdf 8.15.1
+CreationDate:    Mon Aug 24 08:21:28 2026 CST
+ModDate:         Mon Aug 24 08:21:28 2026 CST
+Custom Metadata: yes
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           28
+Encrypted:       no
+Page size:       486 x 720 pts
+Page rot:        0
+File size:       963903 bytes
+Optimized:       no
+PDF version:     1.7

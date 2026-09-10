@@ -5,6 +5,7 @@
 static bool ma_executor_enqueue(ma_executor *executor, ma_task *task) {
     size_t tail;
 
+    /* Like Rust's Waker contract, repeated wakeups may share one queued poll. */
     if (task->complete || task->queued) {
         return true;
     }
@@ -70,7 +71,12 @@ bool ma_executor_spawn(ma_executor *executor, ma_task *task, ma_future future) {
         .executor = executor,
         .future = future,
     };
-    return ma_executor_enqueue(executor, task);
+    if (!ma_executor_enqueue(executor, task)) {
+        ma_future_drop(&task->future);
+        task->complete = true;
+        return false;
+    }
+    return true;
 }
 
 bool ma_executor_run_until_stalled(ma_executor *executor, unsigned max_polls) {
@@ -95,6 +101,7 @@ bool ma_executor_run_until_stalled(ma_executor *executor, unsigned max_polls) {
             continue;
         }
         if (task->cancel_requested) {
+            /* Unaware cancellation drops the frame instead of resuming it. */
             ma_future_drop(&task->future);
             task->cancelled = true;
             task->complete = true;
@@ -139,7 +146,16 @@ void ma_task_abort(ma_task *task) {
     ma_task_wake(task);
 }
 
-void ma_task_detach(ma_task *task) {
+ma_join_handle ma_task_join_handle(ma_task *task) {
+    ma_join_handle handle;
+
     assert(task != NULL);
-    task->detached = true;
+    assert(task->executor != NULL);
+    handle.task = task;
+    return handle;
+}
+
+void ma_join_handle_drop(ma_join_handle *handle) {
+    assert(handle != NULL);
+    handle->task = NULL;
 }

@@ -1,6 +1,6 @@
 use std::cell::RefCell;
-use std::future::{pending, ready, Future};
-use std::pin::Pin;
+use std::future::{Future, pending, ready};
+use std::pin::{Pin, pin};
 use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
 
@@ -33,9 +33,7 @@ impl Drop for DropGuard {
 
 async fn cancellable(trace: Trace) {
     trace.borrow_mut().push('A');
-    let _guard = DropGuard {
-        trace: trace.clone(),
-    };
+    let _guard = DropGuard { trace };
     pending::<()>().await;
 }
 
@@ -43,20 +41,21 @@ fn main() {
     let lazy_trace = Trace::default();
     let lazy_future = lazy(lazy_trace.clone());
     assert_eq!(lazy_trace.borrow().as_str(), "");
-    let mut lazy_future = Box::pin(lazy_future);
+    let mut lazy_future = pin!(lazy_future);
     assert_eq!(poll_once(lazy_future.as_mut()), Poll::Ready(()));
     assert_eq!(lazy_trace.borrow().as_str(), "A");
 
     let dynamic_trace = Trace::default();
-    let mut dynamic_future = Box::pin(dynamic_await(dynamic_trace.clone()));
+    let mut dynamic_future = pin!(dynamic_await(dynamic_trace.clone()));
     assert_eq!(poll_once(dynamic_future.as_mut()), Poll::Ready(()));
     assert_eq!(dynamic_trace.borrow().as_str(), "AB");
 
     let cancel_trace = Trace::default();
-    let mut cancel_future = Box::pin(cancellable(cancel_trace.clone()));
-    assert_eq!(poll_once(cancel_future.as_mut()), Poll::Pending);
-    assert_eq!(cancel_trace.borrow().as_str(), "A");
-    drop(cancel_future);
+    {
+        let mut cancel_future = pin!(cancellable(cancel_trace.clone()));
+        assert_eq!(poll_once(cancel_future.as_mut()), Poll::Pending);
+        assert_eq!(cancel_trace.borrow().as_str(), "A");
+    }
     assert_eq!(cancel_trace.borrow().as_str(), "AD");
 
     println!("rust lazy trace={}", lazy_trace.borrow());

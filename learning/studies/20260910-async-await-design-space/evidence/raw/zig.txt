@@ -1,0 +1,7 @@
+UTC: 2026-09-10T13:52:31Z
+0.16.0
+clang version 21.1.0
+Target: aarch64-apple-macosx26.6.2-unknown
+Thread model: posix
+InstalledDir: /Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0
+mini_async_test: 6/6 checks passed

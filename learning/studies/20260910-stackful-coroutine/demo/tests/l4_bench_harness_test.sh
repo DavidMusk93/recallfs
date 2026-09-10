@@ -4,6 +4,12 @@ set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck disable=SC1090
 L4_BENCH_SOURCE_ONLY=1 source "$script_dir/../bench/l4_bench.sh"
+coroutine_forwarder=
+epoll_forwarder=
+output_dir=
+cacs_forwarder=
+cacs_preserve_none_forwarder=
+benchmark_modes=()
 
 fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/rco-l4-bench-fixture.XXXXXX")
 test_pids=()
@@ -29,6 +35,16 @@ assert_file_equals() {
 
     if ! diff -u "$expected" "$actual"; then
         fail "unexpected contents in $actual"
+    fi
+}
+
+assert_equals() {
+    local expected=$1
+    local actual=$2
+    local label=$3
+
+    if [[ "$actual" != "$expected" ]]; then
+        fail "$label: expected '$expected', got '$actual'"
     fi
 }
 
@@ -68,6 +84,105 @@ start_term_ignoring_child() {
     fail "TERM-ignoring child did not become ready"
 }
 
+configure_benchmark legacy-sysv legacy-epoll legacy-output
+assert_equals legacy-sysv "$coroutine_forwarder" "legacy coroutine binary"
+assert_equals legacy-epoll "$epoll_forwarder" "legacy epoll binary"
+assert_equals legacy-output "$output_dir" "legacy output directory"
+printf '%s\n' "${benchmark_modes[@]}" >"$fixture_root/legacy-modes"
+printf '%s\n' direct coroutine epoll >"$fixture_root/expected-legacy-modes"
+assert_file_equals \
+    "$fixture_root/expected-legacy-modes" "$fixture_root/legacy-modes"
+assert_equals legacy-sysv "$(forwarder_for_mode coroutine)" \
+    "legacy coroutine mode"
+assert_equals legacy-epoll "$(forwarder_for_mode epoll)" "legacy epoll mode"
+
+for name in sysv epoll cacs cacs-preserve-none; do
+    printf '%s\n' "$name-binary" >"$fixture_root/$name"
+done
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/legacy-output"
+write_binary_hashes >"$fixture_root/legacy-hashes"
+{
+    printf 'coroutine_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/sysv" | awk '{print $1}')"
+    printf 'epoll_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/epoll" | awk '{print $1}')"
+} >"$fixture_root/expected-legacy-hashes"
+assert_file_equals \
+    "$fixture_root/expected-legacy-hashes" "$fixture_root/legacy-hashes"
+
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/five-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+assert_equals "$fixture_root/sysv" "$coroutine_forwarder" \
+    "five-mode SysV binary"
+assert_equals "$fixture_root/cacs" "$cacs_forwarder" \
+    "five-mode CACS binary"
+assert_equals "$fixture_root/cacs-preserve-none" \
+    "$cacs_preserve_none_forwarder" "five-mode CACS+PN binary"
+printf '%s\n' "${benchmark_modes[@]}" >"$fixture_root/five-modes"
+printf '%s\n' \
+    direct coroutine-sysv cacs cacs-preserve-none epoll \
+    >"$fixture_root/expected-five-modes"
+assert_file_equals "$fixture_root/expected-five-modes" "$fixture_root/five-modes"
+assert_equals "$fixture_root/sysv" "$(forwarder_for_mode coroutine-sysv)" \
+    "five-mode SysV mode"
+assert_equals "$fixture_root/cacs" "$(forwarder_for_mode cacs)" \
+    "five-mode CACS mode"
+assert_equals "$fixture_root/cacs-preserve-none" \
+    "$(forwarder_for_mode cacs-preserve-none)" "five-mode CACS+PN mode"
+assert_equals "$fixture_root/epoll" "$(forwarder_for_mode epoll)" \
+    "five-mode epoll mode"
+
+if configure_benchmark one two three four 2>"$fixture_root/usage.log"; then
+    fail "four-argument CLI was accepted"
+else
+    configure_status=$?
+fi
+assert_equals 2 "$configure_status" "invalid CLI status"
+grep -Fq \
+    '<coroutine-forwarder> <epoll-forwarder> <output-directory>' \
+    "$fixture_root/usage.log" \
+    || fail "usage omitted the legacy three-argument form"
+grep -Fq \
+    '<sysv-coroutine> <epoll> <output-dir> <cacs> <cacs-preserve-none>' \
+    "$fixture_root/usage.log" \
+    || fail "usage omitted the five-argument form"
+
+write_binary_hashes >"$fixture_root/five-hashes"
+{
+    printf 'coroutine_sysv_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/sysv" | awk '{print $1}')"
+    printf 'cacs_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/cacs" | awk '{print $1}')"
+    printf 'cacs_preserve_none_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/cacs-preserve-none" | awk '{print $1}')"
+    printf 'epoll_forwarder_sha256=%s\n' \
+        "$(sha256sum "$fixture_root/epoll" | awk '{print $1}')"
+} >"$fixture_root/expected-five-hashes"
+assert_file_equals \
+    "$fixture_root/expected-five-hashes" "$fixture_root/five-hashes"
+
+# shellcheck disable=SC2034
+base_port=43000
+for mode in "${benchmark_modes[@]}"; do
+    read -r backend_port proxy_port < <(ports_for_sample "$mode" 1)
+    printf '%s,%s,%s\n' "$mode" "$backend_port" "$proxy_port"
+done >"$fixture_root/five-ports"
+cat >"$fixture_root/expected-five-ports" <<'EOF'
+direct,43010,43011
+coroutine-sysv,43012,43013
+cacs,43014,43015
+cacs-preserve-none,43016,43017
+epoll,43018,43019
+EOF
+assert_file_equals "$fixture_root/expected-five-ports" "$fixture_root/five-ports"
+
 # shellcheck disable=SC2034
 runs=6
 order_csv="$fixture_root/run-order.csv"
@@ -75,6 +190,7 @@ invocations="$fixture_root/invocations.csv"
 run_sample() {
     printf '%s,%s\n' "$2" "$1" >>"$invocations"
 }
+configure_benchmark legacy-sysv legacy-epoll legacy-output
 run_all_samples
 
 cat >"$fixture_root/expected-order.csv" <<'EOF'
@@ -102,6 +218,116 @@ assert_file_equals "$fixture_root/expected-order.csv" "$order_csv"
 awk -F, 'NR > 1 { print $1 "," $3 }' "$order_csv" \
     >"$fixture_root/expected-invocations.csv"
 assert_file_equals "$fixture_root/expected-invocations.csv" "$invocations"
+
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/five-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+order_csv="$fixture_root/five-run-order.csv"
+invocations="$fixture_root/five-invocations.csv"
+run_all_samples
+cat >"$fixture_root/expected-five-order.csv" <<'EOF'
+run,position,mode
+1,1,direct
+1,2,coroutine-sysv
+1,3,cacs
+1,4,cacs-preserve-none
+1,5,epoll
+2,1,coroutine-sysv
+2,2,cacs
+2,3,cacs-preserve-none
+2,4,epoll
+2,5,direct
+3,1,cacs
+3,2,cacs-preserve-none
+3,3,epoll
+3,4,direct
+3,5,coroutine-sysv
+4,1,cacs-preserve-none
+4,2,epoll
+4,3,direct
+4,4,coroutine-sysv
+4,5,cacs
+5,1,epoll
+5,2,direct
+5,3,coroutine-sysv
+5,4,cacs
+5,5,cacs-preserve-none
+6,1,direct
+6,2,coroutine-sysv
+6,3,cacs
+6,4,cacs-preserve-none
+6,5,epoll
+EOF
+assert_file_equals \
+    "$fixture_root/expected-five-order.csv" "$order_csv"
+awk -F, 'NR > 1 { print $1 "," $3 }' "$order_csv" \
+    >"$fixture_root/expected-five-invocations.csv"
+assert_file_equals \
+    "$fixture_root/expected-five-invocations.csv" "$invocations"
+
+cat >"$fixture_root/legacy-throughput.csv" <<'EOF'
+mode,run,bits_per_second
+direct,1,10000000000
+coroutine,1,8000000000
+epoll,1,7000000000
+direct,2,12000000000
+coroutine,2,10000000000
+epoll,2,9000000000
+EOF
+configure_benchmark legacy-sysv legacy-epoll legacy-output
+summarize_throughput "$fixture_root/legacy-throughput.csv" \
+    >"$fixture_root/legacy-summary"
+cat >"$fixture_root/expected-legacy-summary" <<'EOF'
+direct_median_gbps=11.000
+coroutine_median_gbps=9.000
+epoll_median_gbps=8.000
+coroutine_over_direct=0.818
+epoll_over_direct=0.727
+coroutine_over_epoll=1.125
+EOF
+assert_file_equals \
+    "$fixture_root/expected-legacy-summary" "$fixture_root/legacy-summary"
+
+cat >"$fixture_root/five-throughput.csv" <<'EOF'
+mode,run,bits_per_second
+direct,1,10000000000
+coroutine-sysv,1,8000000000
+cacs,1,9000000000
+cacs-preserve-none,1,10000000000
+epoll,1,7000000000
+direct,2,12000000000
+coroutine-sysv,2,10000000000
+cacs,2,11000000000
+cacs-preserve-none,2,12000000000
+epoll,2,9000000000
+EOF
+configure_benchmark \
+    "$fixture_root/sysv" \
+    "$fixture_root/epoll" \
+    "$fixture_root/five-output" \
+    "$fixture_root/cacs" \
+    "$fixture_root/cacs-preserve-none"
+summarize_throughput "$fixture_root/five-throughput.csv" \
+    >"$fixture_root/five-summary"
+cat >"$fixture_root/expected-five-summary" <<'EOF'
+direct_median_gbps=11.000
+coroutine_sysv_median_gbps=9.000
+cacs_median_gbps=10.000
+cacs_preserve_none_median_gbps=11.000
+epoll_median_gbps=8.000
+coroutine_sysv_over_direct=0.818
+cacs_over_direct=0.909
+cacs_preserve_none_over_direct=1.000
+epoll_over_direct=0.727
+coroutine_sysv_over_epoll=1.125
+cacs_over_coroutine_sysv=1.111
+cacs_preserve_none_over_coroutine_sysv=1.222
+EOF
+assert_file_equals \
+    "$fixture_root/expected-five-summary" "$fixture_root/five-summary"
 
 cat >"$fixture_root/normal.log" <<'EOF'
 listening=127.0.0.1:43001 upstream=127.0.0.1:43000

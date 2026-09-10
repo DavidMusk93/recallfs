@@ -12,6 +12,140 @@ wait_timed_out=false
 child_poll_interval=${CHILD_POLL_INTERVAL_SECONDS:-0.02}
 kill_wait_timeout_seconds=${KILL_WAIT_TIMEOUT_SECONDS:-1}
 cleanup_term_timeout_seconds=${CLEANUP_TERM_TIMEOUT_SECONDS:-2}
+benchmark_modes=()
+
+print_usage() {
+    printf 'usage: %s <coroutine-forwarder> <epoll-forwarder> <output-directory>\n' \
+        "$0" >&2
+    printf '       %s <sysv-coroutine> <epoll> <output-dir> <cacs> <cacs-preserve-none>\n' \
+        "$0" >&2
+}
+
+configure_benchmark() {
+    case $# in
+        3)
+            benchmark_modes=(direct coroutine epoll)
+            ;;
+        5)
+            benchmark_modes=(
+                direct
+                coroutine-sysv
+                cacs
+                cacs-preserve-none
+                epoll
+            )
+            ;;
+        *)
+            print_usage
+            return 2
+            ;;
+    esac
+
+    coroutine_forwarder=$1
+    epoll_forwarder=$2
+    output_dir=$3
+    cacs_forwarder=
+    cacs_preserve_none_forwarder=
+    if (( $# == 5 )); then
+        cacs_forwarder=$4
+        cacs_preserve_none_forwarder=$5
+    fi
+}
+
+forwarder_for_mode() {
+    local mode=$1
+
+    case "$mode" in
+        coroutine|coroutine-sysv) printf '%s\n' "$coroutine_forwarder" ;;
+        cacs) printf '%s\n' "$cacs_forwarder" ;;
+        cacs-preserve-none) printf '%s\n' "$cacs_preserve_none_forwarder" ;;
+        epoll) printf '%s\n' "$epoll_forwarder" ;;
+        *)
+            printf 'benchmark mode has no forwarder: %s\n' "$mode" >&2
+            return 1
+            ;;
+    esac
+}
+
+mode_index() {
+    local mode=$1
+    local index
+
+    for index in "${!benchmark_modes[@]}"; do
+        if [[ "${benchmark_modes[$index]}" == "$mode" ]]; then
+            printf '%s\n' "$index"
+            return 0
+        fi
+    done
+    printf 'unknown benchmark mode: %s\n' "$mode" >&2
+    return 1
+}
+
+ports_for_sample() {
+    local mode=$1
+    local run=$2
+    local index
+    local backend_port
+
+    index=$(mode_index "$mode") || return
+    backend_port=$((base_port + run * 10 + index * 2))
+    printf '%s %s\n' "$backend_port" "$((backend_port + 1))"
+}
+
+write_binary_hashes() {
+    local digest
+    local forwarder
+    local key
+    local mode
+
+    for mode in "${benchmark_modes[@]}"; do
+        if [[ "$mode" == direct ]]; then
+            continue
+        fi
+        forwarder=$(forwarder_for_mode "$mode") || return
+        digest=$(sha256sum "$forwarder" | awk '{print $1}')
+        key=${mode//-/_}_forwarder_sha256
+        printf '%s=%s\n' "$key" "$digest"
+    done
+}
+
+summarize_throughput() {
+    local throughput_csv=$1
+
+    python3 - "$throughput_csv" "${benchmark_modes[@]}" <<'PY'
+import csv
+import statistics
+import sys
+
+samples = {}
+with open(sys.argv[1], newline="") as source:
+    for row in csv.DictReader(source):
+        samples.setdefault(row["mode"], []).append(float(row["bits_per_second"]))
+
+modes = sys.argv[2:]
+medians = {mode: statistics.median(samples[mode]) for mode in modes}
+
+def key(mode):
+    return mode.replace("-", "_")
+
+for mode in modes:
+    print("{}_median_gbps={:.3f}".format(key(mode), medians[mode] / 1e9))
+
+direct = medians["direct"]
+for mode in modes[1:]:
+    print("{}_over_direct={:.3f}".format(key(mode), medians[mode] / direct))
+
+sysv_mode = modes[1]
+print("{}_over_epoll={:.3f}".format(
+    key(sysv_mode), medians[sysv_mode] / medians["epoll"]))
+if "cacs" in medians:
+    print("cacs_over_{}={:.3f}".format(
+        key(sysv_mode), medians["cacs"] / medians[sysv_mode]))
+    print("cacs_preserve_none_over_{}={:.3f}".format(
+        key(sysv_mode),
+        medians["cacs-preserve-none"] / medians[sysv_mode]))
+PY
+}
 
 child_is_running() {
     local pid=$1
@@ -135,12 +269,13 @@ validate_forwarder_summary() {
 
 mode_order_for_run() {
     local run=$1
+    local count=${#benchmark_modes[@]}
+    local index
+    local start=$(((run - 1) % count))
 
-    case $(((run - 1) % 3)) in
-        0) printf '%s\n' direct coroutine epoll ;;
-        1) printf '%s\n' coroutine epoll direct ;;
-        2) printf '%s\n' epoll direct coroutine ;;
-    esac
+    for ((index = 0; index < count; index += 1)); do
+        printf '%s\n' "${benchmark_modes[$(((start + index) % count))]}"
+    done
 }
 
 run_all_samples() {
@@ -163,14 +298,7 @@ if [[ ${L4_BENCH_SOURCE_ONLY:-0} == 1 ]]; then
     return 0 2>/dev/null || exit 0
 fi
 
-if [[ $# -ne 3 ]]; then
-    echo "usage: $0 <coroutine-forwarder> <epoll-forwarder> <output-directory>" >&2
-    exit 2
-fi
-
-coroutine_forwarder=$1
-epoll_forwarder=$2
-output_dir=$3
+configure_benchmark "$@" || exit $?
 runs=${RUNS:-5}
 duration=${DURATION:-3}
 parallel=${PARALLEL:-4}
@@ -288,10 +416,7 @@ capture_cpu_frequency_policy() {
     gcc --version
     perf --version
     numactl --show
-    printf 'coroutine_forwarder_sha256='
-    sha256sum "$coroutine_forwarder" | awk '{print $1}'
-    printf 'epoll_forwarder_sha256='
-    sha256sum "$epoll_forwarder" | awk '{print $1}'
+    write_binary_hashes
     printf 'runs=%s duration=%s parallel=%s\n' "$runs" "$duration" "$parallel"
     printf 'proxy_cpu=%s server_cpu=%s client_cpu=%s numa_node=%s\n' \
         "$proxy_cpu" "$server_cpu" "$client_cpu" "$numa_node"
@@ -305,15 +430,11 @@ capture_cpu_frequency_policy() {
 run_sample() {
     local mode=$1
     local run=$2
-    local mode_offset
-    case "$mode" in
-        direct) mode_offset=0 ;;
-        coroutine) mode_offset=2 ;;
-        epoll) mode_offset=4 ;;
-        *) echo "unknown benchmark mode: $mode" >&2; exit 1 ;;
-    esac
-    local backend_port=$((base_port + run * 10 + mode_offset))
-    local proxy_port=$((backend_port + 1))
+    local backend_port
+    local port_pair
+    local proxy_port
+    port_pair=$(ports_for_sample "$mode" "$run") || return
+    read -r backend_port proxy_port <<<"$port_pair"
     local server_json="$output_dir/${mode}-${run}-server.json"
     local client_json="$output_dir/${mode}-${run}-client.json"
     local proxy_log="$output_dir/${mode}-${run}-forwarder.log"
@@ -328,10 +449,8 @@ run_sample() {
 
     local target_port=$backend_port
     if [[ "$mode" != direct ]]; then
-        local forwarder=$coroutine_forwarder
-        if [[ "$mode" == epoll ]]; then
-            forwarder=$epoll_forwarder
-        fi
+        local forwarder
+        forwarder=$(forwarder_for_mode "$mode") || return
         numactl --physcpubind="$proxy_cpu" --membind="$numa_node" \
             "$forwarder" \
             --listen-host 127.0.0.1 \
@@ -471,27 +590,6 @@ run_sample() {
 
 run_all_samples
 
-python3 - "$csv" <<'PY'
-import csv
-import statistics
-import sys
-
-samples = {}
-with open(sys.argv[1], newline="") as source:
-    for row in csv.DictReader(source):
-        samples.setdefault(row["mode"], []).append(float(row["bits_per_second"]))
-
-for mode in ("direct", "coroutine", "epoll"):
-    values = samples[mode]
-    median = statistics.median(values)
-    print("{}_median_gbps={:.3f}".format(mode, median / 1e9))
-
-direct = statistics.median(samples["direct"])
-coroutine = statistics.median(samples["coroutine"])
-epoll = statistics.median(samples["epoll"])
-print("coroutine_over_direct={:.3f}".format(coroutine / direct))
-print("epoll_over_direct={:.3f}".format(epoll / direct))
-print("coroutine_over_epoll={:.3f}".format(coroutine / epoll))
-PY
+summarize_throughput "$csv"
 
 trap - EXIT

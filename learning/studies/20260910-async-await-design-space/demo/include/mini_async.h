@@ -41,8 +41,11 @@ typedef struct ma_task {
     bool complete;
     bool cancel_requested;
     bool cancelled;
-    bool detached;
 } ma_task;
+
+typedef struct ma_join_handle {
+    ma_task *task;
+} ma_join_handle;
 
 typedef struct ma_executor {
     ma_task *queue[MA_EXECUTOR_CAPACITY];
@@ -62,6 +65,7 @@ size_t ma_executor_ready_count(const ma_executor *executor);
 
 void ma_task_wake(ma_task *task);
 void ma_task_abort(ma_task *task);
-void ma_task_detach(ma_task *task);
+ma_join_handle ma_task_join_handle(ma_task *task);
+void ma_join_handle_drop(ma_join_handle *handle);
 
 #endif

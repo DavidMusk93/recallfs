@@ -17,18 +17,11 @@ static bool run_scenario(const char *name, scenario_fn scenario) {
         return false;
     }
 
-    printf(
-        "%-13s trace=%-2s polls=%u inert=%s complete=%s cancelled=%s "
-        "detached=%s cleanup=%s coalesced=%s\n",
-        name,
-        observation.trace,
-        observation.task_polls,
-        yes_no(observation.constructor_was_inert),
-        yes_no(observation.completed),
-        yes_no(observation.cancelled),
-        yes_no(observation.detached),
-        yes_no(observation.cleanup_ran),
-        yes_no(observation.wakeups_coalesced));
+    printf("%-13s trace=%-2s polls=%u inert=%s complete=%s cancelled=%s "
+           "detached=%s cleanup=%s coalesced=%s\n",
+           name, observation.trace, observation.task_polls, yes_no(observation.constructor_was_inert),
+           yes_no(observation.completed), yes_no(observation.cancelled), yes_no(observation.detached),
+           yes_no(observation.cleanup_ran), yes_no(observation.wakeups_coalesced));
     return true;
 }
 

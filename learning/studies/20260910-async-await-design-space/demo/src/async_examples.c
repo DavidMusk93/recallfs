@@ -97,9 +97,11 @@ typedef struct dynamic_parent_state {
 static ma_poll dynamic_parent_poll(void *opaque, const ma_context *context) {
     dynamic_parent_state *state = opaque;
 
-    assert(!state->started);
-    state->started = true;
-    trace_push(state->observation, 'A');
+    if (!state->started) {
+        state->started = true;
+        trace_push(state->observation, 'A');
+    }
+    /* A ready child lets the parent continue without yielding to the executor. */
     if (ma_future_poll(&state->child, context) == MA_POLL_PENDING) {
         return MA_POLL_PENDING;
     }
@@ -131,12 +133,10 @@ bool aa_observe_dynamic_await(aa_observation *observation) {
         .observation = observation,
         .child = ma_future_make(&child_state, &ready_child_vtable),
     };
+    observation->constructor_was_inert = observation->trace[0] == '\0';
 
     ma_executor_init(&executor);
-    if (!ma_executor_spawn(
-            &executor,
-            &task,
-            ma_future_make(&parent_state, &dynamic_parent_vtable))) {
+    if (!ma_executor_spawn(&executor, &task, ma_future_make(&parent_state, &dynamic_parent_vtable))) {
         return false;
     }
     if (!ma_executor_run_until_stalled(&executor, 8U)) {
@@ -164,6 +164,7 @@ static ma_poll event_poll(void *opaque, const ma_context *context) {
         trace_push(state->observation, 'A');
     }
     if (!state->ready) {
+        /* Pending futures retain the latest waker needed to make progress. */
         state->waker = context->waker;
         state->has_waker = true;
         return MA_POLL_PENDING;
@@ -189,6 +190,7 @@ static void event_signal(event_state *state, bool signal_twice) {
 
 static bool observe_event(aa_observation *observation, bool detach) {
     ma_executor executor;
+    ma_join_handle handle;
     ma_task task;
     event_state state;
     size_t ready_after_signal;
@@ -198,13 +200,13 @@ static bool observe_event(aa_observation *observation, bool detach) {
         .observation = observation,
     };
     ma_executor_init(&executor);
-    if (!ma_executor_spawn(
-            &executor, &task, ma_future_make(&state, &event_vtable))) {
+    if (!ma_executor_spawn(&executor, &task, ma_future_make(&state, &event_vtable))) {
         return false;
     }
+    handle = ma_task_join_handle(&task);
     observation->constructor_was_inert = observation->trace[0] == '\0';
     if (detach) {
-        ma_task_detach(&task);
+        ma_join_handle_drop(&handle);
     }
 
     if (!ma_executor_run_until_stalled(&executor, 8U)) {
@@ -221,10 +223,9 @@ static bool observe_event(aa_observation *observation, bool detach) {
     }
 
     observation->task_polls = task.poll_count;
-    observation->wakeups_coalesced =
-        ready_after_signal == 1U && task.poll_count == 2U;
+    observation->wakeups_coalesced = ready_after_signal == 1U && task.poll_count == 2U;
     observation->completed = task.complete;
-    observation->detached = task.detached;
+    observation->detached = handle.task == NULL;
     return true;
 }
 
@@ -238,20 +239,17 @@ bool aa_observe_detach(aa_observation *observation) {
 
 typedef struct cleanup_child_state {
     aa_observation *observation;
-    ma_waker waker;
-    bool has_waker;
     bool resource_open;
 } cleanup_child_state;
 
 static ma_poll cleanup_child_poll(void *opaque, const ma_context *context) {
     cleanup_child_state *state = opaque;
 
+    (void)context;
     if (!state->resource_open) {
         state->resource_open = true;
         trace_push(state->observation, 'A');
     }
-    state->waker = context->waker;
-    state->has_waker = true;
     return MA_POLL_PENDING;
 }
 
@@ -283,6 +281,7 @@ static ma_poll cancel_parent_poll(void *opaque, const ma_context *context) {
 static void cancel_parent_drop(void *opaque) {
     cancel_parent_state *state = opaque;
 
+    /* Dropping the owner recursively cancels its in-frame child future. */
     ma_future_drop(&state->child);
 }
 
@@ -304,17 +303,15 @@ bool aa_observe_cancel(aa_observation *observation) {
     parent_state = (cancel_parent_state){
         .child = ma_future_make(&child_state, &cleanup_child_vtable),
     };
+    observation->constructor_was_inert = observation->trace[0] == '\0';
     ma_executor_init(&executor);
-    if (!ma_executor_spawn(
-            &executor,
-            &task,
-            ma_future_make(&parent_state, &cancel_parent_vtable))) {
+    if (!ma_executor_spawn(&executor, &task, ma_future_make(&parent_state, &cancel_parent_vtable))) {
         return false;
     }
     if (!ma_executor_run_until_stalled(&executor, 8U)) {
         return false;
     }
-    if (!child_state.has_waker || !child_state.resource_open) {
+    if (!child_state.resource_open) {
         return false;
     }
 

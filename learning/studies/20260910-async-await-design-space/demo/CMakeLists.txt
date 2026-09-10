@@ -13,36 +13,23 @@ add_library(
     src/async_examples.c
 )
 target_include_directories(mini_async PUBLIC include)
-target_compile_options(
-    mini_async
-    PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
-)
 
 add_executable(async_design_demo src/main.c)
 target_link_libraries(async_design_demo PRIVATE mini_async)
-target_compile_options(
-    async_design_demo
-    PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
-)
 
 add_executable(mini_async_test tests/mini_async_test.c)
 target_link_libraries(mini_async_test PRIVATE mini_async)
-target_compile_options(
-    mini_async_test
-    PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
-)
+
+foreach(target IN ITEMS mini_async async_design_demo mini_async_test)
+    target_compile_options(
+        ${target}
+        PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Werror
+    )
+endforeach()
 
 enable_testing()
 add_test(NAME mini_async_semantics COMMAND mini_async_test)

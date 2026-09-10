@@ -1,0 +1,37 @@
+UTC: 2026-09-10T13:52:30Z
+Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
+Apple clang version 21.0.0 (clang-2100.1.1.101)
+Target: arm64-apple-darwin25.6.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+cmake version 4.0.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/async-await-design-space/evidence-native
+[1/7] Building C object CMakeFiles/mini_async.dir/src/mini_async.c.o
+[2/7] Building C object CMakeFiles/mini_async.dir/src/async_examples.c.o
+[3/7] Building C object CMakeFiles/async_design_demo.dir/src/main.c.o
+[4/7] Building C object CMakeFiles/mini_async_test.dir/tests/mini_async_test.c.o
+[5/7] Linking C static library libmini_async.a
+[6/7] Linking C executable async_design_demo
+[7/7] Linking C executable mini_async_test
+Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/async-await-design-space/evidence-native
+    Start 1: mini_async_semantics
+1/1 Test #1: mini_async_semantics .............   Passed    0.99 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.99 sec
+lazy          trace=A  polls=1 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=no
+dynamic-await trace=AB polls=1 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=no
+wake          trace=AB polls=2 inert=yes complete=yes cancelled=no detached=no cleanup=no coalesced=yes
+detach        trace=AB polls=2 inert=yes complete=yes cancelled=no detached=yes cleanup=no coalesced=yes
+cancel        trace=AD polls=1 inert=yes complete=yes cancelled=yes detached=no cleanup=yes coalesced=no
