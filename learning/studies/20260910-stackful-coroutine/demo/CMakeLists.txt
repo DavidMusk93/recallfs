@@ -165,6 +165,17 @@ if(RCO_BUILD_BENCHMARKS)
     target_link_libraries(rco_bench PRIVATE rco)
     rco_enable_c_warnings(rco_bench)
 
+    function(rco_add_high_concurrency_bench target library)
+        add_executable(
+            ${target}
+            bench/rco_high_concurrency_bench.c
+        )
+        target_link_libraries(${target} PRIVATE ${library})
+        rco_enable_c_warnings(${target})
+    endfunction()
+
+    rco_add_high_concurrency_bench(rco_high_concurrency_bench_sysv rco)
+
     if(RCO_BUILD_CACS)
         add_executable(rco_bench_cacs bench/rco_bench.c)
         target_link_libraries(rco_bench_cacs PRIVATE rco_cacs)
@@ -176,6 +187,56 @@ if(RCO_BUILD_BENCHMARKS)
             PRIVATE rco_cacs_preserve_none
         )
         rco_enable_c_warnings(rco_bench_cacs_preserve_none)
+
+        rco_add_high_concurrency_bench(
+            rco_high_concurrency_bench_cacs
+            rco_cacs
+        )
+        rco_add_high_concurrency_bench(
+            rco_high_concurrency_bench_cacs_preserve_none
+            rco_cacs_preserve_none
+        )
+    endif()
+
+    if(RCO_BUILD_TESTS AND RCO_BUILD_CACS)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        set(
+            RCO_HIGH_CONCURRENCY_TEST_COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/rco_high_concurrency_bench_test.py
+            --harness
+            ${CMAKE_CURRENT_SOURCE_DIR}/bench/rco_high_concurrency_bench.py
+            --sysv
+            $<TARGET_FILE:rco_high_concurrency_bench_sysv>
+            --cacs
+            $<TARGET_FILE:rco_high_concurrency_bench_cacs>
+            --cacs-preserve-none
+            $<TARGET_FILE:rco_high_concurrency_bench_cacs_preserve_none>
+        )
+
+        foreach(
+            suite
+            IN ITEMS arguments oracle csv timeout integration
+        )
+            add_test(
+                NAME rco_high_concurrency_${suite}
+                COMMAND ${RCO_HIGH_CONCURRENCY_TEST_COMMAND} ${suite}
+            )
+        endforeach()
+        set_tests_properties(
+            rco_high_concurrency_arguments
+            rco_high_concurrency_csv
+            PROPERTIES TIMEOUT 10
+        )
+        set_tests_properties(
+            rco_high_concurrency_oracle
+            rco_high_concurrency_timeout
+            PROPERTIES TIMEOUT 15
+        )
+        set_tests_properties(
+            rco_high_concurrency_integration
+            PROPERTIES TIMEOUT 30
+        )
     endif()
 endif()
 

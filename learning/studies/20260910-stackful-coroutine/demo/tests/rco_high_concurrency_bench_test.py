@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+import importlib.util
+from pathlib import Path
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+
+def load_harness(path):
+    spec = importlib.util.spec_from_file_location("rco_high_concurrency", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("failed to load benchmark harness")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def independent_checksum(tasks, touch_bytes, page_size, yields_per_task):
+    sentinel_count = (touch_bytes + page_size - 1) // page_size
+    checksum = 0
+    for task_id in range(1, tasks + 1):
+        sentinel_sum = sum(
+            ((task_id * 131) + (index * 17) + 0x5A) & 0xFF
+            for index in range(sentinel_count)
+        )
+        checksum += sentinel_sum * (yields_per_task + 1)
+    return checksum
+
+
+class ArgumentBoundsTests(unittest.TestCase):
+    def run_invalid(self, arguments):
+        completed = subprocess.run(
+            [str(BINARIES["sysv"]), *arguments],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=3,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 2, arguments)
+        self.assertEqual(completed.stdout, "")
+        self.assertNotEqual(completed.stderr, "")
+
+    def test_rejects_missing_unknown_and_duplicate_arguments(self):
+        self.run_invalid([])
+        self.run_invalid(["--tasks"])
+        self.run_invalid(
+            [
+                "--tasks",
+                "1",
+                "--tasks",
+                "2",
+                "--stack-bytes",
+                "32768",
+                "--touch-bytes",
+                "4096",
+            ]
+        )
+        self.run_invalid(
+            [
+                "--tasks",
+                "1",
+                "--stack-bytes",
+                "32768",
+                "--touch-bytes",
+                "4096",
+                "--unknown",
+                "1",
+            ]
+        )
+
+    def test_rejects_numeric_and_cross_field_bounds(self):
+        base = {
+            "--tasks": "1",
+            "--stack-bytes": "32768",
+            "--touch-bytes": "4096",
+            "--yields-per-task": "1",
+        }
+        invalid = (
+            ("--tasks", "0"),
+            ("--tasks", "16385"),
+            ("--tasks", "-1"),
+            ("--stack-bytes", "16383"),
+            ("--stack-bytes", "524289"),
+            ("--touch-bytes", "0"),
+            ("--touch-bytes", "24577"),
+            ("--yields-per-task", "0"),
+            ("--yields-per-task", "20000001"),
+        )
+        for option, value in invalid:
+            arguments = []
+            for name, current in base.items():
+                arguments.extend((name, value if name == option else current))
+            with self.subTest(option=option, value=value):
+                self.run_invalid(arguments)
+
+        self.run_invalid(
+            [
+                "--tasks",
+                "4096",
+                "--stack-bytes",
+                "524288",
+                "--touch-bytes",
+                "135168",
+                "--yields-per-task",
+                "1",
+            ]
+        )
+        self.run_invalid(
+            [
+                "--tasks",
+                "1",
+                "--stack-bytes",
+                "32768",
+                "--touch-bytes",
+                "24576",
+                "--yields-per-task",
+                "1",
+            ]
+        )
+        self.run_invalid(
+            [
+                "--tasks",
+                "16384",
+                "--stack-bytes",
+                "32768",
+                "--touch-bytes",
+                "4096",
+                "--yields-per-task",
+                "1221",
+            ]
+        )
+
+
+class CsvValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.case = HARNESS.BenchmarkCase(
+            name="unit",
+            tasks=2,
+            stack_bytes=32768,
+            touch_bytes=4096,
+            yields_per_task=3,
+        )
+
+    def row(self, mode, position):
+        checksum = independent_checksum(2, 4096, 4096, 3)
+        return {
+            "schema": HARNESS.RESULT_SCHEMA,
+            "case": "unit",
+            "run": 1,
+            "position": position,
+            "mode": mode,
+            "tasks": 2,
+            "stack_bytes": 32768,
+            "touch_bytes": 4096,
+            "page_size": 4096,
+            "sentinels_per_task": 1,
+            "yields_per_task": 3,
+            "total_yields": 6,
+            "checksum": checksum,
+            "expected_checksum": checksum,
+            "runtime_switches": 24,
+            "expected_runtime_switches": 24,
+            "wall_ns": 1,
+            "user_us": 0,
+            "system_us": 0,
+            "minor_faults_delta": 0,
+            "major_faults_delta": 0,
+            "voluntary_context_switches_delta": 0,
+            "involuntary_context_switches_delta": 0,
+            "spawned": 2,
+            "completed": 2,
+            "peak_active": 2,
+            "vm_peak_kb": 1,
+            "vm_hwm_kb": 1,
+            "vm_size_kb": 1,
+            "vm_rss_kb": 1,
+            "rss_anon_kb": 1,
+            "rss_file_kb": 1,
+            "rss_shmem_kb": 0,
+            "setup_minor_faults": 7,
+            "setup_major_faults": 0,
+            "smaps_rss_kb": 1,
+            "smaps_pss_kb": 1,
+            "smaps_private_clean_kb": 0,
+            "smaps_private_dirty_kb": 1,
+            "smaps_anonymous_kb": 1,
+        }
+
+    def valid_rows(self):
+        return [
+            self.row(mode, position)
+            for position, mode in enumerate(HARNESS.MODE_NAMES, start=1)
+        ]
+
+    def test_accepts_complete_consistent_rows(self):
+        HARNESS.validate_samples(self.valid_rows(), [self.case], runs=1)
+
+    def test_rejects_duplicate_missing_nonpositive_and_inconsistent_rows(self):
+        mutations = []
+
+        duplicate = self.valid_rows()
+        duplicate.append(dict(duplicate[0]))
+        mutations.append(duplicate)
+
+        mutations.append(self.valid_rows()[:-1])
+
+        missing_field = self.valid_rows()
+        del missing_field[0]["wall_ns"]
+        mutations.append(missing_field)
+
+        nonpositive = self.valid_rows()
+        nonpositive[0]["wall_ns"] = 0
+        mutations.append(nonpositive)
+
+        inconsistent = self.valid_rows()
+        inconsistent[0]["runtime_switches"] += 2
+        mutations.append(inconsistent)
+
+        cross_mode = self.valid_rows()
+        cross_mode[0]["checksum"] += 1
+        mutations.append(cross_mode)
+
+        extra = self.valid_rows()
+        extra[0]["unexpected"] = 1
+        mutations.append(extra)
+
+        wrong_page_size = self.valid_rows()
+        wrong_page_size[0]["page_size"] = 2048
+        wrong_page_size[0]["sentinels_per_task"] = 2
+        wrong_checksum = independent_checksum(2, 4096, 2048, 3)
+        wrong_page_size[0]["checksum"] = wrong_checksum
+        wrong_page_size[0]["expected_checksum"] = wrong_checksum
+        mutations.append(wrong_page_size)
+
+        for rows in mutations:
+            with self.subTest(rows=rows):
+                with self.assertRaises(HARNESS.BenchmarkError):
+                    HARNESS.validate_samples(rows, [self.case], runs=1)
+
+
+class OracleChecksumTests(unittest.TestCase):
+    def test_real_sample_matches_independent_checksum_and_switch_oracles(self):
+        case = HARNESS.BenchmarkCase("oracle", 2, 32768, 4096, 3)
+        row = HARNESS.run_sample(
+            HARNESS.Mode("sysv", BINARIES["sysv"]),
+            case,
+            run=1,
+            position=1,
+            timeout_seconds=10,
+        )
+        expected_checksum = independent_checksum(2, 4096, 4096, 3)
+        self.assertEqual(row["checksum"], expected_checksum)
+        self.assertEqual(row["expected_checksum"], expected_checksum)
+        self.assertEqual(row["runtime_switches"], 2 * (2 * 3 + 6))
+        self.assertEqual(row["expected_runtime_switches"], 2 * (2 * 3 + 6))
+
+
+class TimeoutCleanupTests(unittest.TestCase):
+    def test_timeout_kills_stopped_process_group(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child_pid_path = root / "child.pid"
+            executable = root / "hang.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import os\n"
+                "from pathlib import Path\n"
+                "import signal\n"
+                "import subprocess\n"
+                "import time\n"
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+                "child = subprocess.Popen(['sleep', '30'])\n"
+                f"Path({str(child_pid_path)!r}).write_text(str(child.pid))\n"
+                "os.kill(os.getpid(), signal.SIGSTOP)\n"
+                "time.sleep(30)\n",
+                encoding="ascii",
+            )
+            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            mode = HARNESS.Mode("sysv", executable)
+            case = HARNESS.BenchmarkCase("timeout", 1, 32768, 4096, 1)
+
+            with self.assertRaises(HARNESS.BenchmarkError):
+                HARNESS.run_sample(mode, case, 1, 1, timeout_seconds=0.2)
+
+            child_pid = int(child_pid_path.read_text(encoding="ascii"))
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                status_path = Path("/proc") / str(child_pid) / "status"
+                if not status_path.exists():
+                    break
+                status = status_path.read_text(encoding="ascii")
+                if "\nState:\tZ" in status:
+                    break
+                time.sleep(0.02)
+            else:
+                self.fail(f"child process {child_pid} survived timeout cleanup")
+
+
+class RealProcessIntegrationTests(unittest.TestCase):
+    def test_three_modes_emit_complete_csv_and_match_independent_oracle(self):
+        case = HARNESS.BenchmarkCase("smoke", 3, 32768, 4096, 4)
+        modes = [
+            HARNESS.Mode(name, BINARIES[name]) for name in HARNESS.MODE_NAMES
+        ]
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            HARNESS.run_matrix(
+                modes=modes,
+                cases=[case],
+                runs=3,
+                timeout_seconds=10,
+                output_dir=output,
+            )
+            with (output / "samples.csv").open(newline="", encoding="ascii") as source:
+                samples = list(csv.DictReader(source))
+            with (output / "summary.csv").open(newline="", encoding="ascii") as source:
+                summary = list(csv.DictReader(source))
+
+        self.assertEqual(len(samples), 9)
+        self.assertEqual(len(summary), 3)
+        self.assertEqual(
+            {float(row["paired_wall_ratio_vs_sysv"]) for row in summary
+             if row["mode"] == "sysv"},
+            {1.0},
+        )
+        self.assertEqual(
+            {float(row["paired_cpu_ratio_vs_sysv"]) for row in summary
+             if row["mode"] == "sysv"},
+            {1.0},
+        )
+        expected = independent_checksum(3, 4096, 4096, 4)
+        self.assertEqual({int(row["checksum"]) for row in samples}, {expected})
+        self.assertEqual({int(row["spawned"]) for row in samples}, {3})
+        self.assertEqual({int(row["completed"]) for row in samples}, {3})
+        self.assertEqual({int(row["peak_active"]) for row in samples}, {3})
+        self.assertEqual(
+            [row["mode"] for row in samples],
+            [
+                "sysv",
+                "cacs",
+                "cacs-preserve-none",
+                "cacs",
+                "cacs-preserve-none",
+                "sysv",
+                "cacs-preserve-none",
+                "sysv",
+                "cacs",
+            ],
+        )
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--harness", type=Path, required=True)
+    parser.add_argument("--sysv", type=Path, required=True)
+    parser.add_argument("--cacs", type=Path, required=True)
+    parser.add_argument("--cacs-preserve-none", type=Path, required=True)
+    parser.add_argument(
+        "suite",
+        choices=("arguments", "oracle", "csv", "timeout", "integration", "all"),
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    arguments = parse_arguments()
+    HARNESS = load_harness(arguments.harness)
+    BINARIES = {
+        "sysv": arguments.sysv,
+        "cacs": arguments.cacs,
+        "cacs-preserve-none": arguments.cacs_preserve_none,
+    }
+    suites = {
+        "arguments": ArgumentBoundsTests,
+        "oracle": OracleChecksumTests,
+        "csv": CsvValidationTests,
+        "timeout": TimeoutCleanupTests,
+        "integration": RealProcessIntegrationTests,
+    }
+    selected = suites.values() if arguments.suite == "all" else (
+        suites[arguments.suite],
+    )
+    test_suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(test_case)
+        for test_case in selected
+    )
+    result = unittest.TextTestRunner(verbosity=2).run(test_suite)
+    raise SystemExit(0 if result.wasSuccessful() else 1)
