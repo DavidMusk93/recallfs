@@ -116,6 +116,10 @@ class BenchmarkError(RuntimeError):
     pass
 
 
+def raise_on_termination_signal(signum, _frame):
+    raise BenchmarkError("received {}".format(signal.Signals(signum).name))
+
+
 @dataclass(frozen=True)
 class Mode:
     name: str
@@ -880,6 +884,8 @@ def parse_arguments():
 
 def main():
     arguments = parse_arguments()
+    signal.signal(signal.SIGINT, raise_on_termination_signal)
+    signal.signal(signal.SIGTERM, raise_on_termination_signal)
     modes = [
         Mode("sysv", arguments.sysv.resolve()),
         Mode("cacs", arguments.cacs.resolve()),

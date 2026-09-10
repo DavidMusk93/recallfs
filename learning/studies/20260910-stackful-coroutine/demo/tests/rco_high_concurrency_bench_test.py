@@ -4,7 +4,9 @@ import argparse
 import csv
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
+import signal
 import stat
 import subprocess
 import sys
@@ -42,6 +44,24 @@ def sha256_file(path):
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def wait_for_processes_to_exit(process_ids, timeout_seconds=2):
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        live = []
+        for process_id in process_ids:
+            status_path = Path("/proc") / str(process_id) / "status"
+            try:
+                status = status_path.read_text(encoding="ascii")
+            except FileNotFoundError:
+                continue
+            if "\nState:\tZ" not in status:
+                live.append(process_id)
+        if not live:
+            return []
+        time.sleep(0.02)
+    return live
 
 
 class ArgumentBoundsTests(unittest.TestCase):
@@ -408,6 +428,107 @@ class OracleChecksumTests(unittest.TestCase):
 
 
 class TimeoutCleanupTests(unittest.TestCase):
+    def test_parent_sigterm_reaps_stopped_process_group(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            process_ids_path = root / "process-ids.txt"
+            executables = {}
+            for mode in HARNESS.MODE_NAMES:
+                executable = root / "{}.py".format(mode)
+                executable.write_text(
+                    "#!/usr/bin/env python3\n"
+                    "import os\n"
+                    "from pathlib import Path\n"
+                    "import signal\n"
+                    "import subprocess\n"
+                    "import sys\n"
+                    "import time\n"
+                    "# mode={!s}\n"
+                    "child = subprocess.Popen([\n"
+                    "    sys.executable, '-c',\n"
+                    "    'import signal,time; signal.signal(signal.SIGTERM, "
+                    "signal.SIG_IGN); time.sleep(30)'\n"
+                    "])\n"
+                    "Path({!r}).write_text(\n"
+                    "    '{{}} {{}}'.format(os.getpid(), child.pid)\n"
+                    ")\n"
+                    "os.kill(os.getpid(), signal.SIGSTOP)\n"
+                    "time.sleep(30)\n".format(mode, str(process_ids_path)),
+                    encoding="ascii",
+                )
+                executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+                executables[mode] = executable
+
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    str(arguments.harness),
+                    "--sysv",
+                    str(executables["sysv"]),
+                    "--cacs",
+                    str(executables["cacs"]),
+                    "--cacs-preserve-none",
+                    str(executables["cacs-preserve-none"]),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--matrix",
+                    "smoke",
+                    "--runs",
+                    "1",
+                    "--timeout-seconds",
+                    "10",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            leader_pid = None
+            child_pid = None
+            try:
+                deadline = time.monotonic() + 2
+                while True:
+                    try:
+                        process_ids = process_ids_path.read_text(
+                            encoding="ascii"
+                        ).split()
+                        if len(process_ids) == 2:
+                            leader_pid, child_pid = (
+                                int(value) for value in process_ids
+                            )
+                            break
+                    except (FileNotFoundError, ValueError):
+                        pass
+                    if process.poll() is not None:
+                        self.fail("benchmark harness exited before child startup")
+                    if time.monotonic() >= deadline:
+                        self.fail("benchmark process ids were not published")
+                    time.sleep(0.01)
+
+                process.send_signal(signal.SIGTERM)
+                stdout, stderr = process.communicate(timeout=3)
+                self.assertNotEqual(process.returncode, 0)
+                self.assertEqual(stdout, "")
+                self.assertIn(
+                    "benchmark failed: received SIGTERM", stderr
+                )
+
+                live = wait_for_processes_to_exit((leader_pid, child_pid))
+                if live:
+                    self.fail(
+                        "benchmark descendants survived SIGTERM: {}".format(
+                            live
+                        )
+                    )
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=2)
+                if leader_pid is not None:
+                    try:
+                        os.killpg(leader_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
     def test_early_exit_with_inherited_pipe_is_bounded(self):
         with tempfile.TemporaryDirectory() as temporary:
             executable = Path(temporary) / "early-exit.py"
@@ -463,16 +584,7 @@ class TimeoutCleanupTests(unittest.TestCase):
                 HARNESS.run_sample(mode, case, 1, 1, timeout_seconds=0.2)
 
             child_pid = int(child_pid_path.read_text(encoding="ascii"))
-            deadline = time.monotonic() + 2
-            while time.monotonic() < deadline:
-                status_path = Path("/proc") / str(child_pid) / "status"
-                if not status_path.exists():
-                    break
-                status = status_path.read_text(encoding="ascii")
-                if "\nState:\tZ" in status:
-                    break
-                time.sleep(0.02)
-            else:
+            if wait_for_processes_to_exit((child_pid,)):
                 self.fail(f"child process {child_pid} survived timeout cleanup")
 
     def test_cleanup_kills_descendant_after_leader_exits(self):
@@ -508,15 +620,7 @@ class TimeoutCleanupTests(unittest.TestCase):
 
             HARNESS.terminate_process_group(process)
 
-            deadline = time.monotonic() + 2
-            while time.monotonic() < deadline:
-                status_path = Path("/proc") / str(child_pid) / "status"
-                if not status_path.exists():
-                    break
-                if "\nState:\tZ" in status_path.read_text(encoding="ascii"):
-                    break
-                time.sleep(0.02)
-            else:
+            if wait_for_processes_to_exit((child_pid,)):
                 self.fail(f"descendant process {child_pid} survived cleanup")
 
 
