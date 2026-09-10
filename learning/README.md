@@ -160,7 +160,7 @@ declares an explicit generation contract. Only local build products such as
 | --- | --- |
 | [Kache build cache](studies/20260910-kache-build-cache/README.md) | Compiler-cache internals, Rust/C++ support boundaries, Blade compatibility, and Jenkins rollout |
 | [Design docs as durable Agent context](studies/20260910-design-docs-as-source/README.md) | Agent-ready docs, dependency DAGs, worked examples, reconciliation anchors, and bounded generation |
-| [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack runtime with coroutine vs event-loop L4 A/B |
+| [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack runtime, CACS variants, high-concurrency scaling, and L4 A/B |
 | [Fast time-of-day](studies/20260908-fast-time-of-day/README.md) | Dependency-chain restructuring and bounded fixed-point timestamp decomposition |
 | [Allocator provenance](studies/20260907-allocator-provenance/README.md) | C/Rust allocation lifetime, zero-state provenance, arena selection, and FIL-C verification |
 | [PowerSort](studies/20260611-powersort/README.md) | Adaptive stable merge policy over natural runs |

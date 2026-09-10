@@ -1,0 +1,3 @@
+2011:define preserve_nonecc range(i32 -125, 1) i32 @rco_yield_cacs_preserve_none() local_unnamed_addr #0 !dbg !1871 {
+2099:define preserve_nonecc i32 @rco_wait_fd_cacs_preserve_none(i32 noundef %0, i32 noundef %1, i32 noundef %2, ptr noundef writeonly captures(address_is_null) %3) local_unnamed_addr #0 !dbg !1923 {
+2671:define preserve_nonecc i32 @rco_sleep_ms_cacs_preserve_none(i64 noundef %0) local_unnamed_addr #0 !dbg !2279 {

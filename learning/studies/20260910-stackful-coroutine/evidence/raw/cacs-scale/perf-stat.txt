@@ -1,0 +1,23 @@
+# started on Fri Sep 11 01:37:08 2026
+
+
+ Performance counter stats for 'numactl --physcpubind=0 --membind=0 /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_bench_cacs 500000 3':
+
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+   <not supported>      cache-misses                                                
+   <not supported>      L1-dcache-loads                                             
+   <not supported>      L1-dcache-load-misses                                       
+   <not supported>      dTLB-loads                                                  
+   <not supported>      dTLB-load-misses                                            
+
+       0.750873556 seconds time elapsed
+
+       0.147938000 seconds user
+       0.602747000 seconds sys
+
+
+
+perf_exit_status=0

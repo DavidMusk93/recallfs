@@ -17,6 +17,8 @@ verified_by:
   - CORO-RA-5
   - CORO-RA-6
   - CORO-RA-7
+  - CORO-RA-8
+  - CORO-RA-9
 ---
 
 # Stackful Coroutine 与 L4 Forwarder Study
@@ -31,10 +33,11 @@ verified_by:
 
 ### Decision
 
-在 Linux x86-64 上，以遵守完整 System V AMD64 callee-saved contract 的
-stackful coroutine runtime 作为可复用执行层；以同语义的非 coroutine
-`epoll` state machine 作为 A/B baseline。L4 数据面是否采用 coroutine 不由
-微基准决定，而由真实 workload 下的吞吐、资源上界和控制流复杂度共同决定。
+在 Linux x86-64 上，保留完整 System V AMD64 backend 作为默认生产路径，
+并以 Zig 0.16.0/Clang 21.1.0 构建实验 CACS 与
+CACS+显式 `preserve_none` backend；以同语义的非 coroutine `epoll` state
+machine 作为应用级 A/B baseline。是否采用 coroutine 不由单一吞吐指标决定，
+而由真实 workload 下的 CPU、内存、cache、资源上界和控制流复杂度共同决定。
 
 ### Scope
 
@@ -44,12 +47,16 @@ stackful coroutine runtime 作为可复用执行层；以同语义的非 corouti
   的 coroutine L4 forwarder；
 - `learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c`
   的 non-coroutine A/B baseline；
+- compiler-visible CACS switch 与显式 `preserve_none` suspension ABI；
+- 最高 16,384 tasks、256 KiB touched stack 的 CPU/内存 scaling matrix；
 - d2 上的 FIL-C、native、sanitizer、ABI 与 benchmark evidence；
 - 文献中 CACS、stackful/stackless 和 cooperative task model 的适用边界。
 
 ### Non-goals
 
-- 不实现论文依赖 compiler liveness 的 CACS 或 `preserve_none`；
+- 不实现论文的 automatic preserve-none propagation（APN）或 in-stack
+  generator；
+- 不把实验 CACS backend 作为默认安装 ABI；
 - 不实现多线程 scheduler、work stealing、preemption 或 stack migration；
 - 不实现 TLS/`errno` 虚拟化、blocking syscall hook、dynamic stack；
 - 不把 loopback throughput 外推为真实 NIC line rate 或 p99 latency；
@@ -84,6 +91,8 @@ stackful coroutine runtime 作为可复用执行层；以同语义的非 corouti
   payload byte 只在成功 `send()` 后计入一次；
 - 每条 benchmark stream 的 sender/receiver bytes 和 bitrate 都必须大于 0；
 - FIL-C、sanitizer 和 benchmark 结果不能互相替代。
+- 三种 backend 的 `rco_context` 均保持 64 bytes，避免 layout 混入 CACS
+  CPU/cache 对比。
 
 ### Failure Semantics
 
@@ -127,6 +136,8 @@ busy task 完成 1024 次 yield 前恢复。
 | `CORO-RA-5` | 文档 frontmatter DAG | doc ID 唯一、依赖存在、图无环 | manual DAG validation + local-link check |
 | `CORO-RA-6` | 固定 Zig 0.16.0 | `zig cc` 的 O0/O2/O3 与 ASan/UBSan 路径通过 | `learning/studies/20260910-stackful-coroutine/evidence/raw/ab/zig-validation.txt` |
 | `CORO-RA-7` | client FD 同时可读写，两个方向各有 4 KiB work | 两个方向都转发 4 KiB；同一 byte 不在 recv/send 重复扣 budget | `epoll_l4_state_machine` |
+| `CORO-RA-8` | Zig CACS build | O0/O2/O3、ABI/FP、guard page、codegen 与两版 L4 E2E 通过 | `RCO_BUILD_CACS=ON` CTest |
+| `CORO-RA-9` | 10 cases x 3 modes x 5 runs | 150 samples；checksum、switch count、stack sentinel、task lifecycle 全部一致 | `rco_high_concurrency_bench.py` |
 
 ### Evidence And Unknowns
 
@@ -158,11 +169,15 @@ coroutine library，以及一个真实可运行的 TCP L4 forwarder：
 - 单 proxy core、4 条 loopback TCP 流下，coroutine median 为
   `24.883 Gbit/s`，epoll state machine median 为 `25.012 Gbit/s`，两者
   没有可分辨的吞吐差异；direct loopback median 为 `74.747 Gbit/s`。
+- 同一 Zig O3 binary contract 下，CACS 把 `rco_yield` 从 `35.657 ns`
+  降到 `13.322 ns`（`-62.6%`）；显式 `preserve_none` 为 `13.330 ns`，
+  没有在 plain CACS 之上提供可分辨收益。
 
-这里没有复现论文的 CACS。CACS 依赖 compiler 在每个调用点掌握 register
-liveness，并配合 `preserve_none` calling convention。普通 C11 与独立汇编
-只能安全地实现完整 ABI 保存集。擅自少保存寄存器会把 benchmark 技巧变成
-correctness bug。
+默认 backend 仍使用完整 ABI 保存集。实验 CACS backend 用 inline asm
+clobber 把 register liveness 暴露给 compiler，只显式保存 `rsp/rbp` 与 FP
+control；第三个 backend 再给 suspension API 添加 Clang `preserve_none`。
+这部分复现了论文的 symmetric CACS 核心，但没有复现 APN 或 in-stack
+generator。
 
 主文也不是正式 ASPLOS'24 论文。作者页面明确说明稿件被拒，原因是 CACS
 此前已在 libfringe 中实现。其结果应视为 author manuscript claim，而不是
@@ -251,6 +266,21 @@ caller-saved GPR 和 vector registers 不需要由 switch 保存，因为 compil
 必须把跨普通函数调用仍然 live 的值 spill。汇编显式执行 `cld`，并用
 `endbr64` 支持 IBT 入口。CET shadow stack 尚未支持；runtime 探测到启用
 状态时返回 `-ENOTSUP`。
+
+### 3.4 三种可执行 backend
+
+| Backend | Switch contract | Status |
+| --- | --- | --- |
+| `sysv` | 独立汇编保存完整 callee-saved GPR 与 FP control | 默认、可安装 |
+| `cacs` | inline switch 声明所有 GPR/XMM/x87/flags/memory clobber，由 compiler spill live values | 实验 |
+| `cacs-preserve-none` | CACS + suspension API 使用显式 `preserve_none` | 实验，ABI 固定到 Zig 0.16.0 |
+
+三个 backend 使用相同 64-byte context layout、guarded stack、scheduler、
+tests 和 benchmark source。CACS build 强制 `-mno-red-zone`，否则 inline
+switch 中保存 resume address 会覆盖 compiler-owned red-zone 数据。
+`preserve_none` 的 public compile definition 必须传播到所有 caller；混用
+普通声明和 preserve-none library 会形成静默 ABI 错配，因此实验 archive
+不进入默认 install target。
 
 ## 4. Runtime 结构
 
@@ -439,15 +469,20 @@ normal local variables         persistent connection fields
 
 ## 8. Correctness 结果
 
-目标 code/benchmark commit：`ae0364683fc45e99847872a9f1fe32e5de98c1f4`。
+默认 L4 code/benchmark commit：
+`ae0364683fc45e99847872a9f1fe32e5de98c1f4`。CACS/high-concurrency commit：
+`107bbd6345cea81fad55467c6b570b25e54868c3`；最终 benchmark evidence
+source commit：`57f7ce3163adb14ea8023c51b9d0f7272176f8d1`，已包含 backend
+identity、parent signal cleanup、subreaper 和 tracked evidence driver。
 
 | Gate | Result |
 | --- | --- |
 | Proof-first | API test 首次链接因缺少 `rco_*` symbols 按预期失败 |
-| FIL-C 0.684 | 3 个 lifecycle suites；两条 L4 C 路径和 focused state-machine test 通过 |
+| FIL-C 0.684 | 3 个 lifecycle suites；两条 L4 C 路径、focused state-machine 及 high-concurrency parser/bounds 通过 |
 | GCC/Zig matrix | GCC native benchmark；Zig 0.16.0 `zig cc` O0/O2/O3 全通过 |
-| Native CTest | runtime、guard page、focused tests、双实现 E2E 共 9/9 targets 通过 |
-| ASan + UBSan | 两种 forwarder 的 32 并发、half-close、forced drain 全通过 |
+| Native CTest | 三种 runtime、guard page、codegen、高并发 harness、四版 L4 E2E 共 25/25 targets 通过 |
+| ASan + UBSan | runtime、high-concurrency harness、四版 L4 E2E 共 22/22 targets 通过 |
+| Parent signal cleanup | 19/19 focused harness tests；launch-window signal、stopped leader 与忽略 TERM 的 descendant 均被回收 |
 | Executable stack | `GNU_STACK` 为 `RW`，不是 `RWE` |
 
 FIL-C 不执行自定义 stack-switch assembly，因此不能证明 register save、stack
@@ -461,24 +496,26 @@ alignment、CET 或真实 epoll 时序。对应缺口由 native ABI canary、FP 
 构建参数：
 
 ```text
--std=c11 -O3 -march=native -mtune=native -DNDEBUG -flto
--fno-ipa-icf -Wall -Wextra -Werror -fno-omit-frame-pointer
+-O3 -DNDEBUG -flto -march=native -mtune=native
+-Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone
 -fcf-protection=branch
 ```
 
-每个 run 内部取 11 个 sample 的 median，再对 5 个 run 取中位数：
+每个 backend 的每个 run 内部取 11 个 sample 的 median，再对 5 个
+position-rotated run 取中位数：
 
-| Operation | Run-level medians, ns | Median |
-| --- | --- | ---: |
-| `rco_yield` | 35.203, 35.223, 35.131, 35.158, 35.122 | `35.158` |
-| noinline function call | 1.637, 1.638, 1.637, 1.635, 1.649 | `1.637` |
-| Linux `sched_yield` | 228.384, 228.039, 227.283, 228.312, 228.287 | `228.287` |
+| Backend | Run-level `rco_yield` medians, ns | Median | vs SysV |
+| --- | --- | ---: | ---: |
+| SysV | 35.657, 35.781, 35.680, 35.584, 35.635 | `35.657` | `1.000` |
+| CACS | 13.294, 13.341, 13.277, 13.493, 13.322 | `13.322` | `0.374` |
+| CACS + `preserve_none` | 13.306, 13.301, 13.330, 13.494, 13.357 | `13.330` | `0.374` |
 
 `rco_yield` 是完整 scheduler operation，含两次 assembly transfer、queue
-操作、状态更新和每 64 次 dispatch 一次的 I/O fairness poll。它比本机
-`sched_yield` 低约 84.6%，但约为测试中 noinline function call 的 21.5 倍。
-论文报告的约 1.52 ns CACS yield 使用
-不同实现、compiler 和 benchmark，不能与这里做同口径结论。
+操作、状态更新和每 64 次 dispatch 一次的 I/O fairness poll。CACS 相对 SysV
+减少 `62.6%`；显式 `preserve_none` 没有进一步降低该 workload 的中位数。
+同轮 noinline function call 与 Linux `sched_yield` 的 SysV 中位数分别为
+`1.639 ns` 和 `228.580 ns`。论文报告的约 1.52 ns 使用更激进的
+in-stack generator/APN 和不同 benchmark，不能与这里做同口径结论。
 
 ### 9.2 L4 throughput
 
@@ -515,15 +552,52 @@ startup test 把 soft limit 从 1,024 提到 1,048,576，epoll baseline 的
 `VmSize` 增长为 0 KiB，证明 lazy watch chunks 消除了 limit-driven dense
 allocation 对 VM 对比的混淆。
 
+### 9.3 High-concurrency CPU 与 memory
+
+该 benchmark 不创建 socket。每个 task 在自己的 guarded stack 上按页写入
+sentinel，全部 task 到达 residency barrier 后进程 `SIGSTOP`，parent 读取
+`/proc/<pid>/status`、`smaps_rollup` 和 fault counters，再恢复并执行精确
+yield 数。150 个样本覆盖 10 个 case、3 个 backend、5 次轮转。
+
+| Case | SysV CPU ns/measured-yield | CACS | CACS+PN | CACS/SysV |
+| --- | ---: | ---: | ---: | ---: |
+| 256 tasks, 4 KiB touched | 74.76 | 23.62 | 24.34 | `0.306` |
+| 1,024 tasks, 4 KiB touched | 139.35 | 39.30 | 40.39 | `0.280` |
+| 4,096 tasks, 4 KiB touched | 164.85 | 45.94 | 47.99 | `0.283` |
+| 16,384 tasks, 4 KiB touched | 290.18 | 76.92 | 76.00 | `0.265` |
+| 1,024 tasks, 128 KiB touched | 664.90 | 425.16 | 420.53 | `0.641` |
+| 1,024 tasks, 256 KiB touched | 1,463.69 | 1,230.50 | 1,240.46 | `0.841` |
+| 1,024 tasks, 1,024 yields/task | 136.83 | 39.79 | 38.33 | `0.281` |
+
+结论：
+
+- 高频 suspend/resume 时，CACS 把 CPU/measured-yield 降低约 `69%-74%`；
+- task 数增加时收益没有消失，16,384 tasks 下仍降低约 `74%`；
+- 每次 yield 扫描的 stack working set 从 32 KiB 增到 256 KiB 时，收益从
+  约 `67%` 缩小到 `16%`，说明 memory work 会逐步淹没 switch 优化；
+- 三种 backend 保持相同 64-byte context；16,384 tasks 的 PSS 分别为
+  200,838/200,838/200,838 KiB，CACS 没有可分辨的额外常驻内存成本；
+- plain CACS 与显式 `preserve_none` 基本持平，当前收益主要来自
+  compiler-visible clobber/liveness；显式 PN 没有额外收益，APN 尚未实现。
+
+同一批 CACS binaries 在五路 L4 benchmark 中分别得到 direct `72.284`、
+SysV `25.404`、CACS `25.583`、CACS+PN `25.522`、epoll
+`25.145 Gbit/s`。CACS/SysV 与 CACS+PN/SysV 的 paired ratio 中位数分别为
+`1.002753` 和 `1.004652`，说明 `rco_yield` 的 `62.6%` 降幅没有
+穿透 kernel-TCP-dominated 数据面；这不是 CACS 无效，而是该 workload 的
+switch 占比太低。
+
 d2 的 `perf` 对 `cycles`、`instructions`、`branches`、
-`branch-misses`、`cache-misses` 全部返回 `<not supported>`。因此本报告只把
-固定拓扑与 wall time 作为性能证据，不用 VM 或 FIL-C 指令计数替代 PMU。
+`branch-misses`、`cache-misses`、L1D 和 dTLB events 全部返回
+`<not supported>`。因此 CPU 结论来自 wall time 与 `getrusage` 的一致结果；
+cache/TLB 仍是未知项，不用 VM 或 FIL-C 指令计数替代 PMU。
 该 KVM 也没有暴露 cpufreq policy、governor 或 turbo control；原始环境明确
 记录为 unavailable，而不是推测宿主频率策略。
 
 ## 10. 适用边界
 
-在以下合同内，可以把 `rco` 当作 production-ready building block：
+在以下合同内，可以把默认 SysV `rco` 当作 production-ready building
+block；两个 CACS backend 仍是 benchmark-only experimental targets：
 
 - Linux x86-64 System V ABI；
 - 单 OS thread、cooperative scheduling；
@@ -555,6 +629,6 @@ cmake --build .tmp/rco-build -j
 ctest --test-dir .tmp/rco-build --output-on-failure
 ```
 
-后续若追求论文级 CACS，正确路径是扩展 compiler calling convention 并在
-IR、最终 binary、ABI canary 和目标机 benchmark 四层共同验证，而不是继续
-缩短当前汇编保存列表。
+后续若继续逼近论文完整方案，下一步是实现 automatic preserve-none
+propagation 和 in-stack generator，并继续在 IR、最终 binary、ABI canary
+和目标机 PMU benchmark 四层共同验证，而不是继续缩短固定汇编保存列表。

@@ -1,0 +1,61 @@
+Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
+Architecture:        x86_64
+CPU op-mode(s):      32-bit, 64-bit
+Byte Order:          Little Endian
+Address sizes:       40 bits physical, 57 bits virtual
+CPU(s):              64
+On-line CPU(s) list: 0-63
+Thread(s) per core:  1
+Core(s) per socket:  32
+Socket(s):           2
+NUMA node(s):        2
+Vendor ID:           GenuineIntel
+CPU family:          6
+Model:               143
+Model name:          Intel(R) Xeon(R) Platinum 8457C
+Stepping:            8
+CPU MHz:             2600.000
+BogoMIPS:            5200.00
+Hypervisor vendor:   KVM
+Virtualization type: full
+L1d cache:           48K
+L1i cache:           32K
+L2 cache:            2048K
+L3 cache:            99840K
+NUMA node0 CPU(s):   0-31
+NUMA node1 CPU(s):   32-63
+Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 wbnoinvd arat avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid cldemote movdiri movdir64b fsrm md_clear serialize tsxldtrk arch_lbr amx_bf16 avx512_fp16 amx_tile amx_int8 arch_capabilities
+gcc (Debian 8.3.0-6) 8.3.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+perf version 5.15.198.bsk.1.gb7579367b7bf
+policy: default
+preferred node: current
+physcpubind: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 
+cpubind: 0 1 
+nodebind: 0 1 
+membind: 0 1 
+coroutine_sysv_forwarder_backend_identity=coroutine-sysv
+coroutine_sysv_forwarder_sha256=6976eae1061c5ca1fa5d36548df0e0f7fd944bff10a6f1c262700035bba788ab
+coroutine_sysv_forwarder_private_path=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/final-evidence/l4-five-mode/.l4-forwarders.y1Of13/coroutine-sysv-forwarder
+cacs_forwarder_backend_identity=cacs
+cacs_forwarder_sha256=ef0fb49d36b4758bbfde4cba76aa4d53e828c957689200acb431ebcfc50a1bf0
+cacs_forwarder_private_path=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/final-evidence/l4-five-mode/.l4-forwarders.y1Of13/cacs-forwarder
+cacs_preserve_none_forwarder_backend_identity=cacs-preserve-none
+cacs_preserve_none_forwarder_sha256=468e78674647a4766be78a4f9cc0815568aacc8bc944a55156a3673d79489737
+cacs_preserve_none_forwarder_private_path=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/final-evidence/l4-five-mode/.l4-forwarders.y1Of13/cacs-preserve-none-forwarder
+epoll_forwarder_backend_identity=epoll
+epoll_forwarder_sha256=3b14ac307ee997f814085db94803707cacc9b7450adfa5e8e2b9c2735413200b
+epoll_forwarder_private_path=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/final-evidence/l4-five-mode/.l4-forwarders.y1Of13/epoll-forwarder
+runs=5 duration=3 parallel=4
+proxy_cpu=0 server_cpu=1 client_cpu=2 numa_node=0
+rlimit_nofile_soft=1024
+rlimit_nofile_hard=1048576
+perf_event_paranoid=2
+cpufreq.scaling_driver=unavailable: no policy directories under /sys/devices/system/cpu/cpufreq; kernel/hypervisor does not expose cpufreq
+cpufreq.scaling_governor=unavailable: no policy directories under /sys/devices/system/cpu/cpufreq; kernel/hypervisor does not expose cpufreq
+cpufreq.scaling_min_freq_khz=unavailable: no policy directories under /sys/devices/system/cpu/cpufreq; kernel/hypervisor does not expose cpufreq
+cpufreq.scaling_max_freq_khz=unavailable: no policy directories under /sys/devices/system/cpu/cpufreq; kernel/hypervisor does not expose cpufreq
+cpufreq.turbo=unavailable: neither intel_pstate/no_turbo nor cpufreq/boost is exposed by the kernel/hypervisor

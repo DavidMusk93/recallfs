@@ -1,0 +1,2 @@
+listening=127.0.0.1:61019 upstream=127.0.0.1:61018 max_connections=128 buffer_size=65536
+accepted=5 rejected=0 connected=5 connect_errors=0 peer_resets=4 io_errors=0 half_closes=2 bytes_client_to_upstream=12674489281 bytes_upstream_to_client=679 peak_connections=5 forced_shutdown=false

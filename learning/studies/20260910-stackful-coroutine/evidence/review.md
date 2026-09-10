@@ -10,6 +10,7 @@ depends_on:
 supersedes: []
 verified_by:
   - review run 20260910-184406-b37f2090
+  - review run 20260911-000014-f8811338
 ---
 
 # Code Review Closure
@@ -97,3 +98,37 @@ Remaining test gaps are deterministic connect-deadline expiry and partial-send
 `EAGAIN` injection. The existing end-to-end suite exercises both paths under
 real sockets but cannot force their exact timing. They are residual coverage
 risk, not unresolved review findings.
+
+## CACS And Scale Review Closure
+
+| Field | Value |
+| --- | --- |
+| Review run | `20260911-000014-f8811338` |
+| Reviewed head | `7ef59dbec7b068be354a89be4ce14e04ef786597` plus staged docs/evidence |
+| Review status | Complete |
+| Initial verdict | Not ready |
+| Reviewers | correctness, standards, testing, maintainability, performance, API contract, reliability, adversarial |
+| Independent validation | 7 findings validated, 1 dropped |
+| Fix commits | `db37e70`, `2ac22ec`, `e4b9b05` through `57f7ce3` |
+| Raw receipt | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-code-review.json`](raw/cacs-code-review.json) |
+
+Applied findings:
+
+| Finding | Resolution | Verification |
+| --- | --- | --- |
+| Signal during `Popen` escaped cleanup | Block handled signals through launch and restore them only inside cleanup protection | Deterministic launch-window injection in the 19/19 focused suite |
+| Descendant zombies were accepted as reaped | Enable Linux child-subreaping, reap by process group, and require group disappearance | TERM-ignoring descendant and zombie-sensitive tests |
+| `/proc` metrics lacked field-level oracles | Extract pure status, smaps, and stat parsers with exact and malformed fixtures | Four parser tests plus real-process integration |
+| L4 labels trusted positional binaries | Query compile-time identities, reject duplicates, and execute digest-verified private copies | Swapped, duplicate, source-replacement, and private-copy replacement tests |
+| L4 summary discarded run pairing | Emit ratio-of-medians separately and use median paired ratios for comparisons | Divergent-ratio fixture and incomplete/duplicate run rejection |
+| Build provenance omitted target flags | Track one bounded evidence driver and capture O0/O2/O3/ASan compile/link commands | `compile_and_link_target_binding=PASS` |
+| CACS conclusions lacked a document edge | Add `raw/cacs-scale` to exploration metadata and contract paths | Document DAG and local-link validation |
+
+The validator dropped the proposed broad `-diff` attributes for generated
+payloads as review-policy preference. The two CRLF CSV files remain explicitly
+`-text`, and the staged Git blobs match the 130-entry SHA-256 manifest.
+
+The final d2 evidence source is
+`57f7ce3163adb14ea8023c51b9d0f7272176f8d1`. Its tracked focused log records
+19/19 high-concurrency harness tests; native O3 and sanitizer suites report
+25/25 and 22/22 targets.

@@ -1,0 +1,56 @@
+Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build
+Test project /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build
+      Start  1: rco_native
+ 1/25 Test  #1: rco_native .....................................   Passed    0.01 sec
+      Start  2: rco_guard_page
+ 2/25 Test  #2: rco_guard_page .................................   Passed    0.05 sec
+      Start  3: rco_native_cacs
+ 3/25 Test  #3: rco_native_cacs ................................   Passed    0.01 sec
+      Start  4: rco_guard_page_cacs
+ 4/25 Test  #4: rco_guard_page_cacs ............................   Passed    0.03 sec
+      Start  5: rco_cacs_abi_cacs
+ 5/25 Test  #5: rco_cacs_abi_cacs ..............................   Passed    0.00 sec
+      Start  6: rco_cacs_codegen_cacs
+ 6/25 Test  #6: rco_cacs_codegen_cacs ..........................   Passed    0.08 sec
+      Start  7: rco_native_cacs_preserve_none
+ 7/25 Test  #7: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
+      Start  8: rco_guard_page_cacs_preserve_none
+ 8/25 Test  #8: rco_guard_page_cacs_preserve_none ..............   Passed    0.03 sec
+      Start  9: rco_cacs_abi_cacs_preserve_none
+ 9/25 Test  #9: rco_cacs_abi_cacs_preserve_none ................   Passed    0.00 sec
+      Start 10: rco_cacs_codegen_cacs_preserve_none
+10/25 Test #10: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.08 sec
+      Start 11: rco_cacs_preserve_none_rejects_normal_caller
+11/25 Test #11: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.09 sec
+      Start 12: rco_high_concurrency_arguments
+12/25 Test #12: rco_high_concurrency_arguments .................   Passed    0.11 sec
+      Start 13: rco_high_concurrency_oracle
+13/25 Test #13: rco_high_concurrency_oracle ....................   Passed    0.14 sec
+      Start 14: rco_high_concurrency_csv
+14/25 Test #14: rco_high_concurrency_csv .......................   Passed    0.12 sec
+      Start 15: rco_high_concurrency_timeout
+15/25 Test #15: rco_high_concurrency_timeout ...................   Passed    0.99 sec
+      Start 16: rco_high_concurrency_integration
+16/25 Test #16: rco_high_concurrency_integration ...............   Passed    0.22 sec
+      Start 17: epoll_l4_state_machine
+17/25 Test #17: epoll_l4_state_machine .........................   Passed    0.00 sec
+      Start 18: l4_bench_process_resources
+18/25 Test #18: l4_bench_process_resources .....................   Passed    0.01 sec
+      Start 19: l4_bench_harness
+19/25 Test #19: l4_bench_harness ...............................   Passed    5.29 sec
+      Start 20: rco_l4_wait_failure
+20/25 Test #20: rco_l4_wait_failure ............................   Passed    0.00 sec
+      Start 21: rco_l4_e2e
+21/25 Test #21: rco_l4_e2e .....................................   Passed    1.12 sec
+      Start 22: epoll_l4_e2e
+22/25 Test #22: epoll_l4_e2e ...................................   Passed    1.13 sec
+      Start 23: cacs_l4_e2e
+23/25 Test #23: cacs_l4_e2e ....................................   Passed    1.11 sec
+      Start 24: cacs_preserve_none_l4_e2e
+24/25 Test #24: cacs_preserve_none_l4_e2e ......................   Passed    1.14 sec
+      Start 25: epoll_l4_rlimit
+25/25 Test #25: epoll_l4_rlimit ................................   Passed    0.04 sec
+
+100% tests passed, 0 tests failed out of 25
+
+Total Test time (real) =  11.79 sec

@@ -1,0 +1,511 @@
+{
+  "status": "complete",
+  "verdict": "Not ready",
+  "scope": {
+    "base": "d4b850716a9b51b9fee27cc3b724538e4be01ab7",
+    "branch": "master",
+    "head_sha": "7ef59dbec7b068be354a89be4ce14e04ef786597",
+    "pr_url": null,
+    "files_changed": 129
+  },
+  "intent": "Add compiler-aware SysV, CACS, and CACS+preserve_none coroutine backends while preserving the default ABI. Add bounded high-concurrency and five-mode L4 measurements with revision-bound evidence and reliable process cleanup.",
+  "intent_confidence": "explicit",
+  "reviewers": [
+    "correctness",
+    "project-standards",
+    "testing",
+    "maintainability",
+    "performance",
+    "api-contract",
+    "reliability",
+    "adversarial"
+  ],
+  "findings": [
+    {
+      "title": "L4 samples are not bound to backend identity",
+      "severity": "P1",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "line": 50,
+      "why_it_matters": "Passing the SysV, CACS, or preserve-none executables in the wrong positions, or replacing one after the initial hash capture, still produces a green five-mode run whose CSV rows carry the requested labels. All coroutine variants expose the same forwarder CLI and output, while the harness validates only traffic and shutdown behavior, so inverted or mixed binaries can silently support false backend comparisons. The manifest then preserves the mislabeled evidence rather than detecting it.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add compile-time backend identity queries, reject swapped or duplicate binaries, execute digest-verified private copies, verify each copy before and after every sample, and record identity plus SHA-256 per sample.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:49-51 -- if (( $# == 5 )); then\n        cacs_forwarder=$4\n        cacs_preserve_none_forwarder=$5",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:105-108 -- forwarder=$(forwarder_for_mode \"$mode\") || return\n        digest=$(sha256sum \"$forwarder\" | awk '{print $1}')\n        key=${mode//-/_}_forwarder_sha256\n        printf '%s=%s\\n' \"$key\" \"$digest\"",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:453-455 -- forwarder=$(forwarder_for_mode \"$mode\") || return\n        numactl --physcpubind=\"$proxy_cpu\" --membind=\"$numa_node\" \\\n            \"$forwarder\" \\",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:571-572 -- throughput=$(jq -r '.end.sum_sent.bits_per_second' \"$client_json\")\n    printf '%s,%s,%s\\n' \"$mode\" \"$run\" \"$throughput\" >>\"$csv\"",
+        "No backend_identity query or validation exists in the L4 forwarders, harness, or focused harness test; the current hash is captured once before all samples and is never compared again."
+      ],
+      "pre_existing": false,
+      "#": 1,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:49-51 -- if (( $# == 5 )); then\n        cacs_forwarder=$4\n        cacs_preserve_none_forwarder=$5",
+      "reviewers": [
+        "adversarial",
+        "performance"
+      ],
+      "independent_reviewers": [
+        "adversarial",
+        "performance"
+      ]
+    },
+    {
+      "title": "Signal during launch leaves benchmark group alive",
+      "severity": "P1",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 373,
+      "why_it_matters": "A SIGINT or SIGTERM can arrive after Popen has created the new session but before execution enters the try/finally block. The signal handler raises BenchmarkError immediately, so run_sample unwinds without calling terminate_process_group and the benchmark leader or its descendants remain alive after the parent exits. This directly violates the stated parent-signal cleanup contract.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Block SIGINT and SIGTERM around Popen until the process handle is inside cleanup protection, prevent handled signals from interrupting cleanup, and add a deterministic launch-window regression.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:373-382 -- process = subprocess.Popen(\n        command,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        start_new_session=True,\n    )\n    deadline = time.monotonic() + timeout_seconds\n    completed = False\n    try:",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:119-120 -- def raise_on_termination_signal(signum, _frame):\n    raise BenchmarkError(\"received {}\".format(signal.Signals(signum).name))",
+        "A deterministic probe wrapped Popen to create a new-session child and deliver SIGTERM before returning; run_sample raised \"received SIGTERM\" while child.poll() remained None, proving the cleanup gap."
+      ],
+      "pre_existing": false,
+      "#": 2,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:373-382 -- process = subprocess.Popen(\n        command,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        start_new_session=True,\n    )\n    deadline = time.monotonic() + timeout_seconds\n    completed = False\n    try:",
+      "reviewers": [
+        "adversarial",
+        "correctness",
+        "testing",
+        "reliability"
+      ],
+      "independent_reviewers": [
+        "adversarial",
+        "correctness",
+        "testing",
+        "reliability"
+      ]
+    },
+    {
+      "title": "L4 summary drops run pairing",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "line": 143,
+      "why_it_matters": "The five-mode harness reports CACS/SysV as a ratio of independently selected medians, while the evidence contract and published result use the median of per-run ratios. In the checked evidence those are 1.012161 and 1.005784 respectively; because the runs are deliberately position-rotated and throughput drifts over the matrix, discarding the pairing can change the reported magnitude or even its direction. Computing the ratio inside each run and then taking its median preserves the experiment's stated semantics.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Index throughput by mode and run, validate exactly one positive sample for every expected mode/run pair, and report the median of current[run] / sysv[run]. If ratio-of-medians is retained, publish it under a separate explicit key rather than as the CACS comparison.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:142-143 --     print(\"cacs_over_{}={:.3f}\".format(\n        key(sysv_mode), medians[\"cacs\"] / medians[sysv_mode]))",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:340-341 -- CACS/SysV paired throughput ratio has median `1.005784`; CACS+PN/SysV is `0.992258`.",
+        "The tracked throughput.csv gives CACS/SysV ratio-of-medians 1.0121605656 but median paired ratio 1.0057835453."
+      ],
+      "pre_existing": false,
+      "#": 4,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:142-143 --     print(\"cacs_over_{}={:.3f}\".format(\n        key(sysv_mode), medians[\"cacs\"] / medians[sysv_mode]))",
+      "reviewers": [
+        "performance"
+      ],
+      "independent_reviewers": [
+        "performance"
+      ]
+    },
+    {
+      "title": "Cleanup never waits for remaining group members",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 294,
+      "why_it_matters": "When the direct child exits on SIGTERM but another process-group member ignores it, cleanup sends SIGKILL and returns immediately without waiting for the group to disappear or reaping adopted descendants. The parent can therefore report completed cleanup while a group member is still alive or remains a zombie, which does not satisfy the stated reaping guarantee. The new regression masks this by treating zombie state as successful exit.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Run benchmark groups under a supervisor that owns and reaps descendants, or make the harness a Linux child subreaper before spawning. After SIGKILL, perform bounded waitpid/waitid reaping for the process group and require killpg(pgid, 0) to report ESRCH; update the regression so State: Z is not accepted as reaped.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:294 --     if process_group_exists(process.pid):",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:296 --             os.killpg(process.pid, signal.SIGKILL)",
+        "learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py:59-60 -- if \"\\nState:\\tZ\" not in status:\n                live.append(process_id)"
+      ],
+      "pre_existing": false,
+      "#": 5,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:294 --     if process_group_exists(process.pid):",
+      "reviewers": [
+        "correctness"
+      ],
+      "independent_reviewers": [
+        "correctness"
+      ]
+    },
+    {
+      "title": "Evidence workflow lacks reproducible build provenance",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/evidence/README.md",
+      "line": 58,
+      "why_it_matters": "The published CACS measurements cannot be reproduced or audited against the exact code-generation contract because the raw environment record contains only the optimization flags, while the build also adds ABI-relevant options such as `-mno-red-zone`, `-fcf-protection=branch`, and `-fno-omit-frame-pointer`. This is especially material because the study itself says `-mno-red-zone` is required for CACS correctness. Capturing the actual per-target compile and link commands would satisfy the repository's complete-flags requirement and bind the reported results to the binary configuration that produced them. The repository also lacks a tracked driver that reproduces the build, validation, manifest, and guarded promotion flow.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Check in a bounded CACS evidence driver that captures complete per-target compile/link commands, emits validation.txt and SHA256SUMS, verifies path coverage and digests, and performs guarded promotion.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/environment.txt:34 -- flags=-O3 -march=native -mtune=native -DNDEBUG -flto",
+        "learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt:20 -- $<$<COMPILE_LANGUAGE:C>:-Wall;-Wextra;-Werror;-fno-omit-frame-pointer>",
+        "learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt:79 -- $<$<COMPILE_LANGUAGE:C>:-mno-red-zone;-fcf-protection=branch>",
+        "AGENTS.md:57 -- \"测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:58 -- Tracked promotion has two non-overlapping root pairs:",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:74-79 describes what \"the driver\" does, but repository file and literal-key searches found no tracked driver that emits the CACS validation and promotion outputs.",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/validation.txt records 49 validation facts whose producing commands are not represented by a tracked workflow."
+      ],
+      "pre_existing": false,
+      "#": 6,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/environment.txt:34 -- flags=-O3 -march=native -mtune=native -DNDEBUG -flto",
+      "reviewers": [
+        "project-standards",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "project-standards",
+        "maintainability"
+      ]
+    },
+    {
+      "title": "Exploration omits its CACS evidence edge",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/exploration.md",
+      "line": 380,
+      "why_it_matters": "Agents following the document's declared evidence graph are directed only to the older `raw/ab` dataset even though the new text publishes conclusions from `raw/cacs-scale`. That leaves the substantially modified evidence document internally inconsistent and can cause a reader to miss the revision-bound CACS measurements. Adding the new evidence path to the metadata and contract sections restores the explicit dependency and removes the drift.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add raw/cacs-scale to verified_by and to the contract evidence paths, then rerun document DAG and local-link validation.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/exploration.md:380-382 -- The final CACS scaling evidence was generated from `7715c71054f6183822fdf83ce09baef1cb17193b` and contains 150 position-rotated samples across 10 cases.",
+        "learning/studies/20260910-stackful-coroutine/exploration.md:12-13 -- verified_by: / - learning/studies/20260910-stackful-coroutine/evidence/raw/ab",
+        "learning/studies/20260910-stackful-coroutine/exploration.md:75-76 -- Current raw evidence is [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`](evidence/raw/ab/).",
+        "AGENTS.md:69-75 -- \"冲突是 drift，必须调查，不得静默选择一方。\" and \"Agent 按显式依赖拓扑读取；推断出的依赖只能作为漏边诊断。\""
+      ],
+      "pre_existing": false,
+      "#": 7,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/exploration.md:380-382 -- The final CACS scaling evidence was generated from `7715c71054f6183822fdf83ce09baef1cb17193b` and contains 150 position-rotated samples across 10 cases.",
+      "reviewers": [
+        "project-standards",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "project-standards",
+        "maintainability"
+      ]
+    },
+    {
+      "title": "Metric parsers lack field-level oracles",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 252,
+      "why_it_matters": "A shifted /proc/stat index or swapped status/smaps mapping can publish believable but incorrect CPU, memory, or fault measurements while every current test remains green. The integration path checks presence, sign, and a few inequalities, but never proves that each reported field came from the intended kernel field, which weakens the evidence this benchmark is designed to produce.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Extract pure parsers for status, smaps_rollup, and stat text, then add fixtures with distinct known values, a comm value containing spaces and right parentheses, missing units/fields, and malformed counters. Assert the exact output mapping for every published vm_*, rss_*, smaps_*, setup_minor_faults, and setup_major_faults field.",
+      "confidence": 75,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:252-264 -- def read_setup_faults(pid):\n    path = Path(\"/proc\") / str(pid) / \"stat\"\n    line = path.read_text(encoding=\"ascii\").strip()\n    separator = line.rfind(\") \")\n    if separator < 0:\n        raise BenchmarkError(\"invalid process stat in {}\".format(path))\n    fields = line[separator + 2 :].split()\n    if len(fields) < 10 or not fields[7].isdigit() or not fields[9].isdigit():\n        raise BenchmarkError(\"invalid fault counters in {}\".format(path))\n    return {\n        \"setup_minor_faults\": int(fields[7]),\n        \"setup_major_faults\": int(fields[9]),\n    }",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:499-512 -- setup fault fields are classified only as nonnegative; repository search found no direct test of read_status(), read_smaps_rollup(), or read_setup_faults().",
+        "learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py:627-725 -- the real-process integration test asserts matrix counts, identities, yield/switch counts, and ordering but no vm_*, rss_*, smaps_*, or fault value."
+      ],
+      "pre_existing": false,
+      "#": 8,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:252-264 -- def read_setup_faults(pid):\n    path = Path(\"/proc\") / str(pid) / \"stat\"\n    line = path.read_text(encoding=\"ascii\").strip()\n    separator = line.rfind(\") \")\n    if separator < 0:\n        raise BenchmarkError(\"invalid process stat in {}\".format(path))\n    fields = line[separator + 2 :].split()\n    if len(fields) < 10 or not fields[7].isdigit() or not fields[9].isdigit():\n        raise BenchmarkError(\"invalid fault counters in {}\".format(path))\n    return {\n        \"setup_minor_faults\": int(fields[7]),\n        \"setup_major_faults\": int(fields[9]),\n    }",
+      "reviewers": [
+        "testing"
+      ],
+      "independent_reviewers": [
+        "testing"
+      ]
+    },
+    {
+      "title": "Signal cleanup result lacks revision-bound artifact",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/evidence/README.md",
+      "line": 222,
+      "why_it_matters": "The ledger presents the parent-signal cleanup result as a verified d2 observation, but the tracked raw validation and manifest are bound to 7715c71, before the signal handler added in 7ef59db. A reader cannot audit the claimed 13/13 result, command, environment, or exact source identity from the promoted evidence, so this reliability gate can appear green without revision-bound proof. Capturing and hashing the post-change test output would make the claim independently verifiable.",
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": true,
+      "suggested_fix": "Run the focused harness tests on d2 at commit 7ef59db, capture a raw log containing the full commit, host/tool context, command, and 13/13 output, add it to the CACS evidence manifest, update the manifest counts, and replace the bare commit text in the ledger with a link to that artifact.",
+      "confidence": 75,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:222 -- | Parent signal cleanup | 13/13 focused tests; stopped leader and TERM-ignoring descendant reaped | `7ef59db` d2 verification |",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:143-144 -- | CACS/high-concurrency evidence source commit | `7715c71054f6183822fdf83ce09baef1cb17193b` |\n| Post-evidence parent-signal cleanup | `7ef59db` |",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/validation.txt:1 -- source_commit=7715c71054f6183822fdf83ce09baef1cb17193b"
+      ],
+      "pre_existing": false,
+      "#": 9,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/evidence/README.md:222 -- | Parent signal cleanup | 13/13 focused tests; stopped leader and TERM-ignoring descendant reaped | `7ef59db` d2 verification |",
+      "reviewers": [
+        "reliability"
+      ],
+      "independent_reviewers": [
+        "reliability"
+      ]
+    }
+  ],
+  "actionable_findings": [
+    {
+      "title": "L4 samples are not bound to backend identity",
+      "severity": "P1",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "line": 50,
+      "why_it_matters": "Passing the SysV, CACS, or preserve-none executables in the wrong positions, or replacing one after the initial hash capture, still produces a green five-mode run whose CSV rows carry the requested labels. All coroutine variants expose the same forwarder CLI and output, while the harness validates only traffic and shutdown behavior, so inverted or mixed binaries can silently support false backend comparisons. The manifest then preserves the mislabeled evidence rather than detecting it.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add compile-time backend identity queries, reject swapped or duplicate binaries, execute digest-verified private copies, verify each copy before and after every sample, and record identity plus SHA-256 per sample.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:49-51 -- if (( $# == 5 )); then\n        cacs_forwarder=$4\n        cacs_preserve_none_forwarder=$5",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:105-108 -- forwarder=$(forwarder_for_mode \"$mode\") || return\n        digest=$(sha256sum \"$forwarder\" | awk '{print $1}')\n        key=${mode//-/_}_forwarder_sha256\n        printf '%s=%s\\n' \"$key\" \"$digest\"",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:453-455 -- forwarder=$(forwarder_for_mode \"$mode\") || return\n        numactl --physcpubind=\"$proxy_cpu\" --membind=\"$numa_node\" \\\n            \"$forwarder\" \\",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:571-572 -- throughput=$(jq -r '.end.sum_sent.bits_per_second' \"$client_json\")\n    printf '%s,%s,%s\\n' \"$mode\" \"$run\" \"$throughput\" >>\"$csv\"",
+        "No backend_identity query or validation exists in the L4 forwarders, harness, or focused harness test; the current hash is captured once before all samples and is never compared again."
+      ],
+      "pre_existing": false,
+      "#": 1,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:49-51 -- if (( $# == 5 )); then\n        cacs_forwarder=$4\n        cacs_preserve_none_forwarder=$5",
+      "reviewers": [
+        "adversarial",
+        "performance"
+      ],
+      "independent_reviewers": [
+        "adversarial",
+        "performance"
+      ]
+    },
+    {
+      "title": "Signal during launch leaves benchmark group alive",
+      "severity": "P1",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 373,
+      "why_it_matters": "A SIGINT or SIGTERM can arrive after Popen has created the new session but before execution enters the try/finally block. The signal handler raises BenchmarkError immediately, so run_sample unwinds without calling terminate_process_group and the benchmark leader or its descendants remain alive after the parent exits. This directly violates the stated parent-signal cleanup contract.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Block SIGINT and SIGTERM around Popen until the process handle is inside cleanup protection, prevent handled signals from interrupting cleanup, and add a deterministic launch-window regression.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:373-382 -- process = subprocess.Popen(\n        command,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        start_new_session=True,\n    )\n    deadline = time.monotonic() + timeout_seconds\n    completed = False\n    try:",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:119-120 -- def raise_on_termination_signal(signum, _frame):\n    raise BenchmarkError(\"received {}\".format(signal.Signals(signum).name))",
+        "A deterministic probe wrapped Popen to create a new-session child and deliver SIGTERM before returning; run_sample raised \"received SIGTERM\" while child.poll() remained None, proving the cleanup gap."
+      ],
+      "pre_existing": false,
+      "#": 2,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:373-382 -- process = subprocess.Popen(\n        command,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        start_new_session=True,\n    )\n    deadline = time.monotonic() + timeout_seconds\n    completed = False\n    try:",
+      "reviewers": [
+        "adversarial",
+        "correctness",
+        "testing",
+        "reliability"
+      ],
+      "independent_reviewers": [
+        "adversarial",
+        "correctness",
+        "testing",
+        "reliability"
+      ]
+    },
+    {
+      "title": "L4 summary drops run pairing",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh",
+      "line": 143,
+      "why_it_matters": "The five-mode harness reports CACS/SysV as a ratio of independently selected medians, while the evidence contract and published result use the median of per-run ratios. In the checked evidence those are 1.012161 and 1.005784 respectively; because the runs are deliberately position-rotated and throughput drifts over the matrix, discarding the pairing can change the reported magnitude or even its direction. Computing the ratio inside each run and then taking its median preserves the experiment's stated semantics.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Index throughput by mode and run, validate exactly one positive sample for every expected mode/run pair, and report the median of current[run] / sysv[run]. If ratio-of-medians is retained, publish it under a separate explicit key rather than as the CACS comparison.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:142-143 --     print(\"cacs_over_{}={:.3f}\".format(\n        key(sysv_mode), medians[\"cacs\"] / medians[sysv_mode]))",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:340-341 -- CACS/SysV paired throughput ratio has median `1.005784`; CACS+PN/SysV is `0.992258`.",
+        "The tracked throughput.csv gives CACS/SysV ratio-of-medians 1.0121605656 but median paired ratio 1.0057835453."
+      ],
+      "pre_existing": false,
+      "#": 4,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh:142-143 --     print(\"cacs_over_{}={:.3f}\".format(\n        key(sysv_mode), medians[\"cacs\"] / medians[sysv_mode]))",
+      "reviewers": [
+        "performance"
+      ],
+      "independent_reviewers": [
+        "performance"
+      ]
+    },
+    {
+      "title": "Cleanup never waits for remaining group members",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 294,
+      "why_it_matters": "When the direct child exits on SIGTERM but another process-group member ignores it, cleanup sends SIGKILL and returns immediately without waiting for the group to disappear or reaping adopted descendants. The parent can therefore report completed cleanup while a group member is still alive or remains a zombie, which does not satisfy the stated reaping guarantee. The new regression masks this by treating zombie state as successful exit.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Run benchmark groups under a supervisor that owns and reaps descendants, or make the harness a Linux child subreaper before spawning. After SIGKILL, perform bounded waitpid/waitid reaping for the process group and require killpg(pgid, 0) to report ESRCH; update the regression so State: Z is not accepted as reaped.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:294 --     if process_group_exists(process.pid):",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:296 --             os.killpg(process.pid, signal.SIGKILL)",
+        "learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py:59-60 -- if \"\\nState:\\tZ\" not in status:\n                live.append(process_id)"
+      ],
+      "pre_existing": false,
+      "#": 5,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:294 --     if process_group_exists(process.pid):",
+      "reviewers": [
+        "correctness"
+      ],
+      "independent_reviewers": [
+        "correctness"
+      ]
+    },
+    {
+      "title": "Evidence workflow lacks reproducible build provenance",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/evidence/README.md",
+      "line": 58,
+      "why_it_matters": "The published CACS measurements cannot be reproduced or audited against the exact code-generation contract because the raw environment record contains only the optimization flags, while the build also adds ABI-relevant options such as `-mno-red-zone`, `-fcf-protection=branch`, and `-fno-omit-frame-pointer`. This is especially material because the study itself says `-mno-red-zone` is required for CACS correctness. Capturing the actual per-target compile and link commands would satisfy the repository's complete-flags requirement and bind the reported results to the binary configuration that produced them. The repository also lacks a tracked driver that reproduces the build, validation, manifest, and guarded promotion flow.",
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Check in a bounded CACS evidence driver that captures complete per-target compile/link commands, emits validation.txt and SHA256SUMS, verifies path coverage and digests, and performs guarded promotion.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/environment.txt:34 -- flags=-O3 -march=native -mtune=native -DNDEBUG -flto",
+        "learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt:20 -- $<$<COMPILE_LANGUAGE:C>:-Wall;-Wextra;-Werror;-fno-omit-frame-pointer>",
+        "learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt:79 -- $<$<COMPILE_LANGUAGE:C>:-mno-red-zone;-fcf-protection=branch>",
+        "AGENTS.md:57 -- \"测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数\"",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:58 -- Tracked promotion has two non-overlapping root pairs:",
+        "learning/studies/20260910-stackful-coroutine/evidence/README.md:74-79 describes what \"the driver\" does, but repository file and literal-key searches found no tracked driver that emits the CACS validation and promotion outputs.",
+        "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/validation.txt records 49 validation facts whose producing commands are not represented by a tracked workflow."
+      ],
+      "pre_existing": false,
+      "#": 6,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/environment.txt:34 -- flags=-O3 -march=native -mtune=native -DNDEBUG -flto",
+      "reviewers": [
+        "project-standards",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "project-standards",
+        "maintainability"
+      ]
+    },
+    {
+      "title": "Exploration omits its CACS evidence edge",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/exploration.md",
+      "line": 380,
+      "why_it_matters": "Agents following the document's declared evidence graph are directed only to the older `raw/ab` dataset even though the new text publishes conclusions from `raw/cacs-scale`. That leaves the substantially modified evidence document internally inconsistent and can cause a reader to miss the revision-bound CACS measurements. Adding the new evidence path to the metadata and contract sections restores the explicit dependency and removes the drift.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Add raw/cacs-scale to verified_by and to the contract evidence paths, then rerun document DAG and local-link validation.",
+      "confidence": 100,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/exploration.md:380-382 -- The final CACS scaling evidence was generated from `7715c71054f6183822fdf83ce09baef1cb17193b` and contains 150 position-rotated samples across 10 cases.",
+        "learning/studies/20260910-stackful-coroutine/exploration.md:12-13 -- verified_by: / - learning/studies/20260910-stackful-coroutine/evidence/raw/ab",
+        "learning/studies/20260910-stackful-coroutine/exploration.md:75-76 -- Current raw evidence is [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`](evidence/raw/ab/).",
+        "AGENTS.md:69-75 -- \"冲突是 drift，必须调查，不得静默选择一方。\" and \"Agent 按显式依赖拓扑读取；推断出的依赖只能作为漏边诊断。\""
+      ],
+      "pre_existing": false,
+      "#": 7,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/exploration.md:380-382 -- The final CACS scaling evidence was generated from `7715c71054f6183822fdf83ce09baef1cb17193b` and contains 150 position-rotated samples across 10 cases.",
+      "reviewers": [
+        "project-standards",
+        "maintainability"
+      ],
+      "independent_reviewers": [
+        "project-standards",
+        "maintainability"
+      ]
+    },
+    {
+      "title": "Metric parsers lack field-level oracles",
+      "severity": "P2",
+      "file": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py",
+      "line": 252,
+      "why_it_matters": "A shifted /proc/stat index or swapped status/smaps mapping can publish believable but incorrect CPU, memory, or fault measurements while every current test remains green. The integration path checks presence, sign, and a few inequalities, but never proves that each reported field came from the intended kernel field, which weakens the evidence this benchmark is designed to produce.",
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "Extract pure parsers for status, smaps_rollup, and stat text, then add fixtures with distinct known values, a comm value containing spaces and right parentheses, missing units/fields, and malformed counters. Assert the exact output mapping for every published vm_*, rss_*, smaps_*, setup_minor_faults, and setup_major_faults field.",
+      "confidence": 75,
+      "evidence": [
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:252-264 -- def read_setup_faults(pid):\n    path = Path(\"/proc\") / str(pid) / \"stat\"\n    line = path.read_text(encoding=\"ascii\").strip()\n    separator = line.rfind(\") \")\n    if separator < 0:\n        raise BenchmarkError(\"invalid process stat in {}\".format(path))\n    fields = line[separator + 2 :].split()\n    if len(fields) < 10 or not fields[7].isdigit() or not fields[9].isdigit():\n        raise BenchmarkError(\"invalid fault counters in {}\".format(path))\n    return {\n        \"setup_minor_faults\": int(fields[7]),\n        \"setup_major_faults\": int(fields[9]),\n    }",
+        "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:499-512 -- setup fault fields are classified only as nonnegative; repository search found no direct test of read_status(), read_smaps_rollup(), or read_setup_faults().",
+        "learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py:627-725 -- the real-process integration test asserts matrix counts, identities, yield/switch counts, and ordering but no vm_*, rss_*, smaps_*, or fault value."
+      ],
+      "pre_existing": false,
+      "#": 8,
+      "first_evidence": "learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py:252-264 -- def read_setup_faults(pid):\n    path = Path(\"/proc\") / str(pid) / \"stat\"\n    line = path.read_text(encoding=\"ascii\").strip()\n    separator = line.rfind(\") \")\n    if separator < 0:\n        raise BenchmarkError(\"invalid process stat in {}\".format(path))\n    fields = line[separator + 2 :].split()\n    if len(fields) < 10 or not fields[7].isdigit() or not fields[9].isdigit():\n        raise BenchmarkError(\"invalid fault counters in {}\".format(path))\n    return {\n        \"setup_minor_faults\": int(fields[7]),\n        \"setup_major_faults\": int(fields[9]),\n    }",
+      "reviewers": [
+        "testing"
+      ],
+      "independent_reviewers": [
+        "testing"
+      ]
+    }
+  ],
+  "triage_groups": [
+    {
+      "title": "Benchmark evidence identity",
+      "findings": [
+        1,
+        4,
+        6,
+        7,
+        9
+      ],
+      "context": "Backend labels, paired statistics, build provenance, and document edges must describe one revision-bound experiment.",
+      "preferred_resolution": "Fix backend identity and paired aggregation first, then regenerate evidence with the tracked driver and refresh document edges.",
+      "why": "One regenerated bundle can close all evidence-chain findings."
+    },
+    {
+      "title": "High-concurrency lifecycle",
+      "findings": [
+        2,
+        5,
+        8
+      ],
+      "context": "Launch signals, descendant reaping, and proc parsing can otherwise make a green harness leak work or report wrong metrics.",
+      "preferred_resolution": "Close process lifecycle windows, add exact parser oracles, then rerun the focused Linux suite.",
+      "why": "The same focused harness tests validate cleanup and metrics."
+    }
+  ],
+  "pre_existing_findings": [],
+  "requirements_completeness": null,
+  "learnings": [],
+  "agent_native_gaps": [],
+  "deployment_notes": [],
+  "residual_risks": [
+    "The runbook summary still emphasizes the legacy two-binary form; align it while applying documentation fixes.",
+    "PMU counters and frequency controls remain unavailable on d2, so cache/TLB attribution remains unknown.",
+    "Automatic preserve-none propagation and the in-stack generator remain outside this experiment.",
+    "External default-ABI consumers cannot be exhaustively enumerated."
+  ],
+  "testing_gaps": [
+    "No install-consumer regression links an object compiled against the pre-CACS public header to the default archive.",
+    "The parent-signal tests cover SIGTERM but not SIGINT."
+  ],
+  "coverage": {
+    "mode": "agent report-only",
+    "scope_note": "Synthetic root base excludes unrelated master commits; generated evidence was reviewed through manifests, validators, summaries, and representative payloads.",
+    "cross_model": "not run: host serving family was unverified; in-process adversarial fallback completed",
+    "validator": "one independent batch validated findings #1, #2, #4, #5, #6, #7, and #8; dropped #3 as a review-policy preference",
+    "mode_aware_demotions": 1,
+    "demoted": "Runbook contract summary finding moved to residual risk.",
+    "malformed_findings": 0,
+    "malformed_returns": 0,
+    "settlement_suppression": "not evaluated because no plan was provided",
+    "failed_reviewers": [],
+    "excluded_untracked_paths": []
+  },
+  "artifact_path": "/tmp/compound-engineering-501/ce-code-review/20260911-000014-f8811338",
+  "run_id": "20260911-000014-f8811338"
+}

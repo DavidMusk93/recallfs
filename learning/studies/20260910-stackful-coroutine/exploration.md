@@ -11,6 +11,7 @@ depends_on:
 supersedes: []
 verified_by:
   - learning/studies/20260910-stackful-coroutine/evidence/raw/ab
+  - learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale
 ---
 
 # Exploration Log
@@ -39,7 +40,8 @@ Investigation observations enter this log; durable fixes, tests, and raw
 evidence leave it in
 `learning/studies/20260910-stackful-coroutine/demo/`,
 `learning/studies/20260910-stackful-coroutine/README.md`, and
-`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`.
+`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/` plus
+`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/`.
 
 ### Interfaces And Ownership
 
@@ -67,13 +69,15 @@ post-fix five-run data is current evidence.
 
 ### Reconciliation Anchors
 
-The parent study defines `CORO-RA-1` through `CORO-RA-7`; this log records the
+The parent study defines `CORO-RA-1` through `CORO-RA-9`; this log records the
 debugging path that produced those anchors.
 
 ### Evidence And Unknowns
 
-Current raw evidence is
-[`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`](evidence/raw/ab/).
+Current raw evidence is under
+[`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/`](evidence/raw/ab/)
+and
+[`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/`](evidence/raw/cacs-scale/).
 Historical intermediate measurements are not retained as performance
 conclusions.
 
@@ -275,6 +279,40 @@ fields. Since field 2 `comm` may contain spaces and `)`, that can shift
 parses `stat` plus `status` in one `awk` process. Its fixture uses
 `(worker ) with spaces)` and verifies exact fields 14 and 15.
 
+### 4.9 CACS and high-concurrency isolation
+
+The first CACS experiment kept the public API and scheduler unchanged but
+replaced the full SysV switch with an inline switch that exposes GPR, vector,
+x87, flags and memory clobbers to Clang. A third build applied explicit
+`preserve_none` to `rco_yield`, `rco_wait_fd` and `rco_sleep_ms`. Zig
+0.16.0/Clang 21.1.0 accepted the attribute; GCC 8.3 failed the configure gate
+instead of silently ignoring it.
+
+The initial implementation compacted the CACS context from 64 to 24 bytes.
+That would mix task-layout/cache effects into the switching comparison, so the
+final experiment restored an identical 64-byte context for all three backends.
+The CACS backend still stores only `rsp/rbp` and FP control; the remaining
+slots are reserved solely to hold layout constant.
+
+The first LTO validation attempted to disassemble an archive member containing
+LLVM bitcode. System `objdump` rejected that format. The gate was corrected to
+inspect the final linked ELF while LLVM IR independently verifies clobbers and
+`preserve_nonecc`.
+
+The high-concurrency benchmark uses a two-phase barrier. Every task first
+touches and validates page sentinels on its guarded stack, then the process
+stops itself so the parent can sample resident memory. Timed yields begin only
+after `SIGCONT`; exact checksums, switch counts, task lifecycle counts and
+sentinels prevent dead-code or partial-work results.
+
+The final failure-path review found that a default `SIGTERM` could terminate
+the Python parent before `run_sample()` reached its process-group cleanup.
+The CLI now blocks `SIGINT/SIGTERM` across `Popen`, restores the prior mask only
+inside cleanup protection, and runs as a Linux child subreaper. Its bounded
+cleanup reaps the stopped leader plus TERM-ignoring descendants and requires
+the process group to disappear. A real subprocess test failed before this
+change and passed on d2 afterward.
+
 ## 5. Validation Progression
 
 ```text
@@ -343,3 +381,19 @@ coroutine stacks, while demand paging kept the resident gap much smaller.
 PMU events were attempted, but d2's KVM returned
 `<not supported>` for cycles, instructions, branches, branch misses, and cache
 misses. No substitute instruction count was presented as hardware evidence.
+
+The final CACS scaling evidence was generated from
+`57f7ce3163adb14ea8023c51b9d0f7272176f8d1` and contains 150
+position-rotated samples across 10 cases. CACS reduced the `rco_yield` median
+from 35.657 ns to 13.322 ns. At 16,384 tasks and 4 KiB touched stack per task,
+CPU cost fell from 290.18 to 76.92 ns per measured scheduler yield. At
+256 KiB touched per task, the paired ratio narrowed to 0.841 because sentinel
+memory work dominated switching. Explicit `preserve_none` tracked plain CACS
+within noise and did not demonstrate an additional gain.
+
+A subsequent five-mode L4 run placed direct, SysV coroutine, CACS,
+CACS+`preserve_none`, and epoll in every run position. The four forwarders had
+medians of 25.404, 25.583, 25.522, and 25.145 Gbit/s respectively. Direct
+loopback was 72.284 Gbit/s. CACS/SysV paired ratio median was 1.002753,
+confirming that the scheduler-only win is
+below the resolution of this kernel-dominated forwarding workload.

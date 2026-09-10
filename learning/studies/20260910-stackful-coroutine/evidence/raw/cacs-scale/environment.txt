@@ -1,0 +1,106 @@
+source_commit=57f7ce3163adb14ea8023c51b9d0f7272176f8d1
+source_root=learning/studies/20260910-stackful-coroutine/demo
+work_root=.tmp/rco-cacs/work
+clean_root=.tmp/rco-cacs/final-evidence
+promotion_root=learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale
+zig_archive_sha256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+filc_release=0.684
+Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
+Architecture:        x86_64
+CPU op-mode(s):      32-bit, 64-bit
+Byte Order:          Little Endian
+Address sizes:       40 bits physical, 57 bits virtual
+CPU(s):              64
+On-line CPU(s) list: 0-63
+Thread(s) per core:  1
+Core(s) per socket:  32
+Socket(s):           2
+NUMA node(s):        2
+Vendor ID:           GenuineIntel
+CPU family:          6
+Model:               143
+Model name:          Intel(R) Xeon(R) Platinum 8457C
+Stepping:            8
+CPU MHz:             2600.000
+BogoMIPS:            5200.00
+Hypervisor vendor:   KVM
+Virtualization type: full
+L1d cache:           48K
+L1i cache:           32K
+L2 cache:            2048K
+L3 cache:            99840K
+NUMA node0 CPU(s):   0-31
+NUMA node1 CPU(s):   32-63
+Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 wbnoinvd arat avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid cldemote movdiri movdir64b fsrm md_clear serialize tsxldtrk arch_lbr amx_bf16 avx512_fp16 amx_tile amx_int8 arch_capabilities
+0.16.0
+clang version 21.1.0
+Target: x86_64-unknown-linux5.10.0-gnu2.31.0
+Thread model: posix
+InstalledDir: /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist
+cmake version 3.28.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+gcc (Debian 8.3.0-6) 8.3.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Python 3.7.3
+o0_flags=-O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
+o2_flags=-O2 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
+o3_flags=-O3 -DNDEBUG -flto -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
+sanitizer_flags=-O1 -g -fsanitize=address,undefined -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
+runs=5
+context_cpu=0 context_numa=0
+l4_parallel=4 l4_modes=5 l4_forwarders=4
+rlimit_nofile_soft=1024
+rlimit_nofile_hard=1048576
+perf_event_paranoid=2
+cpufreq_policy_paths=
+tool_sha256:
+2317bbb91798556d9d0f38aabdac23db83f0979b25f767259ae474546724087c  .tmp/zig/dist/zig
+70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  .tmp/zig/downloads/zig-x86_64-linux-0.16.0.tar.xz
+5f431bb27ce9d19ffb4534df74417e5352d14ad9673845543f2131662845eb8e  .tmp/fil-c/bin/filcc
+3019d8a4257a25fd9f6f9bd728f8a7e5090bbd910175fd42d6abc7e5a9de3118  .tmp/fil-c/bin/filrun
+9517718ee92baee3d83c582d530da2de0bf2cfb677cf0525187a8ce81cb48e57  .tmp/fil-c/dist/README.md
+source_sha256:
+a7b9f0234ad8e3a6d7056928f4abd4e5b77c833f10d40b1fcd2461f0d986c84e  learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt
+4c6c011f3b9b313cde7ed2762b8f4e92eabbec1cb49f1cc280db99c767afb163  learning/studies/20260910-stackful-coroutine/demo/README.md
+5246db76bd516a60b6e0a73a164f53808fbae200d147b49f4a39063bb242ec01  learning/studies/20260910-stackful-coroutine/demo/bench/cacs_scale_evidence.sh
+0616e610b9dd0b963da0c0c1221cfc13c69b86a43bb7b8fc31cdc13ef0ac6397  learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh
+0cab7e84c4d7376b11f6a0ccb15ff3db8c60de359dabe435e2e7606594bef6ea  learning/studies/20260910-stackful-coroutine/demo/bench/process_resources.sh
+9de36e4eec8f819d3bbfe2cc7d70bf7a9c1365e93bc94f384f41564bd2c0dcbc  learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+e7902bdc55899c93f8b8869d4fa73871a3ddd3fdc53f8d1a3f5ca0cd4538313d  learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+972ab6ab83c941cba3ffeeaefb68e16650bc4c8f2b2e6b0acb9655e4753de107  learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py
+439965348f55aff34ed99f02094c7c38a8aa22721a7157822afb77eeca06ce12  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+8f35f6f724bab6013d5d2aeb3817ef744e54929423c4d89a22142eafd6786be2  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
+f3575521f350878ca585f46f5fead862a45a80cff1f88c131b6a251188750137  learning/studies/20260910-stackful-coroutine/demo/include/rco.h
+7afa62fa6a77b654e469f0528bbf8e7a6d9574d9fb7e0e07c898740752f75e0b  learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+37e56ccad8e5068e3cca79955255ad2381640be5e729d3b8a5c94dd0757b3589  learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+42b906658f44801887a1903288766fae96d19f0e5db8137a703b2e590bc955e5  learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
+df07019a25d15932b0789d8ac104215196c946b27f33a0ee4143ac8bbb0b09ed  learning/studies/20260910-stackful-coroutine/demo/src/rco_internal.h
+8a317d089f37f19d8928e9292b94abf125bc4f81cbaeabe723fa7227575dbddb  learning/studies/20260910-stackful-coroutine/demo/tests/l4_bench_harness_test.sh
+d0008a2ec38d2cc4249c23ca1f69bf40abf663f24fbf3d1f9a71c08b8b076071  learning/studies/20260910-stackful-coroutine/demo/tests/l4_bench_process_resources_test.sh
+ebffa84b3d2bfd5241734b73a502aaa6b06c2facba2666d109cfea3cdc86e080  learning/studies/20260910-stackful-coroutine/demo/tests/l4_e2e.py
+7152cc88a0a1c89c8edcce18ac1449a316f45eee6c29212f8890f47a82dbe6f4  learning/studies/20260910-stackful-coroutine/demo/tests/l4_epoll_resource_limit.py
+7fde2b8ef9912eb8cc9fcd08eae1ebf399f61e50210ffa060edc02e51b2b7884  learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_epoll_test.c
+172ad2d257175a99816f6b3391d997f222bcc7a4ba2fadaad6571709b3acfd50  learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_test.c
+0cdd8f0f338318db9e065d685603103ae770fff484fc92b6410eef6cab2f27bf  learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_codegen_probe.c
+4d485a7496f629ba87da52a8993e5d9a819aab64b1d278e85f29b9bc9ecd168e  learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_codegen_test.cmake
+59d60ada4247def0701fab261e3094fd69c7f25608c8067fc1c6794f06f5b45b  learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
+6a661e53a99161701c2c30d7fd0bb9d1c48f31fcaf17f5b6d9ac652adb31ece6  learning/studies/20260910-stackful-coroutine/demo/tests/rco_context_filc.c
+dc2e6766673da0cf34538dbf7ab1ab34030d7e04ebb792e287dccdc83b62bba8  learning/studies/20260910-stackful-coroutine/demo/tests/rco_filc_test.c
+eeceb4d66cc653aeb08bcd31103d803cf0e54dfb6f7fd3a42dfc1c2c43645be4  learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+256209be4646706b39d3e1ef09f61315b101d0787b87ea730f9be2282285aa64  learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py
+0090c511a8b2c9a31611bb7b9687dde68f46f462c682abc1dfc54294c328f2fc  learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+binary_sha256:
+463d02d37ba2b55fc03b19b1155dfb5520ea10ccdfe0016e0d9cf3bc665396c7  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_bench
+cf8cf384edc8fe78d3bd155f5f92e8084388ef30d47b88d1ccc48ac1faad80dd  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_bench_cacs
+bf9f81e913eaa9c2c795304fed4659418be6391c65e0abb74794ace21d054980  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_bench_cacs_preserve_none
+1aa82e4aa0b33dca8dcfeee78275cf420031c101eac95b315930d236935a7e0f  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_sysv
+9b9763c07f3b42052a77e7018de9a611c57e11af7df398496b6dd4dfa19c23af  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs
+f9ff6390d0da0320f088eda34bfceaaaf3f70b97758d8e195bd4e423ce6258db  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs_preserve_none
+6976eae1061c5ca1fa5d36548df0e0f7fd944bff10a6f1c262700035bba788ab  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder
+ef0fb49d36b4758bbfde4cba76aa4d53e828c957689200acb431ebcfc50a1bf0  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs
+468e78674647a4766be78a4f9cc0815568aacc8bc944a55156a3673d79489737  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs_preserve_none
+3b14ac307ee997f814085db94803707cacc9b7450adfa5e8e2b9c2735413200b  /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_epoll

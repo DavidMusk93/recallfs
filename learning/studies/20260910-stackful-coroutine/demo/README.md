@@ -15,6 +15,8 @@ verified_by:
   - CORO-RA-4
   - CORO-RA-6
   - CORO-RA-7
+  - CORO-RA-8
+  - CORO-RA-9
 ---
 
 # rco Demo
@@ -28,8 +30,9 @@ TCP layer-4 forwarder, and a non-coroutine epoll baseline.
 ### Decision
 
 Build and validate both forwarders from the same source tree on Linux x86-64.
-Use FIL-C for executed C paths, Zig as the pinned LLVM frontend, native GCC for
-target-machine performance, and the same E2E/benchmark inputs for both models.
+Use FIL-C for executed C paths, native GCC for the default L4 benchmark, and
+Zig as the pinned LLVM frontend and native compiler for all three
+context-switch variants.
 
 ### Scope
 
@@ -46,20 +49,25 @@ capacity and tail-latency SLOs.
 
 | Input | Output |
 | --- | --- |
-| Linux x86-64 source tree and pinned compilers | runtime, tests, two forwarders |
-| Two forwarder binaries and CPU/NUMA settings | aggregate, per-stream, and process-resource CSV |
+| Linux x86-64 source tree and pinned compilers | default runtime, two experimental CACS runtimes, tests, four forwarders |
+| Four forwarder binaries and CPU/NUMA settings | five-mode aggregate, per-stream, process-resource, and rotation CSV |
 
 ### Interfaces And Ownership
 
-CMake owns development builds; explicit GCC commands own performance binaries;
-the A/B script owns child processes, ports, cleanup, and generated evidence.
+CMake owns development builds; explicit GCC commands own default performance
+binaries; the benchmark scripts own child processes and ports. The
+`bench/cacs_scale_evidence.sh` driver owns the bounded CACS work/clean roots,
+validation, manifest generation, and promotion to the declared raw root.
 
 ### Invariants
 
-- both forwarders receive identical CLI limits and traffic;
+- all four forwarders receive identical CLI limits and traffic;
 - every benchmark stream must make positive sender and receiver progress;
 - build/test artifacts stay under the repository-local `.tmp` workspace;
-- performance results come from native GCC binaries, never FIL-C.
+- default L4 performance uses native GCC; CACS performance uses native
+  Zig/Clang; FIL-C timing is never benchmark evidence.
+- SysV/CACS/CACS+PN comparisons use one Zig version, identical flags, context
+  size, benchmark source and run-order policy.
 
 ### Failure Semantics
 
@@ -69,17 +77,23 @@ without fabricating substitute counters.
 
 ### Worked Example
 
-`RUNS=5 DURATION=3` executes `direct -> coroutine -> epoll` for each run,
-producing 15 aggregate rows and 60 per-stream rows when `PARALLEL=4`.
+The default `RUNS=5 DURATION=3` A/B executes direct, coroutine, and epoll
+positions, producing 15 aggregate rows and 60 per-stream rows when
+`PARALLEL=4`. The CACS evidence run rotates direct plus the four SysV, CACS,
+CACS+PN, and epoll forwarder modes through five positions, producing 25
+aggregate rows, 100 per-stream rows, 20 forwarder-resource rows, and 25
+run-order rows.
 
 ### Reconciliation Anchors
 
-See `CORO-RA-1` through `CORO-RA-7` in [`../README.md`](../README.md).
+See `CORO-RA-1` through `CORO-RA-9` in [`../README.md`](../README.md).
 
 ### Evidence And Unknowns
 
-The latest observed outputs are under [`../evidence/raw/ab/`](../evidence/raw/ab/).
-Real-NIC and long-duration behavior remain outside this runbook.
+The latest observed outputs are under
+[`../evidence/raw/ab/`](../evidence/raw/ab/) and
+[`../evidence/raw/cacs-scale/`](../evidence/raw/cacs-scale/). Real-NIC and
+long-duration behavior remain outside this runbook.
 
 ## Platform Contract
 
@@ -152,6 +166,21 @@ docker run --rm --network none \
       "$src/src/rco.c" "$src/tests/rco_context_filc.c" \
       "$src/tests/rco_filc_test.c" -o .tmp/rco-filc-test
     $filrun .tmp/rco-filc-test
+    $filcc -DRCO_FILC -std=c11 -O2 -g \
+      -Wall -Wextra -Werror -I "$src/include" -I "$src/src" \
+      "$src/src/rco.c" "$src/tests/rco_context_filc.c" \
+      "$src/bench/rco_high_concurrency_bench.c" \
+      -o .tmp/rco-high-concurrency-filc
+    set +e
+    $filrun .tmp/rco-high-concurrency-filc \
+      --tasks 0 --stack-bytes 32768 \
+      --touch-bytes 4096 --yields-per-task 1 \
+      >.tmp/rco-high-concurrency-filc.out \
+      2>.tmp/rco-high-concurrency-filc.err
+    status=$?
+    set -e
+    test "$status" -eq 2
+    grep -q "tasks must be" .tmp/rco-high-concurrency-filc.err
     $filcc -std=c11 -O2 -g -Wall -Wextra -Werror \
       "$src/tests/l4_forwarder_epoll_test.c" -o .tmp/l4-epoll-filc-test
     $filrun .tmp/l4-epoll-filc-test
@@ -173,9 +202,42 @@ driver:  .tmp/zig/dist/zig cc
 LLVM:    Clang 21.1.0
 ```
 
-`zig cc` builds both forwarders and the runtime tests at O0/O2/O3. The
-ASan/UBSan E2E binaries also use `zig cc`. Performance binaries deliberately
-use native GCC instead.
+`zig cc` builds all three runtime variants and four forwarders at O0/O2/O3.
+The ASan/UBSan E2E binaries also use `zig cc`. Default L4 performance binaries
+use native GCC; CACS comparisons use the same native Zig/Clang build for every
+variant so compiler choice is not a confound.
+
+## Experimental CACS Variants
+
+The installed `rco` target remains the complete SysV backend. CACS targets are
+opt-in and require Zig/Clang 21:
+
+```bash
+zig="$PWD/.tmp/zig/dist/zig;cc"
+cmake -S learning/studies/20260910-stackful-coroutine/demo \
+  -B .tmp/rco-cacs-build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER="$zig" \
+  -DCMAKE_ASM_COMPILER="$zig" \
+  -DCMAKE_C_FLAGS_RELEASE='-O3 -march=native -mtune=native -DNDEBUG -flto' \
+  -DCMAKE_EXE_LINKER_FLAGS_RELEASE=-flto \
+  -DRCO_BUILD_CACS=ON
+cmake --build .tmp/rco-cacs-build -j
+ctest --test-dir .tmp/rco-cacs-build --output-on-failure
+```
+
+Generated runtime/benchmark targets:
+
+| Mode | Library | Yield benchmark | L4 E2E binary |
+| --- | --- | --- | --- |
+| SysV | `rco` | `rco_bench` | `rco_l4_forwarder` |
+| CACS | `rco_cacs` | `rco_bench_cacs` | `rco_l4_forwarder_cacs` |
+| CACS + PN | `rco_cacs_preserve_none` | `rco_bench_cacs_preserve_none` | `rco_l4_forwarder_cacs_preserve_none` |
+
+The CACS libraries are experimental and are not installed. The preserve-none
+compile definition is public because every caller must use the same unstable
+calling convention. A GCC build with `RCO_BUILD_CACS=ON` fails during configure
+instead of silently ignoring the attribute.
 
 ## Library Example
 
@@ -277,6 +339,27 @@ numactl --physcpubind=0 --membind=0 \
   .tmp/rco-bench 1000000 11
 ```
 
+High-concurrency CPU/memory matrix:
+
+```bash
+numactl --physcpubind=0 --membind=0 \
+  python3 "$src/bench/rco_high_concurrency_bench.py" \
+    --sysv .tmp/rco-cacs-build/rco_high_concurrency_bench_sysv \
+    --cacs .tmp/rco-cacs-build/rco_high_concurrency_bench_cacs \
+    --cacs-preserve-none \
+      .tmp/rco-cacs-build/rco_high_concurrency_bench_cacs_preserve_none \
+    --output-dir .tmp/rco-cacs-results \
+    --runs 5
+```
+
+The default matrix produces 150 validated samples: task-count scaling through
+16,384 tasks, touched-stack scaling through 256 KiB/task, and yield-frequency
+scaling through 1,024 yields/task. The process stops at a residency barrier so
+the parent can sample `/proc/<pid>/status`, `smaps_rollup`, and setup faults
+before timed execution. `SIGINT` and `SIGTERM` are converted into the harness
+error path so an interrupted parent resumes and terminates the complete active
+process group.
+
 L4 direct-versus-proxy benchmark:
 
 ```bash
@@ -287,13 +370,48 @@ RUNS=5 DURATION=3 \
   .tmp/rco-l4-results
 ```
 
+With `RCO_BUILD_CACS=ON`, the same harness accepts two additional binaries and
+runs a five-position rotation:
+
+```bash
+RUNS=5 DURATION=3 \
+  "$src/bench/l4_bench.sh" \
+  .tmp/rco-cacs-build/rco_l4_forwarder \
+  .tmp/rco-cacs-build/rco_l4_forwarder_epoll \
+  .tmp/rco-l4-cacs-results \
+  .tmp/rco-cacs-build/rco_l4_forwarder_cacs \
+  .tmp/rco-cacs-build/rco_l4_forwarder_cacs_preserve_none
+```
+
+The complete CACS correctness, codegen, scale, and L4 evidence run has one
+no-argument invocation from the d2 checkout:
+
+```bash
+ssh d2 'cd /root/recallfs && exec bash learning/studies/20260910-stackful-coroutine/demo/bench/cacs_scale_evidence.sh'
+```
+
+The driver runs only on Linux x86-64. It uses only
+`.tmp/zig/dist/zig` and `.tmp/fil-c`, derives the checked-out source commit,
+and writes builds plus candidate evidence below `.tmp`. It enables
+`CMAKE_EXPORT_COMPILE_COMMANDS`, records complete compile and link commands for
+O0, O2, O3, and sanitizer builds, and validates compiler, backend, binary-hash,
+schema, count, and workload oracles before creating `validation.txt` and
+`SHA256SUMS`. Only a fully validated candidate is promoted to
+`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale`.
+
 The L4 script requires `iperf3`, `jq`, `numactl`, and Python 3. It pins proxy,
 server, and client to CPUs 0, 1, and 2 on NUMA node 0. Each run interleaves
-direct, coroutine, and epoll-state-machine paths with a deterministic
-three-position rotation recorded in `run-order.csv`. It rejects a run unless
+the configured direct/forwarder modes with a deterministic position rotation
+recorded in `run-order.csv`. It rejects a run unless
 every requested sender and receiver stream transfers data, all child processes
 exit within bounded deadlines, and a normal proxy shutdown reports exactly one
-summary with `forced_shutdown=false`. It writes per-stream results to
+summary with `forced_shutdown=false`. Before measurement, each forwarder must
+report the expected compile-time identity through `--backend-identity`; the
+harness rejects duplicate identities and digests, executes private copies, and
+rechecks both source and copy around every sample. Aggregate and resource rows
+carry the verified identity and SHA-256. Summary output labels ratio-of-medians
+separately and uses the median of run-paired ratios for the historical
+`*_over_*` keys. It writes per-stream results to
 `stream-throughput.csv`, records process VM/CPU counters in
 `process-resources.csv`, and records soft/hard `RLIMIT_NOFILE` in
 `environment.txt`. Do not compare its loopback numbers with a real-NIC result.

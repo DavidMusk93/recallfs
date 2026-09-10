@@ -1,0 +1,5 @@
+operation,median_ns_per_operation
+rco_yield,35.584
+function_call,1.640
+sched_yield,228.603
+sink=16132902951485109480

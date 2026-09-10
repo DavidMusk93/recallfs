@@ -1,0 +1,72 @@
+[  2%] Building C object CMakeFiles/rco.dir/src/rco.c.o
+[  4%] Building C object CMakeFiles/rco_cacs.dir/src/rco.c.o
+[  6%] Building ASM object CMakeFiles/rco.dir/src/rco_context_x86_64.S.o
+[  8%] Building ASM object CMakeFiles/rco_cacs.dir/src/rco_context_cacs_x86_64.S.o
+[ 10%] Linking C static library librco.a
+[ 12%] Linking C static library librco_cacs.a
+[ 12%] Built target rco
+[ 14%] Building C object CMakeFiles/rco_cacs_preserve_none.dir/src/rco.c.o
+[ 14%] Built target rco_cacs
+[ 16%] Building C object CMakeFiles/rco_test.dir/tests/rco_test.c.o
+[ 18%] Linking C executable rco_test
+[ 20%] Building ASM object CMakeFiles/rco_cacs_preserve_none.dir/src/rco_context_cacs_x86_64.S.o
+[ 20%] Built target rco_test
+[ 22%] Building C object CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o
+[ 24%] Linking C static library librco_cacs_preserve_none.a
+[ 24%] Built target rco_cacs_preserve_none
+[ 26%] Building C object CMakeFiles/rco_test_cacs.dir/tests/rco_test.c.o
+[ 28%] Linking C executable rco_guard_test
+[ 28%] Built target rco_guard_test
+[ 30%] Building C object CMakeFiles/rco_guard_test_cacs.dir/tests/rco_guard_test.c.o
+[ 32%] Linking C executable rco_test_cacs
+[ 34%] Linking C executable rco_guard_test_cacs
+[ 34%] Built target rco_test_cacs
+[ 36%] Building C object CMakeFiles/rco_cacs_test_cacs.dir/tests/rco_cacs_test.c.o
+[ 36%] Built target rco_guard_test_cacs
+[ 38%] Building C object CMakeFiles/rco_test_cacs_preserve_none.dir/tests/rco_test.c.o
+[ 40%] Linking C executable rco_test_cacs_preserve_none
+[ 40%] Built target rco_test_cacs_preserve_none
+[ 42%] Building C object CMakeFiles/rco_guard_test_cacs_preserve_none.dir/tests/rco_guard_test.c.o
+[ 44%] Linking C executable rco_guard_test_cacs_preserve_none
+[ 44%] Built target rco_guard_test_cacs_preserve_none
+[ 46%] Building C object CMakeFiles/rco_cacs_test_cacs_preserve_none.dir/tests/rco_cacs_test.c.o
+[ 48%] Linking C executable rco_cacs_test_cacs
+[ 48%] Built target rco_cacs_test_cacs
+[ 51%] Building C object CMakeFiles/rco_bench.dir/bench/rco_bench.c.o
+[ 53%] Linking C executable rco_bench
+[ 53%] Built target rco_bench
+[ 55%] Building C object CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o
+[ 57%] Linking C executable rco_high_concurrency_bench_sysv
+[ 59%] Linking C executable rco_cacs_test_cacs_preserve_none
+[ 59%] Built target rco_high_concurrency_bench_sysv
+[ 61%] Building C object CMakeFiles/rco_bench_cacs.dir/bench/rco_bench.c.o
+[ 61%] Built target rco_cacs_test_cacs_preserve_none
+[ 63%] Building C object CMakeFiles/rco_bench_cacs_preserve_none.dir/bench/rco_bench.c.o
+[ 65%] Linking C executable rco_bench_cacs
+[ 67%] Linking C executable rco_bench_cacs_preserve_none
+[ 67%] Built target rco_bench_cacs
+[ 69%] Building C object CMakeFiles/rco_high_concurrency_bench_cacs.dir/bench/rco_high_concurrency_bench.c.o
+[ 69%] Built target rco_bench_cacs_preserve_none
+[ 71%] Building C object CMakeFiles/rco_high_concurrency_bench_cacs_preserve_none.dir/bench/rco_high_concurrency_bench.c.o
+[ 73%] Linking C executable rco_high_concurrency_bench_cacs
+[ 75%] Linking C executable rco_high_concurrency_bench_cacs_preserve_none
+[ 75%] Built target rco_high_concurrency_bench_cacs
+[ 77%] Building C object CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o
+[ 77%] Built target rco_high_concurrency_bench_cacs_preserve_none
+[ 79%] Building C object CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o
+[ 81%] Linking C executable rco_l4_forwarder
+[ 81%] Built target rco_l4_forwarder
+[ 83%] Building C object CMakeFiles/rco_l4_forwarder_cacs.dir/examples/l4_forwarder.c.o
+[ 85%] Linking C executable rco_l4_forwarder_epoll
+[ 85%] Built target rco_l4_forwarder_epoll
+[ 87%] Building C object CMakeFiles/rco_l4_forwarder_cacs_preserve_none.dir/examples/l4_forwarder.c.o
+[ 89%] Linking C executable rco_l4_forwarder_cacs
+[ 89%] Built target rco_l4_forwarder_cacs
+[ 91%] Building C object CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o
+[ 93%] Linking C executable rco_l4_forwarder_cacs_preserve_none
+[ 93%] Built target rco_l4_forwarder_cacs_preserve_none
+[ 95%] Building C object CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o
+[ 97%] Linking C executable rco_l4_wait_test
+[100%] Linking C executable rco_l4_epoll_test
+[100%] Built target rco_l4_wait_test
+[100%] Built target rco_l4_epoll_test
