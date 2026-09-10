@@ -1,0 +1,17 @@
+# started on Thu Sep 10 15:47:24 2026
+
+
+ Performance counter stats for 'numactl --physcpubind=0 --membind=0 .tmp/rco-bench-final 500000 3':
+
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+   <not supported>      cache-misses                                                
+
+       0.823001765 seconds time elapsed
+
+       0.233007000 seconds user
+       0.590018000 seconds sys
+
+

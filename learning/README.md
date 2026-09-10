@@ -152,6 +152,7 @@ demo/
 
 | Study | Topic |
 | --- | --- |
+| [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack coroutine runtime and epoll TCP L4 forwarder |
 | [Fast time-of-day](studies/20260908-fast-time-of-day/README.md) | Dependency-chain restructuring and bounded fixed-point timestamp decomposition |
 | [Allocator provenance](studies/20260907-allocator-provenance/README.md) | C/Rust allocation lifetime, zero-state provenance, arena selection, and FIL-C verification |
 | [PowerSort](studies/20260611-powersort/README.md) | Adaptive stable merge policy over natural runs |

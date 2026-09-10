@@ -1,0 +1,8 @@
+gcc -O0 PASS
+gcc -O2 PASS
+gcc -O3 PASS
+clang -O0 PASS
+clang -O2 PASS
+clang -O3 PASS
+gcc -O3 -flto PASS
+clang -O3 -flto PASS

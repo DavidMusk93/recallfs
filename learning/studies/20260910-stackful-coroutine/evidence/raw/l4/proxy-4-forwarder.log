@@ -1,0 +1,3 @@
+listening=127.0.0.1:43017 upstream=127.0.0.1:43016 max_connections=128 buffer_size=65536
+accepted=5 rejected=0 connected=5 connect_errors=0 peer_resets=1 io_errors=0 half_closes=8 bytes_client_to_upstream=13586989796 bytes_upstream_to_client=677 peak_connections=5 forced_shutdown=false
+coroutines_spawned=17 context_switches=26048 stacks_mapped=13 stacks_reused=4
