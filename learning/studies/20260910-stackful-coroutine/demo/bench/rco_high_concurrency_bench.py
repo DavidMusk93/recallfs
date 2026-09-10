@@ -17,6 +17,7 @@ RESULT_SCHEMA = "rco-high-concurrency-v2"
 MODE_NAMES = ("sysv", "cacs", "cacs-preserve-none")
 MAX_TASKS = 16384
 MAX_STACK_BYTES = 512 * 1024
+MAX_TOTAL_STACK_BYTES = 2 * 1024 * 1024 * 1024
 MAX_TOUCHED_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_YIELDS = 20_000_000
 MAX_RUNS = 10
@@ -183,6 +184,8 @@ def validate_case(case, page_size):
         raise BenchmarkError("{} touch size is not page-aligned".format(case.name))
     if case.touch_bytes + page_size + 8192 > case.stack_bytes:
         raise BenchmarkError("{} leaves insufficient stack headroom".format(case.name))
+    if case.tasks * case.stack_bytes > MAX_TOTAL_STACK_BYTES:
+        raise BenchmarkError("{} exceeds the mapped-stack bound".format(case.name))
     if case.tasks * case.touch_bytes > MAX_TOUCHED_BYTES:
         raise BenchmarkError("{} exceeds the touched-memory bound".format(case.name))
     if (
@@ -308,10 +311,11 @@ def wait_until_stopped(process, deadline):
             CLD_KILLED,
             CLD_DUMPED,
         ):
-            stdout, stderr = process.communicate()
+            process.wait(timeout=0)
             raise BenchmarkError(
-                "benchmark exited before SIGSTOP with {}: stdout={!r} "
-                "stderr={!r}".format(process.returncode, stdout, stderr)
+                "benchmark exited before SIGSTOP with {}".format(
+                    process.returncode
+                )
             )
         time.sleep(0.01)
     raise BenchmarkError("benchmark timed out before the residency barrier")

@@ -126,6 +126,18 @@ class ArgumentBoundsTests(unittest.TestCase):
         self.run_invalid(
             [
                 "--tasks",
+                "16384",
+                "--stack-bytes",
+                "524288",
+                "--touch-bytes",
+                "4096",
+                "--yields-per-task",
+                "1",
+            ]
+        )
+        self.run_invalid(
+            [
+                "--tasks",
                 "1",
                 "--stack-bytes",
                 "32768",
@@ -396,6 +408,34 @@ class OracleChecksumTests(unittest.TestCase):
 
 
 class TimeoutCleanupTests(unittest.TestCase):
+    def test_early_exit_with_inherited_pipe_is_bounded(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            executable = Path(temporary) / "early-exit.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import signal\n"
+                "import subprocess\n"
+                "import sys\n"
+                "subprocess.Popen([\n"
+                "    sys.executable, '-c',\n"
+                "    'import signal,time; signal.signal(signal.SIGTERM, "
+                "signal.SIG_IGN); time.sleep(30)'\n"
+                "])\n"
+                "raise SystemExit(7)\n",
+                encoding="ascii",
+            )
+            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            mode = HARNESS.Mode("sysv", executable)
+            case = HARNESS.BenchmarkCase("early", 1, 32768, 4096, 1)
+            started = time.monotonic()
+            with self.assertRaisesRegex(
+                HARNESS.BenchmarkError, "exited before SIGSTOP with 7"
+            ):
+                HARNESS.run_sample(
+                    mode, case, 1, 1, timeout_seconds=1
+                )
+            self.assertLess(time.monotonic() - started, 2)
+
     def test_timeout_kills_stopped_process_group(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -18,6 +18,7 @@
 #define BENCH_SCHEMA "rco-high-concurrency-v2"
 #define MAX_TASKS UINT64_C(16384)
 #define MAX_STACK_BYTES (UINT64_C(512) * 1024)
+#define MAX_TOTAL_STACK_BYTES (UINT64_C(2) * 1024 * 1024 * 1024)
 #define MAX_TOUCHED_BYTES (UINT64_C(512) * 1024 * 1024)
 #define MAX_TOTAL_YIELDS UINT64_C(20000000)
 #define STACK_HEADROOM_BYTES UINT64_C(8192)
@@ -170,6 +171,7 @@ static int parse_options(int argc, char **argv, struct options *out)
 static int validate_options(const struct options *options, uint64_t page_size)
 {
     uint64_t touched_total = 0;
+    uint64_t stack_total = 0;
     uint64_t total_yields = 0;
     uint64_t stack_required = 0;
 
@@ -197,6 +199,11 @@ static int validate_options(const struct options *options, uint64_t page_size)
         stack_required > options->stack_bytes) {
         fputs("stack-bytes must leave room for aligned sentinels and frames\n",
               stderr);
+        return -EINVAL;
+    }
+    if (!multiply_u64(options->tasks, options->stack_bytes, &stack_total) ||
+        stack_total > MAX_TOTAL_STACK_BYTES) {
+        fputs("total stack bytes must be <= 2147483648\n", stderr);
         return -EINVAL;
     }
     if (!multiply_u64(options->tasks, options->touch_bytes, &touched_total) ||
