@@ -53,7 +53,7 @@
 - **C 正确性工具链**：C 代码必须先使用 [FIL-C](https://fil-c.org/) 编译和测试；FIL-C 用于验证被执行路径的功能正确性、内存安全和未定义行为边界，不作为完整证明或性能基线。将 FIL-C 及其宿主适配封装在仓库 `.tmp/fil-c/`，不得提交编译器、VM 镜像或构建产物；若当前平台不能原生运行 FIL-C，使用其官方支持的隔离 Linux 环境，不得静默降级为系统 Clang。
 - **C benchmark 工具链**：性能测试必须在目标机器上切换到原生 C 编译器，并使用适合该机器和生产语义的最佳优化配置；默认至少包含 `-O3 -march=native -mtune=native -DNDEBUG`，工具链稳定支持时再启用 LTO。benchmark 前仍须通过 FIL-C 正确性验证；优化构建必须保留始终启用的结果校验和可观察 sink，并通过反汇编或负向测试确认待测工作未被 DCE、循环交换或合并。测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数，并用 wall time 与硬件计数器交叉验证；PMU 不可用时须记录原因，退化为拓扑 + wall time 证据，不得静默换用 VM、模拟器或安全插桩计数。不得把 FIL-C、VM、模拟器或安全插桩运行时间当作目标 CPU 的性能结论。
 - **工具实现**：有长期复用价值的工具优先使用 Rust 实现，并按领域放入 `tools/$domain/`；工具二进制和临时输出写入 `.tmp/`。
-- **唯一记忆源**：nmem 是经验、设计和决策的唯一权威记忆源，不再将其他记忆文件作为长期沉淀。
+- **唯一跨会话记忆源**：nmem 保存跨会话的经验、设计理由和决策历史；active tracked design 约束当前实现目标，不再将其他记忆文件作为长期沉淀。
 - **格式化写入**：写入 nmem 前先组织标题、结论、背景、约束、证据和后续动作；复杂流程使用 `text` 代码块中的 ASCII graph，图内不得使用 CJK、全角符号或 Unicode box drawing。
 - **Immutable memory**：已写入的记忆不可原地改写或删除。新认识应创建为新记忆，并通过 `EVOLVES` 或显式语义关系（如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
 
@@ -65,20 +65,27 @@
   source/schema/migration/tests 描述当前可执行行为，runtime evidence 描述带
   revision 与环境的真实观察，历史 study/incident 只对其记录时点负责。冲突是
   drift，必须调查，不得静默选择一方。
-- **显式 DAG**：新建或实质修改的复杂文档声明稳定 `doc_id`、`status`、
-  `authority`、`applies_to`、`depends_on` 和 `verified_by`。Agent 按显式依赖
-  拓扑读取；推断出的依赖只能作为漏边诊断。
+- **显式 DAG**：新建或实质修改的复杂文档声明稳定 `doc_id`、`kind`、`status`、
+  `authority`、`applies_to`、`depends_on`、`supersedes` 和 `verified_by`。
+  仓库相对路径精确解析；doc ID 通过扫描 frontmatter 唯一解析。缺失、重复或
+  循环引用在 mutation 前阻断。Agent 按显式依赖拓扑读取；推断出的依赖只能作为
+  漏边诊断。在 linter 落地前手工执行并记录该校验。
 - **语义锚点**：行为文档必须包含 concrete worked example、边界/失败语义和
   带稳定 ID 的 reconciliation anchors；能自动化的 anchor 应进入测试或探针，
   关键行为至少保留一个不与实现同源生成的 oracle。
-- **受限生成**：只有显式声明 generated paths、clean regeneration、独立验收、
-  promotion 和禁止手改的子树，代码才可视为 disposable build product；其余
-  tracked code 均是 maintained source。
+- **受限生成**：generated paths 必须是规范化、仓库相对且互不重叠的路径，
+  `clean_root` 位于 tracked outputs 外；拒绝 `..`、仓库根目录、symlink escape
+  和 maintained paths overlap。clean generation 后记录 path/digest manifest，
+  promotion 只能修改声明的 outputs。满足独立验收和禁止手改约束后，代码才可
+  视为 disposable build product；其余 tracked code 均是 maintained source。
 - **薄 prompt**：提示 Agent 指向 governing doc 路径与执行协议，不复制完整
-  设计正文。交付应报告 `docs_read`、`anchor_results`、`ambiguities`、
-  `verification_evidence` 和 `successor_id`。
-- **边界**：nmem 是跨会话经验与决策的唯一权威记忆源；仓库 docs 是可版本化、
-  可 review、可随代码引用的项目 artifact，两者不能互相替代。
+  设计正文。交付字段必须恰好为 `docs_read`、`anchor_results`、`ambiguities`、
+  `changed_artifacts`、`verification_evidence`、`successor_id`。
+  `successor_id` 是未解决工作的下一个持久 run/task/doc 标识；没有后继时为
+  `none`。
+- **边界**：nmem 保存跨会话理由和历史，active tracked design 约束实现目标。
+  两者冲突时必须报告，不得静默覆盖；tracked decision 变化后追加一条关联旧记录
+  的 immutable evolved memory。
 
 ## 7. 行为
 

@@ -1,12 +1,13 @@
 ---
 doc_id: recallfs-agent-ready-docs-v1
-kind: standard
+kind: design
 status: active
 authority: design
 applies_to:
   - repository-wide complex changes
 depends_on:
   - AGENTS.md
+supersedes: []
 verified_by:
   - required-section review
   - reconciliation-anchor execution
@@ -50,6 +51,12 @@ questions. A disagreement is drift to investigate:
   and add superseding context;
 - generation input versus generated output: regenerate from a clean location
   instead of patching the output.
+
+nmem preserves cross-session rationale and history; it does not override the
+implementation target. Active tracked design governs that target. Report any
+conflict between nmem and tracked design, and never silently choose one. After
+a tracked decision changes, add an immutable nmem memory that evolves the prior
+memory instead of rewriting it.
 
 ## 3. Scope
 
@@ -100,7 +107,7 @@ Field semantics:
 | `doc_id` | Stable repository-unique ID. Change the version only for a breaking semantic rewrite. |
 | `kind` | `design`, `plan`, `runbook`, `study`, `incident`, or `reference`. |
 | `status` | `draft`, `active`, `superseded`, or `archived`. |
-| `authority` | Usually `design` or `evidence`; use `generation` only with Section 9. |
+| `authority` | Usually `design` or `evidence`; use `generation` only with Section 10. |
 | `applies_to` | Paths or named components governed by the doc. |
 | `depends_on` | Explicit doc IDs or repository paths required to interpret this doc. |
 | `supersedes` | Older doc IDs replaced by this one. Never silently rewrite history. |
@@ -174,24 +181,35 @@ oracle. Keep at least one independent oracle for consequential behavior:
 
 ## 9. Document Dependency DAG
 
-The context graph has two edge types:
+The context graph uses explicit `depends_on` edges:
 
 ```text
 doc A --depends_on--> doc B
-doc A --consumes----> interface exported by B
 ```
+
+Before any mutation, resolve every `depends_on` value:
+
+- a value naming an existing repository-relative path resolves only to that
+  exact path;
+- otherwise, treat the value as a `doc_id` and scan repository document front
+  matter; exactly one document must match;
+- a missing path or ID, duplicate `doc_id` match, or dependency cycle blocks
+  mutation.
+
+Dependency validation is manual until a linter exists. Record the resolved
+paths and validation result in the run evidence.
 
 The orchestrator must:
 
-1. reject missing dependencies and cycles before implementation;
+1. resolve and validate all dependencies before implementation;
 2. read dependencies in topological order;
-3. pass one task doc plus only the needed exported contracts to a worker;
+3. pass one task doc plus its resolved dependency documents to a worker;
 4. integrate and verify one dependency layer before starting dependents;
 5. log ambiguous prose and upstream defects against the responsible `doc_id`.
 
 Do not make every document self-contained by copying all upstream text. A doc
-is self-contained at its task boundary when it names dependencies and restates
-only the contracts it consumes.
+is self-contained at its task boundary when it names dependencies and states
+the interfaces it relies on.
 
 ## 10. Generation Contract
 
@@ -203,12 +221,27 @@ generated_outputs:
 regenerate:
   command: exact clean-generation command
   clean_root: isolated output directory
+manifest:
+  records:
+    - normalized output path and digest
 reconcile:
   - independent verification command
 promotion:
   command: exact validated replacement command
 manual_edits: forbidden
 ```
+
+Before generation, normalize `generated_outputs` and `clean_root` as
+repository-relative paths without empty, `.` or `..` segments. Reject absolute
+paths, the repository root, any symlink escape from the repository, pairwise
+overlap among declared outputs, overlap between `clean_root` and any tracked
+output, or overlap between a declared output and a maintained path.
+
+Run generation with repository writes restricted to `clean_root`. After
+generation, capture a manifest containing every candidate output's normalized
+path and digest. Reconciliation checks that manifest before promotion.
+Promotion may touch only declared `generated_outputs`; an unmanifested or
+out-of-bound write aborts promotion and leaves tracked outputs unchanged.
 
 Before generated output may be called disposable, all of these must hold:
 
@@ -231,17 +264,22 @@ Use a thin prompt that points to the governing doc:
 ```text
 Implement from <entry-doc>.
 
-Treat only active docs with authority=design or authority=generation as
-normative. Resolve explicit depends_on edges and read them in topological
-order. For each task, load the entry doc plus only the exported contracts of
-its dependencies.
+Read and obey applicable policy docs before interpreting intended behavior:
+the nearest AGENTS.md for each artifact, then the repository-root AGENTS.md.
+For intended behavior, treat only active docs with authority=design or
+authority=generation as normative. Resolve each explicit depends_on reference:
+repository-relative paths resolve exactly; doc_id values resolve uniquely by
+scanning repository document front matter. Missing references, duplicate
+doc_id matches, or cycles block all mutation. Read resolved dependencies in
+topological order. Validation is manual until a dependency linter exists.
 
 Preserve stated invariants and execute every reconciliation anchor. Convert
 anchors into tests when practical. If the docs, code, tests, or runtime
 evidence disagree, report the drift; do not silently choose one.
 
 Code is disposable only for paths covered by an explicit generation contract.
-Return docs_read, anchor_results, ambiguities, evidence, and successor_id.
+Return exactly: docs_read, anchor_results, ambiguities, changed_artifacts,
+verification_evidence, successor_id.
 ```
 
 Do not paste the whole design into the prompt. Duplicated requirements drift,
@@ -309,6 +347,7 @@ and made explicit before topological execution.
 | `DOC-RA-3` | Explicit `depends_on` graph contains a cycle | Implementation stops before mutation and reports the cycle | DAG validation |
 | `DOC-RA-4` | Worked example contains numeric behavior | Units, boundary, expected value or tolerance, and executable verification are present | Required-section review |
 | `DOC-RA-5` | Prompt duplicates the governing design | Replace copied requirements with entry path and execution protocol | Prompt review |
+| `DOC-RA-6` | Generation or promotion attempts a write outside `clean_root` or declared outputs | Promotion is blocked and tracked outputs remain unchanged | Negative path-boundary probe |
 
 ## 14. Run Evidence
 
@@ -323,7 +362,12 @@ verification_evidence:
 successor_id:
 ```
 
+`successor_id` is the next durable run, task, or doc identifier for unresolved
+work; use `none` when no successor exists.
+
 The run log is execution evidence, not a second design document. Repeated
 ambiguity must be repaired in the governing doc. Durable cross-session lessons
-and decisions go to nmem; repository docs remain the versioned project
-artifacts that code, tests, and users can reference.
+and rationale go to nmem; active tracked design remains the implementation
+target. Report conflicts instead of silently overriding either source. After a
+tracked decision changes, add an immutable evolved memory that links to the
+prior nmem record.

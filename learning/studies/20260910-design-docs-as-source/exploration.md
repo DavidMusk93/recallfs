@@ -1,3 +1,17 @@
+---
+doc_id: recallfs-study-design-docs-as-source-exploration-v1
+kind: study
+status: active
+authority: evidence
+applies_to:
+  - learning/studies/20260910-design-docs-as-source
+depends_on:
+  - learning/studies/20260910-design-docs-as-source/source.md
+supersedes: []
+verified_by:
+  - claim and evidence review
+---
+
 # Exploration Log
 
 ## 1. Source Resolution
@@ -146,9 +160,9 @@ than reproduction. The practical output of this study is instead the
 repository contract in `designs/agent-ready-docs.md`, which can be piloted on a
 real low-risk module and evaluated with explicit metrics.
 
-## 7. Independent Review
+## 7. Review Inputs
 
-Two read-only reviews were run:
+Two separate read-only review contexts informed the draft:
 
 1. a paper-claims audit, focused on claim/evidence separation and external
    validity;
@@ -158,3 +172,7 @@ Two read-only reviews were run:
 Both independently rejected repository-wide code disposability and recommended
 typed authority, explicit generation boundaries, independent reconciliation,
 and incremental adoption rather than mass-editing historical docs.
+
+Their raw transcripts are session-local and are not repository evidence.
+Conclusions were retained only when they were traceable to the archived paper
+or current repository artifacts, then checked again in the final diff review.

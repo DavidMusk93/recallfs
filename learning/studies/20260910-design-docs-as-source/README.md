@@ -7,6 +7,7 @@ applies_to:
   - learning/studies/20260910-design-docs-as-source
 depends_on:
   - learning/studies/20260910-design-docs-as-source/source.md
+supersedes: []
 verified_by:
   - PDF digest and metadata verification
   - claim and evidence review
@@ -38,8 +39,11 @@ verified_by:
    和独立验收门禁时，其生成代码才是 disposable build product。
 5. 其他模块仍是 maintained source。文档描述目标，代码和测试描述当前可执行
    行为，运行证据描述真实观察；冲突意味着 drift，不能静默挑一个相信。
-6. 每次实现都要返回 `docs_read`、anchor 结果、歧义、证据和 successor ID，
-   反复出现的歧义应修正文档，而不是长期堆在 prompt 中。
+6. 每次实现的 handoff fields 必须恰好为 `docs_read`、`anchor_results`、
+   `ambiguities`、`changed_artifacts`、`verification_evidence`、
+   `successor_id`。`successor_id` 是未解决工作的下一个持久 run/task/doc
+   标识；没有后继时为 `none`。反复出现的歧义应修正文档，而不是长期堆在
+   prompt 中。
 
 仓库级合同见
 [`designs/agent-ready-docs.md`](../../../designs/agent-ready-docs.md)。
@@ -207,6 +211,7 @@ option，不是所有仓库的默认法则。
 | source / schema / migration / tests | 当前能执行什么 | 阅读并验证现状，不假定已符合 design |
 | runtime evidence | 机器上实际发生什么 | 带环境、revision 和时间解释 |
 | study / incident / archive | 当时学到或观察到什么 | 保留历史范围，不冒充当前指令 |
+| nmem | 跨会话为何这样决定、如何演变 | 保存 rationale/history，不覆盖当前实现目标 |
 | generated output | 某份 spec 生成了什么 | 仅在显式 generation contract 内可丢弃 |
 
 冲突处理不是简单覆盖：
@@ -219,12 +224,16 @@ history vs current    -> preserve history, add superseding context
 generated vs spec     -> regenerate from clean input, do not patch output
 ```
 
+nmem 与 repository doc 冲突时，必须报告冲突；active tracked design 约束当前
+实现目标。tracked decision 变化后，追加一条关联旧记录的 immutable evolved
+memory，不得改写旧记忆或静默覆盖任一来源。
+
 ## 7. Agent-ready doc 的最小结构
 
 新建或实质修改的复杂 design doc 至少应包含：
 
-1. `doc_id`、`status`、`authority`、`applies_to`、`depends_on`、
-   `verified_by`；
+1. `doc_id`、`kind`、`status`、`authority`、`applies_to`、`depends_on`、
+   `supersedes`、`verified_by`；
 2. 一句话 decision；
 3. scope 和 non-goals；
 4. 输入、输出、接口、ownership 和 invariant；
@@ -237,6 +246,10 @@ generated vs spec     -> regenerate from clean input, do not patch output
 lint：它可以发现疑似漏边，但不能仅凭推断决定执行顺序。原因是 dependency
 ordering 本身就是 correctness contract，不应交给不可复现的语义猜测。
 
+手工执行时，仓库相对路径必须精确解析；doc ID 必须通过扫描 repository
+frontmatter 唯一解析。缺失、重复或循环引用在 mutation 前阻断。该校验在
+dependency linter 落地前保持手工执行并记录。
+
 ## 8. 如何提示 Agent
 
 Prompt 应该薄。它不复制设计正文，只指定入口、读取协议和完成条件：
@@ -244,17 +257,22 @@ Prompt 应该薄。它不复制设计正文，只指定入口、读取协议和�
 ```text
 Implement from <entry-doc>.
 
-Treat only active docs with authority=design or authority=generation as
-normative. Resolve explicit depends_on edges and read them in topological
-order. For each task, load the entry doc plus only the exported contracts of
-its dependencies.
+Read and obey applicable policy docs before interpreting intended behavior:
+the nearest AGENTS.md for each artifact, then the repository-root AGENTS.md.
+For intended behavior, treat only active docs with authority=design or
+authority=generation as normative. Resolve each explicit depends_on reference:
+repository-relative paths resolve exactly; doc_id values resolve uniquely by
+scanning repository document front matter. Missing references, duplicate
+doc_id matches, or cycles block all mutation. Read resolved dependencies in
+topological order. Validation is manual until a dependency linter exists.
 
 Preserve stated invariants and execute every reconciliation anchor. Convert
 anchors into tests when practical. If the docs, code, tests, or runtime
 evidence disagree, report the drift; do not silently choose one.
 
 Code is disposable only for paths covered by an explicit generation contract.
-Return docs_read, anchor_results, ambiguities, evidence, and successor_id.
+Return exactly: docs_read, anchor_results, ambiguities, changed_artifacts,
+verification_evidence, successor_id.
 ```
 
 这样做有三个好处：
@@ -274,7 +292,10 @@ Return docs_read, anchor_results, ambiguities, evidence, and successor_id.
 
 ### P1: 选择低风险 generated island
 
-优先选择无持久状态、输出可完全比较、clean build 成本低的模块。至少记录：
+优先选择无持久状态、输出可完全比较、clean build 成本低的模块。outputs 必须
+使用规范化、仓库相对且互不重叠的路径；`clean_root` 位于 tracked outputs 外。
+拒绝 `..`、仓库根目录、symlink escape 和 maintained paths overlap。生成后
+记录 path/digest manifest，promotion 只能修改声明的 outputs。至少记录：
 
 | Metric | Purpose |
 | --- | --- |
