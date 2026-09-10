@@ -26,7 +26,9 @@
 #define L4_DEFAULT_CONNECT_TIMEOUT_MS 3000
 #define L4_DEFAULT_GRACE_MS 30000
 #define L4_EPOLL_BATCH 256
+#ifndef L4_IO_BUDGET_BYTES
 #define L4_IO_BUDGET_BYTES ((size_t)1024 * 1024)
+#endif
 #define L4_LISTENER_RETRY_MS 10
 
 enum l4_fd_role {
@@ -440,15 +442,16 @@ static int watch_arm(struct l4_app *app, int fd, uint32_t events)
     }
 
     if (events == 0) {
-        if (watch->registered &&
-            epoll_ctl(app->epoll_fd, EPOLL_CTL_DEL, fd, NULL) != 0 &&
-            errno != ENOENT && errno != EBADF) {
-            return negative_errno();
+        if (watch->registered) {
+            if (epoll_ctl(app->epoll_fd, EPOLL_CTL_DEL, fd, NULL) != 0 &&
+                errno != ENOENT && errno != EBADF) {
+                return negative_errno();
+            }
+            watch_advance_generation(watch);
         }
         watch->registered = false;
         watch->armed = false;
         watch->events = 0;
-        watch_advance_generation(watch);
         return 0;
     }
     if (watch->armed && watch->events == events) {
@@ -476,9 +479,6 @@ static void watch_unbind(struct l4_app *app, int fd)
         return;
     }
     struct l4_fd_watch *watch = &app->watches[fd];
-    if (watch->registered) {
-        (void)epoll_ctl(app->epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-    }
     watch->connection = NULL;
     watch->events = 0;
     watch->role = L4_FD_NONE;
@@ -767,7 +767,6 @@ static int drive_direction(struct l4_connection *connection,
             size_t bytes = (size_t)received;
             state->offset = 0;
             state->length = bytes;
-            *budget -= bytes;
             write_ready = true;
             continue;
         }
@@ -865,6 +864,35 @@ static int finish_connect(struct l4_connection *connection)
     return 0;
 }
 
+static int drive_ready_directions(struct l4_connection *connection,
+                                  int event_fd,
+                                  uint32_t events)
+{
+    size_t budgets[2] = {
+        L4_IO_BUDGET_BYTES,
+        L4_IO_BUDGET_BYTES,
+    };
+    uint32_t read_events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
+    uint32_t write_events = EPOLLOUT | EPOLLHUP | EPOLLERR;
+    for (unsigned turn = 0; turn < 2; ++turn) {
+        unsigned direction = (connection->next_direction + turn) % 2;
+        bool read_ready =
+            direction_source_fd(connection, direction) == event_fd &&
+            (events & read_events) != 0;
+        bool write_ready =
+            direction_destination_fd(connection, direction) == event_fd &&
+            (events & write_events) != 0;
+        int result =
+            drive_direction(connection, direction, &budgets[direction],
+                            read_ready, write_ready);
+        if (result != 0) {
+            return result;
+        }
+    }
+    connection->next_direction ^= 1U;
+    return 0;
+}
+
 static void handle_connection_event(struct l4_connection *connection,
                                     int event_fd,
                                     uint32_t events)
@@ -880,32 +908,18 @@ static void handle_connection_event(struct l4_connection *connection,
         }
     }
 
-    size_t budget = L4_IO_BUDGET_BYTES;
-    uint32_t read_events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
-    uint32_t write_events = EPOLLOUT | EPOLLHUP | EPOLLERR;
-    for (unsigned turn = 0; turn < 2; ++turn) {
-        unsigned direction = (connection->next_direction + turn) % 2;
-        bool read_ready =
-            direction_source_fd(connection, direction) == event_fd &&
-            (events & read_events) != 0;
-        bool write_ready =
-            direction_destination_fd(connection, direction) == event_fd &&
-            (events & write_events) != 0;
-        int result = drive_direction(connection, direction, &budget,
-                                     read_ready, write_ready);
-        if (result != 0) {
-            record_io_error(app, result);
-            connection_close(connection);
-            return;
-        }
+    int result = drive_ready_directions(connection, event_fd, events);
+    if (result != 0) {
+        record_io_error(app, result);
+        connection_close(connection);
+        return;
     }
-    connection->next_direction ^= 1U;
 
     if (connection_done(connection)) {
         connection_close(connection);
         return;
     }
-    int result = connection_sync(connection);
+    result = connection_sync(connection);
     if (result != 0) {
         connection_close(connection);
         app_fail(app, result);

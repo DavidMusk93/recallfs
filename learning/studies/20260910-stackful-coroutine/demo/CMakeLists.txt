@@ -68,6 +68,14 @@ if(RCO_BUILD_EXAMPLES)
     rco_enable_c_warnings(rco_l4_forwarder_epoll)
 
     if(RCO_BUILD_TESTS)
+        add_executable(
+            rco_l4_epoll_test
+            tests/l4_forwarder_epoll_test.c
+        )
+        target_compile_features(rco_l4_epoll_test PRIVATE c_std_11)
+        rco_enable_c_warnings(rco_l4_epoll_test)
+        add_test(NAME epoll_l4_state_machine COMMAND rco_l4_epoll_test)
+
         add_executable(rco_l4_wait_test tests/l4_forwarder_test.c)
         target_link_libraries(rco_l4_wait_test PRIVATE rco)
         rco_enable_c_warnings(rco_l4_wait_test)
