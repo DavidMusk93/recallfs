@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import ctypes
 from dataclasses import dataclass
 import hashlib
 import json
@@ -10,6 +11,7 @@ from pathlib import Path
 import signal
 import statistics
 import subprocess
+import sys
 import time
 
 
@@ -27,6 +29,30 @@ CLD_EXITED = getattr(os, "CLD_EXITED", 1)
 CLD_KILLED = getattr(os, "CLD_KILLED", 2)
 CLD_DUMPED = getattr(os, "CLD_DUMPED", 3)
 CLD_STOPPED = getattr(os, "CLD_STOPPED", 5)
+HANDLED_SIGNALS = (signal.SIGINT, signal.SIGTERM)
+PR_SET_CHILD_SUBREAPER = 36
+CLEANUP_TERM_SECONDS = 0.2
+CLEANUP_KILL_SECONDS = 1.0
+
+STATUS_KB_FIELDS = (
+    ("VmPeak", "vm_peak_kb"),
+    ("VmHWM", "vm_hwm_kb"),
+    ("VmSize", "vm_size_kb"),
+    ("VmRSS", "vm_rss_kb"),
+    ("RssAnon", "rss_anon_kb"),
+    ("RssFile", "rss_file_kb"),
+    ("RssShmem", "rss_shmem_kb"),
+)
+
+SMAPS_ROLLUP_KB_FIELDS = (
+    ("Rss", "smaps_rss_kb"),
+    ("Pss", "smaps_pss_kb"),
+    ("Private_Clean", "smaps_private_clean_kb"),
+    ("Private_Dirty", "smaps_private_dirty_kb"),
+    ("Anonymous", "smaps_anonymous_kb"),
+)
+
+_child_subreaper_enabled = False
 
 SAMPLE_FIELDS = (
     "schema",
@@ -117,6 +143,7 @@ class BenchmarkError(RuntimeError):
 
 
 def raise_on_termination_signal(signum, _frame):
+    signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
     raise BenchmarkError("received {}".format(signal.Signals(signum).name))
 
 
@@ -199,69 +226,87 @@ def validate_case(case, page_size):
         raise BenchmarkError("{} exceeds the yield bound".format(case.name))
 
 
-def read_status(pid):
-    path = Path("/proc") / str(pid) / "status"
+def parse_kb_fields(text, field_mappings, source):
+    required_names = {name for name, _destination in field_mappings}
     values = {}
-    for line in path.read_text(encoding="ascii").splitlines():
+    for line in text.splitlines():
         name, separator, remainder = line.partition(":")
-        if not separator:
+        if not separator or name not in required_names:
             continue
+        if name in values:
+            raise BenchmarkError("duplicate {} in {}".format(name, source))
         values[name] = remainder.strip()
-    required = {
-        "VmPeak": "vm_peak_kb",
-        "VmHWM": "vm_hwm_kb",
-        "VmSize": "vm_size_kb",
-        "VmRSS": "vm_rss_kb",
-        "RssAnon": "rss_anon_kb",
-        "RssFile": "rss_file_kb",
-        "RssShmem": "rss_shmem_kb",
-    }
     result = {}
-    for source, destination in required.items():
-        parts = values.get(source, "").split()
+    for field_name, destination in field_mappings:
+        parts = values.get(field_name, "").split()
         if len(parts) != 2 or parts[1] != "kB" or not parts[0].isdigit():
-            raise BenchmarkError("invalid {} in {}".format(source, path))
+            raise BenchmarkError(
+                "invalid {} in {}".format(field_name, source)
+            )
         result[destination] = int(parts[0])
     return result
 
 
-def read_smaps_rollup(pid):
-    path = Path("/proc") / str(pid) / "smaps_rollup"
-    values = {}
-    for line in path.read_text(encoding="ascii").splitlines():
-        name, separator, remainder = line.partition(":")
-        if not separator:
-            continue
-        values[name] = remainder.strip()
-    required = {
-        "Rss": "smaps_rss_kb",
-        "Pss": "smaps_pss_kb",
-        "Private_Clean": "smaps_private_clean_kb",
-        "Private_Dirty": "smaps_private_dirty_kb",
-        "Anonymous": "smaps_anonymous_kb",
-    }
-    result = {}
-    for source, destination in required.items():
-        parts = values.get(source, "").split()
-        if len(parts) != 2 or parts[1] != "kB" or not parts[0].isdigit():
-            raise BenchmarkError("invalid {} in {}".format(source, path))
-        result[destination] = int(parts[0])
-    return result
+def parse_status(text, source="<status>"):
+    return parse_kb_fields(text, STATUS_KB_FIELDS, source)
 
 
-def read_setup_faults(pid):
-    path = Path("/proc") / str(pid) / "stat"
-    line = path.read_text(encoding="ascii").strip()
+def parse_smaps_rollup(text, source="<smaps_rollup>"):
+    return parse_kb_fields(text, SMAPS_ROLLUP_KB_FIELDS, source)
+
+
+def parse_process_stat(text, source="<stat>"):
+    line = text.strip()
+    open_parenthesis = line.find(" (")
     separator = line.rfind(") ")
-    if separator < 0:
-        raise BenchmarkError("invalid process stat in {}".format(path))
+    if (
+        not line
+        or "\n" in line
+        or "\r" in line
+        or open_parenthesis <= 0
+        or separator <= open_parenthesis + 1
+        or not line[:open_parenthesis].isdigit()
+    ):
+        raise BenchmarkError("invalid process stat in {}".format(source))
     fields = line[separator + 2 :].split()
     if len(fields) < 10 or not fields[7].isdigit() or not fields[9].isdigit():
-        raise BenchmarkError("invalid fault counters in {}".format(path))
+        raise BenchmarkError("invalid fault counters in {}".format(source))
     return {
         "setup_minor_faults": int(fields[7]),
         "setup_major_faults": int(fields[9]),
     }
+
+
+def read_status(pid):
+    path = Path("/proc") / str(pid) / "status"
+    return parse_status(path.read_text(encoding="ascii"), str(path))
+
+
+def read_smaps_rollup(pid):
+    path = Path("/proc") / str(pid) / "smaps_rollup"
+    return parse_smaps_rollup(path.read_text(encoding="ascii"), str(path))
+
+
+def read_setup_faults(pid):
+    path = Path("/proc") / str(pid) / "stat"
+    return parse_process_stat(path.read_text(encoding="ascii"), str(path))
+
+
+def enable_child_subreaper():
+    global _child_subreaper_enabled
+    if _child_subreaper_enabled:
+        return
+    if sys.platform != "linux":
+        raise BenchmarkError("child subreaping requires Linux")
+    libc = ctypes.CDLL(None, use_errno=True)
+    prctl = getattr(libc, "prctl", None)
+    if prctl is None:
+        raise BenchmarkError("Linux prctl is unavailable")
+    ctypes.set_errno(0)
+    if prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+        error_number = ctypes.get_errno()
+        raise OSError(error_number, os.strerror(error_number))
+    _child_subreaper_enabled = True
 
 
 def process_group_exists(process_group):
@@ -272,30 +317,47 @@ def process_group_exists(process_group):
     return True
 
 
+def reap_process_group_children(process_group):
+    while True:
+        try:
+            child_pid, _status = os.waitpid(-process_group, os.WNOHANG)
+        except ChildProcessError:
+            return
+        if child_pid == 0:
+            return
+
+
+def wait_for_process_group_exit(process, deadline):
+    while True:
+        if process.poll() is not None:
+            reap_process_group_children(process.pid)
+        if not process_group_exists(process.pid):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.01)
+
+
 def terminate_process_group(process):
     for group_signal in (signal.SIGCONT, signal.SIGTERM):
         try:
             os.killpg(process.pid, group_signal)
         except ProcessLookupError:
             pass
+    if wait_for_process_group_exit(
+        process, time.monotonic() + CLEANUP_TERM_SECONDS
+    ):
+        return
     try:
-        process.wait(timeout=0.2)
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        try:
-            process.wait(timeout=1)
-        except subprocess.TimeoutExpired:
-            raise BenchmarkError(
-                "process group {} survived SIGKILL".format(process.pid)
-            )
-    if process_group_exists(process.pid):
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    if not wait_for_process_group_exit(
+        process, time.monotonic() + CLEANUP_KILL_SECONDS
+    ):
+        raise BenchmarkError(
+            "process group {} survived SIGKILL".format(process.pid)
+        )
 
 
 def wait_until_stopped(process, deadline):
@@ -370,68 +432,91 @@ def run_sample(
         "--yields-per-task",
         str(case.yields_per_task),
     ]
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
+    enable_child_subreaper()
+    # Defer handled signals until the launched process has cleanup ownership.
+    launch_signal_mask = signal.pthread_sigmask(
+        signal.SIG_BLOCK, HANDLED_SIGNALS
     )
-    deadline = time.monotonic() + timeout_seconds
+    process = None
     completed = False
     try:
-        wait_until_stopped(process, deadline)
-        resources = read_status(process.pid)
-        resources.update(read_smaps_rollup(process.pid))
-        resources.update(read_setup_faults(process.pid))
-        os.kill(process.pid, signal.SIGCONT)
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise BenchmarkError("benchmark timed out at the residency barrier")
-        try:
-            stdout, stderr = process.communicate(timeout=remaining)
-        except subprocess.TimeoutExpired:
-            raise BenchmarkError("benchmark timed out after SIGCONT")
-        if process.returncode != 0:
-            raise BenchmarkError(
-                "benchmark exited with {}: stdout={!r} stderr={!r}".format(
-                    process.returncode, stdout, stderr
-                )
-            )
-        if stderr:
-            raise BenchmarkError(
-                "benchmark wrote unexpected stderr: {!r}".format(stderr)
-            )
-        result = parse_result(stdout)
-        if result.get("backend_identity") != mode.name:
-            raise BenchmarkError(
-                "{} backend identity is {!r}, expected {!r}".format(
-                    mode.executable,
-                    result.get("backend_identity"),
-                    mode.name,
-                )
-            )
-        if sha256_file(mode.executable) != binary_sha256:
-            raise BenchmarkError(
-                "{} changed while its sample was running".format(
-                    mode.executable
-                )
-            )
-        result["binary_sha256"] = binary_sha256
-        result.update(resources)
-        result.update(
-            {
-                "case": case.name,
-                "run": run,
-                "position": position,
-                "mode": mode.name,
-            }
+        def restore_child_signal_mask():
+            signal.pthread_sigmask(signal.SIG_SETMASK, launch_signal_mask)
+
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+            preexec_fn=restore_child_signal_mask,
         )
-        completed = True
-        return result
+        deadline = time.monotonic() + timeout_seconds
+        try:
+            signal.pthread_sigmask(signal.SIG_SETMASK, launch_signal_mask)
+            wait_until_stopped(process, deadline)
+            resources = read_status(process.pid)
+            resources.update(read_smaps_rollup(process.pid))
+            resources.update(read_setup_faults(process.pid))
+            os.kill(process.pid, signal.SIGCONT)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise BenchmarkError(
+                    "benchmark timed out at the residency barrier"
+                )
+            try:
+                stdout, stderr = process.communicate(timeout=remaining)
+            except subprocess.TimeoutExpired:
+                raise BenchmarkError("benchmark timed out after SIGCONT")
+            if process.returncode != 0:
+                raise BenchmarkError(
+                    "benchmark exited with {}: stdout={!r} stderr={!r}".format(
+                        process.returncode, stdout, stderr
+                    )
+                )
+            if stderr:
+                raise BenchmarkError(
+                    "benchmark wrote unexpected stderr: {!r}".format(stderr)
+                )
+            result = parse_result(stdout)
+            if result.get("backend_identity") != mode.name:
+                raise BenchmarkError(
+                    "{} backend identity is {!r}, expected {!r}".format(
+                        mode.executable,
+                        result.get("backend_identity"),
+                        mode.name,
+                    )
+                )
+            if sha256_file(mode.executable) != binary_sha256:
+                raise BenchmarkError(
+                    "{} changed while its sample was running".format(
+                        mode.executable
+                    )
+                )
+            result["binary_sha256"] = binary_sha256
+            result.update(resources)
+            result.update(
+                {
+                    "case": case.name,
+                    "run": run,
+                    "position": position,
+                    "mode": mode.name,
+                }
+            )
+            completed = True
+            return result
+        finally:
+            signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
+            try:
+                if not completed:
+                    terminate_process_group(process)
+            finally:
+                signal.pthread_sigmask(
+                    signal.SIG_SETMASK, launch_signal_mask
+                )
     finally:
-        if not completed:
-            terminate_process_group(process)
+        if process is None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, launch_signal_mask)
 
 
 def integer_field(row, name):

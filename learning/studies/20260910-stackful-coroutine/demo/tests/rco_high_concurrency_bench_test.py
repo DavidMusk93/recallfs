@@ -53,11 +53,10 @@ def wait_for_processes_to_exit(process_ids, timeout_seconds=2):
         for process_id in process_ids:
             status_path = Path("/proc") / str(process_id) / "status"
             try:
-                status = status_path.read_text(encoding="ascii")
+                status_path.read_text(encoding="ascii")
             except FileNotFoundError:
                 continue
-            if "\nState:\tZ" not in status:
-                live.append(process_id)
+            live.append(process_id)
         if not live:
             return []
         time.sleep(0.02)
@@ -179,6 +178,117 @@ class ArgumentBoundsTests(unittest.TestCase):
                 "1221",
             ]
         )
+
+
+class ProcParserTests(unittest.TestCase):
+    def test_status_maps_every_published_field(self):
+        fixture = (
+            "Name:\trco benchmark\n"
+            "VmPeak:\t101 kB\n"
+            "VmHWM:\t202 kB\n"
+            "VmSize:\t303 kB\n"
+            "VmRSS:\t404 kB\n"
+            "RssAnon:\t505 kB\n"
+            "RssFile:\t606 kB\n"
+            "RssShmem:\t707 kB\n"
+            "ignored line without a separator\n"
+        )
+        self.assertEqual(
+            HARNESS.parse_status(fixture),
+            {
+                "vm_peak_kb": 101,
+                "vm_hwm_kb": 202,
+                "vm_size_kb": 303,
+                "vm_rss_kb": 404,
+                "rss_anon_kb": 505,
+                "rss_file_kb": 606,
+                "rss_shmem_kb": 707,
+            },
+        )
+
+    def test_smaps_rollup_maps_every_published_field(self):
+        fixture = (
+            "00400000-7fffffffffff ---p 00000000 00:00 0 [rollup]\n"
+            "Rss:                 111 kB\n"
+            "Pss:                 222 kB\n"
+            "Private_Clean:       333 kB\n"
+            "Private_Dirty:       444 kB\n"
+            "Anonymous:           555 kB\n"
+            "Swap:                666 kB\n"
+        )
+        self.assertEqual(
+            HARNESS.parse_smaps_rollup(fixture),
+            {
+                "smaps_rss_kb": 111,
+                "smaps_pss_kb": 222,
+                "smaps_private_clean_kb": 333,
+                "smaps_private_dirty_kb": 444,
+                "smaps_anonymous_kb": 555,
+            },
+        )
+
+    def test_stat_maps_faults_with_spaces_and_right_parentheses_in_comm(self):
+        fixture = (
+            "123 (worker ) pool)) S 1 2 3 4 5 6 101 7 202 8 9 10\n"
+        )
+        self.assertEqual(
+            HARNESS.parse_process_stat(fixture),
+            {
+                "setup_minor_faults": 101,
+                "setup_major_faults": 202,
+            },
+        )
+
+    def test_proc_parsers_reject_malformed_data(self):
+        malformed = (
+            (
+                HARNESS.parse_status,
+                (
+                    "VmPeak: 1 bytes\n"
+                    "VmHWM: 2 kB\n"
+                    "VmSize: 3 kB\n"
+                    "VmRSS: 4 kB\n"
+                    "RssAnon: 5 kB\n"
+                    "RssFile: 6 kB\n"
+                    "RssShmem: 7 kB\n"
+                ),
+            ),
+            (
+                HARNESS.parse_status,
+                (
+                    "VmPeak: 1 kB\n"
+                    "VmPeak: 2 kB\n"
+                    "VmHWM: 3 kB\n"
+                    "VmSize: 4 kB\n"
+                    "VmRSS: 5 kB\n"
+                    "RssAnon: 6 kB\n"
+                    "RssFile: 7 kB\n"
+                    "RssShmem: 8 kB\n"
+                ),
+            ),
+            (
+                HARNESS.parse_smaps_rollup,
+                (
+                    "Rss: -1 kB\n"
+                    "Pss: 2 kB\n"
+                    "Private_Clean: 3 kB\n"
+                    "Private_Dirty: 4 kB\n"
+                    "Anonymous: 5 kB\n"
+                ),
+            ),
+            (
+                HARNESS.parse_process_stat,
+                "123 (missing close S 1 2 3 4 5 6 7 8 9 10\n",
+            ),
+            (
+                HARNESS.parse_process_stat,
+                "123 (bad faults) S 1 2 3 4 5 6 minor 7 major 8\n",
+            ),
+        )
+        for parser, fixture in malformed:
+            with self.subTest(parser=parser.__name__, fixture=fixture):
+                with self.assertRaises(HARNESS.BenchmarkError):
+                    parser(fixture)
 
 
 class CsvValidationTests(unittest.TestCase):
@@ -428,6 +538,93 @@ class OracleChecksumTests(unittest.TestCase):
 
 
 class TimeoutCleanupTests(unittest.TestCase):
+    def test_signal_before_popen_returns_reaps_launched_group(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            executable = Path(temporary) / "launch-window.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import time\n"
+                "time.sleep(30)\n",
+                encoding="ascii",
+            )
+            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            mode = HARNESS.Mode("sysv", executable)
+            case = HARNESS.BenchmarkCase("launch-window", 1, 32768, 4096, 1)
+            real_popen = subprocess.Popen
+            launched = {}
+
+            def popen_then_signal(*popen_args, **popen_kwargs):
+                child = real_popen(*popen_args, **popen_kwargs)
+                launched["process"] = child
+                os.kill(os.getpid(), signal.SIGTERM)
+                return child
+
+            initial_mask = signal.pthread_sigmask(signal.SIG_BLOCK, ())
+            signal.pthread_sigmask(
+                signal.SIG_BLOCK, HARNESS.HANDLED_SIGNALS
+            )
+            previous_handler = signal.signal(
+                signal.SIGTERM, HARNESS.raise_on_termination_signal
+            )
+            test_mask = set(initial_mask)
+            test_mask.discard(signal.SIGTERM)
+            signal.pthread_sigmask(signal.SIG_SETMASK, test_mask)
+            try:
+                with mock.patch.object(
+                    HARNESS.subprocess,
+                    "Popen",
+                    side_effect=popen_then_signal,
+                ):
+                    with self.assertRaisesRegex(
+                        HARNESS.BenchmarkError, "received SIGTERM"
+                    ):
+                        HARNESS.run_sample(
+                            mode, case, 1, 1, timeout_seconds=1
+                        )
+
+                child = launched["process"]
+                self.assertFalse(HARNESS.process_group_exists(child.pid))
+                self.assertEqual(
+                    signal.pthread_sigmask(signal.SIG_BLOCK, ()),
+                    test_mask,
+                )
+            finally:
+                signal.pthread_sigmask(
+                    signal.SIG_BLOCK, HARNESS.HANDLED_SIGNALS
+                )
+                child = launched.get("process")
+                if child is not None:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    child.wait(timeout=2)
+                if signal.SIGTERM in signal.sigpending():
+                    signal.sigwait((signal.SIGTERM,))
+                signal.signal(signal.SIGTERM, previous_handler)
+                signal.pthread_sigmask(signal.SIG_SETMASK, initial_mask)
+
+    def test_process_exit_wait_does_not_accept_a_zombie(self):
+        process = subprocess.Popen([sys.executable, "-c", "pass"])
+        try:
+            status_path = Path("/proc") / str(process.pid) / "status"
+            deadline = time.monotonic() + 2
+            while True:
+                status = status_path.read_text(encoding="ascii")
+                if "\nState:\tZ" in status:
+                    break
+                if time.monotonic() >= deadline:
+                    self.fail("child did not become a zombie")
+                time.sleep(0.01)
+            self.assertEqual(
+                wait_for_processes_to_exit(
+                    (process.pid,), timeout_seconds=0.05
+                ),
+                [process.pid],
+            )
+        finally:
+            process.wait(timeout=2)
+
     def test_parent_sigterm_reaps_stopped_process_group(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -607,6 +804,7 @@ class TimeoutCleanupTests(unittest.TestCase):
                 encoding="ascii",
             )
             executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            HARNESS.enable_child_subreaper()
             process = subprocess.Popen(
                 [str(executable)],
                 start_new_session=True,
@@ -620,6 +818,7 @@ class TimeoutCleanupTests(unittest.TestCase):
 
             HARNESS.terminate_process_group(process)
 
+            self.assertFalse(HARNESS.process_group_exists(process.pid))
             if wait_for_processes_to_exit((child_pid,)):
                 self.fail(f"descendant process {child_pid} survived cleanup")
 
@@ -733,7 +932,15 @@ def parse_arguments():
     parser.add_argument("--cacs-preserve-none", type=Path, required=True)
     parser.add_argument(
         "suite",
-        choices=("arguments", "oracle", "csv", "timeout", "integration", "all"),
+        choices=(
+            "arguments",
+            "parsers",
+            "oracle",
+            "csv",
+            "timeout",
+            "integration",
+            "all",
+        ),
     )
     return parser.parse_args()
 
@@ -746,15 +953,24 @@ if __name__ == "__main__":
         "cacs": arguments.cacs,
         "cacs-preserve-none": arguments.cacs_preserve_none,
     }
+    all_suites = (
+        ArgumentBoundsTests,
+        ProcParserTests,
+        CsvValidationTests,
+        OracleChecksumTests,
+        TimeoutCleanupTests,
+        RealProcessIntegrationTests,
+    )
     suites = {
-        "arguments": ArgumentBoundsTests,
-        "oracle": OracleChecksumTests,
-        "csv": CsvValidationTests,
-        "timeout": TimeoutCleanupTests,
-        "integration": RealProcessIntegrationTests,
+        "arguments": (ArgumentBoundsTests,),
+        "parsers": (ProcParserTests,),
+        "oracle": (OracleChecksumTests,),
+        "csv": (ProcParserTests, CsvValidationTests),
+        "timeout": (TimeoutCleanupTests,),
+        "integration": (RealProcessIntegrationTests,),
     }
-    selected = suites.values() if arguments.suite == "all" else (
-        suites[arguments.suite],
+    selected = all_suites if arguments.suite == "all" else (
+        suites[arguments.suite]
     )
     test_suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(test_case)
