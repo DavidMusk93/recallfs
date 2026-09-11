@@ -1,16 +1,48 @@
+source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
 command: clang-format --dry-run --Werror
 format: PASS
-
-command: install + external consumer
+command: install + find_package consumer
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2
+[ 28%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
+[ 28%] Building C object CMakeFiles/btree.dir/src/btree.c.o
+[ 42%] Building C object CMakeFiles/btree.dir/src/btree_crc32c.c.o
+[ 57%] Linking C static library libbtree_storage_memory.a
+[ 57%] Built target btree_storage_memory
+[ 71%] Linking C static library libbtree.a
+[ 71%] Built target btree
+[ 85%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
+[100%] Linking C static library libbtree_storage_file.a
+[100%] Built target btree_storage_file
 -- Install configuration: "Release"
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree_storage_memory.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree_storage_file.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/include/bptree.h
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/include/bptree_backends.h
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/cmake/bptree/bptreeTargets.cmake
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/cmake/bptree/bptreeTargets-release.cmake
-installed consumer: PASS
-
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree_storage_memory.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree_storage_file.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include/btree.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include/btree_backends.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeTargets.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeTargets-release.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeConfig.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeConfigVersion.cmake
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2
+[ 50%] Building C object CMakeFiles/btree_package_consumer.dir/main.c.o
+[100%] Linking C executable btree_package_consumer
+[100%] Built target btree_package_consumer
+find_package consumer: PASS
 command: public headers as C++17
 C++17 headers: PASS

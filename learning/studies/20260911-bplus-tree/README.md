@@ -16,30 +16,37 @@ verified_by:
   - BPT-RA-4
   - BPT-RA-5
   - BPT-RA-6
+  - BPT-RA-7
 ---
 
 # Page-oriented B+ Tree Study
 
 ## 1. 结论先行
 
-本 study 交付了一个可直接构建和嵌入的 C11 B+ tree library：
+本 study 交付了一个可直接构建和嵌入的通用 C11 B+ tree library：
 
 - core 使用 search-path transaction；普通 value update 只提交 metadata 和
   一个 leaf，不做全树重建；
+- key/value 是调用方编码的固定宽度 opaque bytes；默认按 unsigned bytes
+  lexicographic 排序，也可绑定带稳定 ID 的自定义 comparator；
+- key/value width 与 comparator ID 写入 metadata，reopen 时不匹配会返回
+  `BTREE_SCHEMA_MISMATCH`，避免使用错误 schema 解释磁盘数据；
+- library API 版本是 1.0.0，磁盘格式版本是 2；旧的专用
+  `uint64_t -> uint64_t` 格式不会被静默解释为新 schema；
 - insert/delete 完整覆盖 leaf/internal split、borrow、merge、root
   grow/collapse 和 freelist reuse；
-- `bpt_storage` 只暴露 page copy 与 atomic page-set commit，buffer pool 可由
+- `btree_storage` 只暴露 page copy 与 atomic page-set commit，buffer pool 可由
   调用方独立实现；
 - memory backend 使用几何扩容；file backend 使用排他锁、CRC32C、
   full-page redo WAL、dirfd-relative sidecar、`CLOEXEC` 和恢复期重放；
 - macOS regular-file barrier 使用 `F_FULLFSYNC`，其他 POSIX 平台使用
   `fsync`；namespace 变更使用 directory `fsync`；
-- `bpt_tree_open()` 会执行全量结构校验，避免在打开后才暴露损坏拓扑。
+- `btree_open()` 会执行全量结构校验，避免在打开后才暴露损坏拓扑。
 
-最终 7 个 CTest suites 在 Debug、Release、ASan/UBSan 和 FIL-C 0.684 下全部
+最终 8 个 CTest suites 在 Debug、Release、ASan/UBSan 和 FIL-C 0.684 下全部
 通过。Crash suite 覆盖 split 导致的 page growth、commit 五个阶段、recovery
-两个阶段、有效 WAL 的每个非空截断前缀，以及 checksum/version/size
-损坏。独立 code review 的 12 个 validated finding 已全部修复。
+两个阶段、有效 WAL 的每个非空截断前缀，以及 checksum/version/size 损坏。
+安装后的 CMake package 也由仓内独立 consumer 通过 `find_package` 验收。
 
 这支持在本文声明的单线程、单写者、本地 POSIX 文件系统边界内进入生产集成和
 更高层 E2E。它不等价于真实断电、存储控制器、network filesystem 或并发事务
@@ -49,12 +56,12 @@ verified_by:
 
 ### Decision
 
-实现一个边界明确、可恢复的 C11 B+ tree library。v1 提供唯一
-`uint64_t -> uint64_t` 映射、point get、upsert、delete 和半开区间 scan；
-tree core 只通过 page-oriented `bpt_storage` 接口读页和原子提交页集合，不拥有
-file descriptor、WAL、buffer frame、pin count、eviction 或 writeback policy。
-内存 backend 提供进程生命周期内的原子提交，文件 backend 使用 full-page
-redo WAL 和 `fsync` 提供 crash recovery。
+实现一个边界明确、可恢复的 C11 B+ tree library。1.0 API 提供固定宽度
+opaque byte key/value、point get、upsert、delete 和带可空边界的半开区间
+scan。tree core 只通过 page-oriented `btree_storage` 接口读页和原子提交页
+集合，不拥有 file descriptor、WAL、buffer frame、pin count、eviction 或
+writeback policy。内存 backend 提供进程生命周期内的原子提交，文件 backend
+使用 full-page redo WAL 提供 crash recovery。
 
 “Production ready”在本文中不是无限承诺，而是以下可审计边界：稳定 API、
 版本化 little-endian 格式、CRC32C、单写者锁、明确 commit-unknown 语义、
@@ -63,10 +70,14 @@ redo WAL 和 `fsync` 提供 crash recovery。
 
 ### Scope
 
-- `learning/studies/20260911-bplus-tree/lib/include/bptree.h` 公共 tree API；
-- `bptree_storage` page provider 合同；
+- `learning/studies/20260911-bplus-tree/lib/include/btree.h` 公共 tree API；
+- `btree_storage` page provider 与 borrowed ownership 合同；
 - 内存和 POSIX 文件 backend；
+- fixed-width binary key/value schema、默认 lexicographic comparator 和
+  自定义 comparator；
+- metadata 持久化 key/value width 与 comparator identity；
 - 512 到 65,536 bytes 的 2 次幂 page size；
+- API 1.0.0 与不向后兼容的 disk format v2；
 - manual little-endian encoding，不持久化 C struct、pointer 或 `size_t`；
 - leaf split/redistribution/merge、internal cascading split/merge、root collapse；
 - page freelist reuse；
@@ -76,7 +87,7 @@ redo WAL 和 `fsync` 提供 crash recovery。
 
 ### Non-goals
 
-- duplicate keys、variable-length keys/values、overflow pages 或 custom comparator；
+- duplicate keys、variable-length records 或 overflow pages；
 - MVCC、snapshot isolation、multi-operation transaction 或 concurrent tree handle；
 - 同进程/跨进程并发 reader 与 writer；
 - tree 内置 LRU/LFU、prefetch、dirty eviction 或 background writeback；
@@ -88,30 +99,51 @@ redo WAL 和 `fsync` 提供 crash recovery。
 
 | Boundary | Input | Output |
 | --- | --- | --- |
-| Tree API | `uint64_t` key/value、range bounds | exact value、ordered pairs 或 typed status |
+| Tree API | fixed-width encoded key/value、nullable range bounds | copied value、ordered pairs 或 typed status |
 | Tree core | logical page ID、caller-owned page buffer、atomic write set | validated pages and metadata |
 | Memory backend | atomic page write set | new in-memory page image or unchanged old image |
 | File backend | atomic page write set | WAL-backed durable page image or recovery-required status |
 | Validator | root metadata and every allocated page | statistics or bounded corruption report |
 
-The range contract is `[begin_key, end_key)`. `begin_key >= end_key` produces
-an empty successful scan. Upserting an existing key replaces its value without
-changing item count. Deleting an absent key succeeds with `removed=false`.
+The range contract is `[begin_key, end_key)`. A `NULL` lower or upper bound is
+unbounded. Equal or reversed bounds produce an empty successful scan. Upserting
+an existing key replaces its value without changing item count. Deleting an
+absent key succeeds with `removed=false`.
 
 ### Interfaces And Ownership
 
 The core receives this logical shape; exact declarations live in
-`include/bptree.h`:
+`include/btree.h`:
 
 ```c
-typedef struct {
+typedef struct btree_schema {
+    uint32_t key_size;
+    uint32_t value_size;
+    uint64_t comparator_id;
+} btree_schema;
+
+typedef struct btree_options {
+    uint32_t key_size;
+    uint32_t value_size;
+    uint64_t comparator_id;
+    btree_compare_fn compare;
+    void *compare_context;
+} btree_options;
+
+typedef struct btree_storage {
     void *context;
     uint32_t page_size;
-    bpt_status (*read_page)(void *, uint64_t, void *);
-    bpt_status (*page_count)(void *, uint64_t *);
-    bpt_status (*commit_pages)(void *, const bpt_page_update *, size_t);
-} bpt_storage;
+    btree_status (*read_page)(void *, uint64_t, void *);
+    btree_status (*page_count)(void *, uint64_t *);
+    btree_status (*commit_pages)(void *, const btree_page_update *, size_t);
+} btree_storage;
 ```
+
+`btree_options_init()` selects stable unsigned-byte lexicographic ordering.
+A custom comparator uses an application-owned ID at or above
+`BTREE_COMPARATOR_USER_MIN`; the function and its context are borrowed and must
+remain behaviorally identical across reopen. The ID names comparator semantics,
+not a function address; the application owns comparator versioning.
 
 `read_page` copies one immutable snapshot into caller-owned memory.
 `commit_pages` atomically publishes the complete set or returns a status that
@@ -119,10 +151,11 @@ does not permit the core to assume partial pages are usable. This permits an
 external buffer pool to implement the interface, but the tree never observes
 frames or retains pointers after a callback returns.
 
-`bpt_tree` owns operation scratch pages and is not thread-safe. A storage
-instance has one attached tree. The file backend owns its descriptors, lock,
-WAL path, recovery, and durability barriers. `bpt_tree_close` does not close
-the backend.
+`btree` owns operation scratch pages and is not thread-safe. A storage
+instance has one attached tree. Comparator state and storage context are
+borrowed for the tree lifetime. The file backend owns its descriptors, lock,
+WAL path, recovery, and durability barriers. `btree_close` does not close the
+backend.
 
 ```text
 application
@@ -131,7 +164,7 @@ application
 B+ tree core
     |
     v
-bpt_storage page contract
+btree_storage page contract
     |
     +----------+-------------------+------------------+
     |                              |                  |
@@ -142,7 +175,7 @@ memory backend              file backend       buffer pool adapter
 
 ### Invariants
 
-1. Keys are strictly increasing and unique in every leaf and ordered globally.
+1. Keys are strictly increasing and unique under the configured comparator.
 2. An internal separator is greater than every key in its left child and less
    than or equal to every key in its right child.
 3. Every leaf is at `height - 1`; only the root may be below minimum occupancy.
@@ -163,16 +196,17 @@ memory backend              file backend       buffer pool adapter
 
 | Failure | Result |
 | --- | --- |
-| Invalid argument or unsupported page size | `BPT_INVALID_ARGUMENT` |
-| Missing key | `BPT_NOT_FOUND` for get; successful `removed=false` for delete |
-| Allocation failure before commit | `BPT_OUT_OF_MEMORY`; old tree remains visible |
-| Invalid magic/version/checksum/range/cycle | `BPT_CORRUPT` with bounded traversal |
-| Unsupported format feature | `BPT_UNSUPPORTED` |
-| Data I/O before WAL commit point | `BPT_IO`; no data page has been installed |
-| I/O at or after WAL durability is attempted | `BPT_RECOVERY_REQUIRED`; handle poisoned |
+| Invalid argument or unsupported page size | `BTREE_INVALID_ARGUMENT` |
+| Missing key | `BTREE_NOT_FOUND` for get; successful `removed=false` for delete |
+| Allocation failure before commit | `BTREE_OUT_OF_MEMORY`; old tree remains visible |
+| Invalid magic/version/checksum/range/cycle | `BTREE_CORRUPT` with bounded traversal |
+| Unsupported format feature | `BTREE_UNSUPPORTED` |
+| Reopen with different key/value width or comparator ID | `BTREE_SCHEMA_MISMATCH` |
+| Data I/O before WAL commit point | `BTREE_IO`; no data page has been installed |
+| I/O at or after WAL durability is attempted | `BTREE_RECOVERY_REQUIRED`; handle poisoned |
 | Reopen with valid committed WAL | replay all page images, sync data, remove WAL |
 | Reopen with empty abandoned WAL | remove it; data remains unchanged |
-| Reopen with malformed non-empty WAL | `BPT_CORRUPT`; preserve WAL for diagnosis |
+| Reopen with malformed non-empty WAL | `BTREE_CORRUPT`; preserve WAL for diagnosis |
 
 The file backend first writes and durably syncs `<database>.wal.tmp`, atomically
 renames it to `<database>.wal`, and syncs the parent directory. That publication
@@ -182,14 +216,14 @@ idempotent because records are full page images addressed by logical page ID.
 
 ### Worked Examples
 
-**BPT-WE-1: cascading split.**
+**BPT-WE-1: generic schema and cascading split.**
 
-With a 512-byte page, a leaf has a finite encoded capacity. Insert ascending
-keys through one more than that capacity. The old leaf keeps the lower half,
-a new leaf receives the upper half, both sibling links are updated, and the
-new separator is inserted into the parent. If the parent is also full, the
-split propagates until a new root is created. Every get returns its exact
-value and a full scan returns each key once in ascending order.
+Create a tree with 13-byte keys and 21-byte values. Insert embedded-NUL byte
+records through one more than leaf capacity. The old leaf keeps the lower half,
+a new leaf receives the upper half, both sibling links are updated, and the new
+separator is inserted into the parent. Input buffers are overwritten after
+each call; later reads still return the copied bytes. Reopen first reads the
+persisted schema, then validates the caller-supplied schema before traversal.
 
 **BPT-WE-2: delete and root collapse.**
 
@@ -212,17 +246,20 @@ never exposed.
 
 | Anchor | Input or condition | Exact expected result | Verification |
 | --- | --- | --- | --- |
-| `BPT-RA-1` | ascending, descending and shuffled inserts across multiple levels | every get and full scan equals the independent sorted model | `bptree_model_test` |
-| `BPT-RA-2` | delete through redistribution, merge, empty root and reuse | validator passes after every boundary; high-water page count stops growing when free pages exist | `bptree_structure_test` |
-| `BPT-RA-3` | file close/reopen after mutations | exact item count and ordered contents survive every reopen | `bptree_persistence_test` |
-| `BPT-RA-4` | crash before WAL publish, after publish, during data write, during replay, and after data sync | reopen yields the exact old or committed post-state and no active WAL | `bptree_crash_test` |
-| `BPT-RA-5` | bad header, page checksum, child ID, sibling cycle and malformed WAL | operation returns `BPT_CORRUPT` without loop, OOB access or silent repair | `bptree_corruption_test` |
+| `BPT-RA-1` | ascending, descending and shuffled inserts across multiple levels | every get and full scan equals the independent sorted model | `btree_model_test` |
+| `BPT-RA-2` | delete through redistribution, merge, empty root and reuse | validator passes after every boundary; high-water page count stops growing when free pages exist | `btree_structure_test` |
+| `BPT-RA-3` | file close/reopen after mutations | exact item count and ordered contents survive every reopen | `btree_persistence_test` |
+| `BPT-RA-4` | crash before WAL publish, after publish, during data write, during replay, and after data sync | reopen yields the exact old or committed post-state and no active WAL | `btree_crash_test` |
+| `BPT-RA-5` | bad header, page checksum, child ID, sibling cycle and malformed WAL | operation returns `BTREE_CORRUPT` without loop, OOB access or silent repair | `btree_corruption_test` |
 | `BPT-RA-6` | all deterministic suites under FIL-C and native sanitizers | zero test failures and zero reported memory/UB defects | evidence commands in `evidence/README.md` |
+| `BPT-RA-7` | 13-byte/21-byte records plus custom 8-byte comparator schema | byte-exact copy, ordered scan, schema reopen/mismatch, split/delete all pass | `btree_generic_test` |
 
 ### Evidence And Unknowns
 
 Observed evidence is recorded in [`evidence/README.md`](evidence/README.md).
-Unknowns outside v1 include multi-writer scheduling, buffer-pool eviction
+The current ledger is bound to source commit
+`b2c4bd8f6e922b06ee58aecf764f8278365a9801` plus per-file SHA-256 values.
+Unknowns outside 1.0 include multi-writer scheduling, buffer-pool eviction
 behavior, physical power-loss testing, network filesystem semantics, and
 workload-specific performance.
 
@@ -234,12 +271,12 @@ contracts:
 
 - page size controls exact leaf and internal fanout;
 - no value bytes are stored in internal pages;
-- all traversal reads whole pages through `bpt_storage`;
+- all traversal reads whole pages through `btree_storage`;
 - sequential scans use leaf links;
 - storage caching is replaceable and intentionally outside the tree;
 - disk mode adds durability machinery absent from the article.
 
-The article's UUID versus sequential-key comparison is not benchmarked here
-because the v1 key type is numeric and the requested deliverable is a
-correctness-first reusable library. Any future performance claim requires a
-target-machine workload and hardware-counter evidence.
+The article's UUID versus sequential-key comparison is not benchmarked here.
+The library can represent UUIDs, integers, strings, composite keys, row IDs,
+or application records through fixed-width encodings, but workload performance
+still requires target-machine evidence.

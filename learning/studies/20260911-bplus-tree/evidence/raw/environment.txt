@@ -1,4 +1,4 @@
-utc=2026-09-11T08:21:49Z
+utc=2026-09-11T10:25:26Z
 Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
 ProductName:		macOS
 ProductVersion:		26.6.2
@@ -9,9 +9,11 @@ Thread model: posix
 InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
 cmake version 4.0.3
 
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
 clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
 Target: aarch64-unknown-linux-gnu
 Thread model: posix
 InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-source_commit=fe17463d3421e65d3a84ddfa3ec145dddad049c9
+source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
+source_tree_clean=true

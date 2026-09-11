@@ -15,15 +15,19 @@ verified_by:
   - BPT-RA-4
   - BPT-RA-5
   - BPT-RA-6
+  - BPT-RA-7
 ---
 
 # B+ Tree C Library
 
 ## Supported Contract
 
-This C11 library implements a unique `uint64_t -> uint64_t` B+ tree with:
+This C11 library implements a unique fixed-width byte-key to byte-value B+ tree
+with:
 
 - point lookup, upsert, delete, and `[begin, end)` ordered scan;
+- caller-selected key/value widths and a persisted comparator identity;
+- built-in unsigned-byte lexicographic order or a custom comparator;
 - page-local split, redistribution, merge, root growth, and root collapse;
 - configurable 512 to 65,536 byte power-of-two pages;
 - a page-provider API independent of file I/O and buffer-pool policy;
@@ -33,6 +37,8 @@ This C11 library implements a unique `uint64_t -> uint64_t` B+ tree with:
 
 One tree handle and its storage instance are single-threaded and single-writer.
 The file backend holds an exclusive nonblocking `flock` for its lifetime.
+The package version is 1.0.0 and `BTREE_FORMAT_VERSION` is 2. Databases created
+by the earlier specialized format are not compatible with this generic schema.
 
 ## Build And Test
 
@@ -53,46 +59,77 @@ Install static libraries and headers:
 cmake --install build --prefix /chosen/prefix
 ```
 
-Link the core plus one backend:
+Consume the installed package:
 
-```text
--lbptree_storage_memory -lbptree
--lbptree_storage_file -lbptree
+```cmake
+find_package(btree 1 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE btree::btree btree::memory)
+# Or replace btree::memory with btree::file.
 ```
+
+The repository keeps a standalone consumer at `tests/package_consumer`; release
+verification builds it only against the installed package.
 
 ## Minimal Memory Example
 
 ```c
-#include <bptree.h>
-#include <bptree_backends.h>
+#include <btree.h>
+#include <btree_backends.h>
+
+#include <string.h>
 
 int main(void)
 {
-    bpt_memory_backend *backend = NULL;
-    bpt_tree *tree = NULL;
-    bpt_storage storage;
+    btree_mem *backend = NULL;
+    btree *tree = NULL;
+    btree_storage storage;
+    static const unsigned char key[4] = {0, 1, 2, 3};
+    static const unsigned char value[3] = {4, 5, 6};
+    unsigned char actual[3] = {0, 0, 0};
+    btree_options options;
     bool inserted = false;
-    uint64_t value = 0;
 
-    if (bpt_memory_backend_create(4096, &backend) != BPT_OK) {
+    if (btree_mem_create(4096, &backend) != BTREE_OK) {
         return 1;
     }
-    storage = bpt_memory_backend_storage(backend);
-    if (bpt_tree_create(&storage, &tree) != BPT_OK ||
-        bpt_tree_put(tree, 42, 84, &inserted) != BPT_OK ||
-        bpt_tree_get(tree, 42, &value) != BPT_OK || value != 84) {
+    btree_options_init(&options, sizeof(key), sizeof(value));
+    storage = btree_mem_storage(backend);
+    if (btree_create(&storage, &options, &tree) != BTREE_OK ||
+        btree_put(tree, key, value, &inserted) != BTREE_OK ||
+        btree_get(tree, key, actual) != BTREE_OK ||
+        memcmp(actual, value, sizeof(value)) != 0) {
         return 2;
     }
 
-    bpt_tree_close(tree);
-    bpt_memory_backend_destroy(backend);
+    btree_close(tree);
+    btree_mem_destroy(backend);
     return 0;
 }
 ```
 
-For a new file, call `bpt_file_backend_create()` followed by
-`bpt_tree_create()`. For an existing file, call `bpt_file_backend_open()`
-followed by `bpt_tree_open()`. Close the tree before closing its backend.
+For a new file, call `btree_file_create()` followed by
+`btree_create()`. For an existing file, call `btree_file_open()`,
+`btree_read_schema()`, and then `btree_open()` with matching options. Close the
+tree before closing its backend.
+
+## Generic Key/Value Contract
+
+The library copies exactly `key_size` and `value_size` bytes on every put.
+Pointers passed to get/put/delete remain caller-owned. Keys and values may
+contain zero bytes and need no C string terminator.
+
+`btree_options_init()` selects `BTREE_COMPARATOR_LEXICOGRAPHIC`, which compares
+keys as unsigned byte sequences. Portable integer order therefore uses a
+canonical big-endian encoding. Applications that use another ordering provide
+a deterministic strict-total-order callback and a stable
+`comparator_id >= BTREE_COMPARATOR_USER_MIN`.
+
+The metadata page persists key width, value width, and comparator ID. Reopen
+requires all three to match and returns `BTREE_SCHEMA_MISMATCH` otherwise.
+Comparator code and context are not serialized; the application owns them for
+the full tree lifetime. A comparator ID identifies ordering semantics, not a
+function address. Reusing an ID for changed semantics can invalidate ordering
+and is an application error.
 
 ## Buffer Pool Integration
 
@@ -112,11 +149,11 @@ the last successful `commit_pages`.
 
 A custom provider must obey this failure rule:
 
-- a failure that provably publishes no page may return `BPT_IO` or
-  `BPT_OUT_OF_MEMORY`;
+- a failure that provably publishes no page may return `BTREE_IO` or
+  `BTREE_OUT_OF_MEMORY`;
 - a failure that may have published any part must return
-  `BPT_RECOVERY_REQUIRED`;
-- after `BPT_RECOVERY_REQUIRED`, all calls on the tree return that status and
+  `BTREE_RECOVERY_REQUIRED`;
+- after `BTREE_RECOVERY_REQUIRED`, all calls on the tree return that status and
   the caller must close and reopen through a recovering provider.
 
 ## Page Format
@@ -130,17 +167,19 @@ All integers are encoded little-endian. Raw C structs are never persisted.
 
 Every logical page has a 64-byte header containing magic, format version, page
 type, logical page ID, cell count, level, sibling/freelist links, and CRC32C.
-Leaf cells are `(key, value)` pairs. Internal payloads alternate child page IDs
-and separator keys. A separator is the minimum key accepted by its right child.
+Metadata schema fields follow that header. Leaf cells use
+`key_size + value_size` bytes. Internal payloads use one initial child ID plus
+repeated `key_size + child-ID` records. A separator is the minimum key accepted
+by its right child.
 
 The file backend reserves physical page zero for a separate database header.
 Logical page `N` is stored at physical offset `(N + 1) * page_size`. The header
 binds the file-format version, tree-format version, page size, database UUID,
 feature flags, and CRC32C.
 
-Unknown versions or feature flags return `BPT_UNSUPPORTED`. Invalid checksums,
+Unknown versions or feature flags return `BTREE_UNSUPPORTED`. Invalid checksums,
 IDs, ranges, topology, file length, UUID binding, or WAL shape return
-`BPT_CORRUPT`.
+`BTREE_CORRUPT`.
 
 ## WAL Protocol
 
@@ -164,21 +203,21 @@ unlink WAL + fsync directory
 
 The WAL records up to 256 page images plus database UUID, both format versions,
 page size, original and final page counts, unique logical page IDs, exact total
-length, and an aggregate CRC32C. Open removes the fixed unpublished temporary sidecar, then
-replays a complete valid active WAL idempotently before exposing the provider.
-A malformed nonempty active WAL is preserved and open fails with
-`BPT_CORRUPT`.
+length, and an aggregate CRC32C. Open removes the fixed unpublished temporary
+sidecar, then replays a complete valid active WAL idempotently before exposing
+the provider. A malformed nonempty active WAL is preserved and open fails with
+`BTREE_CORRUPT`.
 
 Before the temporary WAL is published, a write or sync failure returns
-`BPT_IO` and leaves data pages untouched. After atomic rename publishes the
-active WAL, any I/O failure returns `BPT_RECOVERY_REQUIRED` because user space
+`BTREE_IO` and leaves data pages untouched. After atomic rename publishes the
+active WAL, any I/O failure returns `BTREE_RECOVERY_REQUIRED` because user space
 cannot prove whether installation completed. An application must treat that
 operation result as unknown until reopen and lookup.
 
 ## Validation
 
-`bpt_tree_open()` performs full structural validation, not only metadata
-parsing. `bpt_tree_validate()` repeats it on demand and checks:
+`btree_open()` performs full structural validation, not only metadata
+parsing. `btree_validate()` repeats it on demand and checks:
 
 - strict key order and separator ranges;
 - exact height and non-root occupancy;
@@ -198,10 +237,10 @@ Let `h` be tree height, `F` page fanout, and `k` returned scan items.
 
 | Operation | Tree work | Maximum normal write scope |
 | --- | --- | --- |
-| get | `O(h log F)` | none |
-| same-value put | `O(h log F)` | none |
-| value replace without split | `O(h log F)` | metadata plus one leaf |
-| insert/delete without rebalance | `O(h log F)` | metadata, leaf, and any changed ancestor separator |
+| get | `O(h log F)` comparator calls | none |
+| same-value put | `O(h log F)` comparator calls | none |
+| value replace without split | `O(h log F)` comparator calls | metadata plus one leaf |
+| insert/delete without rebalance | `O(h log F)` comparator calls | metadata, leaf, and any changed ancestor separator |
 | split/merge | `O(hF)` worst case | changed path, siblings, metadata, new/free pages |
 | range scan | `O(h log F + k)` | none |
 | full validate | `O(allocated pages)` | none |
@@ -215,8 +254,8 @@ These are algorithmic bounds, not benchmark results.
    owner.
 3. Do not delete or edit `.wal` or `.wal.tmp` after an error; let open apply
    the recovery rules.
-4. Treat `BPT_CORRUPT` as a hard stop and preserve both files for diagnosis.
-5. Treat `BPT_RECOVERY_REQUIRED` as commit-unknown; close and reopen.
+4. Treat `BTREE_CORRUPT` as a hard stop and preserve both files for diagnosis.
+5. Treat `BTREE_RECOVERY_REQUIRED` as commit-unknown; close and reopen.
 6. Keep one backup generation outside the database/WAL pair. Checksums detect
    latent corruption but cannot repair it after WAL cleanup.
 7. Run the complete native, FIL-C, sanitizer, and crash suites for every source
@@ -224,10 +263,10 @@ These are algorithmic bounds, not benchmark results.
 
 ## Unsupported Production Scenarios
 
-Do not use this v1 for variable records, duplicate keys, MVCC, concurrent
-readers and writers, network filesystems, online backup, or platforms whose
-directory `fsync`, `flock`, atomic rename/unlink, and regular-file durability
-semantics do not match the documented POSIX assumptions. On macOS, regular
-files use `F_FULLFSYNC`. No real power-cut or storage-controller fault campaign
-has been completed; subprocess crash injection verifies ordering and replay
-logic, not hardware behavior.
+Do not use this 1.0 API for variable-width records, duplicate keys, MVCC,
+concurrent readers and writers, network filesystems, online backup, or
+platforms whose directory `fsync`, `flock`, atomic rename/unlink, and
+regular-file durability semantics do not match the documented POSIX
+assumptions. On macOS, regular files use `F_FULLFSYNC`. No real power-cut or
+storage-controller fault campaign has been completed; subprocess crash
+injection verifies ordering and replay logic, not hardware behavior.

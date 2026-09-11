@@ -16,6 +16,7 @@ verified_by:
   - BPT-RA-4
   - BPT-RA-5
   - BPT-RA-6
+  - BPT-RA-7
 ---
 
 # Exploration Log
@@ -54,9 +55,9 @@ Public headers, CMake targets, and black-box tests were written before source
 implementation. The first configure failed as intended:
 
 ```text
-Cannot find source file: src/bptree.c
-Cannot find source file: src/bptree_storage_memory.c
-Cannot find source file: src/bptree_storage_file.c
+Cannot find source file: src/btree.c
+Cannot find source file: src/btree_storage_memory.c
+Cannot find source file: src/btree_storage_file.c
 ```
 
 All test translation units independently passed strict C11 syntax checking,
@@ -128,7 +129,13 @@ The final deterministic suites cover:
 - every nonempty truncated prefix of a valid WAL plus checksum corruption;
 - page checksum, out-of-range child, leaf-cycle, and malformed-WAL rejection;
 - provider rollback on definite I/O failure and handle poisoning on uncertain
-  commit.
+  commit;
+- 13-byte keys and 21-byte values with embedded NUL bytes and overwritten input
+  buffers;
+- persisted schema inspection and mismatch rejection;
+- custom ordering over 2,048 shuffled keys through split, delete, validate, and
+  reopen;
+- installed-package consumption through a tracked external CMake project.
 
 ## 8. Quality Findings
 
@@ -142,11 +149,44 @@ page-size predicates. It also made same-value upsert a true no-op. Larger
 rebalance refactors were intentionally deferred because they increased change
 risk without changing the tested contract.
 
+The generic revision's simplification pass removed an unreachable non-root
+empty-subtree flag and a duplicate CMake feature definition. It deliberately
+kept independent test codecs separate from private serialization helpers and
+rejected refactors that would change observable comparator calls or
+allocation-failure behavior without a measured need.
+
 ## 9. Remaining Unknowns
 
 - subprocess exit is not a physical power-cut or controller-cache test;
 - no concurrent reader/writer protocol is implemented;
 - network filesystem ordering is unsupported;
 - allocation failure is handled, but exhaustive fail-every-allocation
-  instrumentation is not part of v1;
+  instrumentation is not part of 1.0;
 - no workload benchmark supports a performance claim.
+
+## 10. Generic Library Revision
+
+The first implementation used `uint64_t` keys and values and public names such
+as `bpt_tree_put`. That made the article example the library's data model. It
+was rejected as an insufficiently reusable result even though its tests passed.
+
+The 1.0 API now uses the conventional `btree_*` prefix and fixed-width opaque
+byte records:
+
+- `btree_options` defines `key_size`, `value_size`, comparator callback, and a
+  stable comparator ID;
+- the default comparator is unsigned-byte lexicographic order;
+- custom comparators require an application-owned ID at or above
+  `BTREE_COMPARATOR_USER_MIN`;
+- metadata persists both widths and the comparator ID;
+- `btree_read_schema()` permits inspection before open;
+- `btree_open()` rejects mismatched schemas with `BTREE_SCHEMA_MISMATCH`;
+- nullable scan bounds make a true unbounded scan possible without reserving a
+  sentinel key.
+
+Fixed-width records are deliberate. They cover encoded integers, UUIDs,
+hashes, composite keys, fixed records, and row references while retaining
+deterministic page capacity and bounded split/merge proofs. Variable-width
+records require a slotted-page and overflow-page format and remain a separate
+future format feature rather than an unverified extension hidden behind
+`void *`.

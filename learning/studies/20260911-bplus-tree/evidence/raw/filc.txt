@@ -1,13 +1,15 @@
+source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
 clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
 Target: aarch64-unknown-linux-gnu
 Thread model: posix
 InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-
-PASS bptree_backend_test
-PASS bptree_contract_test
-PASS bptree_corruption_test
-PASS bptree_crash_test
-PASS bptree_model_test
-PASS bptree_persistence_test
-PASS bptree_structure_test
+command: strict C11 FIL-C compile + run for every suite
+PASS btree_backend_test
+PASS btree_contract_test
+PASS btree_corruption_test
+PASS btree_crash_test
+PASS btree_generic_test
+PASS btree_model_test
+PASS btree_persistence_test
+PASS btree_structure_test

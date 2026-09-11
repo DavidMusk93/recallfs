@@ -1,63 +1,69 @@
-command: cmake ASan/UBSan + ctest
+source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
+command: ASan/UBSan Debug build + CTest
 -- The C compiler identification is AppleClang 21.0.0.21000101
 -- Detecting C compiler ABI info
 -- Detecting C compiler ABI info - done
 -- Check for working C compiler: /usr/bin/cc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (0.6s)
+-- Configuring done (0.4s)
 -- Generating done (0.1s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-sanitized
-[ 13%] Building C object CMakeFiles/bptree_storage_memory.dir/src/bptree_storage_memory.c.o
-[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree.c.o
-[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree_crc32c.c.o
-[ 17%] Linking C static library libbptree_storage_memory.a
-[ 17%] Built target bptree_storage_memory
-[ 21%] Linking C static library libbptree.a
-[ 21%] Built target bptree
-[ 30%] Building C object CMakeFiles/bptree_storage_file.dir/src/bptree_storage_file.c.o
-[ 30%] Building C object CMakeFiles/bptree_storage_file_test_hooks.dir/src/bptree_storage_file.c.o
-[ 39%] Linking C static library libbptree_storage_file_test_hooks.a
-[ 39%] Linking C static library libbptree_storage_file.a
-[ 39%] Built target bptree_storage_file_test_hooks
-[ 39%] Built target bptree_storage_file
-[ 60%] Building C object CMakeFiles/bptree_model_test.dir/tests/bptree_model_test.c.o
-[ 65%] Building C object CMakeFiles/bptree_persistence_test.dir/tests/bptree_persistence_test.c.o
-[ 65%] Building C object CMakeFiles/bptree_contract_test.dir/tests/bptree_contract_test.c.o
-[ 69%] Building C object CMakeFiles/bptree_corruption_test.dir/tests/bptree_corruption_test.c.o
-[ 69%] Building C object CMakeFiles/bptree_backend_test.dir/tests/bptree_backend_test.c.o
-[ 69%] Building C object CMakeFiles/bptree_structure_test.dir/tests/bptree_structure_test.c.o
-[ 69%] Building C object CMakeFiles/bptree_crash_test.dir/tests/bptree_crash_test.c.o
-[ 78%] Linking C executable bptree_structure_test
-[ 78%] Linking C executable bptree_persistence_test
-[ 82%] Linking C executable bptree_model_test
-[ 86%] Linking C executable bptree_corruption_test
-[ 95%] Linking C executable bptree_backend_test
-[ 95%] Linking C executable bptree_contract_test
-[100%] Linking C executable bptree_crash_test
-[100%] Built target bptree_persistence_test
-[100%] Built target bptree_model_test
-[100%] Built target bptree_structure_test
-[100%] Built target bptree_backend_test
-[100%] Built target bptree_corruption_test
-[100%] Built target bptree_contract_test
-[100%] Built target bptree_crash_test
-Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-sanitized
-    Start 1: bptree_model_test
-1/7 Test #1: bptree_model_test ................   Passed    4.53 sec
-    Start 2: bptree_contract_test
-2/7 Test #2: bptree_contract_test .............   Passed   10.56 sec
-    Start 3: bptree_backend_test
-3/7 Test #3: bptree_backend_test ..............   Passed    2.63 sec
-    Start 4: bptree_structure_test
-4/7 Test #4: bptree_structure_test ............   Passed    1.62 sec
-    Start 5: bptree_persistence_test
-5/7 Test #5: bptree_persistence_test ..........   Passed   14.30 sec
-    Start 6: bptree_corruption_test
-6/7 Test #6: bptree_corruption_test ...........   Passed   35.39 sec
-    Start 7: bptree_crash_test
-7/7 Test #7: bptree_crash_test ................   Passed    5.24 sec
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-sanitized-v2
+[ 12%] Building C object CMakeFiles/btree.dir/src/btree.c.o
+[ 12%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
+[ 12%] Building C object CMakeFiles/btree.dir/src/btree_crc32c.c.o
+[ 16%] Linking C static library libbtree_storage_memory.a
+[ 16%] Built target btree_storage_memory
+[ 20%] Linking C static library libbtree.a
+[ 20%] Built target btree
+[ 24%] Building C object CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o
+[ 28%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
+[ 36%] Linking C static library libbtree_storage_file.a
+[ 36%] Linking C static library libbtree_storage_file_test_hooks.a
+[ 36%] Built target btree_storage_file_test_hooks
+[ 36%] Built target btree_storage_file
+[ 40%] Building C object CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o
+[ 44%] Building C object CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o
+[ 48%] Building C object CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o
+[ 52%] Building C object CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o
+[ 56%] Building C object CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o
+[ 60%] Building C object CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o
+[ 68%] Building C object CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o
+[ 68%] Building C object CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o
+[ 72%] Linking C executable btree_model_test
+[ 76%] Linking C executable btree_persistence_test
+[ 80%] Linking C executable btree_corruption_test
+[ 84%] Linking C executable btree_structure_test
+[ 88%] Linking C executable btree_generic_test
+[ 92%] Linking C executable btree_contract_test
+[ 96%] Linking C executable btree_crash_test
+[100%] Linking C executable btree_backend_test
+[100%] Built target btree_model_test
+[100%] Built target btree_corruption_test
+[100%] Built target btree_contract_test
+[100%] Built target btree_persistence_test
+[100%] Built target btree_generic_test
+[100%] Built target btree_structure_test
+[100%] Built target btree_backend_test
+[100%] Built target btree_crash_test
+Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-sanitized-v2
+    Start 1: btree_model_test
+1/8 Test #1: btree_model_test .................   Passed    5.50 sec
+    Start 2: btree_generic_test
+2/8 Test #2: btree_generic_test ...............   Passed    1.27 sec
+    Start 3: btree_contract_test
+3/8 Test #3: btree_contract_test ..............   Passed   10.67 sec
+    Start 4: btree_backend_test
+4/8 Test #4: btree_backend_test ...............   Passed    2.84 sec
+    Start 5: btree_structure_test
+5/8 Test #5: btree_structure_test .............   Passed    1.59 sec
+    Start 6: btree_persistence_test
+6/8 Test #6: btree_persistence_test ...........   Passed   37.49 sec
+    Start 7: btree_corruption_test
+7/8 Test #7: btree_corruption_test ............   Passed   88.81 sec
+    Start 8: btree_crash_test
+8/8 Test #8: btree_crash_test .................   Passed    5.05 sec
 
-100% tests passed, 0 tests failed out of 7
+100% tests passed, 0 tests failed out of 8
 
-Total Test time (real) =  74.37 sec
+Total Test time (real) = 153.39 sec

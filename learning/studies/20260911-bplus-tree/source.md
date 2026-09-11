@@ -39,7 +39,7 @@ size, headers, and SHA-256.
 | Source claim | Study use |
 | --- | --- |
 | Internal B+ tree pages omit values | Fixed-width internal pages store only separator keys and child page IDs |
-| Values reside in leaves | Leaf pages store `uint64_t` key/value pairs |
+| Values reside in leaves | Leaf pages store configured fixed-width key/value byte records |
 | Leaves form an ordered list | Range scans follow checked `next` links |
 | Nodes should match storage units | Every node occupies one configurable fixed-size page |
 | Buffer pools cache pages | The tree depends on a storage interface and contains no eviction policy |
