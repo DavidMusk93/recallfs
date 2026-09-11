@@ -890,6 +890,13 @@ static void rco_pool_finalize_worker_jobs(struct rco_pool_worker *worker)
 {
     struct rco_pool *pool = worker->pool;
 
+    (void)pthread_mutex_lock(&pool->mutex);
+    bool idle = pool->stats.outstanding == 0;
+    (void)pthread_mutex_unlock(&pool->mutex);
+    if (idle) {
+        return;
+    }
+
     for (size_t slot = 0; slot < pool->config.max_jobs; ++slot) {
         struct rco_pool_job *unstarted = NULL;
         bool finalize_directly = false;

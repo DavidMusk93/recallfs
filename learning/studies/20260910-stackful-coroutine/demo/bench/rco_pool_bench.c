@@ -335,9 +335,18 @@ static uint64_t expected_job_checksum(size_t job_index,
     return value;
 }
 
+static void check_job_worker(struct benchmark_job *job)
+{
+    if (rco_current_worker() != job->worker) {
+        job->migration_seen = true;
+        record_worker_error(job->state, -EXDEV);
+    }
+}
+
 static void check_job_identity(struct benchmark_job *job)
 {
-    if (rco_current_worker() != job->worker || current_tid() != job->tid) {
+    check_job_worker(job);
+    if (current_tid() != job->tid) {
         job->migration_seen = true;
         record_worker_error(job->state, -EXDEV);
     }
@@ -425,7 +434,7 @@ __attribute__((noinline)) static int pool_bench_entry(void *argument)
                 job->entry_result = result;
                 return result;
             }
-            check_job_identity(job);
+            check_job_worker(job);
         }
     }
     check_job_identity(job);

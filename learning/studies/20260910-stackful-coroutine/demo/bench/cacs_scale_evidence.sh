@@ -561,12 +561,30 @@ done
 : >"$clean_root/pool-bench.jsonl"
 for run in 1 2 3 4 5; do
     case $(((run - 1) % 3)) in
-        0) modes=(sysv cacs cacs-preserve-none) ;;
-        1) modes=(cacs cacs-preserve-none sysv) ;;
-        2) modes=(cacs-preserve-none sysv cacs) ;;
+        0)
+            modes=(sysv cacs cacs-preserve-none)
+            worker_counts=(1 2 4)
+            ;;
+        1)
+            modes=(cacs cacs-preserve-none sysv)
+            worker_counts=(2 4 1)
+            ;;
+        2)
+            modes=(cacs-preserve-none sysv cacs)
+            worker_counts=(4 1 2)
+            ;;
     esac
-    for workers in 1 2 4; do
-        for quantum in 0 1000000; do
+    if ((run % 2 == 0)); then
+        quantums=(1000000 0)
+    else
+        quantums=(0 1000000)
+    fi
+    worker_position=0
+    for workers in "${worker_counts[@]}"; do
+        worker_position=$((worker_position + 1))
+        quantum_position=0
+        for quantum in "${quantums[@]}"; do
+            quantum_position=$((quantum_position + 1))
             position=0
             for mode in "${modes[@]}"; do
                 position=$((position + 1))
@@ -584,7 +602,7 @@ for run in 1 2 3 4 5; do
                         "$binary" \
                         --workers "$workers" \
                         --jobs 1024 \
-                        --iterations 8192 \
+                        --iterations 65536 \
                         --preempt-quantum-ns "$quantum" \
                         --pin-first-cpu 0
                 )
@@ -592,10 +610,14 @@ for run in 1 2 3 4 5; do
                     jq -ce \
                         --argjson run "$run" \
                         --argjson position "$position" \
+                        --argjson worker_position "$worker_position" \
+                        --argjson quantum_position "$quantum_position" \
                         --arg binary_sha256 "$binary_sha256" \
                         '. + {
                             run: $run,
                             position: $position,
+                            worker_position: $worker_position,
+                            quantum_position: $quantum_position,
                             binary_sha256: $binary_sha256
                         }' >>"$clean_root/pool-bench.jsonl"
             done
@@ -644,7 +666,7 @@ RUNS=5 DURATION=3 PARALLEL=4 BASE_PORT=61000 \
     printf 'sanitizer_flags=%s\n' "$sanitizer_flags"
     printf 'runs=5\n'
     printf 'context_cpu=0 context_numa=0\n'
-    printf 'pool_workers=1,2,4 pool_jobs=1024 pool_iterations=8192\n'
+    printf 'pool_workers=1,2,4 pool_jobs=1024 pool_iterations=65536\n'
     printf 'pool_preempt_quantum_ns=0,1000000 pool_first_cpu=0\n'
     printf 'l4_parallel=4 l4_modes=5 l4_forwarders=4\n'
     printf 'rlimit_nofile_soft=%s\n' "$(ulimit -Sn)"
@@ -953,6 +975,8 @@ if Counter(
 ) != expected_pool_keys:
     fail("pool benchmark run/backend/worker/preemption coverage is incomplete")
 pool_positions = defaultdict(set)
+pool_worker_positions = defaultdict(set)
+pool_quantum_positions = defaultdict(set)
 pool_checksums = set()
 for row in pool_rows:
     mode = row["backend"]
@@ -967,12 +991,14 @@ for row in pool_rows:
         fail(f"{context} is not bound to the measured binary")
     if (
         config["jobs"] != 1024
-        or config["iterations"] != 8192
+        or config["iterations"] != 65536
         or config["preempt_cadence_iterations"] != 64
         or config["pin_first_cpu"] != 0
     ):
         fail(f"{context} has an unexpected configuration")
     pool_positions[(row["run"], workers, quantum)].add(row["position"])
+    pool_worker_positions[workers].add(row["worker_position"])
+    pool_quantum_positions[quantum].add(row["quantum_position"])
     pool_checksums.add(row["checksum"])
     expected_mask = f"0x{(1 << workers) - 1:016x}"
     if (
@@ -1013,6 +1039,10 @@ for row in pool_rows:
     )
 if any(value != {1, 2, 3} for value in pool_positions.values()):
     fail("pool benchmark backend position rotation is incomplete")
+if any(value != {1, 2, 3} for value in pool_worker_positions.values()):
+    fail("pool benchmark worker-count position rotation is incomplete")
+if any(value != {1, 2} for value in pool_quantum_positions.values()):
+    fail("pool benchmark preemption position rotation is incomplete")
 if len(pool_checksums) != 1:
     fail("pool benchmark checksum is not deterministic across samples")
 if len(set(pool_hashes.values())) != 3:
