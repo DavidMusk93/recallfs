@@ -387,6 +387,7 @@ readonly o3_build="$work_root/o3-build"
 readonly o0_build="$work_root/o0-build"
 readonly o2_build="$work_root/o2-build"
 readonly sanitizer_build="$work_root/sanitizer-build"
+readonly gcc_build="$work_root/gcc-build"
 readonly gcc_negative_build="$work_root/gcc-negative-build"
 
 docker run --rm --pull=never --network none \
@@ -410,7 +411,8 @@ docker run --rm --pull=never --network none \
         "$filcc" --version
         "$filcc" -DRCO_FILC -std=c11 -O2 -g -Wall -Wextra -Werror \
             -I "$src/include" -I "$src/src" \
-            "$src/src/rco.c" "$src/tests/rco_context_filc.c" \
+            "$src/src/rco.c" "$src/src/rco_pool.c" \
+            "$src/tests/rco_context_filc.c" \
             "$src/tests/rco_filc_test.c" -o "$runtime"
         "$filrun" "$runtime"
         "$filcc" -DRCO_FILC -std=c11 -O2 -g -Wall -Wextra -Werror \
@@ -434,6 +436,22 @@ docker run --rm --pull=never --network none \
 configure_and_build "$o3_build" o3 Release "$o3_flags" '-flto'
 ctest --test-dir "$o3_build" --output-on-failure \
     2>&1 | tee "$clean_root/native-tests.txt"
+: >"$clean_root/pool-stress.txt"
+for mode in sysv cacs cacs-preserve-none; do
+    case "$mode" in
+        sysv) binary="$o3_build/rco_pool_test_sysv" ;;
+        cacs) binary="$o3_build/rco_pool_test_cacs" ;;
+        cacs-preserve-none)
+            binary="$o3_build/rco_pool_test_cacs_preserve_none"
+            ;;
+    esac
+    for _run in $(seq 1 500); do
+        "$binary" >/dev/null
+    done
+    binary_sha256=$(sha256sum -- "$binary" | awk '{print $1}')
+    printf 'pool_stress backend=%s binary_sha256=%s runs=500 PASS\n' \
+        "$mode" "$binary_sha256" >>"$clean_root/pool-stress.txt"
+done
 python3 "$source_root/tests/rco_high_concurrency_bench_test.py" \
     --harness "$source_root/bench/rco_high_concurrency_bench.py" \
     --sysv "$o3_build/rco_high_concurrency_bench_sysv" \
@@ -446,15 +464,37 @@ configure_and_build "$o0_build" o0 Debug "$o0_flags" ''
 {
     printf 'profile=o0\n'
     ctest --test-dir "$o0_build" --output-on-failure \
-        -R '^(rco_native|rco_guard_page|rco_cacs|rco_high_concurrency_)'
+        -R '^(rco_native|rco_guard_page|rco_cacs|rco_high_concurrency_|rco_local_state|rco_preempt|rco_pool)'
 } 2>&1 | tee "$clean_root/optimization-matrix.txt"
 
 configure_and_build "$o2_build" o2 RelWithDebInfo "$o2_flags" ''
 {
     printf '\nprofile=o2\n'
     ctest --test-dir "$o2_build" --output-on-failure \
-        -R '^(rco_native|rco_guard_page|rco_cacs|rco_high_concurrency_)'
+        -R '^(rco_native|rco_guard_page|rco_cacs|rco_high_concurrency_|rco_local_state|rco_preempt|rco_pool)'
 } 2>&1 | tee -a "$clean_root/optimization-matrix.txt"
+
+readonly gcc_flags="-O3 -DNDEBUG $common_flags"
+mkdir -p -- "$clean_root/build-commands/gcc"
+cmake -S "$source_root" -B "$gcc_build" -G 'Unix Makefiles' \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=gcc \
+    -DCMAKE_ASM_COMPILER=gcc \
+    -DCMAKE_C_FLAGS="$gcc_flags" \
+    -DCMAKE_C_FLAGS_RELEASE= \
+    -DCMAKE_ASM_FLAGS='-fcf-protection=branch' \
+    -DCMAKE_ASM_FLAGS_RELEASE= \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DRCO_BUILD_CACS=OFF \
+    -DRCO_BUILD_EXAMPLES=ON \
+    -DRCO_BUILD_BENCHMARKS=ON \
+    -DRCO_BUILD_TESTS=ON \
+    2>&1 | tee "$clean_root/build-commands/gcc/configure.txt"
+cmake --build "$gcc_build" -j2 \
+    2>&1 | tee "$clean_root/build-commands/gcc/build.txt"
+capture_build_commands "$gcc_build" gcc
+ctest --test-dir "$gcc_build" --output-on-failure \
+    2>&1 | tee "$clean_root/gcc-tests.txt"
 
 set +e
 cmake -S "$source_root" -B "$gcc_negative_build" -G 'Unix Makefiles' \
@@ -518,6 +558,51 @@ for run in 1 2 3 4 5; do
     done
 done
 
+: >"$clean_root/pool-bench.jsonl"
+for run in 1 2 3 4 5; do
+    case $(((run - 1) % 3)) in
+        0) modes=(sysv cacs cacs-preserve-none) ;;
+        1) modes=(cacs cacs-preserve-none sysv) ;;
+        2) modes=(cacs-preserve-none sysv cacs) ;;
+    esac
+    for workers in 1 2 4; do
+        for quantum in 0 1000000; do
+            position=0
+            for mode in "${modes[@]}"; do
+                position=$((position + 1))
+                case "$mode" in
+                    sysv) binary="$o3_build/rco_pool_bench_sysv" ;;
+                    cacs) binary="$o3_build/rco_pool_bench_cacs" ;;
+                    cacs-preserve-none)
+                        binary="$o3_build/rco_pool_bench_cacs_preserve_none"
+                        ;;
+                esac
+                binary_sha256=$(sha256sum -- "$binary" | awk '{print $1}')
+                sample=$(
+                    timeout --signal=TERM --kill-after=5s 120s \
+                        numactl --membind=0 \
+                        "$binary" \
+                        --workers "$workers" \
+                        --jobs 1024 \
+                        --iterations 8192 \
+                        --preempt-quantum-ns "$quantum" \
+                        --pin-first-cpu 0
+                )
+                printf '%s\n' "$sample" |
+                    jq -ce \
+                        --argjson run "$run" \
+                        --argjson position "$position" \
+                        --arg binary_sha256 "$binary_sha256" \
+                        '. + {
+                            run: $run,
+                            position: $position,
+                            binary_sha256: $binary_sha256
+                        }' >>"$clean_root/pool-bench.jsonl"
+            done
+        done
+    done
+done
+
 numactl --physcpubind=0 --membind=0 \
     python3 "$source_root/bench/rco_high_concurrency_bench.py" \
         --sysv "$o3_build/rco_high_concurrency_bench_sysv" \
@@ -555,9 +640,12 @@ RUNS=5 DURATION=3 PARALLEL=4 BASE_PORT=61000 \
     printf 'o0_flags=%s\n' "$o0_flags"
     printf 'o2_flags=%s\n' "$o2_flags"
     printf 'o3_flags=%s\n' "$o3_flags"
+    printf 'gcc_flags=%s\n' "$gcc_flags"
     printf 'sanitizer_flags=%s\n' "$sanitizer_flags"
     printf 'runs=5\n'
     printf 'context_cpu=0 context_numa=0\n'
+    printf 'pool_workers=1,2,4 pool_jobs=1024 pool_iterations=8192\n'
+    printf 'pool_preempt_quantum_ns=0,1000000 pool_first_cpu=0\n'
     printf 'l4_parallel=4 l4_modes=5 l4_forwarders=4\n'
     printf 'rlimit_nofile_soft=%s\n' "$(ulimit -Sn)"
     printf 'rlimit_nofile_hard=%s\n' "$(ulimit -Hn)"
@@ -586,6 +674,9 @@ RUNS=5 DURATION=3 PARALLEL=4 BASE_PORT=61000 \
         "$o3_build/rco_high_concurrency_bench_sysv" \
         "$o3_build/rco_high_concurrency_bench_cacs" \
         "$o3_build/rco_high_concurrency_bench_cacs_preserve_none" \
+        "$o3_build/rco_pool_bench_sysv" \
+        "$o3_build/rco_pool_bench_cacs" \
+        "$o3_build/rco_pool_bench_cacs_preserve_none" \
         "$o3_build/rco_l4_forwarder" \
         "$o3_build/rco_l4_forwarder_cacs" \
         "$o3_build/rco_l4_forwarder_cacs_preserve_none" \
@@ -684,7 +775,7 @@ def ctest_count(relative, expected):
         fail(f"unexpected CTest counts in {relative}: {matches}")
 
 
-expected_targets = {
+zig_expected_targets = {
     "rco",
     "rco_cacs",
     "rco_cacs_preserve_none",
@@ -694,18 +785,33 @@ expected_targets = {
     "rco_high_concurrency_bench_sysv",
     "rco_high_concurrency_bench_cacs",
     "rco_high_concurrency_bench_cacs_preserve_none",
+    "rco_pool_bench_sysv",
+    "rco_pool_bench_cacs",
+    "rco_pool_bench_cacs_preserve_none",
     "rco_l4_forwarder",
     "rco_l4_forwarder_cacs",
     "rco_l4_forwarder_cacs_preserve_none",
     "rco_l4_forwarder_epoll",
 }
-profile_options = {
-    "o0": ("-O0",),
-    "o2": ("-O2",),
-    "o3": ("-O3", "-DNDEBUG", "-flto"),
-    "asan": ("-O1", "-fsanitize=address,undefined"),
+gcc_expected_targets = {
+    "rco",
+    "rco_bench",
+    "rco_high_concurrency_bench_sysv",
+    "rco_pool_bench_sysv",
+    "rco_l4_forwarder",
+    "rco_l4_forwarder_epoll",
 }
-for profile, options in profile_options.items():
+profile_contracts = {
+    "o0": (("-O0",), zig_expected_targets),
+    "o2": (("-O2",), zig_expected_targets),
+    "o3": (("-O3", "-DNDEBUG", "-flto"), zig_expected_targets),
+    "asan": (
+        ("-O1", "-fsanitize=address,undefined"),
+        zig_expected_targets,
+    ),
+    "gcc": (("-O3", "-DNDEBUG"), gcc_expected_targets),
+}
+for profile, (options, expected_targets) in profile_contracts.items():
     command_root = root / "build-commands" / profile
     raw_path = command_root / "compile_commands.json"
     entries = json.loads(raw_path.read_text(encoding="utf-8"))
@@ -748,9 +854,10 @@ for profile, options in profile_options.items():
         if f"target={target}\n" not in linked:
             fail(f"{profile} link evidence omits {target}")
 
-ctest_count("native-tests.txt", (25,))
-ctest_count("optimization-matrix.txt", (16, 16))
-ctest_count("sanitizer-tests.txt", (22,))
+ctest_count("native-tests.txt", (37,))
+ctest_count("optimization-matrix.txt", (28, 28))
+ctest_count("gcc-tests.txt", (13,))
+ctest_count("sanitizer-tests.txt", (34,))
 focused_text = (
     root / "high-concurrency-focused-tests.txt"
 ).read_text(encoding="utf-8")
@@ -759,6 +866,19 @@ if (
     or "\nOK\n" not in focused_text
 ):
     fail("high-concurrency focused evidence is not 19/19")
+pool_stress_text = (root / "pool-stress.txt").read_text(encoding="utf-8")
+pool_test_binaries = {
+    "sysv": build / "rco_pool_test_sysv",
+    "cacs": build / "rco_pool_test_cacs",
+    "cacs-preserve-none": build / "rco_pool_test_cacs_preserve_none",
+}
+for mode, binary in pool_test_binaries.items():
+    expected = (
+        f"pool_stress backend={mode} "
+        f"binary_sha256={file_sha256(binary)} runs=500 PASS\n"
+    )
+    if expected not in pool_stress_text:
+        fail(f"pool stress evidence omits or misbinds {mode}")
 filc_text = (root / "filc.txt").read_text(encoding="utf-8")
 for marker in (
     "FIL-C high-concurrency parser/bounds PASS",
@@ -794,6 +914,109 @@ for row in context_rows:
         ("rco_yield_ns", "function_call_ns", "sched_yield_ns", "sink"),
         "context sample",
     )
+
+pool_path = root / "pool-bench.jsonl"
+try:
+    pool_rows = [
+        json.loads(line)
+        for line in pool_path.read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+except (OSError, json.JSONDecodeError) as error:
+    fail(f"invalid pool benchmark JSONL: {error}")
+pool_modes = ("sysv", "cacs", "cacs-preserve-none")
+pool_workers = (1, 2, 4)
+pool_quantums = (0, 1_000_000)
+pool_binaries = {
+    "sysv": build / "rco_pool_bench_sysv",
+    "cacs": build / "rco_pool_bench_cacs",
+    "cacs-preserve-none": build / "rco_pool_bench_cacs_preserve_none",
+}
+pool_hashes = {mode: file_sha256(path) for mode, path in pool_binaries.items()}
+expected_pool_keys = Counter(
+    (run, mode, workers, quantum)
+    for run in range(1, 6)
+    for mode in pool_modes
+    for workers in pool_workers
+    for quantum in pool_quantums
+)
+if len(pool_rows) != 90:
+    fail("pool benchmark does not contain 90 samples")
+if Counter(
+    (
+        row.get("run"),
+        row.get("backend"),
+        row.get("config", {}).get("workers"),
+        row.get("config", {}).get("preempt_quantum_ns"),
+    )
+    for row in pool_rows
+) != expected_pool_keys:
+    fail("pool benchmark run/backend/worker/preemption coverage is incomplete")
+pool_positions = defaultdict(set)
+pool_checksums = set()
+for row in pool_rows:
+    mode = row["backend"]
+    config = row["config"]
+    stats = row["pool_stats"]
+    workers = config["workers"]
+    quantum = config["preempt_quantum_ns"]
+    context = f"pool {row['run']}/{mode}/{workers}/{quantum}"
+    if row["schema"] != "rco-pool-bench-v1":
+        fail(f"{context} has the wrong schema")
+    if row["binary_sha256"] != pool_hashes[mode]:
+        fail(f"{context} is not bound to the measured binary")
+    if (
+        config["jobs"] != 1024
+        or config["iterations"] != 8192
+        or config["preempt_cadence_iterations"] != 64
+        or config["pin_first_cpu"] != 0
+    ):
+        fail(f"{context} has an unexpected configuration")
+    pool_positions[(row["run"], workers, quantum)].add(row["position"])
+    pool_checksums.add(row["checksum"])
+    expected_mask = f"0x{(1 << workers) - 1:016x}"
+    if (
+        row["workers"]["count"] != workers
+        or row["workers"]["mask"] != expected_mask
+    ):
+        fail(f"{context} did not use every configured worker")
+    if (
+        stats["submitted"] != config["jobs"]
+        or stats["completed"] != config["jobs"]
+        or stats["cancelled"] != 0
+        or stats["coroutine_migrations"] != 0
+        or stats["outstanding"] != 0
+        or stats["queued_jobs"] != 0
+        or stats["pending_cancellations"] != 0
+    ):
+        fail(f"{context} failed lifecycle or no-migration validation")
+    if workers == 1:
+        if stats["jobs_stolen_before_start"] != 0:
+            fail(f"{context} unexpectedly stole work")
+    elif stats["jobs_stolen_before_start"] <= 0:
+        fail(f"{context} did not exercise work stealing")
+    if stats["steal_attempts"] < stats["jobs_stolen_before_start"]:
+        fail(f"{context} has invalid steal accounting")
+    if (
+        stats["wake_writes"] >= stats["submitted"]
+        or stats["wake_coalesced"] <= 0
+    ):
+        fail(f"{context} failed wake coalescing validation")
+    require_positive(
+        {
+            "wall_ns": row["elapsed"]["wall_ns"],
+            "cpu_ns": row["elapsed"]["cpu_ns"],
+            "jobs_per_second": row["jobs_per_second"],
+        },
+        ("wall_ns", "cpu_ns", "jobs_per_second"),
+        context,
+    )
+if any(value != {1, 2, 3} for value in pool_positions.values()):
+    fail("pool benchmark backend position rotation is incomplete")
+if len(pool_checksums) != 1:
+    fail("pool benchmark checksum is not deterministic across samples")
+if len(set(pool_hashes.values())) != 3:
+    fail("pool benchmark backend binaries do not have distinct hashes")
 
 sample_fields = [
     "schema",
@@ -1175,6 +1398,18 @@ for mode, ratio in l4_paired_ratios.items():
 summary_by_key = {
     (row["case"], row["mode"]): row for row in summary_rows
 }
+pool_medians = {
+    (mode, workers, quantum): statistics.median(
+        float(row["jobs_per_second"])
+        for row in pool_rows
+        if row["backend"] == mode
+        and row["config"]["workers"] == workers
+        and row["config"]["preempt_quantum_ns"] == quantum
+    )
+    for mode in pool_modes
+    for workers in pool_workers
+    for quantum in pool_quantums
+}
 
 validation = root / "validation.txt"
 with validation.open("w", encoding="utf-8", newline="\n") as stream:
@@ -1185,13 +1420,16 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
     emit("compiler", "zig-0.16.0-clang-21")
     emit("filc_runtime_lifecycle", "PASS")
     emit("filc_high_concurrency_parser_bounds", "PASS")
-    emit("zig_o0_focused_ctest", "16/16")
-    emit("zig_o2_focused_ctest", "16/16")
-    emit("zig_o3_full_ctest", "25/25")
-    emit("zig_asan_ubsan_ctest", "22/22")
+    emit("zig_o0_focused_ctest", "28/28")
+    emit("zig_o2_focused_ctest", "28/28")
+    emit("zig_o3_full_ctest", "37/37")
+    emit("zig_asan_ubsan_ctest", "34/34")
+    emit("gcc_sysv_full_ctest", "13/13")
     emit("high_concurrency_focused_tests", "19/19")
+    emit("pool_stress_runs_per_backend", 500)
+    emit("pool_stress_total_runs", 1500)
     emit("gcc_cacs_negative_gate", "PASS")
-    emit("compile_command_profiles", "o0,o2,o3,asan")
+    emit("compile_command_profiles", "o0,o2,o3,asan,gcc")
     emit("compile_and_link_target_binding", "PASS")
     emit("context_samples", len(context_rows))
     emit("context_samples_per_mode", 5)
@@ -1207,6 +1445,23 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
     emit("task_lifecycle_oracle", "PASS")
     emit("stack_page_sentinels", "PASS")
     emit("end_barrier_yields_accounted", "PASS")
+    emit("pool_benchmark_schema", "rco-pool-bench-v1")
+    emit("pool_benchmark_samples", len(pool_rows))
+    emit("pool_benchmark_runs_per_cell", 5)
+    emit("pool_benchmark_checksum_oracle", "PASS")
+    emit("pool_benchmark_exact_once", "PASS")
+    emit("pool_benchmark_worker_coverage", "PASS")
+    emit("pool_benchmark_prestart_stealing", "PASS")
+    emit("pool_benchmark_coroutine_migrations", 0)
+    emit("pool_benchmark_wake_coalescing", "PASS")
+    for mode in pool_modes:
+        key_mode = mode.replace("-", "_")
+        for workers in pool_workers:
+            for quantum in pool_quantums:
+                emit(
+                    f"pool_{key_mode}_{workers}w_{quantum}ns_median_jobs_per_second",
+                    f"{pool_medians[(mode, workers, quantum)]:.3f}",
+                )
     emit("l4_forwarders", 4)
     emit("l4_modes", 5)
     emit("l4_five_mode_aggregate_rows", len(throughput_rows))
