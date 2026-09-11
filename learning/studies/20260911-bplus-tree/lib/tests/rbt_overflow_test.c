@@ -3,6 +3,7 @@
 enum {
     LARGE_BYTES_SIZE = 4096,
     LARGE_TEXT_SIZE = 1536,
+    LARGE_MUTATION_SIZE = 448 * 2048,
 };
 
 static void fill_binary(unsigned char *data, size_t size) {
@@ -219,7 +220,72 @@ static void test_overflow_lifecycle(void) {
     free(large_bytes);
 }
 
+static void test_thousands_page_overflow_replacement(void) {
+    struct rbt_column key_column = {
+        .id = 1u,
+        .type = RBT_TYPE_U64,
+        .flags = 0u,
+        .max_size = 0u,
+    };
+    struct rbt_column value_column = {
+        .id = 2u,
+        .type = RBT_TYPE_BYTES,
+        .flags = 0u,
+        .max_size = LARGE_MUTATION_SIZE,
+    };
+    struct rbt_schema schema = {
+        .id = UINT64_C(0x7262740000000005),
+        .key_columns = &key_column,
+        .key_column_count = 1u,
+        .value_columns = &value_column,
+        .value_column_count = 1u,
+    };
+    unsigned char *payload = malloc(LARGE_MUTATION_SIZE);
+    struct rbt_mem *memory = NULL;
+    struct rbt_storage storage;
+    struct rbt_config config = {
+        .storage = &storage,
+        .schema = &schema,
+    };
+    struct rbt *tree = NULL;
+    struct rbt_value key = rbt_test_u64(42u);
+    struct rbt_value value;
+    struct rbt_record record;
+    struct rbt_record key_record = rbt_test_key(&key, 1u);
+    struct rbt_row *row = NULL;
+    const struct rbt_value *actual = NULL;
+    struct rbt_stats stats;
+    bool inserted = false;
+
+    RBT_TEST_CHECK(payload != NULL);
+    fill_binary(payload, LARGE_MUTATION_SIZE);
+    value = rbt_test_bytes(payload, LARGE_MUTATION_SIZE);
+    record = rbt_test_record(&key, 1u, &value, 1u);
+
+    RBT_TEST_OK(rbt_mem_create(512u, &memory));
+    RBT_TEST_OK(rbt_mem_storage(memory, &storage));
+    RBT_TEST_OK(rbt_create(&config, &tree));
+    RBT_TEST_OK(rbt_put(tree, &record, &inserted));
+    RBT_TEST_CHECK(inserted);
+
+    payload[0] ^= 0xffu;
+    inserted = true;
+    RBT_TEST_OK(rbt_put(tree, &record, &inserted));
+    RBT_TEST_CHECK(!inserted);
+    RBT_TEST_OK(rbt_get(tree, &key_record, &row));
+    RBT_TEST_OK(rbt_row_get_value(row, 0u, &actual));
+    RBT_TEST_BYTES(&actual->as.bytes, payload, LARGE_MUTATION_SIZE);
+    RBT_TEST_OK(rbt_row_destroy(row));
+    stats = rbt_test_validate(tree);
+    RBT_TEST_CHECK(stats.overflow_pages == 2048u);
+
+    RBT_TEST_OK(rbt_destroy(tree));
+    RBT_TEST_OK(rbt_mem_destroy(memory));
+    free(payload);
+}
+
 int main(void) {
     test_overflow_lifecycle();
+    test_thousands_page_overflow_replacement();
     return 0;
 }

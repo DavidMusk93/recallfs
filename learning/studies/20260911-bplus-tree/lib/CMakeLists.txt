@@ -11,6 +11,7 @@ option(RBT_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 add_library(rbt STATIC
     src/rbt.c
     src/rbt_crc32c.c
+    src/rbt_page_updates.c
 )
 add_library(rbt::rbt ALIAS rbt)
 

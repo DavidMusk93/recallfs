@@ -107,4 +107,10 @@ uint32_t rbt_crc32c_page(const void *page, uint32_t page_size);
 bool rbt_page_checksum_valid(const void *page, uint32_t page_size);
 void rbt_page_checksum_store(void *page, uint32_t page_size);
 
+typedef int (*rbt_page_update_check_fn)(uint64_t page_id, const void *context);
+
+int rbt_page_updates_validate(const struct rbt_page_update *updates, size_t update_count,
+                              uint64_t current_page_count, rbt_page_update_check_fn check_page_id,
+                              const void *check_context, uint64_t *out_final_page_count);
+
 #endif

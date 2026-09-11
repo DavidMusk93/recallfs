@@ -43,33 +43,15 @@ static int rbt_mem_read_page(void *context, uint64_t page_id, void *data_out) {
 static int rbt_mem_validate_updates(const struct rbt_mem *memory,
                                     const struct rbt_page_update *updates, size_t update_count,
                                     uint64_t *out_page_count) {
-    uint64_t page_count = memory->page_count;
-    uint64_t new_ids = 0u;
-    size_t index;
+    uint64_t page_count;
+    int result;
 
-    if (update_count != 0u && updates == NULL) {
-        return -EINVAL;
+    result = rbt_page_updates_validate(updates, update_count, memory->page_count, NULL, NULL,
+                                       &page_count);
+    if (result != 0) {
+        return result;
     }
-    for (index = 0u; index < update_count; ++index) {
-        size_t other;
-
-        if (updates[index].data == NULL || updates[index].page_id == UINT64_MAX) {
-            return updates[index].data == NULL ? -EINVAL : -ENOMEM;
-        }
-        for (other = 0u; other < index; ++other) {
-            if (updates[other].page_id == updates[index].page_id) {
-                return -EINVAL;
-            }
-        }
-        if (updates[index].page_id >= memory->page_count) {
-            ++new_ids;
-        }
-        if (updates[index].page_id + 1u > page_count) {
-            page_count = updates[index].page_id + 1u;
-        }
-    }
-    if (page_count > (uint64_t)(SIZE_MAX / (size_t)memory->page_size) ||
-        page_count - memory->page_count != new_ids) {
+    if (page_count > (uint64_t)(SIZE_MAX / (size_t)memory->page_size)) {
         return -EINVAL;
     }
     *out_page_count = page_count;

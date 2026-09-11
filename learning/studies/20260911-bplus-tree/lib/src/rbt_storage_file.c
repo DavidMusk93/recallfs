@@ -96,7 +96,7 @@ static int rbt_file_cloexec(int descriptor) {
         errno = saved;
         return -1;
     }
-    if (flags >= 0 && (flags & FD_CLOEXEC) == 0) {
+    if ((flags & FD_CLOEXEC) == 0) {
         int result;
 
         do {
@@ -483,41 +483,26 @@ static int rbt_file_remove_temp(struct rbt_file *file) {
     return 0;
 }
 
+static int rbt_file_check_update_page_id(uint64_t page_id, const void *context) {
+    const struct rbt_file *file = context;
+    off_t ignored;
+
+    return rbt_file_page_offset(page_id, file->page_size, &ignored) ? 0 : -ENOMEM;
+}
+
 static int rbt_file_validate_updates(const struct rbt_file *file,
                                      const struct rbt_page_update *updates, size_t update_count,
                                      uint64_t *out_final_count) {
-    uint64_t final_count = file->page_count;
-    uint64_t new_ids = 0u;
-    size_t index;
+    uint64_t final_count;
+    int result;
 
-    if ((update_count != 0u && updates == NULL) ||
-        update_count > (size_t)RBT_WAL_MAX_TRANSACTION_PAGES) {
-        return update_count > (size_t)RBT_WAL_MAX_TRANSACTION_PAGES ? -ENOMEM : -EINVAL;
+    if (update_count > (size_t)RBT_WAL_MAX_TRANSACTION_PAGES) {
+        return -ENOMEM;
     }
-    for (index = 0u; index < update_count; ++index) {
-        off_t ignored;
-        size_t other;
-
-        if (updates[index].data == NULL) {
-            return -EINVAL;
-        }
-        if (!rbt_file_page_offset(updates[index].page_id, file->page_size, &ignored)) {
-            return -ENOMEM;
-        }
-        for (other = 0u; other < index; ++other) {
-            if (updates[other].page_id == updates[index].page_id) {
-                return -EINVAL;
-            }
-        }
-        if (updates[index].page_id >= file->page_count) {
-            ++new_ids;
-        }
-        if (updates[index].page_id + 1u > final_count) {
-            final_count = updates[index].page_id + 1u;
-        }
-    }
-    if (final_count - file->page_count != new_ids) {
-        return -EINVAL;
+    result = rbt_page_updates_validate(updates, update_count, file->page_count,
+                                       rbt_file_check_update_page_id, file, &final_count);
+    if (result != 0) {
+        return result;
     }
     *out_final_count = final_count;
     return 0;

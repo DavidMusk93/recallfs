@@ -14,6 +14,15 @@ enum {
     RBT_VALUE_OVERFLOW = 2,
 };
 
+enum rbt_validation_owner {
+    RBT_VALIDATION_UNOWNED = 0,
+    RBT_VALIDATION_METADATA = 1,
+    RBT_VALIDATION_TREE = 2,
+    RBT_VALIDATION_OVERFLOW = 3,
+    RBT_VALIDATION_FREELIST = 4,
+    RBT_VALIDATION_SCHEMA = 5,
+};
+
 struct rbt_metadata {
     uint64_t root_page_id;
     uint64_t free_head;
@@ -69,6 +78,8 @@ struct rbt_txn {
     struct rbt_txn_page *pages;
     size_t page_count;
     size_t page_capacity;
+    size_t *page_index;
+    size_t page_index_capacity;
 };
 
 struct rbt_path_entry {
@@ -804,8 +815,7 @@ static const unsigned char *rbt_slot_cell(const unsigned char *page, uint32_t in
     return page + rbt_load_u32(slot);
 }
 
-static bool rbt_page_add_cell(unsigned char *page, uint32_t page_size, const unsigned char *cell,
-                              uint32_t cell_size) {
+static bool rbt_page_add_cell(unsigned char *page, const unsigned char *cell, uint32_t cell_size) {
     uint32_t count = rbt_load_u32(page + RBT_PAGE_COUNT_OFFSET);
     uint32_t lower = rbt_load_u32(page + RBT_PAGE_FREE_LOWER_OFFSET);
     uint32_t upper = rbt_load_u32(page + RBT_PAGE_FREE_UPPER_OFFSET);
@@ -822,7 +832,6 @@ static bool rbt_page_add_cell(unsigned char *page, uint32_t page_size, const uns
     rbt_store_u32(page + RBT_PAGE_COUNT_OFFSET, count + 1u);
     rbt_store_u32(page + RBT_PAGE_FREE_LOWER_OFFSET, lower + RBT_SLOT_SIZE);
     rbt_store_u32(page + RBT_PAGE_FREE_UPPER_OFFSET, upper);
-    (void)page_size;
     return true;
 }
 
@@ -850,7 +859,7 @@ static int rbt_read_overflow_from(struct rbt *tree, struct rbt_txn *transaction,
         struct rbt_page_header header;
 
         if (page_id == 0u || page_id >= page_limit || visited++ >= page_limit ||
-            (ownership_state != NULL && ownership_state[page_id] != 0u)) {
+            (ownership_state != NULL && ownership_state[page_id] != RBT_VALIDATION_UNOWNED)) {
             result = -EBADMSG;
             break;
         }
@@ -871,7 +880,7 @@ static int rbt_read_overflow_from(struct rbt *tree, struct rbt_txn *transaction,
             break;
         }
         if (ownership_state != NULL) {
-            ownership_state[page_id] = 3u;
+            ownership_state[page_id] = RBT_VALIDATION_OVERFLOW;
         }
         if (inout_overflow_pages != NULL) {
             ++*inout_overflow_pages;
@@ -1138,9 +1147,8 @@ static int rbt_find_leaf(struct rbt *tree, const unsigned char *key, uint32_t ke
     }
 }
 
-static int rbt_leaf_lower_bound(const struct rbt *tree, const unsigned char *page, uint32_t count,
-                                const unsigned char *key, uint32_t key_size,
-                                uint32_t *out_position) {
+static int rbt_leaf_lower_bound(const unsigned char *page, uint32_t count, const unsigned char *key,
+                                uint32_t key_size, uint32_t *out_position) {
     uint32_t first = 0u;
     uint32_t length = count;
 
@@ -1164,7 +1172,6 @@ static int rbt_leaf_lower_bound(const struct rbt *tree, const unsigned char *pag
         }
     }
     *out_position = first;
-    (void)tree;
     return 0;
 }
 
@@ -1189,44 +1196,123 @@ static void rbt_txn_destroy(struct rbt_txn *transaction) {
     for (index = 0u; index < transaction->page_count; ++index) {
         free(transaction->pages[index].data);
     }
+    free(transaction->page_index);
     free(transaction->pages);
 }
 
-static struct rbt_txn_page *rbt_txn_find_page(struct rbt_txn *transaction, uint64_t page_id) {
-    size_t index;
+static size_t rbt_txn_page_hash(uint64_t page_id) {
+    page_id ^= page_id >> 30u;
+    page_id *= UINT64_C(0xbf58476d1ce4e5b9);
+    page_id ^= page_id >> 27u;
+    page_id *= UINT64_C(0x94d049bb133111eb);
+    page_id ^= page_id >> 31u;
+    return (size_t)page_id;
+}
 
-    for (index = 0u; index < transaction->page_count; ++index) {
-        if (transaction->pages[index].page_id == page_id) {
-            return &transaction->pages[index];
+static void rbt_txn_index_insert(size_t *page_index, size_t capacity, uint64_t page_id,
+                                 size_t transaction_index) {
+    size_t slot = rbt_txn_page_hash(page_id) & (capacity - 1u);
+
+    while (page_index[slot] != 0u) {
+        slot = (slot + 1u) & (capacity - 1u);
+    }
+    page_index[slot] = transaction_index + 1u;
+}
+
+static struct rbt_txn_page *rbt_txn_find_page(struct rbt_txn *transaction, uint64_t page_id) {
+    size_t slot;
+    size_t probes;
+
+    if (transaction->page_index_capacity == 0u) {
+        return NULL;
+    }
+    slot = rbt_txn_page_hash(page_id) & (transaction->page_index_capacity - 1u);
+    for (probes = 0u; probes < transaction->page_index_capacity; ++probes) {
+        size_t entry = transaction->page_index[slot];
+        size_t transaction_index;
+
+        if (entry == 0u) {
+            return NULL;
         }
+        transaction_index = entry - 1u;
+        if (transaction_index < transaction->page_count &&
+            transaction->pages[transaction_index].page_id == page_id) {
+            return &transaction->pages[transaction_index];
+        }
+        slot = (slot + 1u) & (transaction->page_index_capacity - 1u);
     }
     return NULL;
 }
 
-static int rbt_txn_reserve_page(struct rbt_txn *transaction, uint64_t page_id,
-                                struct rbt_txn_page **out_page) {
-    struct rbt_txn_page *expanded;
-    size_t capacity;
+static int rbt_txn_add_page(struct rbt_txn *transaction, uint64_t page_id, unsigned char *data,
+                            struct rbt_txn_page **out_page) {
+    struct rbt_txn_page *expanded_pages = NULL;
+    size_t *expanded_index = NULL;
+    size_t page_capacity = transaction->page_capacity;
+    size_t page_index_capacity = transaction->page_index_capacity;
+    size_t next_page_count;
+    size_t index;
 
+    if (transaction->page_count == SIZE_MAX || rbt_txn_find_page(transaction, page_id) != NULL) {
+        return transaction->page_count == SIZE_MAX ? -ENOMEM : -EBADMSG;
+    }
+    next_page_count = transaction->page_count + 1u;
     if (transaction->page_count == transaction->page_capacity) {
-        capacity = transaction->page_capacity == 0u ? 8u : transaction->page_capacity * 2u;
-        if (capacity < transaction->page_capacity || capacity > SIZE_MAX / sizeof(*expanded)) {
+        page_capacity = transaction->page_capacity == 0u ? 8u : transaction->page_capacity * 2u;
+        if (page_capacity < transaction->page_capacity ||
+            page_capacity > SIZE_MAX / sizeof(*expanded_pages)) {
             return -ENOMEM;
         }
-        expanded = realloc(transaction->pages, capacity * sizeof(*expanded));
-        if (expanded == NULL) {
+        expanded_pages = malloc(page_capacity * sizeof(*expanded_pages));
+        if (expanded_pages == NULL) {
             return -ENOMEM;
         }
-        transaction->pages = expanded;
-        transaction->page_capacity = capacity;
+        if (transaction->page_count != 0u) {
+            memcpy(expanded_pages, transaction->pages,
+                   transaction->page_count * sizeof(*expanded_pages));
+        }
+    }
+    if (page_index_capacity == 0u) {
+        page_index_capacity = 16u;
+    }
+    while (next_page_count > page_index_capacity / 2u) {
+        if (page_index_capacity > SIZE_MAX / 2u) {
+            free(expanded_pages);
+            return -ENOMEM;
+        }
+        page_index_capacity *= 2u;
+    }
+    if (page_index_capacity != transaction->page_index_capacity) {
+        if (page_index_capacity > SIZE_MAX / sizeof(*expanded_index)) {
+            free(expanded_pages);
+            return -ENOMEM;
+        }
+        expanded_index = calloc(page_index_capacity, sizeof(*expanded_index));
+        if (expanded_index == NULL) {
+            free(expanded_pages);
+            return -ENOMEM;
+        }
+        for (index = 0u; index < transaction->page_count; ++index) {
+            rbt_txn_index_insert(expanded_index, page_index_capacity,
+                                 transaction->pages[index].page_id, index);
+        }
+    }
+    if (expanded_pages != NULL) {
+        free(transaction->pages);
+        transaction->pages = expanded_pages;
+        transaction->page_capacity = page_capacity;
+    }
+    if (expanded_index != NULL) {
+        free(transaction->page_index);
+        transaction->page_index = expanded_index;
+        transaction->page_index_capacity = page_index_capacity;
     }
     *out_page = &transaction->pages[transaction->page_count];
-    (*out_page)->data = malloc((size_t)transaction->tree->storage.page_size);
-    if ((*out_page)->data == NULL) {
-        return -ENOMEM;
-    }
+    (*out_page)->data = data;
     (*out_page)->page_id = page_id;
     (*out_page)->dirty = false;
+    rbt_txn_index_insert(transaction->page_index, transaction->page_index_capacity, page_id,
+                         transaction->page_count);
     ++transaction->page_count;
     return 0;
 }
@@ -1240,17 +1326,21 @@ static int rbt_txn_load_page(struct rbt_txn *transaction, uint64_t page_id,
         return -EBADMSG;
     }
     if (transaction_page == NULL) {
+        unsigned char *data;
+
         if (page_id >= transaction->tree->metadata.next_page_id) {
             return -EBADMSG;
         }
-        result = rbt_txn_reserve_page(transaction, page_id, &transaction_page);
-        if (result != 0) {
-            return result;
+        data = malloc((size_t)transaction->tree->storage.page_size);
+        if (data == NULL) {
+            return -ENOMEM;
         }
-        result = rbt_read_page(transaction->tree, page_id, transaction_page->data);
+        result = rbt_read_page(transaction->tree, page_id, data);
+        if (result == 0) {
+            result = rbt_txn_add_page(transaction, page_id, data, &transaction_page);
+        }
         if (result != 0) {
-            free(transaction_page->data);
-            --transaction->page_count;
+            free(data);
             return result;
         }
     }
@@ -1292,16 +1382,21 @@ static int rbt_txn_mark_dirty(struct rbt_txn *transaction, uint64_t page_id) {
 static int rbt_txn_new_page(struct rbt_txn *transaction, uint64_t page_id,
                             unsigned char **out_page) {
     struct rbt_txn_page *page;
+    unsigned char *data;
     int result;
 
     if (rbt_txn_find_page(transaction, page_id) != NULL) {
         return -EBADMSG;
     }
-    result = rbt_txn_reserve_page(transaction, page_id, &page);
+    data = malloc((size_t)transaction->tree->storage.page_size);
+    if (data == NULL) {
+        return -ENOMEM;
+    }
+    result = rbt_txn_add_page(transaction, page_id, data, &page);
     if (result != 0) {
+        free(data);
         return result;
     }
-    memset(page->data, 0, (size_t)transaction->tree->storage.page_size);
     page->dirty = true;
     *out_page = page->data;
     return 0;
@@ -1480,8 +1575,7 @@ static int rbt_leaf_encode(const struct rbt *tree, unsigned char *page, uint64_t
     rbt_store_u64(page + RBT_PAGE_LINK0_OFFSET, next);
     rbt_store_u64(page + RBT_PAGE_LINK1_OFFSET, previous);
     for (index = 0u; index < count; ++index) {
-        if (!rbt_page_add_cell(page, tree->storage.page_size, cells[index].data,
-                               cells[index].size)) {
+        if (!rbt_page_add_cell(page, cells[index].data, cells[index].size)) {
             return -EINVAL;
         }
     }
@@ -1752,7 +1846,7 @@ static int rbt_internal_encode(const struct rbt *tree, unsigned char *page, uint
         }
         rbt_store_u64(cell, image->children[index + 1u]);
         memcpy(cell + sizeof(uint64_t), image->keys[index].data, image->keys[index].size);
-        if (!rbt_page_add_cell(page, tree->storage.page_size, cell, cell_size)) {
+        if (!rbt_page_add_cell(page, cell, cell_size)) {
             free(cell);
             return -EINVAL;
         }
@@ -3186,8 +3280,7 @@ int rbt_get(struct rbt *tree, const struct rbt_record *key_record, struct rbt_ro
         result = rbt_find_leaf(tree, encoded_key, encoded_size, page, &header);
     }
     if (result == 0) {
-        result =
-            rbt_leaf_lower_bound(tree, page, header.count, encoded_key, encoded_size, &position);
+        result = rbt_leaf_lower_bound(page, header.count, encoded_key, encoded_size, &position);
     }
     if (result == 0) {
         if (position == header.count) {
@@ -3247,8 +3340,7 @@ int rbt_put(struct rbt *tree, const struct rbt_record *record, bool *out_inserte
         rbt_txn_destroy(&transaction);
         return result;
     }
-    result =
-        rbt_leaf_lower_bound(tree, leaf, leaf_header.count, encoded_key, encoded_size, &position);
+    result = rbt_leaf_lower_bound(leaf, leaf_header.count, encoded_key, encoded_size, &position);
     if (result != 0) {
         free(encoded_key);
         rbt_txn_destroy(&transaction);
@@ -3443,8 +3535,7 @@ int rbt_delete(struct rbt *tree, const struct rbt_record *key_record, bool *out_
         rbt_txn_destroy(&transaction);
         return result;
     }
-    result =
-        rbt_leaf_lower_bound(tree, leaf, leaf_header.count, encoded_key, encoded_size, &position);
+    result = rbt_leaf_lower_bound(leaf, leaf_header.count, encoded_key, encoded_size, &position);
     if (result == 0) {
         if (position == leaf_header.count) {
             result = -ENOENT;
@@ -3576,7 +3667,7 @@ int rbt_scan(struct rbt *tree, const struct rbt_record *begin, const struct rbt_
             break;
         }
         if (first_leaf && begin != NULL) {
-            result = rbt_leaf_lower_bound(tree, page, header.count, begin_key, begin_size, &index);
+            result = rbt_leaf_lower_bound(page, header.count, begin_key, begin_size, &index);
         }
         while (result == 0 && index < header.count) {
             uint32_t cell_size;
@@ -3701,7 +3792,7 @@ static int rbt_validate_node(struct rbt_validation *validation, uint64_t page_id
     uint32_t index;
 
     if (page_id == 0u || page_id >= tree->metadata.next_page_id ||
-        validation->state[page_id] != 0u) {
+        validation->state[page_id] != RBT_VALIDATION_UNOWNED) {
         rbt_set_error(validation, "tree page has an invalid or shared reference");
         return -EBADMSG;
     }
@@ -3718,7 +3809,7 @@ static int rbt_validate_node(struct rbt_validation *validation, uint64_t page_id
         free(page);
         return result != 0 ? result : -EBADMSG;
     }
-    validation->state[page_id] = 2u;
+    validation->state[page_id] = RBT_VALIDATION_TREE;
     ++validation->tree_pages;
     if (expected_level == 0u) {
         uint32_t minimum_count = (tree->leaf_capacity + 1u) / 2u;
@@ -3936,7 +4027,7 @@ static int rbt_validate_all(struct rbt *tree, struct rbt_stats *out_stats, char 
         free(page);
         return -ENOMEM;
     }
-    validation.state[0] = 1u;
+    validation.state[0] = RBT_VALIDATION_METADATA;
     for (page_id = 0u; page_id < tree->metadata.schema_page_count; ++page_id) {
         uint64_t schema_page = tree->schema_pages[page_id];
         struct rbt_page_header header;
@@ -3951,7 +4042,8 @@ static int rbt_validate_all(struct rbt *tree, struct rbt_stats *out_stats, char 
                            ? remaining
                            : tree->storage.page_size - RBT_PAGE_HEADER_SIZE);
 
-        if (schema_page == 0u || schema_page >= page_count || validation.state[schema_page] != 0u ||
+        if (schema_page == 0u || schema_page >= page_count ||
+            validation.state[schema_page] != RBT_VALIDATION_UNOWNED ||
             rbt_read_typed_page(tree, schema_page, RBT_PAGE_SCHEMA, page, &header) != 0 ||
             header.aux != page_id || header.count != expected_count ||
             header.free_lower != RBT_PAGE_HEADER_SIZE + expected_count ||
@@ -3961,7 +4053,7 @@ static int rbt_validate_all(struct rbt *tree, struct rbt_stats *out_stats, char 
             result = -EBADMSG;
             goto cleanup;
         }
-        validation.state[schema_page] = 1u;
+        validation.state[schema_page] = RBT_VALIDATION_SCHEMA;
     }
     result = rbt_validate_node(&validation, tree->metadata.root_page_id, tree->metadata.height - 1u,
                                true, NULL, 0u, NULL, 0u, &minimum, &minimum_size);
@@ -3987,7 +4079,7 @@ static int rbt_validate_all(struct rbt *tree, struct rbt_stats *out_stats, char 
     while (page_id != 0u) {
         struct rbt_page_header header;
 
-        if (page_id >= page_count || validation.state[page_id] != 0u) {
+        if (page_id >= page_count || validation.state[page_id] != RBT_VALIDATION_UNOWNED) {
             rbt_set_error(&validation, "freelist cycle or shared page");
             result = -EBADMSG;
             goto cleanup;
@@ -4001,12 +4093,12 @@ static int rbt_validate_all(struct rbt *tree, struct rbt_stats *out_stats, char 
             result = result != 0 ? result : -EBADMSG;
             goto cleanup;
         }
-        validation.state[page_id] = 4u;
+        validation.state[page_id] = RBT_VALIDATION_FREELIST;
         ++free_pages;
         page_id = header.link0;
     }
     for (page_id = 0u; page_id < page_count; ++page_id) {
-        if (validation.state[page_id] == 0u) {
+        if (validation.state[page_id] == RBT_VALIDATION_UNOWNED) {
             rbt_set_error(&validation, "allocated page has no unique owner");
             result = -EBADMSG;
             goto cleanup;
