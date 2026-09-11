@@ -1,6 +1,8 @@
 # Learn
 
-Goal: standardize long-term learning from web resources into archived sources, reproducible demos, and reusable technical knowledge.
+Goal: turn web resources into durable knowledge and the smallest complete
+engineering artifact that serves the user's actual goal. A demo is one possible
+experiment, not the default definition of done.
 
 ## 1. Trigger
 
@@ -17,7 +19,7 @@ learning/
     README.md
     source.md
     exploration.md
-    demo/
+    demo/ | lib/ | tool/ | benchmark/
       CMakeLists.txt
       README.md
       src/
@@ -51,13 +53,13 @@ learning/
               |
               v
 +---------------------------+---- no ---->+---------------------------+
-| Needs reproduction?       |             | Write structured summary  |
+| Needs executable proof?   |             | Write structured summary  |
 +-------------+-------------+             +---------------------------+
               | yes
               v
 +---------------------------+
-| Build standard demo       |
-| project folder, CMake     |
+| Select artifact by goal   |
+| demo/lib/tool/benchmark   |
 +-------------+-------------+
               |
               v
@@ -80,19 +82,38 @@ learning/
   particular artifact state.
 - If the page cannot be fully archived, save a summary and note the limitation.
 
-## 5. Technical Blog Reproduction
+## 5. Technical Learning Artifacts
 
-- Identify the smallest mechanism worth reproducing.
-- Prefer a minimal C++ prototype for systems topics.
-- If the user asks to extract an open-source module, isolate the smallest base implementation first.
-- Every demo must be a directory with a standard project layout, not a loose single file.
-- Prefer CMake for C/C++ demos and use out-of-source builds under `demo/build/`.
-- Keep the demo small and focused on the article's core claim.
+- Identify the smallest mechanism worth reproducing, then select the artifact
+  type from the requested outcome.
+- Use a `demo/` only for a bounded experiment or explanation.
+- Use a `lib/` when callers need a reusable API, a `tool/` for an operational
+  workflow, and a `benchmark/` for a performance claim.
+- If the user requests production use, a demo or happy-path prototype is not a
+  valid final deliverable.
+- A production library must define ownership, error and retry semantics,
+  compatibility/versioning, resource bounds, concurrency boundaries,
+  persistence/recovery where applicable, and installation/consumption steps.
+- Generalize domain types and interfaces when the mechanism is reusable. Do not
+  bake a source article's sample types or one workload into the core unless the
+  user explicitly requests that specialization.
+- Prefer the smallest complete implementation, not the fewest source lines.
+  Completeness includes failure paths, observability, tests, and documentation.
+- If the user asks to extract an open-source module, isolate the smallest
+  reusable base implementation first.
+- Every executable artifact must be a directory with a standard project layout,
+  not a loose source file.
+- Prefer CMake for C/C++ artifacts and use out-of-source builds.
 - Use the natural input shape of the target problem. For example, a sorting demo should accept a sequence such as `std::vector<int>`, not an artificial record type unless the record is the real subject.
 - Add comments for non-obvious concepts, especially names introduced by the article. A reader should understand what the concept means before reading the implementation details.
 - Use practical test data that represents realistic usage, not only hand-picked toy values.
 - Add comparison tests against a baseline or simpler alternative. If an idea cannot show when it helps, it is not yet useful guidance for practice.
 - Record build commands, run commands, observed output, and mismatches.
+- Do not claim production readiness from unit tests alone. Match evidence to the
+  risk surface: differential or independent oracles, corruption and fault
+  injection, recovery/reopen tests, sanitizer/safety tooling, release builds,
+  install/consumer tests, and target-machine benchmarks when performance is a
+  claim.
 
 Recommended C/C++ demo layout:
 
@@ -117,7 +138,8 @@ macOS notes:
 - `README.md` contains final conclusions, architecture, demo result, and next steps.
 - `source.md` contains URL, archive path, author/source metadata, and access date.
 - `exploration.md` records the step-by-step path, including failed attempts.
-- `demo/` contains a runnable standard project, including build files and source directories.
+- The selected executable artifact directory contains a runnable standard
+  project, including build files and source directories.
 - `evidence/` contains logs, outputs, screenshots, and benchmark data.
 - Demo source, fixtures, and tests are maintained evidence unless their subtree
   declares an explicit generation contract. Generated build output remains
@@ -149,9 +171,11 @@ macOS notes:
 - Is the source revision, version, or digest recorded where relevant?
 - Is the source archived or limitation documented?
 - Is the core technical claim identified?
-- Is there a demo, or a clear reason why no demo is needed?
-- If there is a demo, is it a standard project folder rather than a loose source file?
-- Does the demo use the natural input shape of the problem?
+- Does the artifact type match the user's goal rather than defaulting to a demo?
+- If production use was requested, is there a reusable API plus explicit
+  compatibility, failure, concurrency, recovery, and verification contracts?
+- Is the executable artifact a standard project folder rather than loose source?
+- Does it use a reusable input model rather than an accidental example type?
 - Are important article-specific concepts explained in comments?
 - Does the demo include realistic data and baseline comparison?
 - Are commands and results reproducible?
