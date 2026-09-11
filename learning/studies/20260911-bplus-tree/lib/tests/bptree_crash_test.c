@@ -16,7 +16,7 @@ enum {
     TEST_WAL_CHECKSUM_OFFSET = 80,
     TEST_WAL_HEADER_SIZE = 96,
     TEST_WAL_RECORD_SIZE = 8 + TEST_PAGE_SIZE,
-    TEST_WAL_MAX_TRANSACTION_PAGES = 1024
+    TEST_WAL_MAX_TRANSACTION_PAGES = 256
 };
 
 static void store_u32(unsigned char *data, uint32_t value) {
