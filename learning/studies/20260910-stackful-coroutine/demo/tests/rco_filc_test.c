@@ -2,6 +2,7 @@
 
 #include "rco.h"
 #include "rco_local.h"
+#include "rco_pool.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -132,12 +133,40 @@ static void test_local_state_config_guards(void)
     CHECK(runtime == NULL);
 }
 
+static void test_pool_allocation_and_guards(void)
+{
+    struct rco_pool *pool = NULL;
+    const struct rco_pool_config config = {
+        .worker_count = 2,
+        .max_jobs = 8,
+        .dispatch_batch = 2,
+        .first_cpu = -1,
+    };
+    const struct rco_task_spec spec = {
+        .entry = never_run,
+    };
+
+    CHECK(rco_current_worker() == SIZE_MAX);
+    CHECK(rco_submit_local(&spec, NULL) == -EPERM);
+    CHECK(rco_pool_create(&config, &pool) == 0);
+    CHECK(pool != NULL);
+    CHECK(rco_pool_submit(pool, &spec, NULL, NULL) == -EPERM);
+    CHECK(rco_pool_destroy(pool) == 0);
+
+    struct rco_pool_config invalid = config;
+    invalid.worker_count = 0;
+    pool = NULL;
+    CHECK(rco_pool_create(&invalid, &pool) == -EINVAL);
+    CHECK(pool == NULL);
+}
+
 int main(void)
 {
     test_public_guards_outside_runtime();
     test_local_state_config_guards();
+    test_pool_allocation_and_guards();
     test_allocation_limits_and_teardown();
     test_repeated_create_destroy();
-    puts("FIL-C rco tests passed: 4 suites");
+    puts("FIL-C rco tests passed: 5 suites");
     return 0;
 }
