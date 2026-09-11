@@ -138,6 +138,7 @@ btree_status btree_delete(btree *tree, const void *key, bool *removed_out);
  * Scan [begin_key, end_key). A NULL bound is unbounded. The callback may return
  * BTREE_SCAN_STOP, causing btree_scan to return BTREE_STOPPED. Put, delete, and
  * nested scan calls on the same tree return BTREE_BUSY while a callback runs.
+ * The callback must not call btree_close on the active tree.
  */
 btree_status btree_scan(btree *tree, const void *begin_key, const void *end_key,
                         btree_scan_fn callback, void *context);
