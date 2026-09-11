@@ -1279,7 +1279,7 @@ static int rbt_txn_add_page(struct rbt_txn *transaction, uint64_t page_id, unsig
             page_capacity > SIZE_MAX / sizeof(*expanded_pages)) {
             return -ENOMEM;
         }
-        expanded_pages = malloc(page_capacity * sizeof(*expanded_pages));
+        expanded_pages = calloc(page_capacity, sizeof(*expanded_pages));
         if (expanded_pages == NULL) {
             return -ENOMEM;
         }
@@ -1657,8 +1657,15 @@ static int rbt_txn_build_leaf_cell(struct rbt_txn *transaction, const unsigned c
     unsigned char *cell;
 
     if (existing_cell != NULL) {
+        if (existing_cell->data == NULL || existing_cell->size < RBT_LEAF_CELL_HEADER_SIZE) {
+            return -EBADMSG;
+        }
         uint32_t existing_key_size = rbt_load_u32(existing_cell->data);
 
+        if (existing_key_size > existing_cell->size - RBT_LEAF_CELL_HEADER_SIZE ||
+            RBT_LEAF_CELL_HEADER_SIZE + existing_key_size + directory_size > existing_cell->size) {
+            return -EBADMSG;
+        }
         existing_descriptors = existing_cell->data + RBT_LEAF_CELL_HEADER_SIZE + existing_key_size;
     }
     for (index = 0u; index < tree->schema.value_column_count; ++index) {
@@ -3116,26 +3123,22 @@ static int rbt_create_pages(struct rbt *tree, const unsigned char *schema_data,
     uint64_t root_page_id = schema_pages + 1u;
     size_t update_count = (size_t)schema_pages + 2u;
     struct rbt_page_update *updates;
-    unsigned char **pages;
+    unsigned char *pages;
     struct rbt_metadata metadata;
     uint64_t index;
     size_t offset = 0u;
     int result;
 
+    if (update_count > SIZE_MAX / (size_t)tree->storage.page_size) {
+        return -ENOMEM;
+    }
     updates = calloc(update_count, sizeof(*updates));
-    pages = calloc(update_count, sizeof(*pages));
+    pages = calloc(update_count, (size_t)tree->storage.page_size);
     tree->schema_pages = calloc((size_t)schema_pages, sizeof(*tree->schema_pages));
     if (updates == NULL || pages == NULL || tree->schema_pages == NULL) {
         free(updates);
         free(pages);
         return -ENOMEM;
-    }
-    for (index = 0u; index < update_count; ++index) {
-        pages[index] = malloc((size_t)tree->storage.page_size);
-        if (pages[index] == NULL) {
-            result = -ENOMEM;
-            goto cleanup;
-        }
     }
     metadata.root_page_id = root_page_id;
     metadata.free_head = 0u;
@@ -3145,42 +3148,38 @@ static int rbt_create_pages(struct rbt *tree, const unsigned char *schema_data,
     metadata.schema_head = 1u;
     metadata.schema_size = schema_size;
     metadata.schema_page_count = schema_pages;
-    rbt_metadata_encode(pages[0], tree, &metadata);
+    rbt_metadata_encode(pages, tree, &metadata);
     updates[0].page_id = 0u;
-    updates[0].data = pages[0];
+    updates[0].data = pages;
     for (index = 0u; index < schema_pages; ++index) {
+        unsigned char *page = pages + ((size_t)index + 1u) * (size_t)tree->storage.page_size;
         uint32_t chunk =
             (uint32_t)(schema_size - offset < payload ? schema_size - offset : payload);
         uint64_t page_id = index + 1u;
 
         tree->schema_pages[index] = page_id;
-        rbt_page_initialize(pages[index + 1u], tree->storage.page_size, page_id, RBT_PAGE_SCHEMA,
-                            chunk, 0u);
-        rbt_store_u32(pages[index + 1u] + RBT_PAGE_FREE_LOWER_OFFSET, RBT_PAGE_HEADER_SIZE + chunk);
-        rbt_store_u64(pages[index + 1u] + RBT_PAGE_LINK0_OFFSET,
-                      index + 1u == schema_pages ? 0u : page_id + 1u);
-        rbt_store_u64(pages[index + 1u] + RBT_PAGE_AUX_OFFSET, index);
-        memcpy(pages[index + 1u] + RBT_PAGE_HEADER_SIZE, schema_data + offset, chunk);
+        rbt_page_initialize(page, tree->storage.page_size, page_id, RBT_PAGE_SCHEMA, chunk, 0u);
+        rbt_store_u32(page + RBT_PAGE_FREE_LOWER_OFFSET, RBT_PAGE_HEADER_SIZE + chunk);
+        rbt_store_u64(page + RBT_PAGE_LINK0_OFFSET, index + 1u == schema_pages ? 0u : page_id + 1u);
+        rbt_store_u64(page + RBT_PAGE_AUX_OFFSET, index);
+        memcpy(page + RBT_PAGE_HEADER_SIZE, schema_data + offset, chunk);
         updates[index + 1u].page_id = page_id;
-        updates[index + 1u].data = pages[index + 1u];
+        updates[index + 1u].data = page;
         offset += chunk;
     }
-    rbt_page_initialize(pages[update_count - 1u], tree->storage.page_size, root_page_id,
-                        RBT_PAGE_LEAF, 0u, 0u);
+    rbt_page_initialize(pages + (update_count - 1u) * (size_t)tree->storage.page_size,
+                        tree->storage.page_size, root_page_id, RBT_PAGE_LEAF, 0u, 0u);
     updates[update_count - 1u].page_id = root_page_id;
-    updates[update_count - 1u].data = pages[update_count - 1u];
+    updates[update_count - 1u].data = pages + (update_count - 1u) * (size_t)tree->storage.page_size;
     for (index = 0u; index < update_count; ++index) {
-        rbt_page_checksum_store(pages[index], tree->storage.page_size);
+        rbt_page_checksum_store(pages + (size_t)index * (size_t)tree->storage.page_size,
+                                tree->storage.page_size);
     }
     result = rbt_commit(tree, updates, update_count);
     if (result == 0) {
         tree->metadata = metadata;
     }
 
-cleanup:
-    for (index = 0u; index < update_count; ++index) {
-        free(pages[index]);
-    }
     free(pages);
     free(updates);
     return result;
