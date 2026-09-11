@@ -5,35 +5,35 @@ Test project /root/recallfs/.tmp/rco-cacs/work/sanitizer-build
       Start  2: rco_pool_sysv
  2/34 Test  #2: rco_pool_sysv ..................................   Passed    0.02 sec
       Start  3: rco_local_state
- 3/34 Test  #3: rco_local_state ................................   Passed    0.04 sec
+ 3/34 Test  #3: rco_local_state ................................   Passed    0.03 sec
       Start  4: rco_preempt_sysv
  4/34 Test  #4: rco_preempt_sysv ...............................   Passed    0.37 sec
       Start  5: rco_native_cacs
  5/34 Test  #5: rco_native_cacs ................................   Passed    0.01 sec
       Start  6: rco_local_state_cacs
- 6/34 Test  #6: rco_local_state_cacs ...........................   Passed    0.04 sec
+ 6/34 Test  #6: rco_local_state_cacs ...........................   Passed    0.03 sec
       Start  7: rco_preempt_cacs
  7/34 Test  #7: rco_preempt_cacs ...............................   Passed    0.37 sec
       Start  8: rco_cacs_abi_cacs
  8/34 Test  #8: rco_cacs_abi_cacs ..............................   Passed    0.01 sec
       Start  9: rco_cacs_codegen_cacs
- 9/34 Test  #9: rco_cacs_codegen_cacs ..........................   Passed    0.39 sec
+ 9/34 Test  #9: rco_cacs_codegen_cacs ..........................   Passed    0.36 sec
       Start 10: rco_native_cacs_preserve_none
-10/34 Test #10: rco_native_cacs_preserve_none ..................   Passed    0.02 sec
+10/34 Test #10: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
       Start 11: rco_local_state_cacs_preserve_none
-11/34 Test #11: rco_local_state_cacs_preserve_none .............   Passed    0.04 sec
+11/34 Test #11: rco_local_state_cacs_preserve_none .............   Passed    0.03 sec
       Start 12: rco_preempt_cacs_preserve_none
 12/34 Test #12: rco_preempt_cacs_preserve_none .................   Passed    0.37 sec
       Start 13: rco_cacs_abi_cacs_preserve_none
 13/34 Test #13: rco_cacs_abi_cacs_preserve_none ................   Passed    0.01 sec
       Start 14: rco_cacs_codegen_cacs_preserve_none
-14/34 Test #14: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.36 sec
+14/34 Test #14: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.37 sec
       Start 15: rco_pool_cacs
 15/34 Test #15: rco_pool_cacs ..................................   Passed    0.02 sec
       Start 16: rco_pool_cacs_preserve_none
 16/34 Test #16: rco_pool_cacs_preserve_none ....................   Passed    0.02 sec
       Start 17: rco_cacs_preserve_none_rejects_normal_caller
-17/34 Test #17: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.09 sec
+17/34 Test #17: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.08 sec
       Start 18: rco_pool_bench_smoke_sysv
 18/34 Test #18: rco_pool_bench_smoke_sysv ......................   Passed    0.01 sec
       Start 19: rco_pool_bench_smoke_cacs
@@ -43,32 +43,32 @@ Test project /root/recallfs/.tmp/rco-cacs/work/sanitizer-build
       Start 21: rco_high_concurrency_arguments
 21/34 Test #21: rco_high_concurrency_arguments .................   Passed    0.12 sec
       Start 22: rco_high_concurrency_oracle
-22/34 Test #22: rco_high_concurrency_oracle ....................   Passed    0.16 sec
+22/34 Test #22: rco_high_concurrency_oracle ....................   Passed    0.17 sec
       Start 23: rco_high_concurrency_csv
 23/34 Test #23: rco_high_concurrency_csv .......................   Passed    0.15 sec
       Start 24: rco_high_concurrency_timeout
-24/34 Test #24: rco_high_concurrency_timeout ...................   Passed    0.79 sec
+24/34 Test #24: rco_high_concurrency_timeout ...................   Passed    0.80 sec
       Start 25: rco_high_concurrency_integration
-25/34 Test #25: rco_high_concurrency_integration ...............   Passed    0.32 sec
+25/34 Test #25: rco_high_concurrency_integration ...............   Passed    0.31 sec
       Start 26: epoll_l4_state_machine
 26/34 Test #26: epoll_l4_state_machine .........................   Passed    0.01 sec
       Start 27: l4_bench_process_resources
 27/34 Test #27: l4_bench_process_resources .....................   Passed    0.01 sec
       Start 28: l4_bench_harness
-28/34 Test #28: l4_bench_harness ...............................   Passed    5.81 sec
+28/34 Test #28: l4_bench_harness ...............................   Passed    4.97 sec
       Start 29: rco_l4_wait_failure
 29/34 Test #29: rco_l4_wait_failure ............................   Passed    0.01 sec
       Start 30: rco_l4_e2e
-30/34 Test #30: rco_l4_e2e .....................................   Passed    1.13 sec
+30/34 Test #30: rco_l4_e2e .....................................   Passed    1.14 sec
       Start 31: epoll_l4_e2e
-31/34 Test #31: epoll_l4_e2e ...................................   Passed    1.15 sec
+31/34 Test #31: epoll_l4_e2e ...................................   Passed    1.12 sec
       Start 32: cacs_l4_e2e
-32/34 Test #32: cacs_l4_e2e ....................................   Passed    1.14 sec
+32/34 Test #32: cacs_l4_e2e ....................................   Passed    1.13 sec
       Start 33: cacs_preserve_none_l4_e2e
-33/34 Test #33: cacs_preserve_none_l4_e2e ......................   Passed    1.14 sec
+33/34 Test #33: cacs_preserve_none_l4_e2e ......................   Passed    1.12 sec
       Start 34: epoll_l4_rlimit
 34/34 Test #34: epoll_l4_rlimit ................................   Passed    0.04 sec
 
 100% tests passed, 0 tests failed out of 34
 
-Total Test time (real) =  14.23 sec
+Total Test time (real) =  13.28 sec

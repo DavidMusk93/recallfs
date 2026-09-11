@@ -4,7 +4,7 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o0-build
       Start  1: rco_native
  1/28 Test  #1: rco_native .....................................   Passed    0.01 sec
       Start  2: rco_pool_sysv
- 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.02 sec
+ 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.03 sec
       Start  3: rco_local_state
  3/28 Test  #3: rco_local_state ................................   Passed    0.06 sec
       Start  4: rco_preempt_sysv
@@ -22,11 +22,11 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o0-build
       Start 10: rco_cacs_abi_cacs
 10/28 Test #10: rco_cacs_abi_cacs ..............................   Passed    0.01 sec
       Start 11: rco_cacs_codegen_cacs
-11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.37 sec
+11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.40 sec
       Start 12: rco_native_cacs_preserve_none
 12/28 Test #12: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
       Start 13: rco_local_state_cacs_preserve_none
-13/28 Test #13: rco_local_state_cacs_preserve_none .............   Passed    0.07 sec
+13/28 Test #13: rco_local_state_cacs_preserve_none .............   Passed    0.06 sec
       Start 14: rco_preempt_cacs_preserve_none
 14/28 Test #14: rco_preempt_cacs_preserve_none .................   Passed    0.37 sec
       Start 15: rco_guard_page_cacs_preserve_none
@@ -34,13 +34,13 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o0-build
       Start 16: rco_cacs_abi_cacs_preserve_none
 16/28 Test #16: rco_cacs_abi_cacs_preserve_none ................   Passed    0.01 sec
       Start 17: rco_cacs_codegen_cacs_preserve_none
-17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.37 sec
+17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.38 sec
       Start 18: rco_pool_cacs
 18/28 Test #18: rco_pool_cacs ..................................   Passed    0.03 sec
       Start 19: rco_pool_cacs_preserve_none
-19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.02 sec
+19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.03 sec
       Start 20: rco_cacs_preserve_none_rejects_normal_caller
-20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.09 sec
+20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.10 sec
       Start 21: rco_pool_bench_smoke_sysv
 21/28 Test #21: rco_pool_bench_smoke_sysv ......................   Passed    0.01 sec
       Start 22: rco_pool_bench_smoke_cacs
@@ -50,17 +50,17 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o0-build
       Start 24: rco_high_concurrency_arguments
 24/28 Test #24: rco_high_concurrency_arguments .................   Passed    0.12 sec
       Start 25: rco_high_concurrency_oracle
-25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.16 sec
+25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.17 sec
       Start 26: rco_high_concurrency_csv
 26/28 Test #26: rco_high_concurrency_csv .......................   Passed    0.15 sec
       Start 27: rco_high_concurrency_timeout
-27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.79 sec
+27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.80 sec
       Start 28: rco_high_concurrency_integration
-28/28 Test #28: rco_high_concurrency_integration ...............   Passed    0.32 sec
+28/28 Test #28: rco_high_concurrency_integration ...............   Passed    0.33 sec
 
 100% tests passed, 0 tests failed out of 28
 
-Total Test time (real) =   3.99 sec
+Total Test time (real) =   4.07 sec
 
 profile=o2
 Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/work/o2-build
@@ -68,11 +68,11 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o2-build
       Start  1: rco_native
  1/28 Test  #1: rco_native .....................................   Passed    0.01 sec
       Start  2: rco_pool_sysv
- 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.01 sec
+ 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.02 sec
       Start  3: rco_local_state
  3/28 Test  #3: rco_local_state ................................   Passed    0.01 sec
       Start  4: rco_preempt_sysv
- 4/28 Test  #4: rco_preempt_sysv ...............................   Passed    0.31 sec
+ 4/28 Test  #4: rco_preempt_sysv ...............................   Passed    0.32 sec
       Start  5: rco_guard_page
  5/28 Test  #5: rco_guard_page .................................   Passed    0.04 sec
       Start  6: rco_native_cacs
@@ -80,31 +80,31 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o2-build
       Start  7: rco_local_state_cacs
  7/28 Test  #7: rco_local_state_cacs ...........................   Passed    0.01 sec
       Start  8: rco_preempt_cacs
- 8/28 Test  #8: rco_preempt_cacs ...............................   Passed    0.31 sec
+ 8/28 Test  #8: rco_preempt_cacs ...............................   Passed    0.33 sec
       Start  9: rco_guard_page_cacs
- 9/28 Test  #9: rco_guard_page_cacs ............................   Passed    0.03 sec
+ 9/28 Test  #9: rco_guard_page_cacs ............................   Passed    0.04 sec
       Start 10: rco_cacs_abi_cacs
 10/28 Test #10: rco_cacs_abi_cacs ..............................   Passed    0.00 sec
       Start 11: rco_cacs_codegen_cacs
-11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.36 sec
+11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.38 sec
       Start 12: rco_native_cacs_preserve_none
 12/28 Test #12: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
       Start 13: rco_local_state_cacs_preserve_none
 13/28 Test #13: rco_local_state_cacs_preserve_none .............   Passed    0.01 sec
       Start 14: rco_preempt_cacs_preserve_none
-14/28 Test #14: rco_preempt_cacs_preserve_none .................   Passed    0.35 sec
+14/28 Test #14: rco_preempt_cacs_preserve_none .................   Passed    0.31 sec
       Start 15: rco_guard_page_cacs_preserve_none
 15/28 Test #15: rco_guard_page_cacs_preserve_none ..............   Passed    0.04 sec
       Start 16: rco_cacs_abi_cacs_preserve_none
 16/28 Test #16: rco_cacs_abi_cacs_preserve_none ................   Passed    0.00 sec
       Start 17: rco_cacs_codegen_cacs_preserve_none
-17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.35 sec
+17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.36 sec
       Start 18: rco_pool_cacs
-18/28 Test #18: rco_pool_cacs ..................................   Passed    0.01 sec
+18/28 Test #18: rco_pool_cacs ..................................   Passed    0.02 sec
       Start 19: rco_pool_cacs_preserve_none
-19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.01 sec
+19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.02 sec
       Start 20: rco_cacs_preserve_none_rejects_normal_caller
-20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.08 sec
+20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.09 sec
       Start 21: rco_pool_bench_smoke_sysv
 21/28 Test #21: rco_pool_bench_smoke_sysv ......................   Passed    0.00 sec
       Start 22: rco_pool_bench_smoke_cacs
@@ -114,14 +114,14 @@ Test project /root/recallfs/.tmp/rco-cacs/work/o2-build
       Start 24: rco_high_concurrency_arguments
 24/28 Test #24: rco_high_concurrency_arguments .................   Passed    0.11 sec
       Start 25: rco_high_concurrency_oracle
-25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.14 sec
+25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.15 sec
       Start 26: rco_high_concurrency_csv
 26/28 Test #26: rco_high_concurrency_csv .......................   Passed    0.11 sec
       Start 27: rco_high_concurrency_timeout
-27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.79 sec
+27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.80 sec
       Start 28: rco_high_concurrency_integration
 28/28 Test #28: rco_high_concurrency_integration ...............   Passed    0.22 sec
 
 100% tests passed, 0 tests failed out of 28
 
-Total Test time (real) =   3.35 sec
+Total Test time (real) =   3.39 sec

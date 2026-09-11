@@ -19,6 +19,6 @@ test_timeout_kills_stopped_process_group (__main__.TimeoutCleanupTests) ... ok
 test_three_modes_emit_complete_csv_and_match_independent_oracle (__main__.RealProcessIntegrationTests) ... ok
 
 ----------------------------------------------------------------------
-Ran 19 tests in 0.920s
+Ran 19 tests in 0.874s
 
 OK

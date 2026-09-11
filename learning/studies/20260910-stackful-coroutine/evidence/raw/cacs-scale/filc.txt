@@ -16,6 +16,6 @@ FIL-C rco tests passed: 5 suites
 + grep -q tasks must be .tmp/rco-cacs/work/filc-parser.stderr
 + cat .tmp/rco-cacs/work/filc-parser.stdout
 + cat .tmp/rco-cacs/work/filc-parser.stderr
-tasks must be in [1, 16384]
 + printf FIL-C high-concurrency parser/bounds PASS\n
+tasks must be in [1, 16384]
 FIL-C high-concurrency parser/bounds PASS

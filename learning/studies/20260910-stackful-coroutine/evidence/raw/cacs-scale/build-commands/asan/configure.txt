@@ -13,6 +13,6 @@
 -- Performing Test RCO_COMPILER_HAS_PRESERVE_NONE
 -- Performing Test RCO_COMPILER_HAS_PRESERVE_NONE - Success
 -- Found Python3: /root/.local/bin/python3.13 (found version "3.13.12") found components: Interpreter 
--- Configuring done (0.9s)
+-- Configuring done (0.8s)
 -- Generating done (0.0s)
 -- Build files have been written to: /root/recallfs/.tmp/rco-cacs/work/sanitizer-build

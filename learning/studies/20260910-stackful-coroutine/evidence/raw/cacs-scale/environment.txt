@@ -1,4 +1,4 @@
-source_commit=6a07038f545c4c078badcf3a9c43f9ee95fcd2a1
+source_commit=d3f48b96964d39760ec75b4e5a2ce7227b9b7947
 source_root=learning/studies/20260910-stackful-coroutine/demo
 work_root=.tmp/rco-cacs/work
 clean_root=.tmp/rco-cacs/final-evidence
@@ -53,7 +53,7 @@ gcc_flags=-O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-om
 sanitizer_flags=-O1 -g -fsanitize=address,undefined -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch
 runs=5
 context_cpu=0 context_numa=0
-pool_workers=1,2,4 pool_jobs=1024 pool_iterations=8192
+pool_workers=1,2,4 pool_jobs=1024 pool_iterations=65536
 pool_preempt_quantum_ns=0,1000000 pool_first_cpu=0
 l4_parallel=4 l4_modes=5 l4_forwarders=4
 rlimit_nofile_soft=1024
@@ -69,23 +69,23 @@ tool_sha256:
 source_sha256:
 266b4138fcf349e270968f2019a287cd8a0a892905669f4a98af7f54874a5452  learning/studies/20260910-stackful-coroutine/demo/CMakeLists.txt
 f59ebe037a4fb1f2b693c6e1a342c29bfa71c3cb0db9a9102adbddde8906261a  learning/studies/20260910-stackful-coroutine/demo/README.md
-6c4ed87c7c7220689d72d6c5537304dcc91109c2b3b473b2b325c8e0954df258  learning/studies/20260910-stackful-coroutine/demo/bench/cacs_scale_evidence.sh
+701faa05bfda63c64777820d72b33b8c0a53b752cc0f4c5f49b9dd279915c53e  learning/studies/20260910-stackful-coroutine/demo/bench/cacs_scale_evidence.sh
 0616e610b9dd0b963da0c0c1221cfc13c69b86a43bb7b8fc31cdc13ef0ac6397  learning/studies/20260910-stackful-coroutine/demo/bench/l4_bench.sh
 0cab7e84c4d7376b11f6a0ccb15ff3db8c60de359dabe435e2e7606594bef6ea  learning/studies/20260910-stackful-coroutine/demo/bench/process_resources.sh
 9de36e4eec8f819d3bbfe2cc7d70bf7a9c1365e93bc94f384f41564bd2c0dcbc  learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 e7902bdc55899c93f8b8869d4fa73871a3ddd3fdc53f8d1a3f5ca0cd4538313d  learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 972ab6ab83c941cba3ffeeaefb68e16650bc4c8f2b2e6b0acb9655e4753de107  learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.py
-cb94ab9e279cff384e2d562d90911d053f4374cb29cf2e13bed62cbedbf20229  learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+91908fa6d0ebad05aa90c31d6f5bb54b4d3aa9d546e9d7b7ec2cf358f4c70d5c  learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
 439965348f55aff34ed99f02094c7c38a8aa22721a7157822afb77eeca06ce12  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 8f35f6f724bab6013d5d2aeb3817ef744e54929423c4d89a22142eafd6786be2  learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
-1e626d3db1da952bef3c82987fe6012afc7262374e6d6d30f434d6a3e242ac38  learning/studies/20260910-stackful-coroutine/demo/include/rco.h
-40c7e7c87e324e0ec3dd03512991cfc52cfe81b04f9c78c6945038dddde42fce  learning/studies/20260910-stackful-coroutine/demo/include/rco_local.h
-0bd8c9a191fab3562f9cdeb2b0969f39af1c7cfc737dbf44169be324a705219f  learning/studies/20260910-stackful-coroutine/demo/include/rco_pool.h
-364b1a3a4c956bebd68ffed86c7f92e3dd8adabb08cabf00af5c6a5800c17a86  learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+2c88266d476555b1c49c2945b8341361ef16a6f62f518944a29263298f46f78a  learning/studies/20260910-stackful-coroutine/demo/include/rco.h
+1e2989be9b11baf361fe4e469f9c8d44ceb5ab40c6623f86759713002d7b049b  learning/studies/20260910-stackful-coroutine/demo/include/rco_local.h
+8713e4f68c4c0d82d30957e679b1c66f112c26f55a1de0689f701a5904505645  learning/studies/20260910-stackful-coroutine/demo/include/rco_pool.h
+dc543861f6d6f84170f0077ede3e283f5c3247e5f04474395ea6d0321036c3ef  learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 37e56ccad8e5068e3cca79955255ad2381640be5e729d3b8a5c94dd0757b3589  learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
 42b906658f44801887a1903288766fae96d19f0e5db8137a703b2e590bc955e5  learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
 df07019a25d15932b0789d8ac104215196c946b27f33a0ee4143ac8bbb0b09ed  learning/studies/20260910-stackful-coroutine/demo/src/rco_internal.h
-f26c5e521c4d2648a1e1c91357d519744970ddc5fc6c9e1f9035d88388cf1ba6  learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
+4c768f757480b755e832ba296a16cbc6947a32725c484b2ef29363955848745f  learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
 8a317d089f37f19d8928e9292b94abf125bc4f81cbaeabe723fa7227575dbddb  learning/studies/20260910-stackful-coroutine/demo/tests/l4_bench_harness_test.sh
 d0008a2ec38d2cc4249c23ca1f69bf40abf663f24fbf3d1f9a71c08b8b076071  learning/studies/20260910-stackful-coroutine/demo/tests/l4_bench_process_resources_test.sh
 ebffa84b3d2bfd5241734b73a502aaa6b06c2facba2666d109cfea3cdc86e080  learning/studies/20260910-stackful-coroutine/demo/tests/l4_e2e.py
@@ -99,21 +99,21 @@ e4808ad3e57d77302762d8febb70e08ed54a25a1624c3af3b1309549347379bd  learning/studi
 b1b36236ba0abbf1c6941348641c54eb497642b702eb5bf1d4a8d717f2d235b8  learning/studies/20260910-stackful-coroutine/demo/tests/rco_filc_test.c
 eeceb4d66cc653aeb08bcd31103d803cf0e54dfb6f7fd3a42dfc1c2c43645be4  learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 256209be4646706b39d3e1ef09f61315b101d0787b87ea730f9be2282285aa64  learning/studies/20260910-stackful-coroutine/demo/tests/rco_high_concurrency_bench_test.py
-e1891cc5f1c4293bbd04858eafcb1e35fe506cb33a867b0c32d86ef9119dab31  learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
-5465ffb5c4c05438e6a88120bc5523aa19ec7ed411a50299c2a025da69748536  learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+359d83976aaabc6065395a429abe51b3fd35be5d6f68c25687c0d5a5d183c0f4  learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+d5587ab198ba9f3710831cfbb9a20f23e1cb87d8dea3815a8ed1e6bc502ca1e5  learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
 4e6136c66825506bed23f4b553c7940812a1a2ad12f601e96cbc594c63eb6409  learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
 0090c511a8b2c9a31611bb7b9687dde68f46f462c682abc1dfc54294c328f2fc  learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 binary_sha256:
-a954552e53ea4098e6fb06f93cbd8f0631a87e9dec50b5e89a720d3a2b30cda0  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench
-400d6cdbc0ac82fcead917fa03bc9bbbbdc3b24d4ba0fb36e3f49b68f4854452  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench_cacs
-a823be00fa678b347d1e9bad88e86d105dcae1b901c2afe1601f8da7698c731c  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench_cacs_preserve_none
-4abfde5bbf573e56b6a7c628d65a3cbf2d4d8199d56425c0bfff9112a8932332  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_sysv
-febfb934cd6abf4b50ef8f1b5056a507647c8f330ccdf1ab9ab4f7880bd88947  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs
-2e4702531624210540c66ab80766782c5a2f835083144ebd184d6445ab872662  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs_preserve_none
-26dab98446275f05fdf2820c5d9e8e3e288d5d401d4265b6cff21160033c53ad  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_sysv
-319d13b4cd4bf2bb33381b53de7db0ab97bf4f7aa4cd03c78cbeaf6cfee4220d  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_cacs
-10a2ea4bd1c81a3924b35ac40172b12e5995633dc508192f4c97a0247206e103  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_cacs_preserve_none
-2f39e16f2f7840ddda9409cde76058a4c88c1e18271e8bd448dc8f65a1f3baff  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder
-52fc07ccb3152f272b6e784c95e3ff6930fca28e71288e527dea5b8f7d462baa  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs
-d935e7073736f00c28f200df3f8751d4bf332a517dd2030f9b1175726084c4dc  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs_preserve_none
+37694be5128d57be8e2dc5dca3bec67d8593bd844329018bc71ec89d30ba9899  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench
+fcfc6da82bb305ddd5e4bf802aae190e3326fa102c495917e1d201276e598fed  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench_cacs
+a983eb1fbcf58cf969e2149580688d4190ce5e327f4ec30bfff43fcef688dcc9  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_bench_cacs_preserve_none
+dbdee0f72ce0fcd900b20ce8531ec820c42ffd07ff5da1300a0eadbd4f4a9f88  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_sysv
+fbd4a0d5f1253474de42a46cdaf7dff935cdbe7e8dfc9c5de09752a6f2163c82  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs
+80bc30eed3c708ec9d4af8ab0dd614d60b44e2518fc9caee582e2e77d0e91508  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_high_concurrency_bench_cacs_preserve_none
+1840d5010c4b0018d083dd99017f79a42bd2ddd6bd4dfebe187f6dc98356657c  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_sysv
+6cd71ba6bb0bab0af08f9755374b36d5eda3f5803b2bf1a20a7b6306f78dc750  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_cacs
+8762f581122be6b09e3e343cd43f5614810b31584966d1119fb3b16fe6588b4e  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_pool_bench_cacs_preserve_none
+49cef6f8ba39e3858c6114080a2b02a245018eefeed85ed92fdd5817d93f328a  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder
+2d6e134117beacc7dd8a3d3051ddb113a12afddfe6975a8770de85a21f8aa9be  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs
+edcc9de1c25d73e8890bcc11f3465fc5171dc52ef2ffb82f78ede9140519d34a  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_cacs_preserve_none
 a88e4a727808b40460d7228beba86e9fbdb4aef47d27b4f5d0e564eb060ab63f  /root/recallfs/.tmp/rco-cacs/work/o3-build/rco_l4_forwarder_epoll
