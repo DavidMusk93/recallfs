@@ -1,4 +1,7 @@
+#define _GNU_SOURCE
+
 #include "rco.h"
+#include "rco_local.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -30,10 +33,20 @@ static void count_finalizer(void *argument)
 static void test_public_guards_outside_runtime(void)
 {
     unsigned ready = 0;
+    void *value = NULL;
+    locale_t locale = (locale_t)0;
+    sigset_t mask;
+
+    CHECK(sigemptyset(&mask) == 0);
     CHECK(rco_yield() == -EPERM);
     CHECK(rco_wait_fd(0, RCO_EVENT_READ, 0, &ready) == -EPERM);
     CHECK(rco_sleep_ms(0) == -EPERM);
     CHECK(rco_close_fd(0) == -EPERM);
+    CHECK(rco_tls_get(NULL, 1, &value) == -EINVAL);
+    CHECK(rco_tls_set(NULL, 1, value) == -EINVAL);
+    CHECK(rco_sigmask(SIG_SETMASK, &mask, NULL) == -EPERM);
+    CHECK(rco_locale_set(LC_GLOBAL_LOCALE) == -EPERM);
+    CHECK(rco_locale_get(&locale) == -EPERM);
     CHECK(!rco_cancelled());
     CHECK(rco_current_id() == 0);
 }
@@ -47,7 +60,12 @@ static void test_allocation_limits_and_teardown(void)
         .stack_cache_bytes = 0,
     };
     struct rco_runtime *runtime = NULL;
+    rco_tls_key_t key = 0;
     CHECK(rco_runtime_create(&config, &runtime) == 0);
+    CHECK(rco_tls_key_create(runtime, NULL, &key) == 0);
+    CHECK(key != 0);
+    CHECK(rco_tls_key_delete(runtime, key) == 0);
+    CHECK(rco_tls_key_delete(runtime, key) == -EINVAL);
 
     uint64_t ids[8] = {0};
     size_t finalized = 0;
@@ -93,11 +111,29 @@ static void test_repeated_create_destroy(void)
     }
 }
 
+static void test_local_state_config_guards(void)
+{
+    struct rco_runtime *runtime = NULL;
+    struct rco_config mixed = {
+        .local_state_flags =
+            RCO_LOCAL_STATE_NONE | RCO_LOCAL_STATE_ERRNO,
+    };
+    struct rco_config too_many_keys = {
+        .max_tls_keys = RCO_TLS_KEYS_MAX + 1,
+    };
+
+    CHECK(rco_runtime_create(&mixed, &runtime) == -EINVAL);
+    CHECK(runtime == NULL);
+    CHECK(rco_runtime_create(&too_many_keys, &runtime) == -EINVAL);
+    CHECK(runtime == NULL);
+}
+
 int main(void)
 {
     test_public_guards_outside_runtime();
+    test_local_state_config_guards();
     test_allocation_limits_and_teardown();
     test_repeated_create_destroy();
-    puts("FIL-C rco tests passed: 3 suites");
+    puts("FIL-C rco tests passed: 4 suites");
     return 0;
 }

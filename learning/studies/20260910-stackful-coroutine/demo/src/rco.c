@@ -5,7 +5,11 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <locale.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +55,15 @@
 #define RCO_READY_DISPATCH_BUDGET ((size_t)64)
 #define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
 #define RCO_NO_TIMER SIZE_MAX
+/* TLS handles pack a 24-bit runtime, 16-bit index, and 24-bit generation. */
+#define RCO_TLS_INDEX_SHIFT 24
+#define RCO_TLS_NAMESPACE_SHIFT 40
+#define RCO_TLS_INDEX_MASK UINT64_C(0xffff)
+#define RCO_TLS_GENERATION_MASK UINT64_C(0xffffff)
+#define RCO_TLS_NAMESPACE_MAX UINT64_C(0xffffff)
+#define RCO_LOCAL_STATE_ALL                                             \
+    (RCO_LOCAL_STATE_NONE | RCO_LOCAL_STATE_ERRNO |                    \
+     RCO_LOCAL_STATE_SIGNAL_MASK | RCO_LOCAL_STATE_LOCALE)
 
 #if defined(RCO_CACS)
 #define RCO_CACS_INLINE __attribute__((always_inline)) inline
@@ -92,6 +105,11 @@ struct rco_task {
     int wait_result;
     uint64_t deadline_ns;
     size_t timer_index;
+    void **tls_values;
+    locale_t locale;
+    sigset_t *signal_mask;
+    int saved_errno;
+    bool in_tls_destructor;
 #if defined(RCO_WITH_ASAN)
     void *asan_fake_stack;
 #endif
@@ -107,6 +125,13 @@ struct rco_fd_watch {
     bool registered;
 };
 
+struct rco_tls_key_slot {
+    rco_tls_destructor_fn destructor;
+    uint32_t generation;
+    bool active;
+    bool exhausted;
+};
+
 struct rco_runtime {
     struct rco_context root_context;
     struct rco_config config;
@@ -120,11 +145,16 @@ struct rco_runtime {
     struct rco_fd_watch **fd_watch_chunks;
     size_t fd_watch_chunk_count;
     struct rco_stack *stack_cache;
+    struct rco_tls_key_slot *tls_keys;
     uint64_t next_id;
+    uint32_t tls_namespace;
     long owner_tid;
     long page_size;
     int epoll_fd;
     int fatal_error;
+    int root_errno;
+    locale_t root_locale;
+    sigset_t root_signal_mask;
     bool running;
     bool stop_requested;
 #if defined(RCO_WITH_ASAN)
@@ -135,10 +165,29 @@ struct rco_runtime {
 };
 
 static _Thread_local struct rco_runtime *rco_tls_runtime;
+static atomic_uint_fast64_t rco_next_tls_namespace = 1;
 
 static int rco_neg_errno(void)
 {
     return errno == 0 ? -EIO : -errno;
+}
+
+static bool rco_local_state_enabled(const struct rco_runtime *runtime,
+                                    uint32_t flag)
+{
+    return (runtime->config.local_state_flags & flag) != 0;
+}
+
+static int rco_allocate_tls_namespace(uint32_t *out_namespace)
+{
+    uint_fast64_t value =
+        atomic_fetch_add_explicit(&rco_next_tls_namespace, 1,
+                                  memory_order_relaxed);
+    if (value == 0 || value > RCO_TLS_NAMESPACE_MAX) {
+        return -EOVERFLOW;
+    }
+    *out_namespace = (uint32_t)value;
+    return 0;
 }
 
 static bool rco_is_power_of_two(size_t value)
@@ -190,6 +239,8 @@ static int rco_validate_config(const struct rco_config *input,
         .max_coroutines = RCO_DEFAULT_MAX_COROUTINES,
         .max_fds = RCO_DEFAULT_MAX_FDS,
         .stack_cache_bytes = RCO_DEFAULT_STACK_CACHE_BYTES,
+        .local_state_flags = RCO_LOCAL_STATE_ERRNO,
+        .max_tls_keys = RCO_TLS_KEYS_DEFAULT,
     };
 
     if (input != NULL) {
@@ -203,13 +254,25 @@ static int rco_validate_config(const struct rco_config *input,
             config.max_fds = input->max_fds;
         }
         config.stack_cache_bytes = input->stack_cache_bytes;
+        if (input->local_state_flags != 0) {
+            config.local_state_flags = input->local_state_flags;
+        }
+        if (input->max_tls_keys != 0) {
+            config.max_tls_keys = input->max_tls_keys;
+        }
     }
 
     if (config.default_stack_size < RCO_STACK_SIZE_MIN ||
         config.max_coroutines == 0 || config.max_fds == 0 ||
         config.max_fds > (size_t)INT_MAX ||
+        (config.local_state_flags & ~RCO_LOCAL_STATE_ALL) != 0 ||
+        ((config.local_state_flags & RCO_LOCAL_STATE_NONE) != 0 &&
+         config.local_state_flags != RCO_LOCAL_STATE_NONE) ||
+        config.max_tls_keys == 0 ||
+        config.max_tls_keys > RCO_TLS_KEYS_MAX ||
         config.max_coroutines > SIZE_MAX / sizeof(struct rco_task *) ||
-        config.max_fds > SIZE_MAX / sizeof(struct rco_fd_watch)) {
+        config.max_fds > SIZE_MAX / sizeof(struct rco_fd_watch) ||
+        config.max_tls_keys > SIZE_MAX / sizeof(struct rco_tls_key_slot)) {
         return -EINVAL;
     }
 
@@ -504,6 +567,149 @@ static void rco_record_fatal(struct rco_runtime *runtime, int error)
     }
 }
 
+static int rco_task_local_state_init(struct rco_runtime *runtime,
+                                     struct rco_task *task,
+                                     int inherited_errno)
+{
+    task->saved_errno = inherited_errno;
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
+        task->signal_mask = malloc(sizeof(*task->signal_mask));
+        if (task->signal_mask == NULL) {
+            return -ENOMEM;
+        }
+        int result =
+            pthread_sigmask(SIG_SETMASK, NULL, task->signal_mask);
+        if (result != 0) {
+            free(task->signal_mask);
+            task->signal_mask = NULL;
+            return -result;
+        }
+    }
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE)) {
+        locale_t current = uselocale((locale_t)0);
+        if (current == (locale_t)0) {
+            return rco_neg_errno();
+        }
+        task->locale = duplocale(current);
+        if (task->locale == (locale_t)0) {
+            return rco_neg_errno();
+        }
+    }
+    return 0;
+}
+
+static void rco_task_local_state_destroy(struct rco_task *task)
+{
+    free(task->tls_values);
+    task->tls_values = NULL;
+    free(task->signal_mask);
+    task->signal_mask = NULL;
+    if (task->locale != (locale_t)0) {
+        freelocale(task->locale);
+        task->locale = (locale_t)0;
+    }
+}
+
+static int rco_root_local_state_capture(struct rco_runtime *runtime,
+                                        int entry_errno)
+{
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        runtime->root_errno = entry_errno;
+    }
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
+        int result =
+            pthread_sigmask(SIG_SETMASK, NULL, &runtime->root_signal_mask);
+        if (result != 0) {
+            if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+                errno = runtime->root_errno;
+            }
+            return -result;
+        }
+    }
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE)) {
+        runtime->root_locale = uselocale((locale_t)0);
+        if (runtime->root_locale == (locale_t)0) {
+            int result = rco_neg_errno();
+            if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+                errno = runtime->root_errno;
+            }
+            return result;
+        }
+    }
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = runtime->root_errno;
+    }
+    return 0;
+}
+
+static int rco_restore_root_local_state(struct rco_runtime *runtime)
+{
+    int error = 0;
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
+        int result = pthread_sigmask(SIG_SETMASK, &runtime->root_signal_mask,
+                                     NULL);
+        if (result != 0) {
+            error = -result;
+        }
+    }
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE)) {
+        if (uselocale(runtime->root_locale) == (locale_t)0 && error == 0) {
+            error = rco_neg_errno();
+        }
+    }
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = runtime->root_errno;
+    }
+    return error;
+}
+
+static int rco_activate_task_local_state(struct rco_task *task)
+{
+    struct rco_runtime *runtime = task->runtime;
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE) &&
+        uselocale(task->locale) == (locale_t)0) {
+        int error = rco_neg_errno();
+        (void)rco_restore_root_local_state(runtime);
+        return error;
+    }
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
+        int result =
+            pthread_sigmask(SIG_SETMASK, task->signal_mask, NULL);
+        if (result != 0) {
+            (void)rco_restore_root_local_state(runtime);
+            return -result;
+        }
+    }
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = task->saved_errno;
+    }
+    return 0;
+}
+
+static void rco_deactivate_task_local_state(struct rco_task *task)
+{
+    struct rco_runtime *runtime = task->runtime;
+
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        task->saved_errno = errno;
+    }
+    int result = rco_restore_root_local_state(runtime);
+    if (result != 0) {
+        rco_record_fatal(runtime, result);
+        (void)rco_runtime_stop(runtime);
+        if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+            errno = runtime->root_errno;
+        }
+    }
+}
+
 static void rco_task_detach_wait(struct rco_runtime *runtime,
                                  struct rco_task *task)
 {
@@ -700,15 +906,60 @@ static void rco_dispatch_event(struct rco_runtime *runtime,
     }
 }
 
+static void rco_run_tls_destructors(struct rco_runtime *runtime,
+                                    struct rco_task *task)
+{
+    if (task->tls_values == NULL) {
+        return;
+    }
+
+    struct rco_task *previous = runtime->current;
+    runtime->current = task;
+    task->in_tls_destructor = true;
+    int state_result = rco_activate_task_local_state(task);
+    if (state_result != 0) {
+        task->in_tls_destructor = false;
+        runtime->current = previous;
+        rco_record_fatal(runtime, state_result);
+        return;
+    }
+    for (size_t pass = 0; pass < PTHREAD_DESTRUCTOR_ITERATIONS; ++pass) {
+        bool called_destructor = false;
+
+        for (size_t index = 0; index < runtime->config.max_tls_keys;
+             ++index) {
+            struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
+            void *value = task->tls_values[index];
+            if (!slot->active || slot->destructor == NULL || value == NULL) {
+                continue;
+            }
+
+            rco_tls_destructor_fn destructor = slot->destructor;
+            task->tls_values[index] = NULL;
+            called_destructor = true;
+            destructor(value);
+        }
+        if (!called_destructor) {
+            break;
+        }
+    }
+    rco_deactivate_task_local_state(task);
+    task->in_tls_destructor = false;
+    runtime->current = previous;
+}
+
 static void rco_remove_task(struct rco_runtime *runtime,
                             struct rco_task *task)
 {
+    rco_task_detach_wait(runtime, task);
+
     *task->all_previous_next = task->all_next;
     if (task->all_next != NULL) {
         task->all_next->all_previous_next = task->all_previous_next;
     }
 
-    rco_task_detach_wait(runtime, task);
+    rco_run_tls_destructors(runtime, task);
+    rco_task_local_state_destroy(task);
     rco_stack_release(runtime, &task->stack);
     runtime->stats.active--;
     runtime->stats.completed++;
@@ -723,6 +974,7 @@ static void rco_remove_task(struct rco_runtime *runtime,
 
 static RCO_CACS_INLINE void rco_switch_to_root(struct rco_task *task)
 {
+    rco_deactivate_task_local_state(task);
     task->runtime->stats.context_switches++;
 #if defined(RCO_WITH_ASAN)
     __sanitizer_start_switch_fiber(&task->asan_fake_stack,
@@ -733,6 +985,9 @@ static RCO_CACS_INLINE void rco_switch_to_root(struct rco_task *task)
 #if defined(RCO_WITH_ASAN)
     __sanitizer_finish_switch_fiber(task->asan_fake_stack, NULL, NULL);
 #endif
+    if (rco_local_state_enabled(task->runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = task->saved_errno;
+    }
 }
 
 __attribute__((noreturn)) static void rco_task_returned(void)
@@ -750,6 +1005,9 @@ RCO_NO_ASAN __attribute__((noreturn)) static void rco_task_trampoline(void)
                                     &runtime->asan_stack_bottom,
                                     &runtime->asan_stack_size);
 #endif
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = task->saved_errno;
+    }
 
     if (task->cancel_requested || runtime->stop_requested) {
         task->state = RCO_TASK_CANCELLED;
@@ -757,6 +1015,7 @@ RCO_NO_ASAN __attribute__((noreturn)) static void rco_task_trampoline(void)
         (void)task->entry(task->argument);
         task->state = task->cancel_requested ? RCO_TASK_CANCELLED : RCO_TASK_DONE;
     }
+    rco_deactivate_task_local_state(task);
 #if defined(RCO_WITH_ASAN)
     __sanitizer_start_switch_fiber(NULL, runtime->asan_stack_bottom,
                                    runtime->asan_stack_size);
@@ -811,7 +1070,11 @@ int rco_runtime_create(const struct rco_config *config,
                sizeof(*runtime->fd_watch_chunks));
     runtime->timer_heap =
         calloc(validated.max_coroutines, sizeof(*runtime->timer_heap));
-    if (runtime->fd_watch_chunks == NULL || runtime->timer_heap == NULL) {
+    runtime->tls_keys =
+        calloc(validated.max_tls_keys, sizeof(*runtime->tls_keys));
+    if (runtime->fd_watch_chunks == NULL || runtime->timer_heap == NULL ||
+        runtime->tls_keys == NULL) {
+        free(runtime->tls_keys);
         free(runtime->timer_heap);
         free(runtime->fd_watch_chunks);
         free(runtime);
@@ -821,6 +1084,17 @@ int rco_runtime_create(const struct rco_config *config,
     runtime->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (runtime->epoll_fd < 0) {
         result = rco_neg_errno();
+        free(runtime->tls_keys);
+        free(runtime->timer_heap);
+        free(runtime->fd_watch_chunks);
+        free(runtime);
+        return result;
+    }
+
+    result = rco_allocate_tls_namespace(&runtime->tls_namespace);
+    if (result != 0) {
+        (void)close(runtime->epoll_fd);
+        free(runtime->tls_keys);
         free(runtime->timer_heap);
         free(runtime->fd_watch_chunks);
         free(runtime);
@@ -848,6 +1122,8 @@ int rco_runtime_destroy(struct rco_runtime *runtime)
         if (runtime->all_tasks != NULL) {
             runtime->all_tasks->all_previous_next = &runtime->all_tasks;
         }
+        rco_run_tls_destructors(runtime, task);
+        rco_task_local_state_destroy(task);
         if (task->finalizer != NULL) {
             task->finalizer(task->argument);
         }
@@ -869,6 +1145,7 @@ int rco_runtime_destroy(struct rco_runtime *runtime)
         free(runtime->fd_watch_chunks[index]);
     }
     free(runtime->fd_watch_chunks);
+    free(runtime->tls_keys);
     free(runtime);
     return 0;
 }
@@ -887,6 +1164,8 @@ int rco_spawn_task(struct rco_runtime *runtime,
                    const struct rco_task_spec *spec,
                    uint64_t *out_task_id)
 {
+    int inherited_errno = errno;
+
     if (runtime == NULL || spec == NULL || spec->entry == NULL) {
         return -EINVAL;
     }
@@ -912,14 +1191,23 @@ int rco_spawn_task(struct rco_runtime *runtime,
     }
     task->wait_fd = -1;
     task->timer_index = RCO_NO_TIMER;
+    task->runtime = runtime;
 
-    int result = rco_stack_map(runtime, requested, &task->stack);
+    int result =
+        rco_task_local_state_init(runtime, task, inherited_errno);
     if (result != 0) {
+        rco_task_local_state_destroy(task);
         free(task);
         return result;
     }
 
-    task->runtime = runtime;
+    result = rco_stack_map(runtime, requested, &task->stack);
+    if (result != 0) {
+        rco_task_local_state_destroy(task);
+        free(task);
+        return result;
+    }
+
     task->entry = spec->entry;
     task->finalizer = spec->finalizer;
     task->argument = spec->argument;
@@ -966,6 +1254,169 @@ int rco_spawn(struct rco_runtime *runtime,
         .argument = argument,
     };
     return rco_spawn_task(runtime, &spec, out_task_id);
+}
+
+static rco_tls_key_t rco_tls_key_encode(const struct rco_runtime *runtime,
+                                        size_t index,
+                                        uint32_t generation)
+{
+    return ((uint64_t)runtime->tls_namespace << RCO_TLS_NAMESPACE_SHIFT) |
+           ((uint64_t)index << RCO_TLS_INDEX_SHIFT) | generation;
+}
+
+static int rco_tls_key_lookup(struct rco_runtime *runtime,
+                              rco_tls_key_t key,
+                              size_t *out_index)
+{
+    uint32_t key_namespace =
+        (uint32_t)(key >> RCO_TLS_NAMESPACE_SHIFT);
+    size_t index =
+        (size_t)((key >> RCO_TLS_INDEX_SHIFT) & RCO_TLS_INDEX_MASK);
+    uint32_t generation =
+        (uint32_t)(key & RCO_TLS_GENERATION_MASK);
+
+    if (key_namespace != runtime->tls_namespace ||
+        index >= runtime->config.max_tls_keys || generation == 0) {
+        return -EINVAL;
+    }
+    struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
+    if (!slot->active || slot->generation != generation) {
+        return -EINVAL;
+    }
+    *out_index = index;
+    return 0;
+}
+
+int rco_tls_key_create(struct rco_runtime *runtime,
+                       rco_tls_destructor_fn destructor,
+                       rco_tls_key_t *out_key)
+{
+    if (runtime == NULL || out_key == NULL) {
+        return -EINVAL;
+    }
+    *out_key = 0;
+    if (runtime->owner_tid != syscall(SYS_gettid)) {
+        return -EPERM;
+    }
+
+    for (size_t index = 0; index < runtime->config.max_tls_keys; ++index) {
+        struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
+        if (slot->active || slot->exhausted) {
+            continue;
+        }
+        if (slot->generation == 0) {
+            slot->generation = 1;
+        }
+        slot->destructor = destructor;
+        slot->active = true;
+        *out_key = rco_tls_key_encode(runtime, index, slot->generation);
+        return 0;
+    }
+    return -EAGAIN;
+}
+
+int rco_tls_key_delete(struct rco_runtime *runtime, rco_tls_key_t key)
+{
+    if (runtime == NULL) {
+        return -EINVAL;
+    }
+    if (runtime->owner_tid != syscall(SYS_gettid)) {
+        return -EPERM;
+    }
+
+    size_t index = 0;
+    int result = rco_tls_key_lookup(runtime, key, &index);
+    if (result != 0) {
+        return result;
+    }
+
+    struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
+    slot->active = false;
+    slot->destructor = NULL;
+    if (slot->generation == RCO_TLS_GENERATION_MASK) {
+        slot->exhausted = true;
+    } else {
+        slot->generation++;
+    }
+
+    for (struct rco_task *task = runtime->all_tasks; task != NULL;
+         task = task->all_next) {
+        if (task->tls_values != NULL) {
+            task->tls_values[index] = NULL;
+        }
+    }
+    if (runtime->current != NULL &&
+        runtime->current->tls_values != NULL) {
+        runtime->current->tls_values[index] = NULL;
+    }
+    return 0;
+}
+
+static struct rco_task *rco_tls_current_task(struct rco_runtime *runtime)
+{
+    if (rco_tls_runtime != runtime || runtime->current == NULL) {
+        return NULL;
+    }
+    struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING && !task->in_tls_destructor) {
+        return NULL;
+    }
+    return task;
+}
+
+int rco_tls_get(struct rco_runtime *runtime,
+                rco_tls_key_t key,
+                void **out_value)
+{
+    if (runtime == NULL || out_value == NULL) {
+        return -EINVAL;
+    }
+    *out_value = NULL;
+
+    struct rco_task *task = rco_tls_current_task(runtime);
+    if (task == NULL) {
+        return -EPERM;
+    }
+    size_t index = 0;
+    int result = rco_tls_key_lookup(runtime, key, &index);
+    if (result != 0) {
+        return result;
+    }
+    if (task->tls_values != NULL) {
+        *out_value = task->tls_values[index];
+    }
+    return 0;
+}
+
+int rco_tls_set(struct rco_runtime *runtime,
+                rco_tls_key_t key,
+                void *value)
+{
+    if (runtime == NULL) {
+        return -EINVAL;
+    }
+
+    struct rco_task *task = rco_tls_current_task(runtime);
+    if (task == NULL) {
+        return -EPERM;
+    }
+    size_t index = 0;
+    int result = rco_tls_key_lookup(runtime, key, &index);
+    if (result != 0) {
+        return result;
+    }
+
+    if (task->tls_values == NULL && value != NULL) {
+        task->tls_values =
+            calloc(runtime->config.max_tls_keys, sizeof(*task->tls_values));
+        if (task->tls_values == NULL) {
+            return -ENOMEM;
+        }
+    }
+    if (task->tls_values != NULL) {
+        task->tls_values[index] = value;
+    }
+    return 0;
 }
 
 int rco_cancel(struct rco_runtime *runtime, uint64_t task_id)
@@ -1017,6 +1468,8 @@ int rco_runtime_stop(struct rco_runtime *runtime)
 
 int rco_runtime_run(struct rco_runtime *runtime)
 {
+    int entry_errno = errno;
+
     if (runtime == NULL) {
         return -EINVAL;
     }
@@ -1027,6 +1480,10 @@ int rco_runtime_run(struct rco_runtime *runtime)
         return -EPERM;
     }
 
+    int result = rco_root_local_state_capture(runtime, entry_errno);
+    if (result != 0) {
+        return result;
+    }
     runtime->running = true;
     rco_tls_runtime = runtime;
     struct epoll_event events[RCO_EPOLL_BATCH];
@@ -1050,6 +1507,15 @@ int rco_runtime_run(struct rco_runtime *runtime)
             task->state = RCO_TASK_RUNNING;
             task->started = true;
             runtime->current = task;
+            result = rco_activate_task_local_state(task);
+            if (result != 0) {
+                rco_record_fatal(runtime, result);
+                (void)rco_runtime_stop(runtime);
+                runtime->current = NULL;
+                task->state = RCO_TASK_CANCELLED;
+                rco_remove_task(runtime, task);
+                continue;
+            }
             runtime->stats.context_switches++;
 #if defined(RCO_WITH_ASAN)
             __sanitizer_start_switch_fiber(
@@ -1092,10 +1558,17 @@ int rco_runtime_run(struct rco_runtime *runtime)
         }
     }
 
-    int result = runtime->fatal_error;
     runtime->current = NULL;
+    result = rco_restore_root_local_state(runtime);
+    if (result != 0) {
+        rco_record_fatal(runtime, result);
+    }
+    result = runtime->fatal_error;
     rco_tls_runtime = NULL;
     runtime->running = false;
+    if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
+        errno = runtime->root_errno;
+    }
     return result;
 }
 
@@ -1106,6 +1579,9 @@ RCO_SUSPEND_ABI int rco_yield(void)
         return -EPERM;
     }
     struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
     if (task->cancel_requested || runtime->stop_requested) {
         return -ECANCELED;
     }
@@ -1125,6 +1601,10 @@ RCO_SUSPEND_ABI int rco_wait_fd(int fd,
     if (runtime == NULL || runtime->current == NULL) {
         return -EPERM;
     }
+    struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
     if (fd < 0 || (size_t)fd >= runtime->config.max_fds ||
         events == 0 ||
         (events & ~(RCO_EVENT_READ | RCO_EVENT_WRITE)) != 0 ||
@@ -1133,7 +1613,6 @@ RCO_SUSPEND_ABI int rco_wait_fd(int fd,
     }
     *out_ready_events = 0;
 
-    struct rco_task *task = runtime->current;
     if (task->cancel_requested || runtime->stop_requested) {
         return -ECANCELED;
     }
@@ -1194,6 +1673,9 @@ RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms)
         return -EPERM;
     }
     struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
     if (task->cancel_requested || runtime->stop_requested) {
         return -ECANCELED;
     }
@@ -1239,13 +1721,87 @@ bool rco_cancelled(void)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
     return runtime != NULL && runtime->current != NULL &&
+           runtime->current->state == RCO_TASK_RUNNING &&
            (runtime->current->cancel_requested || runtime->stop_requested);
 }
 
 uint64_t rco_current_id(void)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
-    return runtime == NULL || runtime->current == NULL
-               ? 0
-               : runtime->current->id;
+    if (runtime == NULL || runtime->current == NULL ||
+        runtime->current->state != RCO_TASK_RUNNING) {
+        return 0;
+    }
+    return runtime->current->id;
+}
+
+int rco_sigmask(int how, const sigset_t *set, sigset_t *old_set)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL ||
+        runtime->current->state != RCO_TASK_RUNNING) {
+        return -EPERM;
+    }
+    if (!rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
+        return -ENOTSUP;
+    }
+
+    int result = pthread_sigmask(how, set, old_set);
+    if (result != 0) {
+        return -result;
+    }
+    result = pthread_sigmask(SIG_SETMASK, NULL,
+                             runtime->current->signal_mask);
+    return result == 0 ? 0 : -result;
+}
+
+int rco_locale_set(locale_t locale)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL ||
+        runtime->current->state != RCO_TASK_RUNNING) {
+        return -EPERM;
+    }
+    if (!rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE)) {
+        return -ENOTSUP;
+    }
+    if (locale == (locale_t)0) {
+        return -EINVAL;
+    }
+
+    locale_t replacement = duplocale(locale);
+    if (replacement == (locale_t)0) {
+        return rco_neg_errno();
+    }
+    if (uselocale(replacement) == (locale_t)0) {
+        int result = rco_neg_errno();
+        freelocale(replacement);
+        return result;
+    }
+
+    struct rco_task *task = runtime->current;
+    locale_t previous = task->locale;
+    task->locale = replacement;
+    freelocale(previous);
+    return 0;
+}
+
+int rco_locale_get(locale_t *out_locale)
+{
+    if (out_locale == NULL) {
+        return -EINVAL;
+    }
+    *out_locale = (locale_t)0;
+
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL ||
+        runtime->current->state != RCO_TASK_RUNNING) {
+        return -EPERM;
+    }
+    if (!rco_local_state_enabled(runtime, RCO_LOCAL_STATE_LOCALE)) {
+        return -ENOTSUP;
+    }
+
+    *out_locale = runtime->current->locale;
+    return 0;
 }

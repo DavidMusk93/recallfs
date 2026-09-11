@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(rco VERSION 0.1.0 LANGUAGES C ASM)
+project(rco VERSION 0.2.0 LANGUAGES C ASM)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "rco currently supports Linux only")
@@ -13,6 +13,8 @@ option(RCO_BUILD_BENCHMARKS "Build context-switch benchmarks" ON)
 option(RCO_BUILD_EXAMPLES "Build production-oriented examples" ON)
 option(RCO_BUILD_CACS "Build experimental Clang 21 CACS variants" OFF)
 
+find_package(Threads REQUIRED)
+
 function(rco_enable_c_warnings target)
     target_compile_options(
         ${target}
@@ -23,6 +25,7 @@ endfunction()
 
 function(rco_configure_library target)
     target_compile_features(${target} PUBLIC c_std_11)
+    target_link_libraries(${target} PUBLIC Threads::Threads)
     target_include_directories(
         ${target}
         PUBLIC
@@ -108,10 +111,36 @@ endif()
 if(RCO_BUILD_TESTS)
     enable_testing()
 
+    function(rco_add_local_state_test target test_name library)
+        add_executable(${target} tests/rco_local_state_test.c)
+        target_link_libraries(${target} PRIVATE ${library} Threads::Threads)
+        rco_enable_c_warnings(${target})
+        add_test(NAME ${test_name} COMMAND ${target})
+    endfunction()
+
+    function(rco_add_preempt_test target test_name library)
+        add_executable(${target} tests/rco_preempt_test.c)
+        target_link_libraries(${target} PRIVATE ${library} Threads::Threads)
+        rco_enable_c_warnings(${target})
+        add_test(NAME ${test_name} COMMAND ${target})
+    endfunction()
+
     add_executable(rco_test tests/rco_test.c)
     target_link_libraries(rco_test PRIVATE rco m)
     rco_enable_c_warnings(rco_test)
     add_test(NAME rco_native COMMAND rco_test)
+
+    rco_add_local_state_test(
+        rco_local_state_test
+        rco_local_state
+        rco
+    )
+
+    rco_add_preempt_test(
+        rco_preempt_test
+        rco_preempt_sysv
+        rco
+    )
 
     add_executable(rco_guard_test tests/rco_guard_test.c)
     target_link_libraries(rco_guard_test PRIVATE rco)
@@ -124,6 +153,18 @@ if(RCO_BUILD_TESTS)
             target_link_libraries(rco_test_${suffix} PRIVATE ${library} m)
             rco_enable_c_warnings(rco_test_${suffix})
             add_test(NAME rco_native_${suffix} COMMAND rco_test_${suffix})
+
+            rco_add_local_state_test(
+                rco_local_state_test_${suffix}
+                rco_local_state_${suffix}
+                ${library}
+            )
+
+            rco_add_preempt_test(
+                rco_preempt_test_${suffix}
+                rco_preempt_${suffix}
+                ${library}
+            )
 
             add_executable(rco_guard_test_${suffix} tests/rco_guard_test.c)
             target_link_libraries(rco_guard_test_${suffix} PRIVATE ${library})
@@ -376,4 +417,5 @@ endif()
 
 include(GNUInstallDirs)
 install(TARGETS rco ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES include/rco.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES include/rco.h include/rco_local.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

@@ -10,11 +10,13 @@ extern "C" {
 #endif
 
 #define RCO_VERSION_MAJOR 0
-#define RCO_VERSION_MINOR 1
+#define RCO_VERSION_MINOR 2
 #define RCO_VERSION_PATCH 0
 
 #define RCO_STACK_SIZE_DEFAULT ((size_t)128 * 1024)
 #define RCO_STACK_SIZE_MIN ((size_t)16 * 1024)
+#define RCO_TLS_KEYS_DEFAULT ((size_t)64)
+#define RCO_TLS_KEYS_MAX ((size_t)65536)
 
 #if defined(RCO_CACS_PRESERVE_NONE)
 #if !defined(RCO_CACS)
@@ -42,10 +44,23 @@ enum rco_event {
     RCO_EVENT_WRITE = 1u << 1,
 };
 
+/*
+ * Zero flags select RCO_LOCAL_STATE_ERRNO. RCO_LOCAL_STATE_NONE explicitly
+ * selects legacy switching and cannot be combined with another flag.
+ */
+enum rco_local_state {
+    RCO_LOCAL_STATE_NONE = 1u << 0,
+    RCO_LOCAL_STATE_ERRNO = 1u << 1,
+    RCO_LOCAL_STATE_SIGNAL_MASK = 1u << 2,
+    RCO_LOCAL_STATE_LOCALE = 1u << 3,
+};
+
 struct rco_runtime;
 
 typedef int (*rco_entry_fn)(void *argument);
 typedef void (*rco_finalizer_fn)(void *argument);
+typedef uint64_t rco_tls_key_t;
+typedef void (*rco_tls_destructor_fn)(void *value);
 
 struct rco_task_spec {
     size_t stack_size;
@@ -59,6 +74,8 @@ struct rco_config {
     size_t max_coroutines;
     size_t max_fds;
     size_t stack_cache_bytes;
+    uint32_t local_state_flags;
+    size_t max_tls_keys;
 };
 
 struct rco_stats {
@@ -104,6 +121,24 @@ int rco_spawn(struct rco_runtime *runtime,
               void *argument,
               uint64_t *out_task_id);
 int rco_cancel(struct rco_runtime *runtime, uint64_t task_id);
+
+/*
+ * TLS keys belong to one runtime. Values belong to the current task and are
+ * allocated lazily. Deleting a key clears its values without running its
+ * destructor. Task exit runs up to four destructor passes before the user
+ * finalizer; TLS get/set remain valid in callbacks, but coroutine suspension
+ * does not.
+ */
+int rco_tls_key_create(struct rco_runtime *runtime,
+                       rco_tls_destructor_fn destructor,
+                       rco_tls_key_t *out_key);
+int rco_tls_key_delete(struct rco_runtime *runtime, rco_tls_key_t key);
+int rco_tls_get(struct rco_runtime *runtime,
+                rco_tls_key_t key,
+                void **out_value);
+int rco_tls_set(struct rco_runtime *runtime,
+                rco_tls_key_t key,
+                void *value);
 
 /*
  * Yield, wait, sleep, cancellation status, and current ID are valid only
