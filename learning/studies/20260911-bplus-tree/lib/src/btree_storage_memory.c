@@ -1,24 +1,24 @@
-#include "bptree_backends.h"
-#include "bptree_internal.h"
+#include "btree_backends.h"
+#include "btree_internal.h"
 
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct bpt_memory_backend {
+struct btree_mem {
     unsigned char *pages;
     uint64_t page_count;
     uint64_t capacity_pages;
     uint32_t page_size;
 };
 
-static bpt_status memory_growth_capacity(const bpt_memory_backend *backend, uint64_t required_pages,
-                                         uint64_t *capacity_out) {
+static btree_status memory_growth_capacity(const btree_mem *backend, uint64_t required_pages,
+                                           uint64_t *capacity_out) {
     uint64_t capacity = backend->capacity_pages;
     uint64_t max_capacity = (uint64_t)(SIZE_MAX / (size_t)backend->page_size);
 
     if (required_pages > max_capacity || capacity > max_capacity) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     if (capacity == 0u) {
         capacity = 1u;
@@ -32,55 +32,55 @@ static bpt_status memory_growth_capacity(const bpt_memory_backend *backend, uint
     }
 
     *capacity_out = capacity;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status memory_page_count(void *context, uint64_t *count_out) {
-    bpt_memory_backend *backend = context;
+static btree_status memory_page_count(void *context, uint64_t *count_out) {
+    btree_mem *backend = context;
 
     if (backend == NULL || count_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     *count_out = backend->page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status memory_read_page(void *context, uint64_t page_id, void *data_out) {
-    bpt_memory_backend *backend = context;
+static btree_status memory_read_page(void *context, uint64_t page_id, void *data_out) {
+    btree_mem *backend = context;
 
     if (backend == NULL || data_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     if (page_id >= backend->page_count) {
-        return BPT_IO;
+        return BTREE_IO;
     }
     memcpy(data_out, backend->pages + (size_t)page_id * (size_t)backend->page_size,
            (size_t)backend->page_size);
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status memory_validate_updates(const bpt_memory_backend *backend,
-                                          const bpt_page_update *updates, size_t update_count,
-                                          uint64_t *new_page_count_out) {
+static btree_status memory_validate_updates(const btree_mem *backend,
+                                            const btree_page_update *updates, size_t update_count,
+                                            uint64_t *new_page_count_out) {
     uint64_t new_page_count = backend->page_count;
     uint64_t new_id_count = 0u;
     size_t index;
 
     if (update_count != 0u && updates == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     for (index = 0u; index < update_count; ++index) {
         size_t other;
 
         if (updates[index].data == NULL) {
-            return BPT_INVALID_ARGUMENT;
+            return BTREE_INVALID_ARGUMENT;
         }
         if (updates[index].page_id == UINT64_MAX) {
-            return BPT_OUT_OF_MEMORY;
+            return BTREE_OUT_OF_MEMORY;
         }
         for (other = 0u; other < index; ++other) {
             if (updates[other].page_id == updates[index].page_id) {
-                return BPT_INVALID_ARGUMENT;
+                return BTREE_INVALID_ARGUMENT;
             }
         }
         if (updates[index].page_id >= backend->page_count) {
@@ -92,40 +92,40 @@ static bpt_status memory_validate_updates(const bpt_memory_backend *backend,
     }
 
     if (new_page_count > (uint64_t)(SIZE_MAX / backend->page_size)) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     if (new_page_count - backend->page_count != new_id_count) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
 
     *new_page_count_out = new_page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status memory_commit_pages(void *context, const bpt_page_update *updates,
-                                      size_t update_count) {
-    bpt_memory_backend *backend = context;
+static btree_status memory_commit_pages(void *context, const btree_page_update *updates,
+                                        size_t update_count) {
+    btree_mem *backend = context;
     unsigned char *staged;
     uint64_t new_page_count;
     size_t staged_size;
     size_t index;
-    bpt_status status;
+    btree_status status;
 
     if (backend == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     status = memory_validate_updates(backend, updates, update_count, &new_page_count);
-    if (status != BPT_OK || update_count == 0u) {
+    if (status != BTREE_OK || update_count == 0u) {
         return status;
     }
 
     if (update_count > SIZE_MAX / (size_t)backend->page_size) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     staged_size = update_count * (size_t)backend->page_size;
     staged = malloc(staged_size);
     if (staged == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     for (index = 0u; index < update_count; ++index) {
         memcpy(staged + index * (size_t)backend->page_size, updates[index].data,
@@ -139,7 +139,7 @@ static bpt_status memory_commit_pages(void *context, const bpt_page_update *upda
         unsigned char *expanded;
 
         status = memory_growth_capacity(backend, new_page_count, &new_capacity);
-        if (status != BPT_OK) {
+        if (status != BTREE_OK) {
             free(staged);
             return status;
         }
@@ -149,7 +149,7 @@ static bpt_status memory_commit_pages(void *context, const bpt_page_update *upda
 
         if (expanded == NULL) {
             free(staged);
-            return BPT_OUT_OF_MEMORY;
+            return BTREE_OUT_OF_MEMORY;
         }
         memset(expanded + old_capacity_size, 0, new_capacity_size - old_capacity_size);
         backend->pages = expanded;
@@ -162,28 +162,28 @@ static bpt_status memory_commit_pages(void *context, const bpt_page_update *upda
     }
     backend->page_count = new_page_count;
     free(staged);
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-bpt_status bpt_memory_backend_create(uint32_t page_size, bpt_memory_backend **backend_out) {
-    bpt_memory_backend *backend;
+btree_status btree_mem_create(uint32_t page_size, btree_mem **backend_out) {
+    btree_mem *backend;
 
     if (backend_out != NULL) {
         *backend_out = NULL;
     }
-    if (!bpt_page_size_valid(page_size) || backend_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+    if (!btree_page_size_valid(page_size) || backend_out == NULL) {
+        return BTREE_INVALID_ARGUMENT;
     }
     backend = calloc(1u, sizeof(*backend));
     if (backend == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     backend->page_size = page_size;
     *backend_out = backend;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-void bpt_memory_backend_destroy(bpt_memory_backend *backend) {
+void btree_mem_destroy(btree_mem *backend) {
     if (backend == NULL) {
         return;
     }
@@ -191,8 +191,8 @@ void bpt_memory_backend_destroy(bpt_memory_backend *backend) {
     free(backend);
 }
 
-bpt_storage bpt_memory_backend_storage(bpt_memory_backend *backend) {
-    bpt_storage storage;
+btree_storage btree_mem_storage(btree_mem *backend) {
+    btree_storage storage;
 
     memset(&storage, 0, sizeof(storage));
     if (backend == NULL) {

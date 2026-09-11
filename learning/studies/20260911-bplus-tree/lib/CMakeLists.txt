@@ -1,43 +1,49 @@
 cmake_minimum_required(VERSION 3.20)
-project(bptree VERSION 0.1.0 LANGUAGES C)
+project(btree VERSION 1.0.0 LANGUAGES C)
 
-option(BPTREE_BUILD_TESTS "Build B+ tree regression tests" ON)
-option(BPTREE_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
-add_library(bptree STATIC
-    src/bptree.c
-    src/bptree_crc32c.c
+option(BTREE_BUILD_TESTS "Build B+ tree regression tests" ON)
+option(BTREE_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+
+add_library(btree STATIC
+    src/btree.c
+    src/btree_crc32c.c
 )
-add_library(bptree::bptree ALIAS bptree)
+add_library(btree::btree ALIAS btree)
 
-add_library(bptree_storage_memory STATIC
-    src/bptree_storage_memory.c
+add_library(btree_storage_memory STATIC
+    src/btree_storage_memory.c
 )
-add_library(bptree::memory ALIAS bptree_storage_memory)
+add_library(btree::memory ALIAS btree_storage_memory)
+set_target_properties(btree_storage_memory PROPERTIES EXPORT_NAME memory)
 
-add_library(bptree_storage_file STATIC
-    src/bptree_storage_file.c
+add_library(btree_storage_file STATIC
+    src/btree_storage_file.c
 )
-add_library(bptree::file ALIAS bptree_storage_file)
+add_library(btree::file ALIAS btree_storage_file)
+set_target_properties(btree_storage_file PROPERTIES EXPORT_NAME file)
 
-set(bptree_library_targets
-    bptree
-    bptree_storage_memory
-    bptree_storage_file
+set(btree_library_targets
+    btree
+    btree_storage_memory
+    btree_storage_file
 )
 
-if(BPTREE_BUILD_TESTS AND UNIX)
-    add_library(bptree_storage_file_test_hooks STATIC
-        src/bptree_storage_file.c
+if(BTREE_BUILD_TESTS AND UNIX)
+    add_library(btree_storage_file_test_hooks STATIC
+        src/btree_storage_file.c
     )
     target_compile_definitions(
-        bptree_storage_file_test_hooks
-        PRIVATE BPTREE_ENABLE_TEST_HOOKS=1
+        btree_storage_file_test_hooks
+        PRIVATE BTREE_ENABLE_TEST_HOOKS=1
     )
-    list(APPEND bptree_library_targets bptree_storage_file_test_hooks)
+    list(APPEND btree_library_targets btree_storage_file_test_hooks)
 endif()
 
-foreach(target IN LISTS bptree_library_targets)
+foreach(target IN LISTS btree_library_targets)
     target_compile_features(${target} PUBLIC c_std_11)
     target_include_directories(
         ${target}
@@ -60,19 +66,22 @@ foreach(target IN LISTS bptree_library_targets)
 endforeach()
 
 if(UNIX)
-    foreach(target IN LISTS bptree_library_targets)
+    foreach(target IN LISTS btree_library_targets)
         target_compile_definitions(${target} PRIVATE _POSIX_C_SOURCE=200809L)
+        if(APPLE)
+            target_compile_definitions(${target} PRIVATE _DARWIN_C_SOURCE)
+        endif()
     endforeach()
 endif()
 
-target_link_libraries(bptree_storage_file PUBLIC bptree)
+target_link_libraries(btree_storage_file PUBLIC btree)
 
-if(TARGET bptree_storage_file_test_hooks)
-    target_link_libraries(bptree_storage_file_test_hooks PUBLIC bptree)
+if(TARGET btree_storage_file_test_hooks)
+    target_link_libraries(btree_storage_file_test_hooks PUBLIC btree)
 endif()
 
-if(BPTREE_ENABLE_SANITIZERS)
-    foreach(target IN LISTS bptree_library_targets)
+if(BTREE_ENABLE_SANITIZERS)
+    foreach(target IN LISTS btree_library_targets)
         target_compile_options(
             ${target}
             PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -87,10 +96,10 @@ if(BPTREE_ENABLE_SANITIZERS)
     endforeach()
 endif()
 
-if(BPTREE_BUILD_TESTS)
+if(BTREE_BUILD_TESTS)
     enable_testing()
 
-    function(bptree_configure_test target)
+    function(btree_configure_test target)
         target_compile_options(
             ${target}
             PRIVATE
@@ -101,7 +110,7 @@ if(BPTREE_BUILD_TESTS)
                 -Wconversion
                 -Wsign-conversion
         )
-        if(BPTREE_ENABLE_SANITIZERS)
+        if(BTREE_ENABLE_SANITIZERS)
             target_compile_options(
                 ${target}
                 PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -111,48 +120,71 @@ if(BPTREE_BUILD_TESTS)
                 PRIVATE -fsanitize=address,undefined
             )
         endif()
+        if(APPLE)
+            target_compile_definitions(${target} PRIVATE _DARWIN_C_SOURCE)
+        endif()
         add_test(NAME ${target} COMMAND ${target})
     endfunction()
 
-    function(bptree_add_test target source)
+    function(btree_add_test target source)
         add_executable(${target} ${source})
         target_link_libraries(
             ${target}
-            PRIVATE bptree_storage_memory bptree_storage_file
+            PRIVATE btree_storage_memory btree_storage_file
         )
-        bptree_configure_test(${target})
+        btree_configure_test(${target})
     endfunction()
 
-    bptree_add_test(bptree_model_test tests/bptree_model_test.c)
-    bptree_add_test(bptree_contract_test tests/bptree_contract_test.c)
-    bptree_add_test(bptree_backend_test tests/bptree_backend_test.c)
-    bptree_add_test(bptree_structure_test tests/bptree_structure_test.c)
-    bptree_add_test(bptree_persistence_test tests/bptree_persistence_test.c)
-    bptree_add_test(bptree_corruption_test tests/bptree_corruption_test.c)
+    btree_add_test(btree_model_test tests/btree_model_test.c)
+    btree_add_test(btree_generic_test tests/btree_generic_test.c)
+    btree_add_test(btree_contract_test tests/btree_contract_test.c)
+    btree_add_test(btree_backend_test tests/btree_backend_test.c)
+    btree_add_test(btree_structure_test tests/btree_structure_test.c)
+    btree_add_test(btree_persistence_test tests/btree_persistence_test.c)
+    btree_add_test(btree_corruption_test tests/btree_corruption_test.c)
 
     if(UNIX)
-        add_executable(bptree_crash_test tests/bptree_crash_test.c)
+        add_executable(btree_crash_test tests/btree_crash_test.c)
         target_link_libraries(
-            bptree_crash_test
-            PRIVATE bptree_storage_file_test_hooks
+            btree_crash_test
+            PRIVATE btree_storage_file_test_hooks
         )
-        bptree_configure_test(bptree_crash_test)
+        btree_configure_test(btree_crash_test)
     endif()
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 install(
-    TARGETS bptree bptree_storage_memory bptree_storage_file
-    EXPORT bptreeTargets
+    TARGETS btree btree_storage_memory btree_storage_file
+    EXPORT btreeTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install(
-    FILES include/bptree.h include/bptree_backends.h
+    FILES include/btree.h include/btree_backends.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(
-    EXPORT bptreeTargets
-    NAMESPACE bptree::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bptree
+    EXPORT btreeTargets
+    NAMESPACE btree::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/btree
+)
+
+configure_package_config_file(
+    cmake/btreeConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/btreeConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/btree
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/btreeConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/btreeConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/btreeConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/btree
 )

@@ -1,4 +1,4 @@
-#include "bptree_backends.h"
+#include "btree_backends.h"
 #include "test_support.h"
 
 #include <fcntl.h>
@@ -79,35 +79,35 @@ static void write_exact_at(int fd, const void *data, size_t size, off_t offset) 
 }
 
 static void create_populated(const char *path, uint64_t item_count) {
-    bpt_file_backend *backend = NULL;
-    bpt_storage storage;
-    bpt_tree *tree = NULL;
+    btree_file *backend = NULL;
+    btree_storage storage;
+    btree *tree = NULL;
     uint64_t key;
 
-    TEST_STATUS(bpt_file_backend_create(path, TEST_PAGE_SIZE, &backend), BPT_OK);
-    storage = bpt_file_backend_storage(backend);
-    TEST_STATUS(bpt_tree_create(&storage, &tree), BPT_OK);
+    TEST_STATUS(btree_file_create(path, TEST_PAGE_SIZE, &backend), BTREE_OK);
+    storage = btree_file_storage(backend);
+    TEST_STATUS(test_btree_create_u64(&storage, &tree), BTREE_OK);
     for (key = 0u; key < item_count; ++key) {
         bool inserted = false;
 
-        TEST_STATUS(bpt_tree_put(tree, key, key + 1u, &inserted), BPT_OK);
+        TEST_STATUS(test_btree_put_u64(tree, key, key + 1u, &inserted), BTREE_OK);
         TEST_CHECK(inserted);
     }
     test_validate(tree);
-    bpt_tree_close(tree);
-    TEST_STATUS(bpt_file_backend_close(backend), BPT_OK);
+    btree_close(tree);
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
 }
 
 static void expect_tree_corrupt(const char *path) {
-    bpt_file_backend *backend = NULL;
-    bpt_storage storage;
-    bpt_tree *tree = NULL;
+    btree_file *backend = NULL;
+    btree_storage storage;
+    btree *tree = NULL;
 
-    TEST_STATUS(bpt_file_backend_open(path, &backend), BPT_OK);
-    storage = bpt_file_backend_storage(backend);
-    TEST_STATUS(bpt_tree_open(&storage, &tree), BPT_CORRUPT);
+    TEST_STATUS(btree_file_open(path, &backend), BTREE_OK);
+    storage = btree_file_storage(backend);
+    TEST_STATUS(test_btree_open_u64(&storage, &tree), BTREE_CORRUPT);
     TEST_CHECK(tree == NULL);
-    TEST_STATUS(bpt_file_backend_close(backend), BPT_OK);
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
 }
 
 static void test_bad_file_header(void) {
@@ -124,8 +124,8 @@ static void test_bad_file_header(void) {
     write_exact_at(fd, &byte, 1u, 0);
     TEST_CHECK(close(fd) == 0);
 
-    bpt_file_backend *backend = NULL;
-    TEST_STATUS(bpt_file_backend_open(path, &backend), BPT_CORRUPT);
+    btree_file *backend = NULL;
+    TEST_STATUS(btree_file_open(path, &backend), BTREE_CORRUPT);
     TEST_CHECK(backend == NULL);
     test_remove_database(path);
 }
@@ -209,7 +209,7 @@ static void test_malformed_wal(void) {
     char wal_path[512];
     int length;
     int fd;
-    bpt_file_backend *backend = NULL;
+    btree_file *backend = NULL;
 
     test_temp_path(path, sizeof(path));
     create_populated(path, 4u);
@@ -221,7 +221,7 @@ static void test_malformed_wal(void) {
     write_exact_at(fd, "bad-wal", 7u, 0);
     TEST_CHECK(close(fd) == 0);
 
-    TEST_STATUS(bpt_file_backend_open(path, &backend), BPT_CORRUPT);
+    TEST_STATUS(btree_file_open(path, &backend), BTREE_CORRUPT);
     TEST_CHECK(backend == NULL);
     TEST_CHECK(access(wal_path, F_OK) == 0);
     test_remove_database(path);

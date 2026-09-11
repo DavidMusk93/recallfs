@@ -2,8 +2,8 @@
 #define _DARWIN_C_SOURCE
 #endif
 
-#include "bptree_backends.h"
-#include "bptree_internal.h"
+#include "btree_backends.h"
+#include "btree_internal.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -27,48 +27,48 @@
 #endif
 
 enum {
-    BPT_FILE_MAGIC_SIZE = 8,
-    BPT_FILE_UUID_SIZE = 16,
-    BPT_FILE_VERSION_OFFSET = 8,
-    BPT_FILE_TREE_VERSION_OFFSET = 12,
-    BPT_FILE_PAGE_SIZE_OFFSET = 16,
-    BPT_FILE_FLAGS_OFFSET = 20,
-    BPT_FILE_UUID_OFFSET = 24,
-    BPT_FILE_CHECKSUM_OFFSET = 40,
-    BPT_FILE_HEADER_USED_SIZE = 44,
+    BTREE_FILE_MAGIC_SIZE = 8,
+    BTREE_FILE_UUID_SIZE = 16,
+    BTREE_FILE_VERSION_OFFSET = 8,
+    BTREE_FILE_TREE_VERSION_OFFSET = 12,
+    BTREE_FILE_PAGE_SIZE_OFFSET = 16,
+    BTREE_FILE_FLAGS_OFFSET = 20,
+    BTREE_FILE_UUID_OFFSET = 24,
+    BTREE_FILE_CHECKSUM_OFFSET = 40,
+    BTREE_FILE_HEADER_USED_SIZE = 44,
 
-    BPT_WAL_MAGIC_SIZE = 8,
-    BPT_WAL_VERSION_OFFSET = 8,
-    BPT_WAL_FILE_VERSION_OFFSET = 12,
-    BPT_WAL_TREE_VERSION_OFFSET = 16,
-    BPT_WAL_PAGE_SIZE_OFFSET = 20,
-    BPT_WAL_FLAGS_OFFSET = 24,
-    BPT_WAL_HEADER_SIZE_OFFSET = 28,
-    BPT_WAL_UUID_OFFSET = 32,
-    BPT_WAL_RECORD_COUNT_OFFSET = 48,
-    BPT_WAL_ORIGINAL_PAGE_COUNT_OFFSET = 56,
-    BPT_WAL_FINAL_PAGE_COUNT_OFFSET = 64,
-    BPT_WAL_TOTAL_SIZE_OFFSET = 72,
-    BPT_WAL_CHECKSUM_OFFSET = 80,
-    BPT_WAL_HEADER_SIZE = 96,
-    BPT_WAL_PAGE_ID_SIZE = 8,
-    BPT_WAL_MAX_TRANSACTION_PAGES = 256
+    BTREE_WAL_MAGIC_SIZE = 8,
+    BTREE_WAL_VERSION_OFFSET = 8,
+    BTREE_WAL_FILE_VERSION_OFFSET = 12,
+    BTREE_WAL_TREE_VERSION_OFFSET = 16,
+    BTREE_WAL_PAGE_SIZE_OFFSET = 20,
+    BTREE_WAL_FLAGS_OFFSET = 24,
+    BTREE_WAL_HEADER_SIZE_OFFSET = 28,
+    BTREE_WAL_UUID_OFFSET = 32,
+    BTREE_WAL_RECORD_COUNT_OFFSET = 48,
+    BTREE_WAL_ORIGINAL_PAGE_COUNT_OFFSET = 56,
+    BTREE_WAL_FINAL_PAGE_COUNT_OFFSET = 64,
+    BTREE_WAL_TOTAL_SIZE_OFFSET = 72,
+    BTREE_WAL_CHECKSUM_OFFSET = 80,
+    BTREE_WAL_HEADER_SIZE = 96,
+    BTREE_WAL_PAGE_ID_SIZE = 8,
+    BTREE_WAL_MAX_TRANSACTION_PAGES = 256
 };
 
-#define BPT_FILE_FORMAT_VERSION UINT32_C(1)
-#define BPT_WAL_FORMAT_VERSION UINT32_C(1)
+#define BTREE_FILE_FORMAT_VERSION UINT32_C(1)
+#define BTREE_WAL_FORMAT_VERSION UINT32_C(1)
 
-static const unsigned char bpt_file_magic[BPT_FILE_MAGIC_SIZE] = {'B', 'P', 'T', 'D',
-                                                                  'B', '0', '0', '1'};
-static const unsigned char bpt_wal_magic[BPT_WAL_MAGIC_SIZE] = {'B', 'P', 'T', 'W',
-                                                                'A', 'L', '0', '1'};
+static const unsigned char btree_file_magic[BTREE_FILE_MAGIC_SIZE] = {'B', 'T', 'R', 'E',
+                                                                      'E', '0', '0', '2'};
+static const unsigned char btree_wal_magic[BTREE_WAL_MAGIC_SIZE] = {'B', 'T', 'R', 'W',
+                                                                    'A', 'L', '0', '2'};
 
-struct bpt_file_backend {
+struct btree_file {
     int fd;
     int parent_fd;
     uint32_t page_size;
     uint64_t page_count;
-    unsigned char uuid[BPT_FILE_UUID_SIZE];
+    unsigned char uuid[BTREE_FILE_UUID_SIZE];
     char *wal_name;
     char *wal_temp_name;
     bool recovery_required;
@@ -304,20 +304,20 @@ static bool file_descriptor_size(int fd, uint64_t *size_out) {
     return (off_t)*size_out == status.st_size;
 }
 
-static bpt_status file_lock_exclusive(int fd) {
+static btree_status file_lock_exclusive(int fd) {
     int result;
 
     do {
         result = flock(fd, LOCK_EX | LOCK_NB);
     } while (result != 0 && errno == EINTR);
     if (result == 0) {
-        return BPT_OK;
+        return BTREE_OK;
     }
-    return errno == EACCES || errno == EAGAIN ? BPT_BUSY : BPT_IO;
+    return errno == EACCES || errno == EAGAIN ? BTREE_BUSY : BTREE_IO;
 }
 
-static bpt_status file_build_paths(const char *path, char **wal_name_out, char **wal_temp_name_out,
-                                   char **parent_path_out) {
+static btree_status file_build_paths(const char *path, char **wal_name_out,
+                                     char **wal_temp_name_out, char **parent_path_out) {
     const char *slash;
     const char *base_name;
     size_t path_length;
@@ -329,28 +329,28 @@ static bpt_status file_build_paths(const char *path, char **wal_name_out, char *
 
     if (path == NULL || path[0] == '\0' || wal_name_out == NULL || wal_temp_name_out == NULL ||
         parent_path_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     path_length = strlen(path);
     if (path[path_length - 1u] == '/') {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     slash = strrchr(path, '/');
     base_name = slash == NULL ? path : slash + 1;
     base_length = strlen(base_name);
     if (base_length > SIZE_MAX - 9u) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     wal_name = malloc(base_length + 5u);
     if (wal_name == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     memcpy(wal_name, base_name, base_length);
     memcpy(wal_name + base_length, ".wal", 5u);
     wal_temp_name = malloc(base_length + 9u);
     if (wal_temp_name == NULL) {
         free(wal_name);
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     memcpy(wal_temp_name, base_name, base_length);
     memcpy(wal_temp_name + base_length, ".wal.tmp", 9u);
@@ -378,31 +378,31 @@ static bpt_status file_build_paths(const char *path, char **wal_name_out, char *
     if (parent_path == NULL) {
         free(wal_temp_name);
         free(wal_name);
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
 
     *wal_name_out = wal_name;
     *wal_temp_name_out = wal_temp_name;
     *parent_path_out = parent_path;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_open_parent(const char *parent_path, int *fd_out) {
+static btree_status file_open_parent(const char *parent_path, int *fd_out) {
     struct stat status;
     int fd = file_open_existing(parent_path, O_RDONLY);
 
     if (fd < 0) {
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (!file_fstat(fd, &status) || !S_ISDIR(status.st_mode)) {
         (void)close(fd);
-        return BPT_IO;
+        return BTREE_IO;
     }
     *fd_out = fd;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_require_absent_at(int parent_fd, const char *name) {
+static btree_status file_require_absent_at(int parent_fd, const char *name) {
     struct stat status;
     int result;
     int flags = 0;
@@ -414,163 +414,162 @@ static bpt_status file_require_absent_at(int parent_fd, const char *name) {
         result = fstatat(parent_fd, name, &status, flags);
     } while (result != 0 && errno == EINTR);
     if (result == 0) {
-        return BPT_BUSY;
+        return BTREE_BUSY;
     }
-    return errno == ENOENT ? BPT_OK : BPT_IO;
+    return errno == ENOENT ? BTREE_OK : BTREE_IO;
 }
 
-static bpt_status file_remove_stale_wal_temp(bpt_file_backend *backend) {
-    bpt_status status = file_require_absent_at(backend->parent_fd, backend->wal_temp_name);
+static btree_status file_remove_stale_wal_temp(btree_file *backend) {
+    btree_status status = file_require_absent_at(backend->parent_fd, backend->wal_temp_name);
 
-    if (status == BPT_OK) {
-        return BPT_OK;
+    if (status == BTREE_OK) {
+        return BTREE_OK;
     }
-    if (status != BPT_BUSY) {
+    if (status != BTREE_BUSY) {
         return status;
     }
     if (!file_unlink_at(backend->parent_fd, backend->wal_temp_name) ||
         !file_sync_directory(backend->parent_fd)) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_random_uuid(unsigned char uuid[BPT_FILE_UUID_SIZE]) {
+static btree_status file_random_uuid(unsigned char uuid[BTREE_FILE_UUID_SIZE]) {
     int fd = file_open_existing("/dev/urandom", O_RDONLY);
 
     if (fd < 0) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    if (!file_read_exact_at(fd, uuid, BPT_FILE_UUID_SIZE, 0)) {
+    if (!file_read_exact_at(fd, uuid, BTREE_FILE_UUID_SIZE, 0)) {
         (void)close(fd);
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (close(fd) != 0) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    return BPT_OK;
+    return BTREE_OK;
 }
 
 static uint32_t file_checksum(unsigned char *data, size_t size, size_t checksum_offset) {
     uint32_t checksum;
 
-    bpt_store_u32(data + checksum_offset, 0u);
-    checksum = bpt_crc32c(data, size);
-    bpt_store_u32(data + checksum_offset, checksum);
+    btree_store_u32(data + checksum_offset, 0u);
+    checksum = btree_crc32c(data, size);
+    btree_store_u32(data + checksum_offset, checksum);
     return checksum;
 }
 
 static void file_header_encode(unsigned char *header, uint32_t page_size,
-                               const unsigned char uuid[BPT_FILE_UUID_SIZE]) {
+                               const unsigned char uuid[BTREE_FILE_UUID_SIZE]) {
     memset(header, 0, (size_t)page_size);
-    memcpy(header, bpt_file_magic, BPT_FILE_MAGIC_SIZE);
-    bpt_store_u32(header + BPT_FILE_VERSION_OFFSET, BPT_FILE_FORMAT_VERSION);
-    bpt_store_u32(header + BPT_FILE_TREE_VERSION_OFFSET, BPTREE_FORMAT_VERSION);
-    bpt_store_u32(header + BPT_FILE_PAGE_SIZE_OFFSET, page_size);
-    bpt_store_u32(header + BPT_FILE_FLAGS_OFFSET, 0u);
-    memcpy(header + BPT_FILE_UUID_OFFSET, uuid, BPT_FILE_UUID_SIZE);
-    (void)file_checksum(header, (size_t)page_size, BPT_FILE_CHECKSUM_OFFSET);
+    memcpy(header, btree_file_magic, BTREE_FILE_MAGIC_SIZE);
+    btree_store_u32(header + BTREE_FILE_VERSION_OFFSET, BTREE_FILE_FORMAT_VERSION);
+    btree_store_u32(header + BTREE_FILE_TREE_VERSION_OFFSET, BTREE_FORMAT_VERSION);
+    btree_store_u32(header + BTREE_FILE_PAGE_SIZE_OFFSET, page_size);
+    btree_store_u32(header + BTREE_FILE_FLAGS_OFFSET, 0u);
+    memcpy(header + BTREE_FILE_UUID_OFFSET, uuid, BTREE_FILE_UUID_SIZE);
+    (void)file_checksum(header, (size_t)page_size, BTREE_FILE_CHECKSUM_OFFSET);
 }
 
-static bpt_status file_header_validate(unsigned char *header, uint32_t expected_page_size,
-                                       unsigned char uuid_out[BPT_FILE_UUID_SIZE]) {
+static btree_status file_header_validate(unsigned char *header, uint32_t expected_page_size,
+                                         unsigned char uuid_out[BTREE_FILE_UUID_SIZE]) {
     uint32_t stored_checksum;
     uint32_t actual_checksum;
     size_t index;
 
-    if (memcmp(header, bpt_file_magic, BPT_FILE_MAGIC_SIZE) != 0) {
-        return BPT_CORRUPT;
+    if (memcmp(header, btree_file_magic, BTREE_FILE_MAGIC_SIZE) != 0) {
+        return BTREE_CORRUPT;
     }
-    stored_checksum = bpt_load_u32(header + BPT_FILE_CHECKSUM_OFFSET);
-    actual_checksum = file_checksum(header, (size_t)expected_page_size, BPT_FILE_CHECKSUM_OFFSET);
+    stored_checksum = btree_load_u32(header + BTREE_FILE_CHECKSUM_OFFSET);
+    actual_checksum = file_checksum(header, (size_t)expected_page_size, BTREE_FILE_CHECKSUM_OFFSET);
     if (stored_checksum != actual_checksum) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
-    if (bpt_load_u32(header + BPT_FILE_VERSION_OFFSET) != BPT_FILE_FORMAT_VERSION ||
-        bpt_load_u32(header + BPT_FILE_TREE_VERSION_OFFSET) != BPTREE_FORMAT_VERSION ||
-        bpt_load_u32(header + BPT_FILE_FLAGS_OFFSET) != 0u) {
-        return BPT_UNSUPPORTED;
+    if (btree_load_u32(header + BTREE_FILE_VERSION_OFFSET) != BTREE_FILE_FORMAT_VERSION ||
+        btree_load_u32(header + BTREE_FILE_TREE_VERSION_OFFSET) != BTREE_FORMAT_VERSION ||
+        btree_load_u32(header + BTREE_FILE_FLAGS_OFFSET) != 0u) {
+        return BTREE_UNSUPPORTED;
     }
-    if (bpt_load_u32(header + BPT_FILE_PAGE_SIZE_OFFSET) != expected_page_size) {
-        return BPT_CORRUPT;
+    if (btree_load_u32(header + BTREE_FILE_PAGE_SIZE_OFFSET) != expected_page_size) {
+        return BTREE_CORRUPT;
     }
-    for (index = BPT_FILE_HEADER_USED_SIZE; index < (size_t)expected_page_size; ++index) {
+    for (index = BTREE_FILE_HEADER_USED_SIZE; index < (size_t)expected_page_size; ++index) {
         if (header[index] != 0u) {
-            return BPT_UNSUPPORTED;
+            return BTREE_UNSUPPORTED;
         }
     }
-    memcpy(uuid_out, header + BPT_FILE_UUID_OFFSET, BPT_FILE_UUID_SIZE);
-    return BPT_OK;
+    memcpy(uuid_out, header + BTREE_FILE_UUID_OFFSET, BTREE_FILE_UUID_SIZE);
+    return BTREE_OK;
 }
 
-static bpt_status file_read_header(int fd, uint32_t *page_size_out,
-                                   unsigned char uuid_out[BPT_FILE_UUID_SIZE]) {
-    unsigned char prefix[BPT_FILE_HEADER_USED_SIZE];
+static btree_status file_read_header(int fd, uint32_t *page_size_out,
+                                     unsigned char uuid_out[BTREE_FILE_UUID_SIZE]) {
+    unsigned char prefix[BTREE_FILE_HEADER_USED_SIZE];
     unsigned char *header;
     uint64_t file_size;
     uint32_t page_size;
-    bpt_status status;
+    btree_status status;
 
     if (!file_descriptor_size(fd, &file_size)) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    if (file_size < BPT_FILE_HEADER_USED_SIZE) {
-        return BPT_CORRUPT;
+    if (file_size < BTREE_FILE_HEADER_USED_SIZE) {
+        return BTREE_CORRUPT;
     }
     if (!file_read_exact_at(fd, prefix, sizeof(prefix), 0)) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    if (memcmp(prefix, bpt_file_magic, BPT_FILE_MAGIC_SIZE) != 0) {
-        return BPT_CORRUPT;
+    if (memcmp(prefix, btree_file_magic, BTREE_FILE_MAGIC_SIZE) != 0) {
+        return BTREE_CORRUPT;
     }
-    page_size = bpt_load_u32(prefix + BPT_FILE_PAGE_SIZE_OFFSET);
-    if (!bpt_page_size_valid(page_size) || file_size < page_size) {
-        return BPT_CORRUPT;
+    page_size = btree_load_u32(prefix + BTREE_FILE_PAGE_SIZE_OFFSET);
+    if (!btree_page_size_valid(page_size) || file_size < page_size) {
+        return BTREE_CORRUPT;
     }
     header = malloc((size_t)page_size);
     if (header == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     if (!file_read_exact_at(fd, header, (size_t)page_size, 0)) {
         free(header);
-        return BPT_IO;
+        return BTREE_IO;
     }
     status = file_header_validate(header, page_size, uuid_out);
     free(header);
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         *page_size_out = page_size;
     }
     return status;
 }
 
-static bpt_status file_measure_page_count(const bpt_file_backend *backend,
-                                          uint64_t *page_count_out) {
+static btree_status file_measure_page_count(const btree_file *backend, uint64_t *page_count_out) {
     uint64_t file_size;
 
     if (!file_descriptor_size(backend->fd, &file_size)) {
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (file_size < backend->page_size || (file_size % backend->page_size) != 0u) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
     *page_count_out = file_size / backend->page_size - UINT64_C(1);
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_refresh_page_count(bpt_file_backend *backend) {
+static btree_status file_refresh_page_count(btree_file *backend) {
     uint64_t page_count;
-    bpt_status status = file_measure_page_count(backend, &page_count);
+    btree_status status = file_measure_page_count(backend, &page_count);
 
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
     backend->page_count = page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
 static void file_test_crash(const char *point) {
-#ifdef BPTREE_ENABLE_TEST_HOOKS
-    const char *configured = getenv("BPTREE_TEST_CRASH_POINT");
+#ifdef BTREE_ENABLE_TEST_HOOKS
+    const char *configured = getenv("BTREE_TEST_CRASH_POINT");
 
     if (configured != NULL && strcmp(configured, point) == 0) {
         _exit(86);
@@ -580,32 +579,32 @@ static void file_test_crash(const char *point) {
 #endif
 }
 
-static bpt_status file_validate_updates(const bpt_file_backend *backend,
-                                        const bpt_page_update *updates, size_t update_count,
-                                        uint64_t *final_page_count_out) {
+static btree_status file_validate_updates(const btree_file *backend,
+                                          const btree_page_update *updates, size_t update_count,
+                                          uint64_t *final_page_count_out) {
     uint64_t final_page_count = backend->page_count;
     uint64_t new_id_count = 0u;
     size_t index;
 
     if (update_count != 0u && updates == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
-    if (update_count > (size_t)BPT_WAL_MAX_TRANSACTION_PAGES) {
-        return BPT_OUT_OF_MEMORY;
+    if (update_count > (size_t)BTREE_WAL_MAX_TRANSACTION_PAGES) {
+        return BTREE_OUT_OF_MEMORY;
     }
     for (index = 0u; index < update_count; ++index) {
         size_t other;
         off_t offset;
 
         if (updates[index].data == NULL) {
-            return BPT_INVALID_ARGUMENT;
+            return BTREE_INVALID_ARGUMENT;
         }
         if (!file_page_offset(updates[index].page_id, backend->page_size, &offset)) {
-            return BPT_OUT_OF_MEMORY;
+            return BTREE_OUT_OF_MEMORY;
         }
         for (other = 0u; other < index; ++other) {
             if (updates[other].page_id == updates[index].page_id) {
-                return BPT_INVALID_ARGUMENT;
+                return BTREE_INVALID_ARGUMENT;
             }
         }
         if (updates[index].page_id >= backend->page_count) {
@@ -616,102 +615,102 @@ static bpt_status file_validate_updates(const bpt_file_backend *backend,
         }
     }
     if (final_page_count - backend->page_count != new_id_count) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     {
         uint64_t final_size;
 
         if (!file_size_for_page_count(final_page_count, backend->page_size, &final_size)) {
-            return BPT_OUT_OF_MEMORY;
+            return BTREE_OUT_OF_MEMORY;
         }
     }
     *final_page_count_out = final_page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_build_wal(const bpt_file_backend *backend, const bpt_page_update *updates,
-                                 size_t update_count, uint64_t final_page_count,
-                                 unsigned char **wal_out, size_t *wal_size_out) {
-    size_t record_size = BPT_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
+static btree_status file_build_wal(const btree_file *backend, const btree_page_update *updates,
+                                   size_t update_count, uint64_t final_page_count,
+                                   unsigned char **wal_out, size_t *wal_size_out) {
+    size_t record_size = BTREE_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
     size_t wal_size;
     unsigned char *wal;
     size_t index;
 
-    if (update_count > (size_t)BPT_WAL_MAX_TRANSACTION_PAGES ||
-        update_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
-        return BPT_OUT_OF_MEMORY;
+    if (update_count > (size_t)BTREE_WAL_MAX_TRANSACTION_PAGES ||
+        update_count > (SIZE_MAX - BTREE_WAL_HEADER_SIZE) / record_size) {
+        return BTREE_OUT_OF_MEMORY;
     }
-    wal_size = BPT_WAL_HEADER_SIZE + update_count * record_size;
+    wal_size = BTREE_WAL_HEADER_SIZE + update_count * record_size;
     {
         off_t converted = (off_t)wal_size;
 
         if (converted < 0 || (size_t)converted != wal_size) {
-            return BPT_OUT_OF_MEMORY;
+            return BTREE_OUT_OF_MEMORY;
         }
     }
     wal = calloc(1u, wal_size);
     if (wal == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
 
-    memcpy(wal, bpt_wal_magic, BPT_WAL_MAGIC_SIZE);
-    bpt_store_u32(wal + BPT_WAL_VERSION_OFFSET, BPT_WAL_FORMAT_VERSION);
-    bpt_store_u32(wal + BPT_WAL_FILE_VERSION_OFFSET, BPT_FILE_FORMAT_VERSION);
-    bpt_store_u32(wal + BPT_WAL_TREE_VERSION_OFFSET, BPTREE_FORMAT_VERSION);
-    bpt_store_u32(wal + BPT_WAL_PAGE_SIZE_OFFSET, backend->page_size);
-    bpt_store_u32(wal + BPT_WAL_FLAGS_OFFSET, 0u);
-    bpt_store_u32(wal + BPT_WAL_HEADER_SIZE_OFFSET, BPT_WAL_HEADER_SIZE);
-    memcpy(wal + BPT_WAL_UUID_OFFSET, backend->uuid, BPT_FILE_UUID_SIZE);
-    bpt_store_u64(wal + BPT_WAL_RECORD_COUNT_OFFSET, (uint64_t)update_count);
-    bpt_store_u64(wal + BPT_WAL_ORIGINAL_PAGE_COUNT_OFFSET, backend->page_count);
-    bpt_store_u64(wal + BPT_WAL_FINAL_PAGE_COUNT_OFFSET, final_page_count);
-    bpt_store_u64(wal + BPT_WAL_TOTAL_SIZE_OFFSET, (uint64_t)wal_size);
+    memcpy(wal, btree_wal_magic, BTREE_WAL_MAGIC_SIZE);
+    btree_store_u32(wal + BTREE_WAL_VERSION_OFFSET, BTREE_WAL_FORMAT_VERSION);
+    btree_store_u32(wal + BTREE_WAL_FILE_VERSION_OFFSET, BTREE_FILE_FORMAT_VERSION);
+    btree_store_u32(wal + BTREE_WAL_TREE_VERSION_OFFSET, BTREE_FORMAT_VERSION);
+    btree_store_u32(wal + BTREE_WAL_PAGE_SIZE_OFFSET, backend->page_size);
+    btree_store_u32(wal + BTREE_WAL_FLAGS_OFFSET, 0u);
+    btree_store_u32(wal + BTREE_WAL_HEADER_SIZE_OFFSET, BTREE_WAL_HEADER_SIZE);
+    memcpy(wal + BTREE_WAL_UUID_OFFSET, backend->uuid, BTREE_FILE_UUID_SIZE);
+    btree_store_u64(wal + BTREE_WAL_RECORD_COUNT_OFFSET, (uint64_t)update_count);
+    btree_store_u64(wal + BTREE_WAL_ORIGINAL_PAGE_COUNT_OFFSET, backend->page_count);
+    btree_store_u64(wal + BTREE_WAL_FINAL_PAGE_COUNT_OFFSET, final_page_count);
+    btree_store_u64(wal + BTREE_WAL_TOTAL_SIZE_OFFSET, (uint64_t)wal_size);
     for (index = 0u; index < update_count; ++index) {
-        size_t offset = BPT_WAL_HEADER_SIZE + index * record_size;
+        size_t offset = BTREE_WAL_HEADER_SIZE + index * record_size;
 
-        bpt_store_u64(wal + offset, updates[index].page_id);
-        memcpy(wal + offset + BPT_WAL_PAGE_ID_SIZE, updates[index].data,
+        btree_store_u64(wal + offset, updates[index].page_id);
+        memcpy(wal + offset + BTREE_WAL_PAGE_ID_SIZE, updates[index].data,
                (size_t)backend->page_size);
     }
-    (void)file_checksum(wal, wal_size, BPT_WAL_CHECKSUM_OFFSET);
+    (void)file_checksum(wal, wal_size, BTREE_WAL_CHECKSUM_OFFSET);
     *wal_out = wal;
     *wal_size_out = wal_size;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_wal_preflight(const bpt_file_backend *backend,
-                                     const unsigned char header[BPT_WAL_HEADER_SIZE],
-                                     uint64_t wal_file_size, size_t *wal_size_out) {
+static btree_status file_wal_preflight(const btree_file *backend,
+                                       const unsigned char header[BTREE_WAL_HEADER_SIZE],
+                                       uint64_t wal_file_size, size_t *wal_size_out) {
     uint64_t record_count;
     uint64_t total_size;
-    size_t record_size = BPT_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
+    size_t record_size = BTREE_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
     size_t expected_size;
 
-    if (wal_file_size < BPT_WAL_HEADER_SIZE || wal_file_size > (uint64_t)SIZE_MAX ||
-        memcmp(header, bpt_wal_magic, BPT_WAL_MAGIC_SIZE) != 0 ||
-        bpt_load_u32(header + BPT_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
-        bpt_load_u32(header + BPT_WAL_HEADER_SIZE_OFFSET) != BPT_WAL_HEADER_SIZE) {
-        return BPT_CORRUPT;
+    if (wal_file_size < BTREE_WAL_HEADER_SIZE || wal_file_size > (uint64_t)SIZE_MAX ||
+        memcmp(header, btree_wal_magic, BTREE_WAL_MAGIC_SIZE) != 0 ||
+        btree_load_u32(header + BTREE_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
+        btree_load_u32(header + BTREE_WAL_HEADER_SIZE_OFFSET) != BTREE_WAL_HEADER_SIZE) {
+        return BTREE_CORRUPT;
     }
 
-    record_count = bpt_load_u64(header + BPT_WAL_RECORD_COUNT_OFFSET);
-    total_size = bpt_load_u64(header + BPT_WAL_TOTAL_SIZE_OFFSET);
-    if (record_count == 0u || record_count > BPT_WAL_MAX_TRANSACTION_PAGES ||
+    record_count = btree_load_u64(header + BTREE_WAL_RECORD_COUNT_OFFSET);
+    total_size = btree_load_u64(header + BTREE_WAL_TOTAL_SIZE_OFFSET);
+    if (record_count == 0u || record_count > BTREE_WAL_MAX_TRANSACTION_PAGES ||
         record_count > (uint64_t)SIZE_MAX ||
-        (size_t)record_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
-        return BPT_CORRUPT;
+        (size_t)record_count > (SIZE_MAX - BTREE_WAL_HEADER_SIZE) / record_size) {
+        return BTREE_CORRUPT;
     }
-    expected_size = BPT_WAL_HEADER_SIZE + (size_t)record_count * record_size;
+    expected_size = BTREE_WAL_HEADER_SIZE + (size_t)record_count * record_size;
     if (total_size != wal_file_size || expected_size != (size_t)wal_file_size) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
 
     *wal_size_out = expected_size;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wal, size_t wal_size,
-                                    uint64_t data_file_size, uint64_t *final_page_count_out) {
+static btree_status file_wal_validate(btree_file *backend, unsigned char *wal, size_t wal_size,
+                                      uint64_t data_file_size, uint64_t *final_page_count_out) {
     uint64_t record_count;
     uint64_t original_page_count;
     uint64_t final_page_count;
@@ -719,74 +718,76 @@ static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wa
     uint64_t final_file_size;
     uint64_t maximum_page_count;
     uint64_t new_id_count = 0u;
-    size_t record_size = BPT_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
+    size_t record_size = BTREE_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
     size_t expected_size;
     size_t index;
     uint32_t stored_checksum;
     uint32_t actual_checksum;
 
-    if (wal_size < BPT_WAL_HEADER_SIZE || memcmp(wal, bpt_wal_magic, BPT_WAL_MAGIC_SIZE) != 0 ||
-        bpt_load_u32(wal + BPT_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
-        bpt_load_u32(wal + BPT_WAL_HEADER_SIZE_OFFSET) != BPT_WAL_HEADER_SIZE) {
-        return BPT_CORRUPT;
+    if (wal_size < BTREE_WAL_HEADER_SIZE ||
+        memcmp(wal, btree_wal_magic, BTREE_WAL_MAGIC_SIZE) != 0 ||
+        btree_load_u32(wal + BTREE_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
+        btree_load_u32(wal + BTREE_WAL_HEADER_SIZE_OFFSET) != BTREE_WAL_HEADER_SIZE) {
+        return BTREE_CORRUPT;
     }
 
-    record_count = bpt_load_u64(wal + BPT_WAL_RECORD_COUNT_OFFSET);
-    original_page_count = bpt_load_u64(wal + BPT_WAL_ORIGINAL_PAGE_COUNT_OFFSET);
-    final_page_count = bpt_load_u64(wal + BPT_WAL_FINAL_PAGE_COUNT_OFFSET);
-    if (record_count == 0u || record_count > BPT_WAL_MAX_TRANSACTION_PAGES ||
+    record_count = btree_load_u64(wal + BTREE_WAL_RECORD_COUNT_OFFSET);
+    original_page_count = btree_load_u64(wal + BTREE_WAL_ORIGINAL_PAGE_COUNT_OFFSET);
+    final_page_count = btree_load_u64(wal + BTREE_WAL_FINAL_PAGE_COUNT_OFFSET);
+    if (record_count == 0u || record_count > BTREE_WAL_MAX_TRANSACTION_PAGES ||
         record_count > (uint64_t)SIZE_MAX ||
-        (size_t)record_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
-        return BPT_CORRUPT;
+        (size_t)record_count > (SIZE_MAX - BTREE_WAL_HEADER_SIZE) / record_size) {
+        return BTREE_CORRUPT;
     }
-    expected_size = BPT_WAL_HEADER_SIZE + (size_t)record_count * record_size;
+    expected_size = BTREE_WAL_HEADER_SIZE + (size_t)record_count * record_size;
     if (expected_size != wal_size ||
-        bpt_load_u64(wal + BPT_WAL_TOTAL_SIZE_OFFSET) != (uint64_t)wal_size) {
-        return BPT_CORRUPT;
+        btree_load_u64(wal + BTREE_WAL_TOTAL_SIZE_OFFSET) != (uint64_t)wal_size) {
+        return BTREE_CORRUPT;
     }
 
-    stored_checksum = bpt_load_u32(wal + BPT_WAL_CHECKSUM_OFFSET);
-    actual_checksum = file_checksum(wal, wal_size, BPT_WAL_CHECKSUM_OFFSET);
+    stored_checksum = btree_load_u32(wal + BTREE_WAL_CHECKSUM_OFFSET);
+    actual_checksum = file_checksum(wal, wal_size, BTREE_WAL_CHECKSUM_OFFSET);
     if (stored_checksum != actual_checksum) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
-    if (memcmp(wal + BPT_WAL_UUID_OFFSET, backend->uuid, BPT_FILE_UUID_SIZE) != 0) {
-        return BPT_CORRUPT;
+    if (memcmp(wal + BTREE_WAL_UUID_OFFSET, backend->uuid, BTREE_FILE_UUID_SIZE) != 0) {
+        return BTREE_CORRUPT;
     }
-    if (bpt_load_u32(wal + BPT_WAL_VERSION_OFFSET) != BPT_WAL_FORMAT_VERSION ||
-        bpt_load_u32(wal + BPT_WAL_FILE_VERSION_OFFSET) != BPT_FILE_FORMAT_VERSION ||
-        bpt_load_u32(wal + BPT_WAL_TREE_VERSION_OFFSET) != BPTREE_FORMAT_VERSION ||
-        bpt_load_u32(wal + BPT_WAL_FLAGS_OFFSET) != 0u) {
-        return BPT_UNSUPPORTED;
+    if (btree_load_u32(wal + BTREE_WAL_VERSION_OFFSET) != BTREE_WAL_FORMAT_VERSION ||
+        btree_load_u32(wal + BTREE_WAL_FILE_VERSION_OFFSET) != BTREE_FILE_FORMAT_VERSION ||
+        btree_load_u32(wal + BTREE_WAL_TREE_VERSION_OFFSET) != BTREE_FORMAT_VERSION ||
+        btree_load_u32(wal + BTREE_WAL_FLAGS_OFFSET) != 0u) {
+        return BTREE_UNSUPPORTED;
     }
-    for (index = BPT_WAL_CHECKSUM_OFFSET + sizeof(uint32_t); index < BPT_WAL_HEADER_SIZE; ++index) {
+    for (index = BTREE_WAL_CHECKSUM_OFFSET + sizeof(uint32_t); index < BTREE_WAL_HEADER_SIZE;
+         ++index) {
         if (wal[index] != 0u) {
-            return BPT_CORRUPT;
+            return BTREE_CORRUPT;
         }
     }
     if (final_page_count < original_page_count ||
         !file_size_for_page_count(original_page_count, backend->page_size, &original_file_size) ||
         !file_size_for_page_count(final_page_count, backend->page_size, &final_file_size) ||
         data_file_size < original_file_size || data_file_size > final_file_size) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
 
     maximum_page_count = original_page_count;
     for (index = 0u; index < (size_t)record_count; ++index) {
-        size_t offset = BPT_WAL_HEADER_SIZE + index * record_size;
-        uint64_t page_id = bpt_load_u64(wal + offset);
+        size_t offset = BTREE_WAL_HEADER_SIZE + index * record_size;
+        uint64_t page_id = btree_load_u64(wal + offset);
         size_t other;
         off_t page_offset;
 
         if (!file_page_offset(page_id, backend->page_size, &page_offset) ||
             page_id >= final_page_count) {
-            return BPT_CORRUPT;
+            return BTREE_CORRUPT;
         }
         for (other = 0u; other < index; ++other) {
-            size_t other_offset = BPT_WAL_HEADER_SIZE + other * record_size;
+            size_t other_offset = BTREE_WAL_HEADER_SIZE + other * record_size;
 
-            if (bpt_load_u64(wal + other_offset) == page_id) {
-                return BPT_CORRUPT;
+            if (btree_load_u64(wal + other_offset) == page_id) {
+                return BTREE_CORRUPT;
             }
         }
         if (page_id >= original_page_count) {
@@ -798,25 +799,25 @@ static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wa
     }
     if (maximum_page_count != final_page_count ||
         final_page_count - original_page_count != new_id_count) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
 
     *final_page_count_out = final_page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_remove_wal(bpt_file_backend *backend) {
+static btree_status file_remove_wal(btree_file *backend) {
     if (!file_unlink_at(backend->parent_fd, backend->wal_name)) {
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
     if (!file_sync_directory(backend->parent_fd)) {
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_recover_wal(bpt_file_backend *backend) {
-    unsigned char wal_header[BPT_WAL_HEADER_SIZE];
+static btree_status file_recover_wal(btree_file *backend) {
+    unsigned char wal_header[BTREE_WAL_HEADER_SIZE];
     uint64_t wal_file_size;
     uint64_t data_file_size;
     uint64_t final_page_count;
@@ -826,78 +827,78 @@ static bpt_status file_recover_wal(bpt_file_backend *backend) {
     uint64_t record_count;
     size_t index;
     int wal_fd;
-    bpt_status status;
+    btree_status status;
 
     wal_fd = file_open_existing_at(backend->parent_fd, backend->wal_name, O_RDONLY);
     if (wal_fd < 0) {
         if (errno == ENOENT) {
             return file_refresh_page_count(backend);
         }
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (!file_descriptor_size(wal_fd, &wal_file_size)) {
         (void)close(wal_fd);
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
     if (wal_file_size == 0u) {
         if (close(wal_fd) != 0) {
-            return BPT_IO;
+            return BTREE_IO;
         }
         status = file_remove_wal(backend);
-        if (status != BPT_OK) {
+        if (status != BTREE_OK) {
             return status;
         }
         return file_refresh_page_count(backend);
     }
-    if (wal_file_size < BPT_WAL_HEADER_SIZE) {
+    if (wal_file_size < BTREE_WAL_HEADER_SIZE) {
         (void)close(wal_fd);
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
     if (!file_read_exact_at(wal_fd, wal_header, sizeof(wal_header), 0)) {
         (void)close(wal_fd);
-        return BPT_IO;
+        return BTREE_IO;
     }
     status = file_wal_preflight(backend, wal_header, wal_file_size, &wal_size);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         (void)close(wal_fd);
         return status;
     }
     wal = malloc(wal_size);
     if (wal == NULL) {
         (void)close(wal_fd);
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     if (!file_read_exact_at(wal_fd, wal, wal_size, 0)) {
         free(wal);
         (void)close(wal_fd);
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (close(wal_fd) != 0) {
         free(wal);
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (!file_descriptor_size(backend->fd, &data_file_size)) {
         free(wal);
-        return BPT_IO;
+        return BTREE_IO;
     }
     status = file_wal_validate(backend, wal, wal_size, data_file_size, &final_page_count);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         free(wal);
         return status;
     }
 
-    record_count = bpt_load_u64(wal + BPT_WAL_RECORD_COUNT_OFFSET);
-    record_size = BPT_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
+    record_count = btree_load_u64(wal + BTREE_WAL_RECORD_COUNT_OFFSET);
+    record_size = BTREE_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
     for (index = 0u; index < (size_t)record_count; ++index) {
-        size_t record_offset = BPT_WAL_HEADER_SIZE + index * record_size;
-        uint64_t page_id = bpt_load_u64(wal + record_offset);
+        size_t record_offset = BTREE_WAL_HEADER_SIZE + index * record_size;
+        uint64_t page_id = btree_load_u64(wal + record_offset);
         off_t page_offset;
 
         if (!file_page_offset(page_id, backend->page_size, &page_offset) ||
-            !file_write_exact_at(backend->fd, wal + record_offset + BPT_WAL_PAGE_ID_SIZE,
+            !file_write_exact_at(backend->fd, wal + record_offset + BTREE_WAL_PAGE_ID_SIZE,
                                  (size_t)backend->page_size, page_offset)) {
             free(wal);
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
         if (index == 0u) {
             file_test_crash("recovery_first_page_written");
@@ -909,145 +910,145 @@ static bpt_status file_recover_wal(bpt_file_backend *backend) {
         if (!file_size_for_page_count(final_page_count, backend->page_size, &final_size) ||
             !file_ftruncate(backend->fd, (off_t)final_size) || !file_sync_regular(backend->fd)) {
             free(wal);
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
     }
     file_test_crash("recovery_data_synced");
     free(wal);
     status = file_remove_wal(backend);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
     backend->page_count = final_page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_page_count(void *context, uint64_t *count_out) {
-    bpt_file_backend *backend = context;
+static btree_status file_page_count(void *context, uint64_t *count_out) {
+    btree_file *backend = context;
     uint64_t measured_page_count;
-    bpt_status status;
+    btree_status status;
 
     if (backend == NULL || count_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     if (backend->recovery_required) {
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
     status = file_measure_page_count(backend, &measured_page_count);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
     if (measured_page_count != backend->page_count) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
     *count_out = backend->page_count;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static bpt_status file_read_page(void *context, uint64_t page_id, void *data_out) {
-    bpt_file_backend *backend = context;
+static btree_status file_read_page(void *context, uint64_t page_id, void *data_out) {
+    btree_file *backend = context;
     off_t offset;
 
     if (backend == NULL || data_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     if (backend->recovery_required) {
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
     if (page_id >= backend->page_count) {
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (!file_page_offset(page_id, backend->page_size, &offset)) {
-        return BPT_IO;
+        return BTREE_IO;
     }
-    return file_read_exact_at(backend->fd, data_out, (size_t)backend->page_size, offset) ? BPT_OK
-                                                                                         : BPT_IO;
+    return file_read_exact_at(backend->fd, data_out, (size_t)backend->page_size, offset) ? BTREE_OK
+                                                                                         : BTREE_IO;
 }
 
-static bpt_status file_commit_pages(void *context, const bpt_page_update *updates,
-                                    size_t update_count) {
-    bpt_file_backend *backend = context;
+static btree_status file_commit_pages(void *context, const btree_page_update *updates,
+                                      size_t update_count) {
+    btree_file *backend = context;
     unsigned char *wal = NULL;
     size_t wal_size = 0u;
     uint64_t final_page_count;
     uint64_t measured_page_count;
     size_t index;
     int wal_fd = -1;
-    bpt_status status;
+    btree_status status;
 
     if (backend == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     if (backend->recovery_required) {
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
     status = file_validate_updates(backend, updates, update_count, &final_page_count);
-    if (status != BPT_OK || update_count == 0u) {
+    if (status != BTREE_OK || update_count == 0u) {
         return status;
     }
     status = file_measure_page_count(backend, &measured_page_count);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
     if (measured_page_count != backend->page_count) {
-        return BPT_CORRUPT;
+        return BTREE_CORRUPT;
     }
     status = file_build_wal(backend, updates, update_count, final_page_count, &wal, &wal_size);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
 
     status = file_require_absent_at(backend->parent_fd, backend->wal_name);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         free(wal);
-        if (status == BPT_BUSY) {
+        if (status == BTREE_BUSY) {
             backend->recovery_required = true;
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
         return status;
     }
     status = file_remove_stale_wal_temp(backend);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         free(wal);
         return status;
     }
     wal_fd = file_open_exclusive_at(backend->parent_fd, backend->wal_temp_name, O_WRONLY);
     if (wal_fd < 0) {
         free(wal);
-        return BPT_IO;
+        return BTREE_IO;
     }
     file_test_crash("wal_created");
     if (!file_write_exact_at(wal_fd, wal, wal_size, 0) || !file_sync_regular(wal_fd)) {
         free(wal);
         (void)close(wal_fd);
         (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
-        return BPT_IO;
+        return BTREE_IO;
     }
     if (close(wal_fd) != 0) {
         free(wal);
         (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
-        return BPT_IO;
+        return BTREE_IO;
     }
     file_test_crash("wal_temp_synced");
     status = file_require_absent_at(backend->parent_fd, backend->wal_name);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         free(wal);
         (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
-        if (status == BPT_BUSY) {
+        if (status == BTREE_BUSY) {
             backend->recovery_required = true;
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
         return status;
     }
     if (!file_rename_at(backend->parent_fd, backend->wal_temp_name, backend->wal_name)) {
         free(wal);
         (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
-        return BPT_IO;
+        return BTREE_IO;
     }
     backend->recovery_required = true;
     if (!file_sync_directory(backend->parent_fd)) {
         free(wal);
-        return BPT_RECOVERY_REQUIRED;
+        return BTREE_RECOVERY_REQUIRED;
     }
     file_test_crash("wal_synced");
 
@@ -1058,7 +1059,7 @@ static bpt_status file_commit_pages(void *context, const bpt_page_update *update
             !file_write_exact_at(backend->fd, updates[index].data, (size_t)backend->page_size,
                                  page_offset)) {
             free(wal);
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
         if (index == 0u) {
             file_test_crash("first_page_written");
@@ -1070,22 +1071,22 @@ static bpt_status file_commit_pages(void *context, const bpt_page_update *update
         if (!file_size_for_page_count(final_page_count, backend->page_size, &final_size) ||
             !file_ftruncate(backend->fd, (off_t)final_size) || !file_sync_regular(backend->fd)) {
             free(wal);
-            return BPT_RECOVERY_REQUIRED;
+            return BTREE_RECOVERY_REQUIRED;
         }
     }
     file_test_crash("data_synced");
     free(wal);
     status = file_remove_wal(backend);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         return status;
     }
 
     backend->page_count = final_page_count;
     backend->recovery_required = false;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-static void file_backend_release(bpt_file_backend *backend) {
+static void file_backend_release(btree_file *backend) {
     if (backend == NULL) {
         return;
     }
@@ -1100,72 +1101,71 @@ static void file_backend_release(bpt_file_backend *backend) {
     free(backend);
 }
 
-bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
-                                   bpt_file_backend **backend_out) {
-    bpt_file_backend *backend;
+btree_status btree_file_create(const char *path, uint32_t page_size, btree_file **backend_out) {
+    btree_file *backend;
     char *parent_path = NULL;
     unsigned char *header = NULL;
     bool created = false;
-    bpt_status status;
+    btree_status status;
 
     if (backend_out != NULL) {
         *backend_out = NULL;
     }
-    if (backend_out == NULL || !bpt_page_size_valid(page_size)) {
-        return BPT_INVALID_ARGUMENT;
+    if (backend_out == NULL || !btree_page_size_valid(page_size)) {
+        return BTREE_INVALID_ARGUMENT;
     }
     backend = calloc(1u, sizeof(*backend));
     if (backend == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     backend->fd = -1;
     backend->parent_fd = -1;
     backend->page_size = page_size;
     status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
     }
     status = file_open_parent(parent_path, &backend->parent_fd);
     free(parent_path);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
     }
     backend->fd = file_open_exclusive(path, O_RDWR);
     if (backend->fd < 0) {
         file_backend_release(backend);
-        return errno == EEXIST ? BPT_BUSY : BPT_IO;
+        return errno == EEXIST ? BTREE_BUSY : BTREE_IO;
     }
     created = true;
     status = file_lock_exclusive(backend->fd);
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_require_absent_at(backend->parent_fd, backend->wal_name);
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_remove_stale_wal_temp(backend);
     }
-    if (status == BPT_OK && !file_fchmod_private(backend->fd)) {
-        status = BPT_IO;
+    if (status == BTREE_OK && !file_fchmod_private(backend->fd)) {
+        status = BTREE_IO;
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_random_uuid(backend->uuid);
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         header = malloc((size_t)page_size);
         if (header == NULL) {
-            status = BPT_OUT_OF_MEMORY;
+            status = BTREE_OUT_OF_MEMORY;
         }
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         file_header_encode(header, page_size, backend->uuid);
         if (!file_write_exact_at(backend->fd, header, (size_t)page_size, 0) ||
             !file_sync_regular(backend->fd) || !file_sync_directory(backend->parent_fd)) {
-            status = BPT_IO;
+            status = BTREE_IO;
         }
     }
     free(header);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         if (backend->fd >= 0) {
             (void)close(backend->fd);
             backend->fd = -1;
@@ -1179,66 +1179,66 @@ bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
     }
 
     *backend_out = backend;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-bpt_status bpt_file_backend_open(const char *path, bpt_file_backend **backend_out) {
-    bpt_file_backend *backend;
+btree_status btree_file_open(const char *path, btree_file **backend_out) {
+    btree_file *backend;
     char *parent_path = NULL;
-    bpt_status status;
+    btree_status status;
 
     if (backend_out != NULL) {
         *backend_out = NULL;
     }
     if (backend_out == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     backend = calloc(1u, sizeof(*backend));
     if (backend == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        return BTREE_OUT_OF_MEMORY;
     }
     backend->fd = -1;
     backend->parent_fd = -1;
     status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
     }
     status = file_open_parent(parent_path, &backend->parent_fd);
     free(parent_path);
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
     }
     backend->fd = file_open_existing(path, O_RDWR);
     if (backend->fd < 0) {
         file_backend_release(backend);
-        return BPT_IO;
+        return BTREE_IO;
     }
     status = file_lock_exclusive(backend->fd);
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_read_header(backend->fd, &backend->page_size, backend->uuid);
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_remove_stale_wal_temp(backend);
     }
-    if (status == BPT_OK) {
+    if (status == BTREE_OK) {
         status = file_recover_wal(backend);
     }
-    if (status != BPT_OK) {
+    if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
     }
 
     *backend_out = backend;
-    return BPT_OK;
+    return BTREE_OK;
 }
 
-bpt_status bpt_file_backend_close(bpt_file_backend *backend) {
+btree_status btree_file_close(btree_file *backend) {
     bool close_failed = false;
 
     if (backend == NULL) {
-        return BPT_INVALID_ARGUMENT;
+        return BTREE_INVALID_ARGUMENT;
     }
     if (backend->fd >= 0 && close(backend->fd) != 0) {
         close_failed = true;
@@ -1249,11 +1249,11 @@ bpt_status bpt_file_backend_close(bpt_file_backend *backend) {
     free(backend->wal_name);
     free(backend->wal_temp_name);
     free(backend);
-    return close_failed ? BPT_IO : BPT_OK;
+    return close_failed ? BTREE_IO : BTREE_OK;
 }
 
-bpt_storage bpt_file_backend_storage(bpt_file_backend *backend) {
-    bpt_storage storage;
+btree_storage btree_file_storage(btree_file *backend) {
+    btree_storage storage;
 
     memset(&storage, 0, sizeof(storage));
     if (backend == NULL) {
