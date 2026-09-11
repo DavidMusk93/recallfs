@@ -47,6 +47,11 @@ struct rco_pool_stats {
     uint64_t jobs_stolen_before_start;
     uint64_t coroutine_migrations;
     size_t outstanding;
+    uint64_t wake_writes;
+    uint64_t wake_coalesced;
+    uint64_t steal_attempts;
+    size_t queued_jobs;
+    size_t pending_cancellations;
 };
 
 /*
@@ -64,6 +69,7 @@ int rco_pool_submit(struct rco_pool *pool,
 int rco_pool_cancel(struct rco_pool *pool, rco_job_id_t job_id);
 int rco_pool_shutdown(struct rco_pool *pool,
                       enum rco_shutdown_mode mode);
+/* Blocking pool waits return -EDEADLK from one of the pool's worker threads. */
 int rco_pool_wait_idle(struct rco_pool *pool, int timeout_ms);
 int rco_pool_join(struct rco_pool *pool, int timeout_ms);
 int rco_pool_get_stats(const struct rco_pool *pool,

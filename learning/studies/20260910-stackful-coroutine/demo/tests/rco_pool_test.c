@@ -89,6 +89,26 @@ _Static_assert(
     _Generic(((struct rco_pool_stats *)0)->outstanding,
              size_t: 1, default: 0),
     "outstanding must be size_t");
+_Static_assert(
+    _Generic(((struct rco_pool_stats *)0)->wake_writes,
+             uint64_t: 1, default: 0),
+    "wake_writes must be uint64_t");
+_Static_assert(
+    _Generic(((struct rco_pool_stats *)0)->wake_coalesced,
+             uint64_t: 1, default: 0),
+    "wake_coalesced must be uint64_t");
+_Static_assert(
+    _Generic(((struct rco_pool_stats *)0)->steal_attempts,
+             uint64_t: 1, default: 0),
+    "steal_attempts must be uint64_t");
+_Static_assert(
+    _Generic(((struct rco_pool_stats *)0)->queued_jobs,
+             size_t: 1, default: 0),
+    "queued_jobs must be size_t");
+_Static_assert(
+    _Generic(((struct rco_pool_stats *)0)->pending_cancellations,
+             size_t: 1, default: 0),
+    "pending_cancellations must be size_t");
 
 static void check(bool condition, const char *expression, const char *file,
                   int line)
@@ -232,6 +252,8 @@ static struct rco_pool_stats joined_stats(struct rco_pool *pool)
     CHECK(rco_pool_get_stats(pool, &stats) == 0);
     CHECK(stats.submitted == stats.completed + stats.cancelled);
     CHECK(stats.outstanding == 0);
+    CHECK(stats.queued_jobs == 0);
+    CHECK(stats.pending_cancellations == 0);
     CHECK(stats.coroutine_migrations == 0);
     return stats;
 }
@@ -427,6 +449,8 @@ static void test_concurrent_submit_steals_before_start_without_migration(void)
     const struct rco_submit_options require_zero =
         submit_options(RCO_AFFINITY_REQUIRE, 0);
     rco_job_id_t blocker_id = 0;
+    struct rco_pool_stats before_submissions;
+    struct rco_pool_stats after_submissions;
 
     gate_init(&blocker_gate);
     blocking_job_init(&blocker, &blocker_gate, 0);
@@ -434,6 +458,7 @@ static void test_concurrent_submit_steals_before_start_without_migration(void)
     CHECK(rco_pool_submit(pool, &blocker_task, &require_zero, &blocker_id) ==
           0);
     gate_wait_for(&blocker_gate, 1);
+    CHECK(rco_pool_get_stats(pool, &before_submissions) == 0);
 
     gate_init(&shared.distribution_gate);
     gate_init(&shared.fd_wait_gate);
@@ -464,6 +489,9 @@ static void test_concurrent_submit_steals_before_start_without_migration(void)
     for (size_t producer = 0; producer < PRODUCER_COUNT; ++producer) {
         CHECK(pthread_join(producer_threads[producer], NULL) == 0);
     }
+    CHECK(rco_pool_get_stats(pool, &after_submissions) == 0);
+    CHECK(after_submissions.wake_writes - before_submissions.wake_writes <=
+          3 * STEAL_JOBS);
 
     for (size_t left = 0; left < STEAL_JOBS; ++left) {
         for (size_t right = left + 1; right < STEAL_JOBS; ++right) {
@@ -488,6 +516,8 @@ static void test_concurrent_submit_steals_before_start_without_migration(void)
     CHECK(stats.completed == STEAL_JOBS + 1);
     CHECK(stats.cancelled == 0);
     CHECK(stats.jobs_stolen_before_start > 0);
+    CHECK(stats.steal_attempts >= stats.jobs_stolen_before_start);
+    CHECK(stats.wake_coalesced > 0);
     CHECK(bit_count(atomic_load_explicit(&shared.worker_mask,
                                          memory_order_relaxed)) >= 2);
     CHECK(atomic_load_explicit(&blocker.life.executions,
@@ -835,6 +865,10 @@ static void test_cancel_queued_claimed_running_and_completing_jobs(void)
         CHECK(repeated_cancel == 0 || repeated_cancel == -EALREADY ||
               repeated_cancel == -ESRCH);
     }
+    struct rco_pool_stats queued_cancel_stats;
+    CHECK(rco_pool_get_stats(pool, &queued_cancel_stats) == 0);
+    CHECK(queued_cancel_stats.queued_jobs == QUEUED);
+    CHECK(queued_cancel_stats.pending_cancellations == QUEUED);
 
     /*
      * Worker 0 claims one dispatch batch after its initial blocker leaves.
@@ -879,6 +913,10 @@ static void test_cancel_queued_claimed_running_and_completing_jobs(void)
     gate_open(&claimed_gate);
     CHECK(rco_pool_wait_idle(pool, TEST_TIMEOUT_MS) == 0);
     CHECK(running.wait_result == -ECANCELED);
+    struct rco_pool_stats drained_cancel_stats;
+    CHECK(rco_pool_get_stats(pool, &drained_cancel_stats) == 0);
+    CHECK(drained_cancel_stats.queued_jobs == 0);
+    CHECK(drained_cancel_stats.pending_cancellations == 0);
 
     struct gate completion_race;
     struct completing_job completing;
@@ -1153,6 +1191,56 @@ static void test_shutdown_cancel_cancels_every_remaining_job(void)
     gate_destroy(&blocker_gate);
 }
 
+struct reentrant_wait_job {
+    struct life_record life;
+    struct rco_pool *pool;
+    int entry_wait_result;
+    int finalizer_wait_result;
+};
+
+static int reentrant_wait_entry(void *argument)
+{
+    struct reentrant_wait_job *job = argument;
+
+    atomic_fetch_add_explicit(&job->life.executions, 1,
+                              memory_order_relaxed);
+    job->entry_wait_result = rco_pool_wait_idle(job->pool, -1);
+    return 0;
+}
+
+static void reentrant_wait_finalizer(void *argument)
+{
+    struct reentrant_wait_job *job = argument;
+
+    job->finalizer_wait_result = rco_pool_wait_idle(job->pool, -1);
+    atomic_fetch_add_explicit(&job->life.finalizations, 1,
+                              memory_order_relaxed);
+}
+
+static void test_worker_context_rejects_blocking_pool_waits(void)
+{
+    struct rco_pool_config config = pool_config(2, 4, 1);
+    struct rco_pool *pool = create_started_pool(&config);
+    struct reentrant_wait_job job;
+    memset(&job, 0, sizeof(job));
+    life_init(&job.life);
+    job.pool = pool;
+    const struct rco_task_spec spec = {
+        .entry = reentrant_wait_entry,
+        .argument = &job,
+        .finalizer = reentrant_wait_finalizer,
+    };
+
+    CHECK(rco_pool_submit(pool, &spec, NULL, NULL) == 0);
+    drain_join_destroy(pool);
+    CHECK(job.entry_wait_result == -EDEADLK);
+    CHECK(job.finalizer_wait_result == -EDEADLK);
+    CHECK(atomic_load_explicit(&job.life.executions,
+                               memory_order_relaxed) == 1);
+    CHECK(atomic_load_explicit(&job.life.finalizations,
+                               memory_order_relaxed) == 1);
+}
+
 struct affinity_probe {
     int cpu;
 };
@@ -1406,8 +1494,9 @@ int main(void)
     test_capacity_stale_handles_and_shutdown_rejection();
     test_shutdown_drain_completes_accepted_jobs();
     test_shutdown_cancel_cancels_every_remaining_job();
+    test_worker_context_rejects_blocking_pool_waits();
     test_requested_worker_cpu_pinning_when_permitted();
     test_pool_workers_support_deferred_preemption();
-    puts("rco pool contract tests passed: 9 suites");
+    puts("rco pool contract tests passed: 10 suites");
     return EXIT_SUCCESS;
 }

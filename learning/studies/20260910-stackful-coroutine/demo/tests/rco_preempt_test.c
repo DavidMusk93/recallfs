@@ -185,7 +185,7 @@ static void reserve_preempt_signal(struct sigaction *original_action,
     CHECK(sigaction(preempt_signal, NULL, &expected_action) == 0);
 
     expected_owner_mask = *original_mask;
-    CHECK(sigaddset(&expected_owner_mask, preempt_signal) == 0);
+    CHECK(sigdelset(&expected_owner_mask, preempt_signal) == 0);
     CHECK(sigdelset(&expected_owner_mask, SIGUSR1) == 0);
     CHECK(pthread_sigmask(SIG_SETMASK, &expected_owner_mask, NULL) == 0);
     assert_owner_state_restored();
@@ -464,6 +464,43 @@ static void test_no_safe_point_is_not_force_switched(void)
     assert_owner_state_restored();
     CHECK(rco_runtime_destroy(runtime) == 0);
     assert_owner_state_restored();
+}
+
+struct non_timer_signal_case {
+    bool pending;
+    int observed_errno;
+};
+
+static int non_timer_signal_worker(void *argument)
+{
+    struct non_timer_signal_case *test_case = argument;
+
+    errno = ENOTRECOVERABLE;
+    CHECK(pthread_kill(pthread_self(), preempt_signal) == 0);
+    test_case->pending = rco_preempt_pending();
+    test_case->observed_errno = errno;
+    return 0;
+}
+
+static void test_reserved_non_timer_signal_is_ignored(void)
+{
+    struct rco_config config = enabled_config();
+    config.preempt_quantum_ns = UINT64_C(1000) * NS_PER_MS;
+    struct rco_runtime *runtime = NULL;
+    struct non_timer_signal_case test_case = {0};
+    struct rco_stats stats;
+
+    CHECK(rco_runtime_create(&config, &runtime) == 0);
+    CHECK(rco_spawn(runtime, 0, non_timer_signal_worker, &test_case, NULL) ==
+          0);
+    CHECK(rco_runtime_run(runtime) == 0);
+    CHECK(!test_case.pending);
+    CHECK(test_case.observed_errno == ENOTRECOVERABLE);
+    CHECK(rco_runtime_get_stats(runtime, &stats) == 0);
+    CHECK(stats.preemption_requests == 0);
+    CHECK(stats.preemption_switches == 0);
+    assert_owner_state_restored();
+    CHECK(rco_runtime_destroy(runtime) == 0);
 }
 
 struct interleave_case {
@@ -791,6 +828,7 @@ int main(void)
     test_zero_quantum_disables_preemption();
     test_timer_counts_only_owner_thread_cpu();
     test_no_safe_point_is_not_force_switched();
+    test_reserved_non_timer_signal_is_ignored();
     test_safe_points_interleave_and_preserve_state();
     test_nested_disable_defers_one_switch();
     test_cancellation_wins_over_pending();
@@ -799,6 +837,6 @@ int main(void)
     CHECK(count_process_timers() == baseline_process_timers);
     release_preempt_signal(&original_action, &original_mask);
 
-    puts("rco preemption contract tests passed: 9 suites");
+    puts("rco preemption contract tests passed: 10 suites");
     return EXIT_SUCCESS;
 }

@@ -33,6 +33,8 @@ static void check(bool condition, const char *expression, const char *file,
 }
 
 #define CHECK(expression) check((expression), #expression, __FILE__, __LINE__)
+#define TLS_HIGH_INDEX_KEY_COUNT 4096
+#define TLS_HIGH_INDEX_TASK_COUNT 64
 
 struct errno_case {
     int value;
@@ -133,6 +135,8 @@ struct tls_destructor_case {
 static void tls_rearming_destructor(void *value)
 {
     struct tls_destructor_case *test_case = value;
+    rco_tls_key_t forbidden_key = UINT64_MAX;
+    void *current_value = (void *)(uintptr_t)1;
 
     CHECK(test_case->event_count < sizeof(test_case->events));
     test_case->events[test_case->event_count++] = 'D';
@@ -141,6 +145,13 @@ static void tls_rearming_destructor(void *value)
               sizeof(test_case->destructor_errno[0]));
     test_case->destructor_errno[test_case->destructor_calls] = errno;
     test_case->destructor_calls++;
+    CHECK(rco_tls_get(test_case->runtime, test_case->key, &current_value) ==
+          0);
+    CHECK(current_value == NULL);
+    CHECK(rco_tls_key_create(test_case->runtime, NULL, &forbidden_key) ==
+          -EPERM);
+    CHECK(forbidden_key == 0);
+    CHECK(rco_tls_key_delete(test_case->runtime, test_case->key) == -EPERM);
     CHECK(rco_tls_set(test_case->runtime, test_case->key, test_case) == 0);
 }
 
@@ -266,6 +277,175 @@ static void test_runtime_scoped_tls(void)
     CHECK(rco_tls_key_delete(runtime, destructor_key) == 0);
     CHECK(rco_runtime_destroy(other_runtime) == 0);
     CHECK(rco_runtime_destroy(runtime) == 0);
+}
+
+struct tls_high_index_case {
+    struct rco_runtime *runtime;
+    rco_tls_key_t original_key;
+    rco_tls_key_t *replacement_key;
+    int value;
+    bool set_original;
+    bool stale_rejected;
+    bool cleared_on_reuse;
+    bool replacement_round_tripped;
+};
+
+static int tls_high_index_worker(void *argument)
+{
+    struct tls_high_index_case *test_case = argument;
+    void *value = NULL;
+
+    CHECK(rco_tls_set(test_case->runtime, test_case->original_key,
+                      &test_case->value) == 0);
+    CHECK(rco_tls_get(test_case->runtime, test_case->original_key, &value) ==
+          0);
+    test_case->set_original = value == &test_case->value;
+    CHECK(rco_yield() == 0);
+
+    value = (void *)(uintptr_t)1;
+    test_case->stale_rejected =
+        rco_tls_get(test_case->runtime, test_case->original_key, &value) ==
+            -EINVAL &&
+        value == NULL;
+    CHECK(*test_case->replacement_key != 0);
+    CHECK(rco_tls_get(test_case->runtime, *test_case->replacement_key,
+                      &value) == 0);
+    test_case->cleared_on_reuse = value == NULL;
+    CHECK(rco_tls_set(test_case->runtime, *test_case->replacement_key,
+                      &test_case->value) == 0);
+    CHECK(rco_tls_get(test_case->runtime, *test_case->replacement_key,
+                      &value) == 0);
+    test_case->replacement_round_tripped = value == &test_case->value;
+    return 0;
+}
+
+struct tls_key_reuse_case {
+    struct rco_runtime *runtime;
+    rco_tls_key_t original_key;
+    rco_tls_key_t *replacement_key;
+};
+
+static int tls_key_reuse_worker(void *argument)
+{
+    struct tls_key_reuse_case *test_case = argument;
+
+    CHECK(rco_tls_key_delete(test_case->runtime, test_case->original_key) == 0);
+    CHECK(rco_tls_key_create(test_case->runtime, NULL,
+                             test_case->replacement_key) == 0);
+    CHECK(*test_case->replacement_key != test_case->original_key);
+    return 0;
+}
+
+static void test_high_index_tls_deletion_and_reuse(void)
+{
+    struct rco_config config = {
+        .default_stack_size = RCO_STACK_SIZE_MIN,
+        .max_coroutines = TLS_HIGH_INDEX_TASK_COUNT + 1,
+        .max_fds = 8,
+        .stack_cache_bytes = 0,
+        .local_state_flags = RCO_LOCAL_STATE_ERRNO,
+        .max_tls_keys = RCO_TLS_KEYS_MAX,
+    };
+    struct rco_runtime *runtime = NULL;
+    rco_tls_key_t keys[TLS_HIGH_INDEX_KEY_COUNT];
+    rco_tls_key_t replacement_key = 0;
+    struct tls_high_index_case cases[TLS_HIGH_INDEX_TASK_COUNT];
+
+    CHECK(rco_runtime_create(&config, &runtime) == 0);
+    for (size_t index = 0; index < TLS_HIGH_INDEX_KEY_COUNT; ++index) {
+        CHECK(rco_tls_key_create(runtime, NULL, &keys[index]) == 0);
+    }
+
+    for (size_t index = 0; index < TLS_HIGH_INDEX_TASK_COUNT; ++index) {
+        cases[index] = (struct tls_high_index_case){
+            .runtime = runtime,
+            .original_key = keys[TLS_HIGH_INDEX_KEY_COUNT - 1],
+            .replacement_key = &replacement_key,
+            .value = (int)index + 1,
+        };
+        CHECK(rco_spawn(runtime, 0, tls_high_index_worker, &cases[index],
+                        NULL) == 0);
+    }
+    struct tls_key_reuse_case reuse = {
+        .runtime = runtime,
+        .original_key = keys[TLS_HIGH_INDEX_KEY_COUNT - 1],
+        .replacement_key = &replacement_key,
+    };
+    CHECK(rco_spawn(runtime, 0, tls_key_reuse_worker, &reuse, NULL) == 0);
+    CHECK(rco_runtime_run(runtime) == 0);
+
+    for (size_t index = 0; index < TLS_HIGH_INDEX_TASK_COUNT; ++index) {
+        CHECK(cases[index].set_original);
+        CHECK(cases[index].stale_rejected);
+        CHECK(cases[index].cleared_on_reuse);
+        CHECK(cases[index].replacement_round_tripped);
+    }
+    CHECK(rco_tls_key_delete(runtime, replacement_key) == 0);
+    CHECK(rco_runtime_destroy(runtime) == 0);
+}
+
+struct tls_delete_case {
+    struct rco_runtime *runtime;
+    rco_tls_key_t key;
+    size_t destructor_calls;
+    bool stale_rejected;
+};
+
+static void tls_deleted_value_destructor(void *value)
+{
+    struct tls_delete_case *test_case = value;
+
+    test_case->destructor_calls++;
+}
+
+static int tls_delete_value_worker(void *argument)
+{
+    struct tls_delete_case *test_case = argument;
+    void *value = (void *)(uintptr_t)1;
+
+    CHECK(rco_tls_set(test_case->runtime, test_case->key, test_case) == 0);
+    CHECK(rco_yield() == 0);
+    test_case->stale_rejected =
+        rco_tls_get(test_case->runtime, test_case->key, &value) == -EINVAL &&
+        value == NULL;
+    return 0;
+}
+
+static int tls_delete_key_worker(void *argument)
+{
+    struct tls_delete_case *test_case = argument;
+
+    CHECK(rco_tls_key_delete(test_case->runtime, test_case->key) == 0);
+    return 0;
+}
+
+static void test_tls_delete_skips_destructor(void)
+{
+    struct rco_config config = {
+        .default_stack_size = RCO_STACK_SIZE_MIN,
+        .max_coroutines = 2,
+        .max_fds = 8,
+        .stack_cache_bytes = 0,
+        .local_state_flags = RCO_LOCAL_STATE_ERRNO,
+        .max_tls_keys = 1,
+    };
+    struct rco_runtime *runtime = NULL;
+    struct tls_delete_case test_case = {
+        .runtime = runtime,
+    };
+
+    CHECK(rco_runtime_create(&config, &runtime) == 0);
+    test_case.runtime = runtime;
+    CHECK(rco_tls_key_create(runtime, tls_deleted_value_destructor,
+                             &test_case.key) == 0);
+    CHECK(rco_spawn(runtime, 0, tls_delete_value_worker, &test_case, NULL) ==
+          0);
+    CHECK(rco_spawn(runtime, 0, tls_delete_key_worker, &test_case, NULL) == 0);
+    CHECK(rco_runtime_run(runtime) == 0);
+    CHECK(test_case.stale_rejected);
+    CHECK(test_case.destructor_calls == 0);
+    CHECK(rco_runtime_destroy(runtime) == 0);
+    CHECK(test_case.destructor_calls == 0);
 }
 
 static void test_invalid_local_state_configuration(void)
@@ -529,9 +709,11 @@ int main(void)
     test_invalid_local_state_configuration();
     test_zero_flags_default_to_errno();
     test_runtime_scoped_tls();
+    test_high_index_tls_deletion_and_reuse();
+    test_tls_delete_skips_destructor();
     test_signal_masks_are_per_task();
     test_locales_are_owned_and_per_task();
     test_explicit_none_uses_legacy_path();
-    puts("rco coroutine-local state contract tests passed: 5 suites");
+    puts("rco coroutine-local state contract tests passed: 7 suites");
     return EXIT_SUCCESS;
 }

@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -48,21 +49,34 @@ struct rco_pool_job {
     size_t owner_worker;
     size_t previous;
     size_t next;
+    size_t steal_previous;
+    size_t steal_next;
+    size_t cancel_worker;
+    size_t cancel_previous;
+    size_t cancel_next;
     bool cancel_requested;
     bool cancel_delivered;
+    bool cancellation_queued;
 };
 
 struct rco_pool_worker {
     struct rco_pool *pool;
     size_t index;
     pthread_t thread;
-    pthread_mutex_t deque_mutex;
+    /* Never nested with pool->mutex; only serializes control_fd write/close. */
     pthread_mutex_t wake_mutex;
     size_t deque_head;
     size_t deque_tail;
+    size_t stealable_head;
+    size_t stealable_tail;
+    size_t cancellation_head;
+    size_t cancellation_tail;
+    size_t queued_jobs;
+    size_t pending_cancellations;
     size_t *dispatch_slots;
     struct rco_runtime *runtime;
     int control_fd;
+    bool wake_pending;
     bool created;
     bool joined;
 };
@@ -76,7 +90,11 @@ struct rco_pool {
     size_t startup_reports;
     size_t created_workers;
     size_t next_worker;
+    size_t next_thief;
     size_t free_head;
+    size_t stealable_jobs;
+    _Atomic uint64_t wake_writes;
+    _Atomic uint64_t wake_coalesced;
     bool joining;
     struct rco_pool_stats stats;
     struct rco_pool_worker *workers;
@@ -127,7 +145,25 @@ static int rco_pool_deadline(int timeout_ms, struct timespec *out_deadline)
     return 0;
 }
 
-static int rco_pool_worker_wake(struct rco_pool_worker *worker)
+static void rco_pool_increment_stat(uint64_t *stat)
+{
+    if (*stat != UINT64_MAX) {
+        (*stat)++;
+    }
+}
+
+static void rco_pool_increment_atomic_stat(_Atomic uint64_t *stat)
+{
+    uint64_t value = atomic_load_explicit(stat, memory_order_relaxed);
+
+    while (value != UINT64_MAX &&
+           !atomic_compare_exchange_weak_explicit(
+               stat, &value, value + 1, memory_order_relaxed,
+               memory_order_relaxed)) {
+    }
+}
+
+static int rco_pool_signal_worker(struct rco_pool_worker *worker)
 {
     int result = pthread_mutex_lock(&worker->wake_mutex);
     if (result != 0) {
@@ -135,28 +171,106 @@ static int rco_pool_worker_wake(struct rco_pool_worker *worker)
     }
 
     int error = 0;
+    bool wrote = false;
+    bool kernel_coalesced = false;
     if (worker->control_fd >= 0) {
         eventfd_t value = 1;
         while (eventfd_write(worker->control_fd, value) != 0) {
             if (errno == EINTR) {
                 continue;
             }
-            if (errno != EAGAIN) {
+            if (errno == EAGAIN) {
+                kernel_coalesced = true;
+            } else {
                 error = rco_pool_neg_errno();
             }
             break;
         }
+        if (error == 0 && !kernel_coalesced) {
+            wrote = true;
+        }
     }
 
     result = pthread_mutex_unlock(&worker->wake_mutex);
+    if (wrote || kernel_coalesced) {
+        struct rco_pool *pool = worker->pool;
+
+        if (wrote) {
+            rco_pool_increment_atomic_stat(&pool->wake_writes);
+        } else {
+            rco_pool_increment_atomic_stat(&pool->wake_coalesced);
+        }
+    }
     return error != 0 ? error : (result == 0 ? 0 : -result);
+}
+
+static bool rco_pool_mark_wake_locked(struct rco_pool *pool,
+                                      size_t worker_index)
+{
+    struct rco_pool_worker *worker = &pool->workers[worker_index];
+
+    if (worker->wake_pending) {
+        rco_pool_increment_atomic_stat(&pool->wake_coalesced);
+        return false;
+    }
+    worker->wake_pending = true;
+    return true;
+}
+
+static int rco_pool_wake_worker(struct rco_pool *pool, size_t worker_index)
+{
+    (void)pthread_mutex_lock(&pool->mutex);
+    bool signal = rco_pool_mark_wake_locked(pool, worker_index);
+    (void)pthread_mutex_unlock(&pool->mutex);
+    return signal ? rco_pool_signal_worker(&pool->workers[worker_index]) : 0;
 }
 
 static void rco_pool_wake_all(struct rco_pool *pool)
 {
     for (size_t index = 0; index < pool->config.worker_count; ++index) {
-        (void)rco_pool_worker_wake(&pool->workers[index]);
+        (void)rco_pool_wake_worker(pool, index);
     }
+}
+
+static size_t rco_pool_pick_thief_locked(struct rco_pool *pool,
+                                         size_t excluded_worker)
+{
+    if (pool->config.worker_count < 2) {
+        return RCO_POOL_NO_INDEX;
+    }
+
+    size_t thief = pool->next_thief;
+    if (++pool->next_thief == pool->config.worker_count) {
+        pool->next_thief = 0;
+    }
+    if (thief == excluded_worker) {
+        thief = pool->next_thief;
+        if (++pool->next_thief == pool->config.worker_count) {
+            pool->next_thief = 0;
+        }
+    }
+    return thief;
+}
+
+static void rco_pool_stealable_unlink_locked(
+    struct rco_pool *pool,
+    struct rco_pool_worker *worker,
+    struct rco_pool_job *job)
+{
+    if (job->steal_previous == RCO_POOL_NO_INDEX) {
+        worker->stealable_head = job->steal_next;
+    } else {
+        pool->jobs[job->steal_previous].steal_next = job->steal_next;
+    }
+    if (job->steal_next == RCO_POOL_NO_INDEX) {
+        worker->stealable_tail = job->steal_previous;
+    } else {
+        pool->jobs[job->steal_next].steal_previous =
+            job->steal_previous;
+    }
+    job->steal_previous = RCO_POOL_NO_INDEX;
+    job->steal_next = RCO_POOL_NO_INDEX;
+    pool->stealable_jobs--;
 }
 
 static void rco_pool_deque_push_locked(struct rco_pool *pool,
@@ -166,7 +280,6 @@ static void rco_pool_deque_push_locked(struct rco_pool *pool,
     struct rco_pool_worker *worker = &pool->workers[worker_index];
     struct rco_pool_job *job = &pool->jobs[slot];
 
-    (void)pthread_mutex_lock(&worker->deque_mutex);
     job->previous = worker->deque_tail;
     job->next = RCO_POOL_NO_INDEX;
     if (worker->deque_tail == RCO_POOL_NO_INDEX) {
@@ -175,15 +288,31 @@ static void rco_pool_deque_push_locked(struct rco_pool *pool,
         pool->jobs[worker->deque_tail].next = slot;
     }
     worker->deque_tail = slot;
-    (void)pthread_mutex_unlock(&worker->deque_mutex);
+    worker->queued_jobs++;
+    pool->stats.queued_jobs++;
+
+    if (job->affinity != RCO_AFFINITY_REQUIRE) {
+        job->steal_previous = worker->stealable_tail;
+        job->steal_next = RCO_POOL_NO_INDEX;
+        if (worker->stealable_tail == RCO_POOL_NO_INDEX) {
+            worker->stealable_head = slot;
+        } else {
+            pool->jobs[worker->stealable_tail].steal_next = slot;
+        }
+        worker->stealable_tail = slot;
+        pool->stealable_jobs++;
+    }
 }
 
-static void rco_pool_deque_unlink(struct rco_pool *pool,
-                                  struct rco_pool_worker *worker,
-                                  size_t slot)
+static void rco_pool_deque_unlink_locked(struct rco_pool *pool,
+                                         struct rco_pool_worker *worker,
+                                         size_t slot)
 {
     struct rco_pool_job *job = &pool->jobs[slot];
 
+    if (job->affinity != RCO_AFFINITY_REQUIRE) {
+        rco_pool_stealable_unlink_locked(pool, worker, job);
+    }
     if (job->previous == RCO_POOL_NO_INDEX) {
         worker->deque_head = job->next;
     } else {
@@ -196,6 +325,9 @@ static void rco_pool_deque_unlink(struct rco_pool *pool,
     }
     job->previous = RCO_POOL_NO_INDEX;
     job->next = RCO_POOL_NO_INDEX;
+    job->queued_worker = RCO_POOL_NO_INDEX;
+    worker->queued_jobs--;
+    pool->stats.queued_jobs--;
 }
 
 static size_t rco_pool_deque_take_locked(struct rco_pool *pool,
@@ -203,26 +335,76 @@ static size_t rco_pool_deque_take_locked(struct rco_pool *pool,
                                          bool steal)
 {
     struct rco_pool_worker *worker = &pool->workers[worker_index];
-    size_t slot = RCO_POOL_NO_INDEX;
-
-    (void)pthread_mutex_lock(&worker->deque_mutex);
-    if (!steal) {
-        slot = worker->deque_head;
-    } else {
-        for (slot = worker->deque_tail;
-             slot != RCO_POOL_NO_INDEX;
-             slot = pool->jobs[slot].previous) {
-            if (pool->jobs[slot].affinity != RCO_AFFINITY_REQUIRE) {
-                break;
-            }
-        }
-    }
+    size_t slot =
+        steal ? worker->stealable_tail : worker->deque_head;
 
     if (slot != RCO_POOL_NO_INDEX) {
-        rco_pool_deque_unlink(pool, worker, slot);
+        rco_pool_deque_unlink_locked(pool, worker, slot);
     }
-    (void)pthread_mutex_unlock(&worker->deque_mutex);
     return slot;
+}
+
+static void rco_pool_cancellation_unlink_locked(
+    struct rco_pool *pool,
+    struct rco_pool_job *job)
+{
+    if (!job->cancellation_queued) {
+        return;
+    }
+
+    struct rco_pool_worker *worker =
+        &pool->workers[job->cancel_worker];
+    if (job->cancel_previous == RCO_POOL_NO_INDEX) {
+        worker->cancellation_head = job->cancel_next;
+    } else {
+        pool->jobs[job->cancel_previous].cancel_next = job->cancel_next;
+    }
+    if (job->cancel_next == RCO_POOL_NO_INDEX) {
+        worker->cancellation_tail = job->cancel_previous;
+    } else {
+        pool->jobs[job->cancel_next].cancel_previous =
+            job->cancel_previous;
+    }
+    job->cancel_worker = RCO_POOL_NO_INDEX;
+    job->cancel_previous = RCO_POOL_NO_INDEX;
+    job->cancel_next = RCO_POOL_NO_INDEX;
+    job->cancellation_queued = false;
+    worker->pending_cancellations--;
+    pool->stats.pending_cancellations--;
+}
+
+static void rco_pool_cancellation_push_locked(struct rco_pool *pool,
+                                              size_t worker_index,
+                                              size_t slot)
+{
+    struct rco_pool_worker *worker = &pool->workers[worker_index];
+    struct rco_pool_job *job = &pool->jobs[slot];
+
+    job->cancel_worker = worker_index;
+    job->cancel_previous = worker->cancellation_tail;
+    job->cancel_next = RCO_POOL_NO_INDEX;
+    if (worker->cancellation_tail == RCO_POOL_NO_INDEX) {
+        worker->cancellation_head = slot;
+    } else {
+        pool->jobs[worker->cancellation_tail].cancel_next = slot;
+    }
+    worker->cancellation_tail = slot;
+    job->cancellation_queued = true;
+    worker->pending_cancellations++;
+    pool->stats.pending_cancellations++;
+}
+
+static void rco_pool_cancellation_move_locked(struct rco_pool *pool,
+                                              struct rco_pool_job *job,
+                                              size_t worker_index)
+{
+    if (!job->cancellation_queued ||
+        job->cancel_worker == worker_index) {
+        return;
+    }
+    size_t slot = (size_t)(job - pool->jobs);
+    rco_pool_cancellation_unlink_locked(pool, job);
+    rco_pool_cancellation_push_locked(pool, worker_index, slot);
 }
 
 static void rco_pool_retire_job(struct rco_pool_job *job, bool cancelled)
@@ -232,6 +414,7 @@ static void rco_pool_retire_job(struct rco_pool_job *job, bool cancelled)
     bool wake_shutdown = false;
 
     (void)pthread_mutex_lock(&pool->mutex);
+    rco_pool_cancellation_unlink_locked(pool, job);
     if (cancelled) {
         pool->stats.cancelled++;
     } else {
@@ -245,8 +428,14 @@ static void rco_pool_retire_job(struct rco_pool_job *job, bool cancelled)
     job->queued_worker = RCO_POOL_NO_INDEX;
     job->owner_worker = RCO_POOL_NO_INDEX;
     job->previous = RCO_POOL_NO_INDEX;
+    job->steal_previous = RCO_POOL_NO_INDEX;
+    job->steal_next = RCO_POOL_NO_INDEX;
+    job->cancel_worker = RCO_POOL_NO_INDEX;
+    job->cancel_previous = RCO_POOL_NO_INDEX;
+    job->cancel_next = RCO_POOL_NO_INDEX;
     job->cancel_requested = false;
     job->cancel_delivered = false;
+    job->cancellation_queued = false;
     if (job->generation == UINT32_MAX) {
         job->next = RCO_POOL_NO_INDEX;
     } else {
@@ -258,7 +447,9 @@ static void rco_pool_retire_job(struct rco_pool_job *job, bool cancelled)
         pool->stats.outstanding == 0 &&
         (pool->state == RCO_POOL_DRAINING ||
          pool->state == RCO_POOL_CANCELLING);
-    (void)pthread_cond_broadcast(&pool->condition);
+    if (pool->stats.outstanding == 0) {
+        (void)pthread_cond_broadcast(&pool->condition);
+    }
     (void)pthread_mutex_unlock(&pool->mutex);
 
     if (wake_shutdown) {
@@ -288,6 +479,8 @@ static void rco_pool_finalize_unstarted(struct rco_pool_job *job)
         return;
     }
     job->cancel_requested = true;
+    job->cancel_delivered = true;
+    rco_pool_cancellation_unlink_locked(pool, job);
     job->state = RCO_POOL_JOB_FINALIZING;
     (void)pthread_mutex_unlock(&pool->mutex);
 
@@ -337,6 +530,15 @@ static void rco_pool_request_cancel_all(struct rco_pool *pool)
             job->state == RCO_POOL_JOB_SPAWNED ||
             job->state == RCO_POOL_JOB_RUNNING) {
             job->cancel_requested = true;
+            if (!job->cancel_delivered && !job->cancellation_queued) {
+                size_t owner =
+                    job->state == RCO_POOL_JOB_QUEUED
+                        ? job->queued_worker
+                        : job->owner_worker;
+                if (owner != RCO_POOL_NO_INDEX) {
+                    rco_pool_cancellation_push_locked(pool, owner, slot);
+                }
+            }
         }
     }
     (void)pthread_mutex_unlock(&pool->mutex);
@@ -367,21 +569,26 @@ static size_t rco_pool_claim_one(struct rco_pool_worker *worker)
 {
     struct rco_pool *pool = worker->pool;
     size_t slot = RCO_POOL_NO_INDEX;
+    size_t thief = RCO_POOL_NO_INDEX;
+    bool signal_thief = false;
+    bool stolen = false;
 
     (void)pthread_mutex_lock(&pool->mutex);
     if (pool->state == RCO_POOL_RUNNING ||
         pool->state == RCO_POOL_DRAINING ||
         pool->state == RCO_POOL_CANCELLING) {
         slot = rco_pool_deque_take_locked(pool, worker->index, false);
-        if (slot == RCO_POOL_NO_INDEX) {
+        if (slot == RCO_POOL_NO_INDEX && pool->stealable_jobs != 0) {
             for (size_t offset = 1;
                  offset < pool->config.worker_count;
                  ++offset) {
                 size_t victim =
                     (worker->index + offset) % pool->config.worker_count;
+                rco_pool_increment_stat(&pool->stats.steal_attempts);
                 slot = rco_pool_deque_take_locked(pool, victim, true);
                 if (slot != RCO_POOL_NO_INDEX) {
                     pool->stats.jobs_stolen_before_start++;
+                    stolen = true;
                     break;
                 }
             }
@@ -391,8 +598,22 @@ static size_t rco_pool_claim_one(struct rco_pool_worker *worker)
         struct rco_pool_job *job = &pool->jobs[slot];
         job->state = RCO_POOL_JOB_RESERVED;
         job->owner_worker = worker->index;
+        rco_pool_cancellation_move_locked(pool, job, worker->index);
+        if (stolen && pool->stealable_jobs != 0) {
+            thief = rco_pool_pick_thief_locked(pool, worker->index);
+            signal_thief =
+                thief != RCO_POOL_NO_INDEX &&
+                rco_pool_mark_wake_locked(pool, thief);
+        }
     }
     (void)pthread_mutex_unlock(&pool->mutex);
+
+    if (signal_thief) {
+        int result = rco_pool_signal_worker(&pool->workers[thief]);
+        if (result != 0) {
+            rco_pool_fail(pool, result);
+        }
+    }
     return slot;
 }
 
@@ -415,21 +636,39 @@ static int rco_pool_deliver_cancellations(struct rco_pool_worker *worker)
 {
     struct rco_pool *pool = worker->pool;
 
-    for (size_t slot = 0; slot < pool->config.max_jobs; ++slot) {
+    for (;;) {
+        struct rco_pool_job *finalize = NULL;
         uint64_t task_id = 0;
 
         (void)pthread_mutex_lock(&pool->mutex);
+        size_t slot = worker->cancellation_head;
+        if (slot == RCO_POOL_NO_INDEX) {
+            (void)pthread_mutex_unlock(&pool->mutex);
+            break;
+        }
         struct rco_pool_job *job = &pool->jobs[slot];
-        if (job->owner_worker == worker->index &&
-            (job->state == RCO_POOL_JOB_SPAWNED ||
-             job->state == RCO_POOL_JOB_RUNNING) &&
-            job->cancel_requested && !job->cancel_delivered &&
-            job->runtime_task_id != 0) {
+        rco_pool_cancellation_unlink_locked(pool, job);
+        if (job->state == RCO_POOL_JOB_QUEUED) {
+            size_t queued_worker = job->queued_worker;
+            rco_pool_deque_unlink_locked(
+                pool, &pool->workers[queued_worker], slot);
+            job->owner_worker = worker->index;
+            job->cancel_delivered = true;
+            job->state = RCO_POOL_JOB_FINALIZING;
+            finalize = job;
+        } else if (job->state == RCO_POOL_JOB_RESERVED) {
+            job->cancel_delivered = true;
+        } else if ((job->state == RCO_POOL_JOB_SPAWNED ||
+                    job->state == RCO_POOL_JOB_RUNNING) &&
+                   job->runtime_task_id != 0) {
             job->cancel_delivered = true;
             task_id = job->runtime_task_id;
         }
         (void)pthread_mutex_unlock(&pool->mutex);
 
+        if (finalize != NULL) {
+            rco_pool_invoke_finalizer(finalize, true);
+        }
         if (task_id != 0) {
             int result = rco_cancel(worker->runtime, task_id);
             if (result != 0 && result != -ESRCH) {
@@ -438,55 +677,6 @@ static int rco_pool_deliver_cancellations(struct rco_pool_worker *worker)
         }
     }
     return 0;
-}
-
-static bool rco_pool_worker_should_exit(struct rco_pool_worker *worker)
-{
-    struct rco_pool *pool = worker->pool;
-    bool should_exit;
-
-    (void)pthread_mutex_lock(&pool->mutex);
-    should_exit =
-        (pool->state == RCO_POOL_DRAINING ||
-         pool->state == RCO_POOL_CANCELLING) &&
-        pool->stats.outstanding == 0;
-    (void)pthread_mutex_unlock(&pool->mutex);
-    return should_exit;
-}
-
-static bool rco_pool_worker_has_work(struct rco_pool_worker *worker)
-{
-    struct rco_pool *pool = worker->pool;
-    bool has_work = false;
-
-    (void)pthread_mutex_lock(&pool->mutex);
-    if (pool->state == RCO_POOL_RUNNING ||
-        pool->state == RCO_POOL_DRAINING ||
-        pool->state == RCO_POOL_CANCELLING) {
-        for (size_t slot = 0; slot < pool->config.max_jobs; ++slot) {
-            const struct rco_pool_job *job = &pool->jobs[slot];
-            if (job->state == RCO_POOL_JOB_QUEUED &&
-                (job->queued_worker == worker->index ||
-                 job->affinity != RCO_AFFINITY_REQUIRE)) {
-                has_work = true;
-                break;
-            }
-        }
-    }
-    if (!has_work) {
-        for (size_t slot = 0; slot < pool->config.max_jobs; ++slot) {
-            const struct rco_pool_job *job = &pool->jobs[slot];
-            if (job->owner_worker == worker->index &&
-                (job->state == RCO_POOL_JOB_SPAWNED ||
-                 job->state == RCO_POOL_JOB_RUNNING) &&
-                job->cancel_requested && !job->cancel_delivered) {
-                has_work = true;
-                break;
-            }
-        }
-    }
-    (void)pthread_mutex_unlock(&pool->mutex);
-    return has_work;
 }
 
 static int rco_pool_worker_drain_signal(struct rco_pool_worker *worker)
@@ -503,11 +693,48 @@ static int rco_pool_worker_drain_signal(struct rco_pool_worker *worker)
     }
 }
 
+static int rco_pool_worker_prepare_wait(struct rco_pool_worker *worker,
+                                        bool *out_should_wait,
+                                        bool *out_should_exit)
+{
+    struct rco_pool *pool = worker->pool;
+
+    (void)pthread_mutex_lock(&pool->mutex);
+    int result = rco_pool_worker_drain_signal(worker);
+    worker->wake_pending = false;
+    bool active =
+        pool->state == RCO_POOL_RUNNING ||
+        pool->state == RCO_POOL_DRAINING ||
+        pool->state == RCO_POOL_CANCELLING;
+    bool has_work =
+        active &&
+        (worker->queued_jobs != 0 || pool->stealable_jobs != 0 ||
+         worker->pending_cancellations != 0);
+    *out_should_exit =
+        (pool->state == RCO_POOL_DRAINING ||
+         pool->state == RCO_POOL_CANCELLING) &&
+        pool->stats.outstanding == 0;
+    *out_should_wait = !*out_should_exit && !has_work;
+    (void)pthread_mutex_unlock(&pool->mutex);
+    return result;
+}
+
 static int rco_pool_start_reserved(struct rco_pool_worker *worker,
                                    size_t slot)
 {
     struct rco_pool *pool = worker->pool;
     struct rco_pool_job *job = &pool->jobs[slot];
+
+    (void)pthread_mutex_lock(&pool->mutex);
+    bool cancelled =
+        job->state == RCO_POOL_JOB_RESERVED &&
+        (job->cancel_requested || pool->state == RCO_POOL_CANCELLING);
+    (void)pthread_mutex_unlock(&pool->mutex);
+    if (cancelled) {
+        rco_pool_finalize_unstarted(job);
+        return 0;
+    }
+
     const struct rco_task_spec runtime_spec = {
         .stack_size = job->spec.stack_size,
         .entry = rco_pool_runtime_entry,
@@ -526,11 +753,12 @@ static int rco_pool_start_reserved(struct rco_pool_worker *worker,
     (void)pthread_mutex_lock(&pool->mutex);
     job->runtime_task_id = task_id;
     job->state = RCO_POOL_JOB_SPAWNED;
-    bool cancelled = job->cancel_requested ||
-                     pool->state == RCO_POOL_CANCELLING;
+    cancelled = job->cancel_requested ||
+                pool->state == RCO_POOL_CANCELLING;
     if (cancelled) {
         job->cancel_requested = true;
         job->cancel_delivered = true;
+        rco_pool_cancellation_unlink_locked(pool, job);
     }
     (void)pthread_mutex_unlock(&pool->mutex);
 
@@ -555,13 +783,7 @@ static int rco_pool_dispatcher(void *argument)
     struct rco_pool *pool = worker->pool;
 
     for (;;) {
-        int result = rco_pool_worker_drain_signal(worker);
-        if (result != 0) {
-            rco_pool_fail(pool, result);
-            break;
-        }
-
-        result = rco_pool_deliver_cancellations(worker);
+        int result = rco_pool_deliver_cancellations(worker);
         if (result != 0) {
             rco_pool_fail(pool, result);
             break;
@@ -582,11 +804,22 @@ static int rco_pool_dispatcher(void *argument)
             }
         }
 
-        if (rco_pool_worker_should_exit(worker)) {
+        if (count == pool->config.dispatch_batch) {
+            continue;
+        }
+
+        bool should_wait;
+        bool should_exit;
+        result = rco_pool_worker_prepare_wait(
+            worker, &should_wait, &should_exit);
+        if (result != 0) {
+            rco_pool_fail(pool, result);
             break;
         }
-        if (count == pool->config.dispatch_batch ||
-            rco_pool_worker_has_work(worker)) {
+        if (should_exit) {
+            break;
+        }
+        if (!should_wait) {
             continue;
         }
 
@@ -653,23 +886,37 @@ static void rco_pool_worker_close_control(struct rco_pool_worker *worker)
     (void)pthread_mutex_unlock(&worker->wake_mutex);
 }
 
-static void rco_pool_finalize_worker_reservations(
-    struct rco_pool_worker *worker)
+static void rco_pool_finalize_worker_jobs(struct rco_pool_worker *worker)
 {
     struct rco_pool *pool = worker->pool;
 
     for (size_t slot = 0; slot < pool->config.max_jobs; ++slot) {
-        struct rco_pool_job *reserved = NULL;
+        struct rco_pool_job *unstarted = NULL;
+        bool finalize_directly = false;
 
         (void)pthread_mutex_lock(&pool->mutex);
         struct rco_pool_job *job = &pool->jobs[slot];
-        if (job->state == RCO_POOL_JOB_RESERVED &&
-            job->owner_worker == worker->index) {
-            reserved = job;
+        if (job->state == RCO_POOL_JOB_QUEUED &&
+            job->queued_worker == worker->index) {
+            rco_pool_cancellation_unlink_locked(pool, job);
+            rco_pool_deque_unlink_locked(pool, worker, slot);
+            job->owner_worker = worker->index;
+            job->cancel_requested = true;
+            job->cancel_delivered = true;
+            job->state = RCO_POOL_JOB_FINALIZING;
+            unstarted = job;
+            finalize_directly = true;
+        } else if (job->state == RCO_POOL_JOB_RESERVED &&
+                   job->owner_worker == worker->index) {
+            unstarted = job;
         }
         (void)pthread_mutex_unlock(&pool->mutex);
-        if (reserved != NULL) {
-            rco_pool_finalize_unstarted(reserved);
+        if (unstarted != NULL) {
+            if (finalize_directly) {
+                rco_pool_invoke_finalizer(unstarted, true);
+            } else {
+                rco_pool_finalize_unstarted(unstarted);
+            }
         }
     }
 }
@@ -747,7 +994,7 @@ static void *rco_pool_worker_main(void *argument)
         }
     }
 
-    rco_pool_finalize_worker_reservations(worker);
+    rco_pool_finalize_worker_jobs(worker);
     if (worker->runtime != NULL) {
         int destroy_result = rco_runtime_destroy(worker->runtime);
         worker->runtime = NULL;
@@ -822,6 +1069,8 @@ int rco_pool_create(const struct rco_pool_config *config,
     }
     pool->config = *config;
     pool->state = RCO_POOL_CREATED;
+    atomic_init(&pool->wake_writes, 0);
+    atomic_init(&pool->wake_coalesced, 0);
 
     result = pthread_mutex_init(&pool->mutex, NULL);
     if (result != 0) {
@@ -848,14 +1097,13 @@ int rco_pool_create(const struct rco_pool_config *config,
         worker->index = initialized_workers;
         worker->deque_head = RCO_POOL_NO_INDEX;
         worker->deque_tail = RCO_POOL_NO_INDEX;
+        worker->stealable_head = RCO_POOL_NO_INDEX;
+        worker->stealable_tail = RCO_POOL_NO_INDEX;
+        worker->cancellation_head = RCO_POOL_NO_INDEX;
+        worker->cancellation_tail = RCO_POOL_NO_INDEX;
         worker->control_fd = -1;
-        result = pthread_mutex_init(&worker->deque_mutex, NULL);
-        if (result != 0) {
-            break;
-        }
         result = pthread_mutex_init(&worker->wake_mutex, NULL);
         if (result != 0) {
-            (void)pthread_mutex_destroy(&worker->deque_mutex);
             break;
         }
     }
@@ -864,8 +1112,6 @@ int rco_pool_create(const struct rco_pool_config *config,
             initialized_workers--;
             (void)pthread_mutex_destroy(
                 &pool->workers[initialized_workers].wake_mutex);
-            (void)pthread_mutex_destroy(
-                &pool->workers[initialized_workers].deque_mutex);
         }
         (void)pthread_cond_destroy(&pool->condition);
         (void)pthread_mutex_destroy(&pool->mutex);
@@ -881,6 +1127,11 @@ int rco_pool_create(const struct rco_pool_config *config,
         pool->jobs[slot].queued_worker = RCO_POOL_NO_INDEX;
         pool->jobs[slot].owner_worker = RCO_POOL_NO_INDEX;
         pool->jobs[slot].previous = RCO_POOL_NO_INDEX;
+        pool->jobs[slot].steal_previous = RCO_POOL_NO_INDEX;
+        pool->jobs[slot].steal_next = RCO_POOL_NO_INDEX;
+        pool->jobs[slot].cancel_worker = RCO_POOL_NO_INDEX;
+        pool->jobs[slot].cancel_previous = RCO_POOL_NO_INDEX;
+        pool->jobs[slot].cancel_next = RCO_POOL_NO_INDEX;
         pool->jobs[slot].next =
             slot + 1 < config->max_jobs ? slot + 1 : RCO_POOL_NO_INDEX;
     }
@@ -977,7 +1228,10 @@ int rco_pool_submit(struct rco_pool *pool,
 
     size_t slot = RCO_POOL_NO_INDEX;
     size_t target;
+    size_t thief = RCO_POOL_NO_INDEX;
     rco_job_id_t id;
+    bool signal_target;
+    bool signal_thief = false;
 
     (void)pthread_mutex_lock(&pool->mutex);
     if (pool->state != RCO_POOL_RUNNING) {
@@ -1021,21 +1275,40 @@ int rco_pool_submit(struct rco_pool *pool,
     job->affinity = selected.affinity;
     job->queued_worker = target;
     job->owner_worker = RCO_POOL_NO_INDEX;
+    job->previous = RCO_POOL_NO_INDEX;
+    job->next = RCO_POOL_NO_INDEX;
+    job->steal_previous = RCO_POOL_NO_INDEX;
+    job->steal_next = RCO_POOL_NO_INDEX;
+    job->cancel_worker = RCO_POOL_NO_INDEX;
+    job->cancel_previous = RCO_POOL_NO_INDEX;
+    job->cancel_next = RCO_POOL_NO_INDEX;
     job->cancel_requested = false;
     job->cancel_delivered = false;
+    job->cancellation_queued = false;
     id = rco_pool_encode_id(slot, job->generation);
     rco_pool_deque_push_locked(pool, target, slot);
     pool->stats.submitted++;
     pool->stats.outstanding++;
+    signal_target = rco_pool_mark_wake_locked(pool, target);
+    if (selected.affinity != RCO_AFFINITY_REQUIRE) {
+        thief = rco_pool_pick_thief_locked(pool, target);
+        signal_thief =
+            thief != RCO_POOL_NO_INDEX &&
+            rco_pool_mark_wake_locked(pool, thief);
+    }
     (void)pthread_mutex_unlock(&pool->mutex);
 
     if (out_job_id != NULL) {
         *out_job_id = id;
     }
 
-    int wake_result = rco_pool_worker_wake(&pool->workers[target]);
-    if (selected.affinity != RCO_AFFINITY_REQUIRE) {
-        rco_pool_wake_all(pool);
+    int wake_result =
+        signal_target ? rco_pool_signal_worker(&pool->workers[target]) : 0;
+    if (signal_thief) {
+        int result = rco_pool_signal_worker(&pool->workers[thief]);
+        if (wake_result == 0) {
+            wake_result = result;
+        }
     }
     if (wake_result != 0) {
         rco_pool_fail(pool, wake_result);
@@ -1056,6 +1329,7 @@ int rco_pool_cancel(struct rco_pool *pool, rco_job_id_t job_id)
     }
 
     size_t owner = RCO_POOL_NO_INDEX;
+    bool signal_owner = false;
 
     (void)pthread_mutex_lock(&pool->mutex);
     struct rco_pool_job *job = &pool->jobs[slot];
@@ -1076,10 +1350,14 @@ int rco_pool_cancel(struct rco_pool *pool, rco_job_id_t job_id)
     } else {
         owner = job->owner_worker;
     }
+    if (owner != RCO_POOL_NO_INDEX) {
+        rco_pool_cancellation_push_locked(pool, owner, slot);
+        signal_owner = rco_pool_mark_wake_locked(pool, owner);
+    }
     (void)pthread_mutex_unlock(&pool->mutex);
 
-    if (owner != RCO_POOL_NO_INDEX) {
-        int result = rco_pool_worker_wake(&pool->workers[owner]);
+    if (signal_owner) {
+        int result = rco_pool_signal_worker(&pool->workers[owner]);
         if (result != 0) {
             rco_pool_fail(pool, result);
         }
@@ -1129,6 +1407,10 @@ int rco_pool_wait_idle(struct rco_pool *pool, int timeout_ms)
     if (pool == NULL) {
         return -EINVAL;
     }
+    if (rco_pool_tls_worker != NULL &&
+        rco_pool_tls_worker->pool == pool) {
+        return -EDEADLK;
+    }
 
     struct timespec deadline;
     if (timeout_ms >= 0) {
@@ -1172,6 +1454,10 @@ int rco_pool_join(struct rco_pool *pool, int timeout_ms)
 {
     if (pool == NULL) {
         return -EINVAL;
+    }
+    if (rco_pool_tls_worker != NULL &&
+        rco_pool_tls_worker->pool == pool) {
+        return -EDEADLK;
     }
 
     struct timespec deadline;
@@ -1254,6 +1540,10 @@ int rco_pool_get_stats(const struct rco_pool *pool,
     struct rco_pool *mutable_pool = (struct rco_pool *)pool;
     (void)pthread_mutex_lock(&mutable_pool->mutex);
     *out_stats = pool->stats;
+    out_stats->wake_writes =
+        atomic_load_explicit(&pool->wake_writes, memory_order_relaxed);
+    out_stats->wake_coalesced =
+        atomic_load_explicit(&pool->wake_coalesced, memory_order_relaxed);
     (void)pthread_mutex_unlock(&mutable_pool->mutex);
     return 0;
 }
@@ -1276,7 +1566,6 @@ int rco_pool_destroy(struct rco_pool *pool)
 
     for (size_t index = 0; index < pool->config.worker_count; ++index) {
         (void)pthread_mutex_destroy(&pool->workers[index].wake_mutex);
-        (void)pthread_mutex_destroy(&pool->workers[index].deque_mutex);
     }
     (void)pthread_cond_destroy(&pool->condition);
     (void)pthread_mutex_destroy(&pool->mutex);

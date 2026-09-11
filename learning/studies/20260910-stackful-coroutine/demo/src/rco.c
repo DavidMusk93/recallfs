@@ -66,6 +66,7 @@
 #define RCO_EPOLL_BATCH 128
 #define RCO_READY_DISPATCH_BUDGET ((size_t)64)
 #define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
+#define RCO_TLS_VALUE_CHUNK_SIZE ((size_t)32)
 #define RCO_NO_TIMER SIZE_MAX
 /* TLS handles pack a 24-bit runtime, 16-bit index, and 24-bit generation. */
 #define RCO_TLS_INDEX_SHIFT 24
@@ -100,6 +101,13 @@ struct rco_stack {
     struct rco_stack *next;
 };
 
+struct rco_tls_value_chunk {
+    struct rco_tls_value_chunk *next;
+    size_t number;
+    size_t used;
+    void *values[RCO_TLS_VALUE_CHUNK_SIZE];
+};
+
 struct rco_task {
     struct rco_context context;
     struct rco_runtime *runtime;
@@ -117,7 +125,7 @@ struct rco_task {
     int wait_result;
     uint64_t deadline_ns;
     size_t timer_index;
-    void **tls_values;
+    struct rco_tls_value_chunk *tls_value_chunks;
     locale_t locale;
     sigset_t *signal_mask;
     int saved_errno;
@@ -156,6 +164,7 @@ struct rco_runtime {
     struct rco_task *all_tasks;
     struct rco_task **timer_heap;
     size_t timer_count;
+    size_t timer_capacity;
     struct rco_fd_watch **fd_watch_chunks;
     size_t fd_watch_chunk_count;
     struct rco_stack *stack_cache;
@@ -462,8 +471,28 @@ static void rco_timer_swap(struct rco_runtime *runtime,
     runtime->timer_heap[right]->timer_index = right;
 }
 
-static void rco_timer_add(struct rco_runtime *runtime, struct rco_task *task)
+static int rco_timer_add(struct rco_runtime *runtime, struct rco_task *task)
 {
+    if (runtime->timer_count == runtime->timer_capacity) {
+        size_t capacity =
+            runtime->timer_capacity == 0 ? 16 : runtime->timer_capacity * 2;
+        if (capacity < runtime->timer_capacity ||
+            capacity > runtime->config.max_coroutines) {
+            capacity = runtime->config.max_coroutines;
+        }
+        if (capacity <= runtime->timer_capacity ||
+            capacity > SIZE_MAX / sizeof(*runtime->timer_heap)) {
+            return -EOVERFLOW;
+        }
+        struct rco_task **heap =
+            realloc(runtime->timer_heap, capacity * sizeof(*heap));
+        if (heap == NULL) {
+            return -ENOMEM;
+        }
+        runtime->timer_heap = heap;
+        runtime->timer_capacity = capacity;
+    }
+
     size_t index = runtime->timer_count;
     runtime->timer_heap[index] = task;
     task->timer_index = index;
@@ -478,6 +507,7 @@ static void rco_timer_add(struct rco_runtime *runtime, struct rco_task *task)
         rco_timer_swap(runtime, index, parent);
         index = parent;
     }
+    return 0;
 }
 
 static void rco_timer_remove(struct rco_runtime *runtime,
@@ -844,15 +874,10 @@ static int rco_preempt_setup(struct rco_runtime *runtime)
         return -result;
     }
     runtime->preempt_mask_saved = true;
-    int blocked =
-        sigismember(&runtime->preempt_previous_mask,
-                    runtime->config.preempt_signal);
-    if (blocked < 0) {
-        result = rco_neg_errno();
-        goto rollback;
-    }
-    if (blocked == 0) {
-        result = -EPERM;
+    result =
+        pthread_sigmask(SIG_BLOCK, &runtime->preempt_signal_set, NULL);
+    if (result != 0) {
+        result = -result;
         goto rollback;
     }
 
@@ -1021,6 +1046,93 @@ static void rco_preempt_leave_task(struct rco_task *task)
     errno = saved_errno;
 }
 
+static struct rco_tls_value_chunk **
+rco_tls_value_chunk_link(struct rco_task *task, size_t number)
+{
+    struct rco_tls_value_chunk **link = &task->tls_value_chunks;
+
+    while (*link != NULL && (*link)->number < number) {
+        link = &(*link)->next;
+    }
+    return link;
+}
+
+static void *rco_tls_value_get(const struct rco_task *task, size_t index)
+{
+    size_t chunk_number = index / RCO_TLS_VALUE_CHUNK_SIZE;
+    const struct rco_tls_value_chunk *chunk = task->tls_value_chunks;
+
+    while (chunk != NULL && chunk->number < chunk_number) {
+        chunk = chunk->next;
+    }
+
+    return chunk == NULL || chunk->number != chunk_number
+               ? NULL
+               : chunk->values[index % RCO_TLS_VALUE_CHUNK_SIZE];
+}
+
+static void rco_tls_value_clear(struct rco_task *task, size_t index)
+{
+    size_t chunk_number = index / RCO_TLS_VALUE_CHUNK_SIZE;
+    struct rco_tls_value_chunk **link =
+        rco_tls_value_chunk_link(task, chunk_number);
+    struct rco_tls_value_chunk *chunk = *link;
+
+    if (chunk == NULL || chunk->number != chunk_number) {
+        return;
+    }
+    size_t offset = index % RCO_TLS_VALUE_CHUNK_SIZE;
+    if (chunk->values[offset] == NULL) {
+        return;
+    }
+
+    chunk->values[offset] = NULL;
+    chunk->used--;
+    if (chunk->used == 0 && !task->in_tls_destructor) {
+        *link = chunk->next;
+        free(chunk);
+    }
+}
+
+static int rco_tls_value_set(struct rco_task *task,
+                             size_t index,
+                             void *value)
+{
+    if (value == NULL) {
+        rco_tls_value_clear(task, index);
+        return 0;
+    }
+
+    size_t chunk_number = index / RCO_TLS_VALUE_CHUNK_SIZE;
+    struct rco_tls_value_chunk **link =
+        rco_tls_value_chunk_link(task, chunk_number);
+
+    if (*link == NULL || (*link)->number != chunk_number) {
+        struct rco_tls_value_chunk *chunk = calloc(1, sizeof(*chunk));
+        if (chunk == NULL) {
+            return -ENOMEM;
+        }
+        chunk->number = chunk_number;
+        chunk->next = *link;
+        *link = chunk;
+    }
+    size_t offset = index % RCO_TLS_VALUE_CHUNK_SIZE;
+    if ((*link)->values[offset] == NULL) {
+        (*link)->used++;
+    }
+    (*link)->values[offset] = value;
+    return 0;
+}
+
+static void rco_tls_values_destroy(struct rco_task *task)
+{
+    while (task->tls_value_chunks != NULL) {
+        struct rco_tls_value_chunk *chunk = task->tls_value_chunks;
+        task->tls_value_chunks = chunk->next;
+        free(chunk);
+    }
+}
+
 static int rco_task_local_state_init(struct rco_runtime *runtime,
                                      struct rco_task *task,
                                      int inherited_errno)
@@ -1064,8 +1176,7 @@ static int rco_task_local_state_init(struct rco_runtime *runtime,
 
 static void rco_task_local_state_destroy(struct rco_task *task)
 {
-    free(task->tls_values);
-    task->tls_values = NULL;
+    rco_tls_values_destroy(task);
     free(task->signal_mask);
     task->signal_mask = NULL;
     if (task->locale != (locale_t)0) {
@@ -1114,8 +1225,15 @@ static int rco_restore_root_local_state(struct rco_runtime *runtime)
     int error = 0;
 
     if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
-        int result = pthread_sigmask(SIG_SETMASK, &runtime->root_signal_mask,
-                                     NULL);
+        sigset_t root_mask = runtime->root_signal_mask;
+        if (runtime->preempt_handler_installed &&
+            sigaddset(&root_mask, runtime->config.preempt_signal) != 0) {
+            error = rco_neg_errno();
+        }
+        int result =
+            error == 0
+                ? pthread_sigmask(SIG_SETMASK, &root_mask, NULL)
+                : 0;
         if (result != 0) {
             error = -result;
         }
@@ -1377,7 +1495,7 @@ static void rco_dispatch_event(struct rco_runtime *runtime,
 static void rco_run_tls_destructors(struct rco_runtime *runtime,
                                     struct rco_task *task)
 {
-    if (task->tls_values == NULL) {
+    if (task->tls_value_chunks == NULL) {
         return;
     }
 
@@ -1394,18 +1512,27 @@ static void rco_run_tls_destructors(struct rco_runtime *runtime,
     for (size_t pass = 0; pass < PTHREAD_DESTRUCTOR_ITERATIONS; ++pass) {
         bool called_destructor = false;
 
-        for (size_t index = 0; index < runtime->config.max_tls_keys;
-             ++index) {
-            struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
-            void *value = task->tls_values[index];
-            if (!slot->active || slot->destructor == NULL || value == NULL) {
-                continue;
-            }
+        for (struct rco_tls_value_chunk *chunk = task->tls_value_chunks;
+             chunk != NULL; chunk = chunk->next) {
+            size_t base = chunk->number * RCO_TLS_VALUE_CHUNK_SIZE;
+            for (size_t offset = 0;
+                 offset < RCO_TLS_VALUE_CHUNK_SIZE &&
+                 base + offset < runtime->config.max_tls_keys;
+                 ++offset) {
+                size_t index = base + offset;
+                struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
+                void *value = chunk->values[offset];
+                if (!slot->active || slot->destructor == NULL ||
+                    value == NULL) {
+                    continue;
+                }
 
-            rco_tls_destructor_fn destructor = slot->destructor;
-            task->tls_values[index] = NULL;
-            called_destructor = true;
-            destructor(value);
+                rco_tls_destructor_fn destructor = slot->destructor;
+                chunk->values[offset] = NULL;
+                chunk->used--;
+                called_destructor = true;
+                destructor(value);
+            }
         }
         if (!called_destructor) {
             break;
@@ -1540,14 +1667,10 @@ int rco_runtime_create(const struct rco_config *config,
     runtime->fd_watch_chunks =
         calloc(runtime->fd_watch_chunk_count,
                sizeof(*runtime->fd_watch_chunks));
-    runtime->timer_heap =
-        calloc(validated.max_coroutines, sizeof(*runtime->timer_heap));
     runtime->tls_keys =
         calloc(validated.max_tls_keys, sizeof(*runtime->tls_keys));
-    if (runtime->fd_watch_chunks == NULL || runtime->timer_heap == NULL ||
-        runtime->tls_keys == NULL) {
+    if (runtime->fd_watch_chunks == NULL || runtime->tls_keys == NULL) {
         free(runtime->tls_keys);
-        free(runtime->timer_heap);
         free(runtime->fd_watch_chunks);
         free(runtime);
         return -ENOMEM;
@@ -1778,6 +1901,10 @@ int rco_tls_key_create(struct rco_runtime *runtime,
     if (runtime->owner_tid != syscall(SYS_gettid)) {
         return -EPERM;
     }
+    if (runtime->current != NULL &&
+        runtime->current->in_tls_destructor) {
+        return -EPERM;
+    }
 
     for (size_t index = 0; index < runtime->config.max_tls_keys; ++index) {
         struct rco_tls_key_slot *slot = &runtime->tls_keys[index];
@@ -1803,6 +1930,10 @@ int rco_tls_key_delete(struct rco_runtime *runtime, rco_tls_key_t key)
     if (runtime->owner_tid != syscall(SYS_gettid)) {
         return -EPERM;
     }
+    if (runtime->current != NULL &&
+        runtime->current->in_tls_destructor) {
+        return -EPERM;
+    }
 
     size_t index = 0;
     int result = rco_tls_key_lookup(runtime, key, &index);
@@ -1821,13 +1952,10 @@ int rco_tls_key_delete(struct rco_runtime *runtime, rco_tls_key_t key)
 
     for (struct rco_task *task = runtime->all_tasks; task != NULL;
          task = task->all_next) {
-        if (task->tls_values != NULL) {
-            task->tls_values[index] = NULL;
-        }
+        rco_tls_value_clear(task, index);
     }
-    if (runtime->current != NULL &&
-        runtime->current->tls_values != NULL) {
-        runtime->current->tls_values[index] = NULL;
+    if (runtime->current != NULL) {
+        rco_tls_value_clear(runtime->current, index);
     }
     return 0;
 }
@@ -1862,9 +1990,7 @@ int rco_tls_get(struct rco_runtime *runtime,
     if (result != 0) {
         return result;
     }
-    if (task->tls_values != NULL) {
-        *out_value = task->tls_values[index];
-    }
+    *out_value = rco_tls_value_get(task, index);
     return 0;
 }
 
@@ -1886,17 +2012,7 @@ int rco_tls_set(struct rco_runtime *runtime,
         return result;
     }
 
-    if (task->tls_values == NULL && value != NULL) {
-        task->tls_values =
-            calloc(runtime->config.max_tls_keys, sizeof(*task->tls_values));
-        if (task->tls_values == NULL) {
-            return -ENOMEM;
-        }
-    }
-    if (task->tls_values != NULL) {
-        task->tls_values[index] = value;
-    }
-    return 0;
+    return rco_tls_value_set(task, index, value);
 }
 
 int rco_cancel(struct rco_runtime *runtime, uint64_t task_id)
@@ -2159,7 +2275,13 @@ RCO_SUSPEND_ABI int rco_wait_fd(int fd,
         uint64_t delay = (uint64_t)timeout_ms * 1000000ULL;
         task->deadline_ns =
             now > UINT64_MAX - delay ? UINT64_MAX : now + delay;
-        rco_timer_add(runtime, task);
+        result = rco_timer_add(runtime, task);
+        if (result != 0) {
+            task->state = RCO_TASK_WAIT_IO;
+            rco_task_detach_wait(runtime, task);
+            task->state = RCO_TASK_RUNNING;
+            return result;
+        }
     }
 
     task->state = RCO_TASK_WAIT_IO;
@@ -2198,7 +2320,11 @@ RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms)
     task->wait_result = 0;
     task->ready_events = 0;
     task->state = RCO_TASK_WAIT_TIMER;
-    rco_timer_add(runtime, task);
+    result = rco_timer_add(runtime, task);
+    if (result != 0) {
+        task->state = RCO_TASK_RUNNING;
+        return result;
+    }
     rco_switch_to_root(task);
     return task->wait_result;
 }
