@@ -17,7 +17,6 @@ typedef struct btree_metadata {
 typedef struct btree_node_ref {
     unsigned char *minimum_key;
     unsigned char *maximum_key;
-    bool has_keys;
 } btree_node_ref;
 
 typedef struct btree_node_header {
@@ -399,8 +398,7 @@ static btree_status btree_validate_node(btree_validation *validation, uint64_t p
         validation->item_count += header.count;
         validation->leaf_ids[validation->leaf_count] = page_id;
         validation->leaf_count++;
-        result_out->has_keys = header.count != 0u;
-        if (result_out->has_keys) {
+        if (header.count != 0u) {
             memcpy(result_out->minimum_key, btree_leaf_key_const(tree, page, 0u),
                    (size_t)tree->schema.key_size);
             memcpy(result_out->maximum_key, btree_leaf_key_const(tree, page, header.count - 1u),
@@ -434,7 +432,6 @@ static btree_status btree_validate_node(btree_validation *validation, uint64_t p
         }
     }
 
-    result_out->has_keys = false;
     {
         unsigned char *child_keys = malloc((size_t)tree->schema.key_size * 2u);
         btree_node_ref child;
@@ -462,15 +459,8 @@ static btree_status btree_validate_node(btree_validation *validation, uint64_t p
                 free(page);
                 return status;
             }
-            if (!child.has_keys) {
-                btree_set_error(validation, "empty non-root subtree");
-                free(child_keys);
-                free(page);
-                return BTREE_CORRUPT;
-            }
             if (index == 0u) {
                 memcpy(result_out->minimum_key, child.minimum_key, (size_t)tree->schema.key_size);
-                result_out->has_keys = true;
             }
             memcpy(result_out->maximum_key, child.maximum_key, (size_t)tree->schema.key_size);
             if (index > 0u &&

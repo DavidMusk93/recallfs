@@ -86,12 +86,6 @@ if(BTREE_ENABLE_SANITIZERS)
             ${target}
             PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
         )
-        if(UNIX)
-            target_compile_definitions(
-                ${target}
-                PRIVATE _POSIX_C_SOURCE=200809L
-            )
-        endif()
         target_link_options(${target} PRIVATE -fsanitize=address,undefined)
     endforeach()
 endif()
