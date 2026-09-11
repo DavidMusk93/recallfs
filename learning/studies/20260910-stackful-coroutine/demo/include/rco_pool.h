@@ -29,6 +29,7 @@ enum rco_shutdown_mode {
 struct rco_pool_config {
     size_t worker_count;
     size_t max_jobs;
+    /* Maximum jobs considered per dispatcher pass; jobs are claimed singly. */
     size_t dispatch_batch;
     int first_cpu;
     bool pin_workers;
@@ -43,6 +44,8 @@ struct rco_submit_options {
 struct rco_pool_stats {
     uint64_t submitted;
     uint64_t completed;
+    uint64_t failed;
+    int first_job_error;
     uint64_t cancelled;
     uint64_t jobs_stolen_before_start;
     uint64_t coroutine_migrations;
@@ -56,7 +59,9 @@ struct rco_pool_stats {
 
 /*
  * rco_pool_start() returns the negated pthread affinity error when required
- * worker pinning cannot be applied. A successful submit transfers finalizer
+ * worker pinning cannot be applied. Failed startup internally joins every
+ * created worker; submit is then rejected, a later join returns the recorded
+ * startup error, and destroy is valid. A successful submit transfers finalizer
  * ownership to the pool; a failed submit never invokes the finalizer.
  */
 int rco_pool_create(const struct rco_pool_config *config,
@@ -69,7 +74,12 @@ int rco_pool_submit(struct rco_pool *pool,
 int rco_pool_cancel(struct rco_pool *pool, rco_job_id_t job_id);
 int rco_pool_shutdown(struct rco_pool *pool,
                       enum rco_shutdown_mode mode);
-/* Blocking pool waits return -EDEADLK from one of the pool's worker threads. */
+/*
+ * Blocking pool waits return -EDEADLK from one of the pool's worker threads.
+ * wait_idle and join report only pool/runtime lifecycle errors. A non-cancelled
+ * job whose entry returns nonzero is still completed; stats.failed increments
+ * and stats.first_job_error records the first such result.
+ */
 int rco_pool_wait_idle(struct rco_pool *pool, int timeout_ms);
 int rco_pool_join(struct rco_pool *pool, int timeout_ms);
 int rco_pool_get_stats(const struct rco_pool *pool,

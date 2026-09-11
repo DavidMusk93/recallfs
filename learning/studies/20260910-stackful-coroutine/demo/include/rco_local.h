@@ -17,7 +17,10 @@ extern "C" {
 /*
  * Signal masks and locales are task-only APIs and require their corresponding
  * local-state flags. rco_locale_set() duplicates its input, and
- * rco_locale_get() returns a borrowed task-owned handle.
+ * rco_locale_get() returns a borrowed task-owned handle. When deferred
+ * preemption is enabled, config.preempt_signal is reserved by the runtime;
+ * rco_sigmask() rejects SIG_BLOCK and SIG_SETMASK sets containing it with
+ * -EINVAL.
  */
 int rco_sigmask(int how, const sigset_t *set, sigset_t *old_set);
 int rco_locale_set(locale_t locale);

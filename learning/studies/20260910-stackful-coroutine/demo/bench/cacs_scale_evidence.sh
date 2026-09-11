@@ -445,8 +445,14 @@ for mode in sysv cacs cacs-preserve-none; do
             binary="$o3_build/rco_pool_test_cacs_preserve_none"
             ;;
     esac
-    for _run in $(seq 1 500); do
-        "$binary" >/dev/null
+    for run in $(seq 1 500); do
+        if timeout --signal=TERM --kill-after=5s 30s \
+            "$binary" >/dev/null; then
+            continue
+        else
+            stress_status=$?
+            die "pool stress failed: backend=$mode run=$run exit_status=$stress_status"
+        fi
     done
     binary_sha256=$(sha256sum -- "$binary" | awk '{print $1}')
     printf 'pool_stress backend=%s binary_sha256=%s runs=500 PASS\n' \
@@ -724,17 +730,31 @@ grep -n 'preserve_nonecc' \
     "$o3_build/rco_cacs_preserve_none-runtime.ll" \
     >"$clean_root/preserve-none-ir.txt"
 
+readonly perf_events='cycles,instructions,branches,branch-misses,cache-misses,L1-dcache-loads,L1-dcache-load-misses,dTLB-loads,dTLB-load-misses'
+
 set +e
 perf stat \
-    -e cycles,instructions,branches,branch-misses,cache-misses,\
-L1-dcache-loads,L1-dcache-load-misses,dTLB-loads,dTLB-load-misses \
+    -e "$perf_events" \
     -o "$clean_root/perf-stat.txt" \
     numactl --physcpubind=0 --membind=0 \
     "$o3_build/rco_bench_cacs" 500000 3 >/dev/null
 perf_status=$?
+perf stat \
+    -e "$perf_events" \
+    -o "$clean_root/perf-pool-stat.txt" \
+    numactl --membind=0 \
+    "$o3_build/rco_pool_bench_cacs" \
+    --workers 4 \
+    --jobs 1024 \
+    --iterations 65536 \
+    --preempt-quantum-ns 0 \
+    --pin-first-cpu 0 >/dev/null
+pool_perf_status=$?
 set -e
 printf '\nperf_exit_status=%s\n' "$perf_status" \
     >>"$clean_root/perf-stat.txt"
+printf '\nperf_exit_status=%s\n' "$pool_perf_status" \
+    >>"$clean_root/perf-pool-stat.txt"
 
 python3 - \
     "$clean_root" "$o3_build" "$source_commit" \
@@ -1009,6 +1029,8 @@ for row in pool_rows:
     if (
         stats["submitted"] != config["jobs"]
         or stats["completed"] != config["jobs"]
+        or stats["failed"] != 0
+        or stats["first_job_error"] != 0
         or stats["cancelled"] != 0
         or stats["coroutine_migrations"] != 0
         or stats["outstanding"] != 0
@@ -1361,22 +1383,24 @@ if "preserve_nonecc" not in (
 ).read_text(encoding="utf-8"):
     fail("preserve-none LLVM IR evidence is missing")
 
-perf_text = (root / "perf-stat.txt").read_text(
-    encoding="utf-8", errors="replace"
-)
-perf_match = re.search(r"perf_exit_status=([0-9]+)", perf_text)
-if perf_match is None:
-    fail("PMU evidence omits the perf exit status")
-if re.search(
-    r"not supported|No permission|Permission denied|perf_event_paranoid",
-    perf_text,
-    re.IGNORECASE,
-):
-    pmu_status = "unavailable"
-elif perf_match.group(1) == "0":
-    pmu_status = "available"
-else:
-    fail("perf failed for an unclassified reason")
+def classify_perf(relative):
+    text = (root / relative).read_text(encoding="utf-8", errors="replace")
+    match = re.search(r"perf_exit_status=([0-9]+)", text)
+    if match is None:
+        fail(f"{relative} omits the perf exit status")
+    if re.search(
+        r"not supported|No permission|Permission denied|perf_event_paranoid",
+        text,
+        re.IGNORECASE,
+    ):
+        return "unavailable"
+    if match.group(1) == "0":
+        return "available"
+    fail(f"{relative} failed for an unclassified reason")
+
+
+pmu_status = classify_perf("perf-stat.txt")
+pool_pmu_status = classify_perf("perf-pool-stat.txt")
 
 environment = (root / "environment.txt").read_text(encoding="utf-8")
 if f"source_commit={source_commit}\n" not in environment:
@@ -1440,6 +1464,33 @@ pool_medians = {
     for workers in pool_workers
     for quantum in pool_quantums
 }
+pool_speedup_thresholds = {2: 1.50, 4: 2.50}
+pool_jobs_per_second = {
+    (
+        row["run"],
+        row["backend"],
+        row["config"]["workers"],
+        row["config"]["preempt_quantum_ns"],
+    ): float(row["jobs_per_second"])
+    for row in pool_rows
+}
+pool_median_speedups = {
+    (mode, workers, quantum): statistics.median(
+        pool_jobs_per_second[(run, mode, workers, quantum)]
+        / pool_jobs_per_second[(run, mode, 1, quantum)]
+        for run in range(1, 6)
+    )
+    for mode in pool_modes
+    for workers in pool_speedup_thresholds
+    for quantum in pool_quantums
+}
+for (mode, workers, quantum), speedup in pool_median_speedups.items():
+    minimum = pool_speedup_thresholds[workers]
+    if speedup < minimum:
+        fail(
+            f"pool {mode}/{workers}/{quantum} median speedup "
+            f"{speedup:.3f} is below {minimum:.2f}"
+        )
 
 validation = root / "validation.txt"
 with validation.open("w", encoding="utf-8", newline="\n") as stream:
@@ -1484,6 +1535,11 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
     emit("pool_benchmark_prestart_stealing", "PASS")
     emit("pool_benchmark_coroutine_migrations", 0)
     emit("pool_benchmark_wake_coalescing", "PASS")
+    for workers, minimum in pool_speedup_thresholds.items():
+        emit(
+            f"pool_{workers}w_minimum_median_speedup_vs_1w",
+            f"{minimum:.2f}",
+        )
     for mode in pool_modes:
         key_mode = mode.replace("-", "_")
         for workers in pool_workers:
@@ -1491,6 +1547,12 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
                 emit(
                     f"pool_{key_mode}_{workers}w_{quantum}ns_median_jobs_per_second",
                     f"{pool_medians[(mode, workers, quantum)]:.3f}",
+                )
+        for workers in pool_speedup_thresholds:
+            for quantum in pool_quantums:
+                emit(
+                    f"pool_{key_mode}_{workers}w_{quantum}ns_median_speedup_vs_1w",
+                    f"{pool_median_speedups[(mode, workers, quantum)]:.6f}",
                 )
     emit("l4_forwarders", 4)
     emit("l4_modes", 5)
@@ -1522,6 +1584,7 @@ with validation.open("w", encoding="utf-8", newline="\n") as stream:
             )
     emit("disassembly_ir_gnu_stack", "PASS")
     emit("pmu_status", pmu_status)
+    emit("pool_pmu_status", pool_pmu_status)
     emit("promotion_clean_root", clean_root_relative)
     emit("promotion_generated_output", promotion_root_relative)
     emit("promotion_path_contract", "PASS")

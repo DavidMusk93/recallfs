@@ -42,6 +42,7 @@ struct rco_pool_job {
     struct rco_pool *pool;
     struct rco_task_spec spec;
     uint64_t runtime_task_id;
+    int entry_result;
     uint32_t generation;
     enum rco_pool_job_state state;
     enum rco_affinity affinity;
@@ -73,7 +74,6 @@ struct rco_pool_worker {
     size_t cancellation_tail;
     size_t queued_jobs;
     size_t pending_cancellations;
-    size_t *dispatch_slots;
     struct rco_runtime *runtime;
     int control_fd;
     bool wake_pending;
@@ -419,10 +419,17 @@ static void rco_pool_retire_job(struct rco_pool_job *job, bool cancelled)
         pool->stats.cancelled++;
     } else {
         pool->stats.completed++;
+        if (job->entry_result != 0) {
+            pool->stats.failed++;
+            if (pool->stats.first_job_error == 0) {
+                pool->stats.first_job_error = job->entry_result;
+            }
+        }
     }
     pool->stats.outstanding--;
     job->spec = (struct rco_task_spec){0};
     job->runtime_task_id = 0;
+    job->entry_result = 0;
     job->state = RCO_POOL_JOB_FREE;
     job->affinity = RCO_AFFINITY_ANY;
     job->queued_worker = RCO_POOL_NO_INDEX;
@@ -517,7 +524,12 @@ static int rco_pool_runtime_entry(void *argument)
     entry_argument = job->spec.argument;
     (void)pthread_mutex_unlock(&pool->mutex);
 
-    return cancelled ? 0 : entry(entry_argument);
+    int result = cancelled ? 0 : entry(entry_argument);
+
+    (void)pthread_mutex_lock(&pool->mutex);
+    job->entry_result = result;
+    (void)pthread_mutex_unlock(&pool->mutex);
+    return 0;
 }
 
 static void rco_pool_request_cancel_all(struct rco_pool *pool)
@@ -615,21 +627,6 @@ static size_t rco_pool_claim_one(struct rco_pool_worker *worker)
         }
     }
     return slot;
-}
-
-static size_t rco_pool_claim_batch(struct rco_pool_worker *worker,
-                                   size_t *slots)
-{
-    size_t count = 0;
-
-    while (count < worker->pool->config.dispatch_batch) {
-        size_t slot = rco_pool_claim_one(worker);
-        if (slot == RCO_POOL_NO_INDEX) {
-            break;
-        }
-        slots[count++] = slot;
-    }
-    return count;
 }
 
 static int rco_pool_deliver_cancellations(struct rco_pool_worker *worker)
@@ -789,11 +786,14 @@ static int rco_pool_dispatcher(void *argument)
             break;
         }
 
-        size_t count =
-            rco_pool_claim_batch(worker, worker->dispatch_slots);
-        for (size_t index = 0; index < count; ++index) {
-            result = rco_pool_start_reserved(
-                worker, worker->dispatch_slots[index]);
+        size_t considered = 0;
+        while (considered < pool->config.dispatch_batch) {
+            size_t slot = rco_pool_claim_one(worker);
+            if (slot == RCO_POOL_NO_INDEX) {
+                break;
+            }
+            considered++;
+            result = rco_pool_start_reserved(worker, slot);
             if (result == -ECANCELED) {
                 break;
             }
@@ -804,7 +804,7 @@ static int rco_pool_dispatcher(void *argument)
             }
         }
 
-        if (count == pool->config.dispatch_batch) {
+        if (considered == pool->config.dispatch_batch) {
             continue;
         }
 
@@ -956,15 +956,6 @@ static void *rco_pool_worker_main(void *argument)
         }
     }
     if (result == 0) {
-        worker->dispatch_slots =
-            calloc(pool->config.dispatch_batch,
-                   sizeof(*worker->dispatch_slots));
-        if (worker->dispatch_slots == NULL) {
-            result = -ENOMEM;
-        }
-    }
-
-    if (result == 0) {
         int control_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
         if (control_fd < 0) {
             result = rco_pool_neg_errno();
@@ -979,6 +970,9 @@ static void *rco_pool_worker_main(void *argument)
         size_t required_coroutines = pool->config.max_jobs + 1;
         if (runtime_config.max_coroutines < required_coroutines) {
             runtime_config.max_coroutines = required_coroutines;
+        }
+        if (runtime_config.max_fds == 0) {
+            runtime_config.max_fds = RCO_MAX_FDS_DEFAULT;
         }
         if (runtime_config.max_fds <= (size_t)worker->control_fd) {
             runtime_config.max_fds = (size_t)worker->control_fd + 1;
@@ -1010,8 +1004,6 @@ static void *rco_pool_worker_main(void *argument)
         }
     }
     rco_pool_worker_close_control(worker);
-    free(worker->dispatch_slots);
-    worker->dispatch_slots = NULL;
     if (mask_saved) {
         int mask_result =
             pthread_sigmask(SIG_SETMASK, &inherited_mask, NULL);
@@ -1278,6 +1270,7 @@ int rco_pool_submit(struct rco_pool *pool,
     struct rco_pool_job *job = &pool->jobs[slot];
     job->spec = *spec;
     job->runtime_task_id = 0;
+    job->entry_result = 0;
     job->state = RCO_POOL_JOB_QUEUED;
     job->affinity = selected.affinity;
     job->queued_worker = target;

@@ -591,7 +591,8 @@ static bool validate_stats(const struct options *options,
             : (UINT64_C(1) << options->workers) - 1;
 
     return stats->submitted == options->jobs &&
-           stats->completed == options->jobs && stats->cancelled == 0 &&
+           stats->completed == options->jobs && stats->failed == 0 &&
+           stats->first_job_error == 0 && stats->cancelled == 0 &&
            stats->submitted == stats->completed + stats->cancelled &&
            stats->outstanding == 0 && stats->queued_jobs == 0 &&
            stats->pending_cancellations == 0 &&
@@ -761,13 +762,15 @@ static int run_benchmark(const struct options *options)
                 "/%" PRIu64 " wall=%" PRIu64 "/%" PRIu64
                 " cpu=%" PRIu64 "/%" PRIu64 " mask=0x%016" PRIx64
                 " used=%u/%zu submitted=%" PRIu64
-                " completed=%" PRIu64 " cancelled=%" PRIu64
+                " completed=%" PRIu64 " failed=%" PRIu64
+                " first_job_error=%d cancelled=%" PRIu64
                 " stolen=%" PRIu64 " migrations=%" PRIu64
                 " outstanding=%zu queued=%zu pending=%zu\n",
                 worker_error, jobs_valid, stats_valid, checksum,
                 expected_checksum, wall_start_ns, wall_end_ns, cpu_start_ns,
                 cpu_end_ns, worker_mask, workers_used, options->workers,
-                stats.submitted, stats.completed, stats.cancelled,
+                stats.submitted, stats.completed, stats.failed,
+                stats.first_job_error, stats.cancelled,
                 stats.jobs_stolen_before_start, stats.coroutine_migrations,
                 stats.outstanding, stats.queued_jobs,
                 stats.pending_cancellations);
@@ -833,7 +836,8 @@ cleanup:
             ",\"cpu_ns\":%" PRIu64 "},\"jobs_per_second\":%.3f,"
             "\"workers\":{\"mask\":\"0x%016" PRIx64
             "\",\"count\":%u},\"pool_stats\":{\"submitted\":%" PRIu64
-            ",\"completed\":%" PRIu64 ",\"cancelled\":%" PRIu64
+            ",\"completed\":%" PRIu64 ",\"failed\":%" PRIu64
+            ",\"first_job_error\":%d,\"cancelled\":%" PRIu64
             ",\"jobs_stolen_before_start\":%" PRIu64
             ",\"coroutine_migrations\":%" PRIu64
             ",\"outstanding\":%zu,\"wake_writes\":%" PRIu64
@@ -845,7 +849,8 @@ cleanup:
             options->jobs, options->iterations, options->preempt_quantum_ns,
             PREEMPT_CADENCE_ITERATIONS, options->first_cpu, wall_ns, cpu_ns,
             jobs_per_second, worker_mask, workers_used, stats.submitted,
-            stats.completed, stats.cancelled,
+            stats.completed, stats.failed, stats.first_job_error,
+            stats.cancelled,
             stats.jobs_stolen_before_start, stats.coroutine_migrations,
             stats.outstanding, stats.wake_writes, stats.wake_coalesced,
             stats.steal_attempts, stats.queued_jobs,

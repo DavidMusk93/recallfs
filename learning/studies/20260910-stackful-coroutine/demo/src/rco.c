@@ -60,7 +60,6 @@
 #endif
 
 #define RCO_DEFAULT_MAX_COROUTINES ((size_t)65536)
-#define RCO_DEFAULT_MAX_FDS ((size_t)65536)
 #define RCO_DEFAULT_STACK_CACHE_BYTES ((size_t)8 * 1024 * 1024)
 #define RCO_DEFAULT_PREEMPT_ALT_STACK_SIZE ((size_t)64 * 1024)
 #define RCO_EPOLL_BATCH 128
@@ -280,7 +279,7 @@ static int rco_validate_config(const struct rco_config *input,
     struct rco_config config = {
         .default_stack_size = RCO_STACK_SIZE_DEFAULT,
         .max_coroutines = RCO_DEFAULT_MAX_COROUTINES,
-        .max_fds = RCO_DEFAULT_MAX_FDS,
+        .max_fds = RCO_MAX_FDS_DEFAULT,
         .stack_cache_bytes = RCO_DEFAULT_STACK_CACHE_BYTES,
         .local_state_flags = RCO_LOCAL_STATE_ERRNO,
         .max_tls_keys = RCO_TLS_KEYS_DEFAULT,

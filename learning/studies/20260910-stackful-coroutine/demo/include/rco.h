@@ -15,6 +15,7 @@ extern "C" {
 
 #define RCO_STACK_SIZE_DEFAULT ((size_t)128 * 1024)
 #define RCO_STACK_SIZE_MIN ((size_t)16 * 1024)
+#define RCO_MAX_FDS_DEFAULT ((size_t)65536)
 #define RCO_TLS_KEYS_DEFAULT ((size_t)64)
 #define RCO_TLS_KEYS_MAX ((size_t)65536)
 
@@ -115,9 +116,10 @@ int rco_runtime_get_stats(const struct rco_runtime *runtime,
  * A zero stack_size selects the configured default. Task identifiers are
  * monotonically increasing runtime-local handles and are never raw pointers.
  * A task finalizer runs exactly once on the scheduler stack after completion
- * or cancellation. It must not call a coroutine suspension function. When
- * rco_spawn_task() fails, ownership remains with the caller and the finalizer
- * is not called.
+ * or cancellation, after TLS destruction and root-state restoration. TLS
+ * get/set and coroutine suspension functions return -EPERM from a finalizer.
+ * When rco_spawn_task() fails, ownership remains with the caller and the
+ * finalizer is not called.
  */
 int rco_spawn_task(struct rco_runtime *runtime,
                    const struct rco_task_spec *spec,
@@ -133,8 +135,8 @@ int rco_cancel(struct rco_runtime *runtime, uint64_t task_id);
  * TLS keys belong to one runtime. Values belong to the current task and are
  * allocated lazily. Deleting a key clears its values without running its
  * destructor. Task exit runs up to four destructor passes before the user
- * finalizer; TLS get/set remain valid in callbacks, but coroutine suspension
- * does not.
+ * finalizer; TLS get/set remain valid only in TLS destructor callbacks, but
+ * coroutine suspension does not.
  */
 int rco_tls_key_create(struct rco_runtime *runtime,
                        rco_tls_destructor_fn destructor,

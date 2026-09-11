@@ -130,6 +130,8 @@ struct tls_destructor_case {
     char events[PTHREAD_DESTRUCTOR_ITERATIONS + 1];
     int destructor_errno[PTHREAD_DESTRUCTOR_ITERATIONS];
     int finalizer_errno;
+    int finalizer_get_result;
+    int finalizer_set_result;
 };
 
 static void tls_rearming_destructor(void *value)
@@ -167,10 +169,18 @@ static int tls_destructor_worker(void *argument)
 static void tls_user_finalizer(void *argument)
 {
     struct tls_destructor_case *test_case = argument;
+    void *value = (void *)(uintptr_t)1;
 
     CHECK(test_case->destructor_calls == PTHREAD_DESTRUCTOR_ITERATIONS);
     CHECK(test_case->event_count == PTHREAD_DESTRUCTOR_ITERATIONS);
     CHECK(test_case->event_count < sizeof(test_case->events));
+    test_case->finalizer_get_result =
+        rco_tls_get(test_case->runtime, test_case->key, &value);
+    test_case->finalizer_set_result =
+        rco_tls_set(test_case->runtime, test_case->key, test_case);
+    CHECK(test_case->finalizer_get_result == -EPERM);
+    CHECK(test_case->finalizer_set_result == -EPERM);
+    CHECK(value == NULL);
     test_case->finalizer_errno = errno;
     test_case->events[test_case->event_count++] = 'F';
 }
@@ -262,6 +272,8 @@ static void test_runtime_scoped_tls(void)
     }
     CHECK(destructor.events[PTHREAD_DESTRUCTOR_ITERATIONS] == 'F');
     CHECK(destructor.finalizer_errno == root_errno);
+    CHECK(destructor.finalizer_get_result == -EPERM);
+    CHECK(destructor.finalizer_set_result == -EPERM);
 
     struct tls_invalid_key_case cross_runtime = {
         .runtime = other_runtime,
@@ -535,6 +547,46 @@ static void test_signal_masks_are_per_task(void)
     CHECK(pthread_sigmask(SIG_SETMASK, &original_mask, NULL) == 0);
 }
 
+struct reserved_signal_case {
+    int signal_number;
+    int block_result;
+    int setmask_result;
+};
+
+static int reserved_signal_worker(void *argument)
+{
+    struct reserved_signal_case *test_case = argument;
+    sigset_t signal_set;
+
+    CHECK(sigemptyset(&signal_set) == 0);
+    CHECK(sigaddset(&signal_set, test_case->signal_number) == 0);
+    test_case->block_result = rco_sigmask(SIG_BLOCK, &signal_set, NULL);
+    test_case->setmask_result = rco_sigmask(SIG_SETMASK, &signal_set, NULL);
+    return 0;
+}
+
+static void test_preemption_signal_is_reserved(void)
+{
+    const int preempt_signal = SIGRTMIN + 5;
+    struct rco_config config = {
+        .local_state_flags = RCO_LOCAL_STATE_SIGNAL_MASK,
+        .preempt_quantum_ns = UINT64_C(1000000),
+        .preempt_signal = preempt_signal,
+    };
+    struct rco_runtime *runtime = NULL;
+    struct reserved_signal_case test_case = {
+        .signal_number = preempt_signal,
+    };
+
+    CHECK(preempt_signal <= SIGRTMAX);
+    CHECK(rco_runtime_create(&config, &runtime) == 0);
+    CHECK(rco_spawn(runtime, 0, reserved_signal_worker, &test_case, NULL) == 0);
+    CHECK(rco_runtime_run(runtime) == 0);
+    CHECK(test_case.block_result == -EINVAL);
+    CHECK(test_case.setmask_result == -EINVAL);
+    CHECK(rco_runtime_destroy(runtime) == 0);
+}
+
 struct locale_case {
     locale_t source;
     locale_t root;
@@ -712,8 +764,9 @@ int main(void)
     test_high_index_tls_deletion_and_reuse();
     test_tls_delete_skips_destructor();
     test_signal_masks_are_per_task();
+    test_preemption_signal_is_reserved();
     test_locales_are_owned_and_per_task();
     test_explicit_none_uses_legacy_path();
-    puts("rco coroutine-local state contract tests passed: 7 suites");
+    puts("rco coroutine-local state contract tests passed: 8 suites");
     return EXIT_SUCCESS;
 }
