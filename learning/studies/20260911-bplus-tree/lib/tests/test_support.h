@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #define RBT_TEST_CHECK(condition)                                                                  \
@@ -122,6 +123,133 @@ static inline struct rbt_record rbt_test_record(const struct rbt_value *key, siz
 
 static inline struct rbt_record rbt_test_key(const struct rbt_value *key, size_t key_count) {
     return rbt_test_record(key, key_count, NULL, 0u);
+}
+
+static inline struct rbt_schema rbt_test_u64_bytes_schema(void) {
+    static const struct rbt_column key_columns[] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
+    };
+    static const struct rbt_column value_columns[] = {
+        {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
+        {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 8192u},
+    };
+    struct rbt_schema schema = {
+        .id = UINT64_C(0x7262740000000010),
+        .key_columns = key_columns,
+        .key_column_count = sizeof(key_columns) / sizeof(key_columns[0]),
+        .value_columns = value_columns,
+        .value_column_count = sizeof(value_columns) / sizeof(value_columns[0]),
+    };
+
+    return schema;
+}
+
+static inline int rbt_test_create_u64_bytes(const struct rbt_storage *storage,
+                                            struct rbt **out_rbt) {
+    struct rbt_schema schema = rbt_test_u64_bytes_schema();
+    struct rbt_config config = {
+        .storage = storage,
+        .schema = &schema,
+    };
+
+    return rbt_create(&config, out_rbt);
+}
+
+static inline int rbt_test_put_u64_bytes(struct rbt *rbt, uint64_t key_number,
+                                         uint64_t value_number, const void *bytes,
+                                         size_t byte_count, bool *out_inserted) {
+    struct rbt_value key = rbt_test_u64(key_number);
+    struct rbt_value values[2] = {
+        rbt_test_u64(value_number),
+        rbt_test_bytes(bytes, byte_count),
+    };
+    struct rbt_record record = rbt_test_record(&key, 1u, values, 2u);
+
+    return rbt_put(rbt, &record, out_inserted);
+}
+
+static inline uint32_t rbt_test_load_u32(const unsigned char *data) {
+    return (uint32_t)data[0] | ((uint32_t)data[1] << 8u) | ((uint32_t)data[2] << 16u) |
+           ((uint32_t)data[3] << 24u);
+}
+
+static inline uint64_t rbt_test_load_u64(const unsigned char *data) {
+    uint64_t value = 0u;
+    unsigned int shift;
+
+    for (shift = 0u; shift < 64u; shift += 8u) {
+        value |= (uint64_t)data[shift / 8u] << shift;
+    }
+    return value;
+}
+
+static inline void rbt_test_store_u32(unsigned char *data, uint32_t value) {
+    unsigned int index;
+
+    for (index = 0u; index < 4u; ++index) {
+        data[index] = (unsigned char)(value >> (index * 8u));
+    }
+}
+
+static inline void rbt_test_store_u64(unsigned char *data, uint64_t value) {
+    unsigned int index;
+
+    for (index = 0u; index < 8u; ++index) {
+        data[index] = (unsigned char)(value >> (index * 8u));
+    }
+}
+
+static inline uint32_t rbt_test_crc32c_zeroed(const unsigned char *data, size_t size,
+                                              size_t zero_offset, size_t zero_size) {
+    uint32_t crc = UINT32_MAX;
+    size_t index;
+
+    RBT_TEST_CHECK(zero_offset <= size);
+    RBT_TEST_CHECK(zero_size <= size - zero_offset);
+    for (index = 0u; index < size; ++index) {
+        unsigned char byte =
+            index >= zero_offset && index - zero_offset < zero_size ? 0u : data[index];
+        unsigned int bit;
+
+        crc ^= byte;
+        for (bit = 0u; bit < 8u; ++bit) {
+            uint32_t mask = (uint32_t) - (int32_t)(crc & 1u);
+
+            crc = (crc >> 1u) ^ (UINT32_C(0x82f63b78) & mask);
+        }
+    }
+    return ~crc;
+}
+
+static inline void rbt_test_read_exact_at(int descriptor, void *data, size_t size, off_t offset) {
+    size_t consumed = 0u;
+
+    while (consumed < size) {
+        ssize_t count = pread(descriptor, (unsigned char *)data + consumed, size - consumed,
+                              offset + (off_t)consumed);
+
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+        RBT_TEST_CHECK(count > 0);
+        consumed += (size_t)count;
+    }
+}
+
+static inline void rbt_test_write_exact_at(int descriptor, const void *data, size_t size,
+                                           off_t offset) {
+    size_t consumed = 0u;
+
+    while (consumed < size) {
+        ssize_t count = pwrite(descriptor, (const unsigned char *)data + consumed, size - consumed,
+                               offset + (off_t)consumed);
+
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+        RBT_TEST_CHECK(count > 0);
+        consumed += (size_t)count;
+    }
 }
 
 static inline void rbt_test_temp_path(char *path, size_t capacity) {
