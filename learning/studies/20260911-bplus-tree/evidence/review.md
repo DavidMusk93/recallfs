@@ -20,6 +20,9 @@ verified_by:
 
 - Base: `db65f4c`
 - Initial implementation commit: `bafd0e0`
+- Review fixes: `d388274`
+- WAL bound follow-up: `0f6c17b`
+- Public header clarification: `fe17463`
 - Review run: `20260911-143717-b9a08456`
 - Reviewed scope: `learning/studies/20260911-bplus-tree/lib`
 - Excluded: unrelated concurrent coroutine changes and untracked study docs
