@@ -1,172 +1,171 @@
-#ifndef BTREE_TEST_SUPPORT_H
-#define BTREE_TEST_SUPPORT_H
+#ifndef RBT_TEST_SUPPORT_H
+#define RBT_TEST_SUPPORT_H
 
-#include "btree.h"
+#include "rbt_backends.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#define TEST_CHECK(condition)                                                                      \
+#define RBT_TEST_CHECK(condition)                                                                  \
     do {                                                                                           \
         if (!(condition)) {                                                                        \
             fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            exit(1);                                                                               \
+            exit(EXIT_FAILURE);                                                                    \
         }                                                                                          \
     } while (0)
 
-#define TEST_STATUS(expression, expected)                                                          \
+#define RBT_TEST_OK(expression)                                                                    \
     do {                                                                                           \
-        btree_status test_status_value = (expression);                                             \
-        if (test_status_value != (expected)) {                                                     \
-            fprintf(stderr, "%s:%d: %s returned %s, expected %s\n", __FILE__, __LINE__,            \
-                    #expression, btree_status_string(test_status_value),                           \
-                    btree_status_string(expected));                                                \
-            exit(1);                                                                               \
+        int rbt_test_result_ = (expression);                                                       \
+        if (rbt_test_result_ != 0) {                                                               \
+            fprintf(stderr, "%s:%d: %s returned %d (%s), expected success\n", __FILE__, __LINE__,  \
+                    #expression, rbt_test_result_, rbt_strerror(rbt_test_result_));                \
+            exit(EXIT_FAILURE);                                                                    \
         }                                                                                          \
     } while (0)
 
-typedef btree_status (*test_u64_scan_fn)(void *context, uint64_t key, uint64_t value);
+#define RBT_TEST_ERRNO(expression, expected_errno)                                                 \
+    do {                                                                                           \
+        int rbt_test_result_ = (expression);                                                       \
+        int rbt_test_expected_ = -(expected_errno);                                                \
+        if (rbt_test_result_ != rbt_test_expected_) {                                              \
+            fprintf(stderr, "%s:%d: %s returned %d (%s), expected -%s\n", __FILE__, __LINE__,      \
+                    #expression, rbt_test_result_, rbt_strerror(rbt_test_result_),                 \
+                    #expected_errno);                                                              \
+            exit(EXIT_FAILURE);                                                                    \
+        }                                                                                          \
+    } while (0)
 
-typedef struct test_u64_scan_bridge {
-    test_u64_scan_fn callback;
-    void *context;
-} test_u64_scan_bridge;
+#define RBT_TEST_BYTES(actual_bytes, expected_data, expected_size)                                 \
+    do {                                                                                           \
+        const struct rbt_bytes *rbt_test_actual_ = (actual_bytes);                                 \
+        size_t rbt_test_size_ = (expected_size);                                                   \
+        RBT_TEST_CHECK(rbt_test_actual_->size == rbt_test_size_);                                  \
+        RBT_TEST_CHECK(rbt_test_size_ == 0u ||                                                     \
+                       memcmp(rbt_test_actual_->data, (expected_data), rbt_test_size_) == 0);      \
+    } while (0)
 
-static inline void test_u64_encode(uint64_t value, unsigned char bytes[8]) {
-    unsigned int index;
+static inline struct rbt_value rbt_test_bool(bool value) {
+    struct rbt_value result = {
+        .type = RBT_TYPE_BOOL,
+        .is_null = false,
+        .as.boolean = value,
+    };
 
-    for (index = 0u; index < 8u; ++index) {
-        bytes[7u - index] = (unsigned char)(value >> (index * 8u));
-    }
+    return result;
 }
 
-static inline uint64_t test_u64_decode(const void *data) {
-    const unsigned char *bytes = data;
-    uint64_t value = 0u;
-    unsigned int index;
+static inline struct rbt_value rbt_test_i64(int64_t value) {
+    struct rbt_value result = {
+        .type = RBT_TYPE_I64,
+        .is_null = false,
+        .as.i64 = value,
+    };
 
-    for (index = 0u; index < 8u; ++index) {
-        value = (value << 8u) | bytes[index];
-    }
-    return value;
+    return result;
 }
 
-static inline btree_options test_u64_options(void) {
-    btree_options options;
+static inline struct rbt_value rbt_test_u64(uint64_t value) {
+    struct rbt_value result = {
+        .type = RBT_TYPE_U64,
+        .is_null = false,
+        .as.u64 = value,
+    };
 
-    btree_options_init(&options, 8u, 8u);
-    return options;
+    return result;
 }
 
-static inline btree_status test_btree_create_u64(const btree_storage *storage, btree **tree_out) {
-    btree_options options = test_u64_options();
+static inline struct rbt_value rbt_test_bytes(const void *data, size_t size) {
+    struct rbt_value result = {
+        .type = RBT_TYPE_BYTES,
+        .is_null = false,
+        .as.bytes = {.data = data, .size = size},
+    };
 
-    return btree_create(storage, &options, tree_out);
+    return result;
 }
 
-static inline btree_status test_btree_open_u64(const btree_storage *storage, btree **tree_out) {
-    btree_options options = test_u64_options();
+static inline struct rbt_value rbt_test_utf8(const char *data, size_t size) {
+    struct rbt_value result = {
+        .type = RBT_TYPE_UTF8,
+        .is_null = false,
+        .as.bytes = {.data = data, .size = size},
+    };
 
-    return btree_open(storage, &options, tree_out);
+    return result;
 }
 
-static inline btree_status test_btree_put_u64(btree *tree, uint64_t key, uint64_t value,
-                                              bool *inserted_out) {
-    unsigned char encoded_key[8];
-    unsigned char encoded_value[8];
+static inline struct rbt_value rbt_test_null(enum rbt_type type) {
+    struct rbt_value result = {
+        .type = type,
+        .is_null = true,
+        .as.u64 = 0u,
+    };
 
-    test_u64_encode(key, encoded_key);
-    test_u64_encode(value, encoded_value);
-    return btree_put(tree, encoded_key, encoded_value, inserted_out);
+    return result;
 }
 
-static inline btree_status test_btree_get_u64(btree *tree, uint64_t key, uint64_t *value_out) {
-    unsigned char encoded_key[8];
-    unsigned char encoded_value[8];
-    btree_status status;
+static inline struct rbt_record rbt_test_record(const struct rbt_value *key, size_t key_count,
+                                                const struct rbt_value *value, size_t value_count) {
+    struct rbt_record result = {
+        .key = key,
+        .key_count = key_count,
+        .value = value,
+        .value_count = value_count,
+    };
 
-    test_u64_encode(key, encoded_key);
-    status = btree_get(tree, encoded_key, value_out == NULL ? NULL : encoded_value);
-    if (status == BTREE_OK && value_out != NULL) {
-        *value_out = test_u64_decode(encoded_value);
-    }
-    return status;
+    return result;
 }
 
-static inline btree_status test_btree_delete_u64(btree *tree, uint64_t key, bool *removed_out) {
-    unsigned char encoded_key[8];
-
-    test_u64_encode(key, encoded_key);
-    return btree_delete(tree, encoded_key, removed_out);
+static inline struct rbt_record rbt_test_key(const struct rbt_value *key, size_t key_count) {
+    return rbt_test_record(key, key_count, NULL, 0u);
 }
 
-static inline btree_scan_action test_u64_scan_adapter(void *context, const void *key,
-                                                      const void *value) {
-    test_u64_scan_bridge *bridge = context;
-    btree_status status =
-        bridge->callback(bridge->context, test_u64_decode(key), test_u64_decode(value));
+static inline void rbt_test_temp_path(char *path, size_t capacity) {
+    int descriptor;
+    int length;
 
-    TEST_CHECK(status == BTREE_OK || status == BTREE_STOPPED);
-    return status == BTREE_OK ? BTREE_SCAN_CONTINUE : BTREE_SCAN_STOP;
+    RBT_TEST_CHECK(capacity >= 32u);
+    length = snprintf(path, capacity, "/tmp/rbt-test-XXXXXX");
+    RBT_TEST_CHECK(length > 0);
+    RBT_TEST_CHECK((size_t)length < capacity);
+    descriptor = mkstemp(path);
+    RBT_TEST_CHECK(descriptor >= 0);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+    RBT_TEST_CHECK(unlink(path) == 0);
 }
 
-static inline btree_status test_btree_scan_u64(btree *tree, uint64_t begin_key, uint64_t end_key,
-                                               test_u64_scan_fn callback, void *context) {
-    unsigned char encoded_begin[8];
-    unsigned char encoded_end[8];
-    test_u64_scan_bridge bridge;
-
-    test_u64_encode(begin_key, encoded_begin);
-    test_u64_encode(end_key, encoded_end);
-    if (callback == NULL) {
-        return btree_scan(tree, encoded_begin, encoded_end, NULL, context);
-    }
-    bridge.callback = callback;
-    bridge.context = context;
-    return btree_scan(tree, encoded_begin, encoded_end, test_u64_scan_adapter, &bridge);
-}
-
-static inline void test_temp_path(char *path, size_t capacity) {
-    int fd;
-
-    TEST_CHECK(capacity >= 32u);
-    TEST_CHECK(snprintf(path, capacity, "/tmp/btree-test-XXXXXX") > 0);
-    fd = mkstemp(path);
-    TEST_CHECK(fd >= 0);
-    TEST_CHECK(close(fd) == 0);
-    TEST_CHECK(unlink(path) == 0);
-}
-
-static inline void test_remove_database(const char *path) {
+static inline void rbt_test_remove_database(const char *path) {
     char wal_path[512];
     char wal_temp_path[512];
     int length;
 
     (void)unlink(path);
     length = snprintf(wal_path, sizeof(wal_path), "%s.wal", path);
-    TEST_CHECK(length > 0);
-    TEST_CHECK((size_t)length < sizeof(wal_path));
+    RBT_TEST_CHECK(length > 0);
+    RBT_TEST_CHECK((size_t)length < sizeof(wal_path));
     (void)unlink(wal_path);
     length = snprintf(wal_temp_path, sizeof(wal_temp_path), "%s.wal.tmp", path);
-    TEST_CHECK(length > 0);
-    TEST_CHECK((size_t)length < sizeof(wal_temp_path));
+    RBT_TEST_CHECK(length > 0);
+    RBT_TEST_CHECK((size_t)length < sizeof(wal_temp_path));
     (void)unlink(wal_temp_path);
 }
 
-static inline void test_validate(btree *tree) {
-    char error[256];
-    btree_stats stats;
-    btree_status status;
+static inline struct rbt_stats rbt_test_validate(struct rbt *rbt) {
+    char error[256] = {0};
+    struct rbt_stats stats;
+    int result;
 
-    memset(&stats, 0, sizeof(stats));
-    memset(error, 0, sizeof(error));
-    status = btree_validate(tree, &stats, error, sizeof(error));
-    if (status != BTREE_OK) {
-        fprintf(stderr, "validation failed: %s: %s\n", btree_status_string(status), error);
-        exit(1);
+    memset(&stats, 0xa5, sizeof(stats));
+    result = rbt_validate(rbt, &stats, error, sizeof(error));
+    if (result != 0) {
+        fprintf(stderr, "validation failed: %d (%s): %s\n", result, rbt_strerror(result), error);
+        exit(EXIT_FAILURE);
     }
+    return stats;
 }
 
 #endif
