@@ -36,6 +36,17 @@
 #define RCO_NO_ASAN
 #endif
 
+#if defined(__clang__)
+#define RCO_SIGNAL_SAFE                                                   \
+    __attribute__((no_sanitize("address", "thread", "undefined", "memory")))
+#elif defined(__GNUC__)
+#define RCO_SIGNAL_SAFE                                                   \
+    __attribute__((no_sanitize_address, no_sanitize_thread,               \
+                   no_sanitize_undefined))
+#else
+#define RCO_SIGNAL_SAFE
+#endif
+
 #ifndef MAP_STACK
 #define MAP_STACK 0
 #endif
@@ -51,6 +62,7 @@
 #define RCO_DEFAULT_MAX_COROUTINES ((size_t)65536)
 #define RCO_DEFAULT_MAX_FDS ((size_t)65536)
 #define RCO_DEFAULT_STACK_CACHE_BYTES ((size_t)8 * 1024 * 1024)
+#define RCO_DEFAULT_PREEMPT_ALT_STACK_SIZE ((size_t)64 * 1024)
 #define RCO_EPOLL_BATCH 128
 #define RCO_READY_DISPATCH_BUDGET ((size_t)64)
 #define RCO_FD_WATCH_CHUNK_SIZE ((size_t)256)
@@ -109,6 +121,8 @@ struct rco_task {
     locale_t locale;
     sigset_t *signal_mask;
     int saved_errno;
+    unsigned preempt_disable_depth;
+    volatile sig_atomic_t preempt_pending;
     bool in_tls_destructor;
 #if defined(RCO_WITH_ASAN)
     void *asan_fake_stack;
@@ -155,6 +169,17 @@ struct rco_runtime {
     int root_errno;
     locale_t root_locale;
     sigset_t root_signal_mask;
+    sigset_t preempt_previous_mask;
+    sigset_t preempt_signal_set;
+    timer_t preempt_timer;
+    stack_t preempt_previous_alt_stack;
+    void *preempt_alt_stack_mapping;
+    size_t preempt_alt_stack_mapping_size;
+    volatile sig_atomic_t preempt_request_count;
+    bool preempt_timer_created;
+    bool preempt_alt_stack_installed;
+    bool preempt_handler_installed;
+    bool preempt_mask_saved;
     bool running;
     bool stop_requested;
 #if defined(RCO_WITH_ASAN)
@@ -165,7 +190,16 @@ struct rco_runtime {
 };
 
 static _Thread_local struct rco_runtime *rco_tls_runtime;
+static _Thread_local struct rco_runtime *rco_preempt_runtime;
 static atomic_uint_fast64_t rco_next_tls_namespace = 1;
+
+struct rco_preempt_signal_slot {
+    struct sigaction previous_action;
+    size_t users;
+};
+
+static pthread_mutex_t rco_preempt_signal_mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct rco_preempt_signal_slot rco_preempt_signal_slots[NSIG];
 
 static int rco_neg_errno(void)
 {
@@ -241,6 +275,7 @@ static int rco_validate_config(const struct rco_config *input,
         .stack_cache_bytes = RCO_DEFAULT_STACK_CACHE_BYTES,
         .local_state_flags = RCO_LOCAL_STATE_ERRNO,
         .max_tls_keys = RCO_TLS_KEYS_DEFAULT,
+        .preempt_alt_stack_size = RCO_DEFAULT_PREEMPT_ALT_STACK_SIZE,
     };
 
     if (input != NULL) {
@@ -260,6 +295,11 @@ static int rco_validate_config(const struct rco_config *input,
         if (input->max_tls_keys != 0) {
             config.max_tls_keys = input->max_tls_keys;
         }
+        config.preempt_quantum_ns = input->preempt_quantum_ns;
+        config.preempt_signal = input->preempt_signal;
+        if (input->preempt_alt_stack_size != 0) {
+            config.preempt_alt_stack_size = input->preempt_alt_stack_size;
+        }
     }
 
     if (config.default_stack_size < RCO_STACK_SIZE_MIN ||
@@ -270,6 +310,10 @@ static int rco_validate_config(const struct rco_config *input,
          config.local_state_flags != RCO_LOCAL_STATE_NONE) ||
         config.max_tls_keys == 0 ||
         config.max_tls_keys > RCO_TLS_KEYS_MAX ||
+        (config.preempt_quantum_ns != 0 &&
+         (config.preempt_signal < SIGRTMIN ||
+          config.preempt_signal > SIGRTMAX ||
+          config.preempt_alt_stack_size < (size_t)MINSIGSTKSZ)) ||
         config.max_coroutines > SIZE_MAX / sizeof(struct rco_task *) ||
         config.max_fds > SIZE_MAX / sizeof(struct rco_fd_watch) ||
         config.max_tls_keys > SIZE_MAX / sizeof(struct rco_tls_key_slot)) {
@@ -567,6 +611,416 @@ static void rco_record_fatal(struct rco_runtime *runtime, int error)
     }
 }
 
+static bool rco_preempt_enabled(const struct rco_runtime *runtime)
+{
+    return runtime->config.preempt_quantum_ns != 0;
+}
+
+static RCO_SIGNAL_SAFE void
+rco_preempt_signal_handler(int signal_number, siginfo_t *info, void *context)
+{
+    int saved_errno = errno;
+    struct rco_runtime *runtime = rco_preempt_runtime;
+
+    (void)context;
+    if (runtime != NULL && info != NULL && info->si_code == SI_TIMER &&
+        info->si_value.sival_ptr == runtime &&
+        signal_number == runtime->config.preempt_signal &&
+        runtime->current != NULL) {
+        if (runtime->preempt_request_count < SIG_ATOMIC_MAX) {
+            runtime->preempt_request_count++;
+        }
+        runtime->current->preempt_pending = 1;
+    }
+    errno = saved_errno;
+}
+
+static int rco_preempt_handler_acquire(struct rco_runtime *runtime)
+{
+    int result = pthread_mutex_lock(&rco_preempt_signal_mutex);
+    if (result != 0) {
+        return -result;
+    }
+
+    int error = 0;
+    struct rco_preempt_signal_slot *slot =
+        &rco_preempt_signal_slots[runtime->config.preempt_signal];
+    if (slot->users == 0) {
+        if (sigaction(runtime->config.preempt_signal, NULL,
+                      &slot->previous_action) != 0) {
+            error = rco_neg_errno();
+        } else {
+            struct sigaction action;
+            memset(&action, 0, sizeof(action));
+            action.sa_sigaction = rco_preempt_signal_handler;
+            action.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_RESTART;
+            if (sigemptyset(&action.sa_mask) != 0 ||
+                sigaction(runtime->config.preempt_signal, &action, NULL) !=
+                    0) {
+                error = rco_neg_errno();
+            }
+        }
+    }
+    if (error == 0) {
+        slot->users++;
+        runtime->preempt_handler_installed = true;
+    }
+
+    result = pthread_mutex_unlock(&rco_preempt_signal_mutex);
+    if (result != 0 && error == 0) {
+        error = -result;
+    }
+    return error;
+}
+
+static int rco_preempt_handler_release(struct rco_runtime *runtime)
+{
+    if (!runtime->preempt_handler_installed) {
+        return 0;
+    }
+
+    int result = pthread_mutex_lock(&rco_preempt_signal_mutex);
+    if (result != 0) {
+        return -result;
+    }
+
+    int error = 0;
+    struct rco_preempt_signal_slot *slot =
+        &rco_preempt_signal_slots[runtime->config.preempt_signal];
+    if (slot->users == 0) {
+        error = -EPROTO;
+    } else if (slot->users == 1) {
+        if (sigaction(runtime->config.preempt_signal, &slot->previous_action,
+                      NULL) != 0) {
+            error = rco_neg_errno();
+        } else {
+            slot->users = 0;
+            runtime->preempt_handler_installed = false;
+        }
+    } else {
+        slot->users--;
+        runtime->preempt_handler_installed = false;
+    }
+
+    result = pthread_mutex_unlock(&rco_preempt_signal_mutex);
+    if (result != 0 && error == 0) {
+        error = -result;
+    }
+    return error;
+}
+
+static int rco_preempt_alt_stack_install(struct rco_runtime *runtime)
+{
+    size_t usable_size = 0;
+    if (!rco_round_up(runtime->config.preempt_alt_stack_size,
+                      (size_t)runtime->page_size, &usable_size)) {
+        return -EOVERFLOW;
+    }
+    size_t guards = (size_t)runtime->page_size * 2;
+    if (usable_size > SIZE_MAX - guards) {
+        return -EOVERFLOW;
+    }
+
+    size_t mapping_size = usable_size + guards;
+    void *mapping = mmap(NULL, mapping_size, PROT_NONE,
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+    if (mapping == MAP_FAILED) {
+        return rco_neg_errno();
+    }
+    unsigned char *base =
+        (unsigned char *)mapping + (size_t)runtime->page_size;
+    if (mprotect(base, usable_size, PROT_READ | PROT_WRITE) != 0) {
+        int error = rco_neg_errno();
+        (void)munmap(mapping, mapping_size);
+        return error;
+    }
+
+    stack_t alternate = {
+        .ss_sp = base,
+        .ss_size = usable_size,
+        .ss_flags = 0,
+    };
+    if (sigaltstack(&alternate, &runtime->preempt_previous_alt_stack) != 0) {
+        int error = rco_neg_errno();
+        (void)munmap(mapping, mapping_size);
+        return error;
+    }
+
+    runtime->preempt_alt_stack_mapping = mapping;
+    runtime->preempt_alt_stack_mapping_size = mapping_size;
+    runtime->preempt_alt_stack_installed = true;
+    return 0;
+}
+
+static int rco_preempt_alt_stack_restore(struct rco_runtime *runtime)
+{
+    if (!runtime->preempt_alt_stack_installed) {
+        return 0;
+    }
+    if (sigaltstack(&runtime->preempt_previous_alt_stack, NULL) != 0) {
+        return rco_neg_errno();
+    }
+
+    if (munmap(runtime->preempt_alt_stack_mapping,
+               runtime->preempt_alt_stack_mapping_size) != 0) {
+        return rco_neg_errno();
+    }
+    runtime->preempt_alt_stack_mapping = NULL;
+    runtime->preempt_alt_stack_mapping_size = 0;
+    runtime->preempt_alt_stack_installed = false;
+    return 0;
+}
+
+static void rco_preempt_add_requests(struct rco_runtime *runtime,
+                                     uint64_t requests)
+{
+    if (UINT64_MAX - runtime->stats.preemption_requests < requests) {
+        runtime->stats.preemption_requests = UINT64_MAX;
+    } else {
+        runtime->stats.preemption_requests += requests;
+    }
+}
+
+static void rco_preempt_consume_handler_requests(struct rco_runtime *runtime)
+{
+    sig_atomic_t requests = runtime->preempt_request_count;
+    runtime->preempt_request_count = 0;
+    if (requests > 0) {
+        rco_preempt_add_requests(runtime, (uint64_t)requests);
+    }
+}
+
+static int rco_preempt_drain_signal(struct rco_runtime *runtime)
+{
+    const struct timespec no_wait = {0};
+    for (;;) {
+        siginfo_t info;
+        int received =
+            sigtimedwait(&runtime->preempt_signal_set, &info, &no_wait);
+        if (received == runtime->config.preempt_signal) {
+            if (info.si_code == SI_TIMER &&
+                info.si_value.sival_ptr == runtime) {
+                rco_preempt_add_requests(runtime, 1);
+            }
+            continue;
+        }
+        if (received < 0 && errno == EAGAIN) {
+            return 0;
+        }
+        if (received < 0 && errno == EINTR) {
+            continue;
+        }
+        return received < 0 ? rco_neg_errno() : -EPROTO;
+    }
+}
+
+static int rco_preempt_disarm_timer(struct rco_runtime *runtime)
+{
+    if (!runtime->preempt_timer_created) {
+        return 0;
+    }
+    const struct itimerspec disarmed = {0};
+    return timer_settime(runtime->preempt_timer, 0, &disarmed, NULL) == 0
+               ? 0
+               : rco_neg_errno();
+}
+
+static int rco_preempt_teardown(struct rco_runtime *runtime);
+
+static int rco_preempt_setup(struct rco_runtime *runtime)
+{
+    if (!rco_preempt_enabled(runtime)) {
+        return 0;
+    }
+
+    if (sigemptyset(&runtime->preempt_signal_set) != 0 ||
+        sigaddset(&runtime->preempt_signal_set,
+                  runtime->config.preempt_signal) != 0) {
+        return rco_neg_errno();
+    }
+    int result =
+        pthread_sigmask(SIG_SETMASK, NULL, &runtime->preempt_previous_mask);
+    if (result != 0) {
+        return -result;
+    }
+    runtime->preempt_mask_saved = true;
+    int blocked =
+        sigismember(&runtime->preempt_previous_mask,
+                    runtime->config.preempt_signal);
+    if (blocked < 0) {
+        result = rco_neg_errno();
+        goto rollback;
+    }
+    if (blocked == 0) {
+        result = -EPERM;
+        goto rollback;
+    }
+
+    result = rco_preempt_alt_stack_install(runtime);
+    if (result != 0) {
+        goto rollback;
+    }
+    result = rco_preempt_handler_acquire(runtime);
+    if (result != 0) {
+        goto rollback;
+    }
+
+    struct sigevent event;
+    memset(&event, 0, sizeof(event));
+    event.sigev_notify = SIGEV_THREAD_ID;
+    event.sigev_signo = runtime->config.preempt_signal;
+    event.sigev_value.sival_ptr = runtime;
+#if defined(__GLIBC__)
+    event._sigev_un._tid = (pid_t)runtime->owner_tid;
+#else
+    event.sigev_notify_thread_id = (pid_t)runtime->owner_tid;
+#endif
+    if (timer_create(CLOCK_THREAD_CPUTIME_ID, &event,
+                     &runtime->preempt_timer) != 0) {
+        result = rco_neg_errno();
+        goto rollback;
+    }
+    runtime->preempt_timer_created = true;
+    rco_preempt_runtime = runtime;
+    return 0;
+
+rollback:
+    (void)rco_preempt_teardown(runtime);
+    return result;
+}
+
+static int rco_preempt_teardown(struct rco_runtime *runtime)
+{
+    if (!rco_preempt_enabled(runtime) ||
+        (!runtime->preempt_mask_saved &&
+         !runtime->preempt_timer_created &&
+         !runtime->preempt_handler_installed &&
+         !runtime->preempt_alt_stack_installed)) {
+        return 0;
+    }
+
+    int error = 0;
+    int result =
+        pthread_sigmask(SIG_BLOCK, &runtime->preempt_signal_set, NULL);
+    if (result != 0) {
+        error = -result;
+    }
+
+    result = rco_preempt_disarm_timer(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    if (runtime->preempt_timer_created) {
+        if (timer_delete(runtime->preempt_timer) != 0) {
+            if (error == 0) {
+                error = rco_neg_errno();
+            }
+        } else {
+            runtime->preempt_timer_created = false;
+        }
+    }
+    result = rco_preempt_drain_signal(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    rco_preempt_consume_handler_requests(runtime);
+    if (runtime->current != NULL) {
+        runtime->current->preempt_pending = 0;
+    }
+    rco_preempt_runtime = NULL;
+
+    result = rco_preempt_handler_release(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    if (runtime->preempt_mask_saved) {
+        result =
+            pthread_sigmask(SIG_SETMASK, &runtime->preempt_previous_mask, NULL);
+        if (result != 0) {
+            if (error == 0) {
+                error = -result;
+            }
+        } else {
+            runtime->preempt_mask_saved = false;
+        }
+    }
+    result = rco_preempt_alt_stack_restore(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    return error;
+}
+
+static int rco_preempt_arm_timer(struct rco_task *task)
+{
+    struct rco_runtime *runtime = task->runtime;
+    if (!rco_preempt_enabled(runtime)) {
+        return 0;
+    }
+
+    uint64_t quantum = runtime->config.preempt_quantum_ns;
+    struct itimerspec armed = {
+        .it_value = {
+            .tv_sec = (time_t)(quantum / UINT64_C(1000000000)),
+            .tv_nsec = (long)(quantum % UINT64_C(1000000000)),
+        },
+    };
+    int saved_errno = errno;
+    task->preempt_pending = 0;
+    int result = timer_settime(runtime->preempt_timer, 0, &armed, NULL);
+    int error = result == 0 ? 0 : rco_neg_errno();
+    errno = saved_errno;
+    return error;
+}
+
+static void rco_preempt_enter_task(struct rco_task *task)
+{
+    struct rco_runtime *runtime = task->runtime;
+    if (!rco_preempt_enabled(runtime)) {
+        return;
+    }
+
+    int saved_errno = errno;
+    int result =
+        pthread_sigmask(SIG_UNBLOCK, &runtime->preempt_signal_set, NULL);
+    int error = result == 0 ? 0 : -result;
+    if (error != 0) {
+        rco_record_fatal(runtime, error);
+        (void)rco_runtime_stop(runtime);
+    }
+    errno = saved_errno;
+}
+
+static void rco_preempt_leave_task(struct rco_task *task)
+{
+    struct rco_runtime *runtime = task->runtime;
+    if (!rco_preempt_enabled(runtime)) {
+        return;
+    }
+
+    int saved_errno = errno;
+    int result =
+        pthread_sigmask(SIG_BLOCK, &runtime->preempt_signal_set, NULL);
+    int error = result == 0 ? 0 : -result;
+
+    result = rco_preempt_disarm_timer(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    result = rco_preempt_drain_signal(runtime);
+    if (result != 0 && error == 0) {
+        error = result;
+    }
+    rco_preempt_consume_handler_requests(runtime);
+    task->preempt_pending = 0;
+
+    if (error != 0) {
+        rco_record_fatal(runtime, error);
+        (void)rco_runtime_stop(runtime);
+    }
+    errno = saved_errno;
+}
+
 static int rco_task_local_state_init(struct rco_runtime *runtime,
                                      struct rco_task *task,
                                      int inherited_errno)
@@ -584,6 +1038,14 @@ static int rco_task_local_state_init(struct rco_runtime *runtime,
             free(task->signal_mask);
             task->signal_mask = NULL;
             return -result;
+        }
+        if (rco_preempt_enabled(runtime) &&
+            sigdelset(task->signal_mask, runtime->config.preempt_signal) !=
+                0) {
+            int error = rco_neg_errno();
+            free(task->signal_mask);
+            task->signal_mask = NULL;
+            return error;
         }
     }
 
@@ -680,8 +1142,14 @@ static int rco_activate_task_local_state(struct rco_task *task)
         return error;
     }
     if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
-        int result =
-            pthread_sigmask(SIG_SETMASK, task->signal_mask, NULL);
+        sigset_t active_mask = *task->signal_mask;
+        if (rco_preempt_enabled(runtime) &&
+            sigaddset(&active_mask, runtime->config.preempt_signal) != 0) {
+            int error = rco_neg_errno();
+            (void)rco_restore_root_local_state(runtime);
+            return error;
+        }
+        int result = pthread_sigmask(SIG_SETMASK, &active_mask, NULL);
         if (result != 0) {
             (void)rco_restore_root_local_state(runtime);
             return -result;
@@ -974,6 +1442,7 @@ static void rco_remove_task(struct rco_runtime *runtime,
 
 static RCO_CACS_INLINE void rco_switch_to_root(struct rco_task *task)
 {
+    rco_preempt_leave_task(task);
     rco_deactivate_task_local_state(task);
     task->runtime->stats.context_switches++;
 #if defined(RCO_WITH_ASAN)
@@ -985,6 +1454,7 @@ static RCO_CACS_INLINE void rco_switch_to_root(struct rco_task *task)
 #if defined(RCO_WITH_ASAN)
     __sanitizer_finish_switch_fiber(task->asan_fake_stack, NULL, NULL);
 #endif
+    rco_preempt_enter_task(task);
     if (rco_local_state_enabled(task->runtime, RCO_LOCAL_STATE_ERRNO)) {
         errno = task->saved_errno;
     }
@@ -1005,6 +1475,7 @@ RCO_NO_ASAN __attribute__((noreturn)) static void rco_task_trampoline(void)
                                     &runtime->asan_stack_bottom,
                                     &runtime->asan_stack_size);
 #endif
+    rco_preempt_enter_task(task);
     if (rco_local_state_enabled(runtime, RCO_LOCAL_STATE_ERRNO)) {
         errno = task->saved_errno;
     }
@@ -1015,6 +1486,7 @@ RCO_NO_ASAN __attribute__((noreturn)) static void rco_task_trampoline(void)
         (void)task->entry(task->argument);
         task->state = task->cancel_requested ? RCO_TASK_CANCELLED : RCO_TASK_DONE;
     }
+    rco_preempt_leave_task(task);
     rco_deactivate_task_local_state(task);
 #if defined(RCO_WITH_ASAN)
     __sanitizer_start_switch_fiber(NULL, runtime->asan_stack_bottom,
@@ -1113,6 +1585,14 @@ int rco_runtime_destroy(struct rco_runtime *runtime)
     }
     if (runtime->running || runtime->owner_tid != syscall(SYS_gettid)) {
         return -EBUSY;
+    }
+    if (runtime->preempt_mask_saved || runtime->preempt_timer_created ||
+        runtime->preempt_handler_installed ||
+        runtime->preempt_alt_stack_installed) {
+        int result = rco_preempt_teardown(runtime);
+        if (result != 0) {
+            return result;
+        }
     }
 
     rco_tls_runtime = runtime;
@@ -1484,6 +1964,14 @@ int rco_runtime_run(struct rco_runtime *runtime)
     if (result != 0) {
         return result;
     }
+    result = rco_preempt_setup(runtime);
+    if (result != 0) {
+        int restore_result = rco_restore_root_local_state(runtime);
+        if (restore_result != 0) {
+            return restore_result;
+        }
+        return result;
+    }
     runtime->running = true;
     rco_tls_runtime = runtime;
     struct epoll_event events[RCO_EPOLL_BATCH];
@@ -1509,6 +1997,17 @@ int rco_runtime_run(struct rco_runtime *runtime)
             runtime->current = task;
             result = rco_activate_task_local_state(task);
             if (result != 0) {
+                rco_record_fatal(runtime, result);
+                (void)rco_runtime_stop(runtime);
+                runtime->current = NULL;
+                task->state = RCO_TASK_CANCELLED;
+                rco_remove_task(runtime, task);
+                continue;
+            }
+            result = rco_preempt_arm_timer(task);
+            if (result != 0) {
+                rco_preempt_leave_task(task);
+                rco_deactivate_task_local_state(task);
                 rco_record_fatal(runtime, result);
                 (void)rco_runtime_stop(runtime);
                 runtime->current = NULL;
@@ -1559,6 +2058,10 @@ int rco_runtime_run(struct rco_runtime *runtime)
     }
 
     runtime->current = NULL;
+    result = rco_preempt_teardown(runtime);
+    if (result != 0) {
+        rco_record_fatal(runtime, result);
+    }
     result = rco_restore_root_local_state(runtime);
     if (result != 0) {
         rco_record_fatal(runtime, result);
@@ -1700,6 +2203,101 @@ RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms)
     return task->wait_result;
 }
 
+RCO_SUSPEND_ABI int rco_preempt_point(void)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL) {
+        return -EPERM;
+    }
+    struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
+    if (task->cancel_requested || runtime->stop_requested) {
+        return -ECANCELED;
+    }
+    if (!rco_preempt_enabled(runtime) || task->preempt_pending == 0 ||
+        task->preempt_disable_depth != 0) {
+        return 0;
+    }
+
+    int saved_errno = errno;
+    task->state = RCO_TASK_READY;
+    rco_ready_push(runtime, task);
+    if (runtime->stats.preemption_switches != UINT64_MAX) {
+        runtime->stats.preemption_switches++;
+    }
+    rco_switch_to_root(task);
+    int result =
+        task->cancel_requested || runtime->stop_requested ? -ECANCELED : 0;
+    errno = saved_errno;
+    return result;
+}
+
+int rco_preempt_disable(void)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL) {
+        return -EPERM;
+    }
+    struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
+    if (task->cancel_requested || runtime->stop_requested) {
+        return -ECANCELED;
+    }
+    if (task->preempt_disable_depth == UINT_MAX) {
+        return -EOVERFLOW;
+    }
+    task->preempt_disable_depth++;
+    return 0;
+}
+
+RCO_SUSPEND_ABI int rco_preempt_enable(void)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    if (runtime == NULL || runtime->current == NULL) {
+        return -EPERM;
+    }
+    struct rco_task *task = runtime->current;
+    if (task->state != RCO_TASK_RUNNING || task->in_tls_destructor) {
+        return -EPERM;
+    }
+    if (task->cancel_requested || runtime->stop_requested) {
+        return -ECANCELED;
+    }
+    if (task->preempt_disable_depth == 0) {
+        return -EINVAL;
+    }
+    task->preempt_disable_depth--;
+    if (!rco_preempt_enabled(runtime) || task->preempt_disable_depth != 0 ||
+        task->preempt_pending == 0) {
+        return 0;
+    }
+
+    int saved_errno = errno;
+    task->state = RCO_TASK_READY;
+    rco_ready_push(runtime, task);
+    if (runtime->stats.preemption_switches != UINT64_MAX) {
+        runtime->stats.preemption_switches++;
+    }
+    rco_switch_to_root(task);
+    int result =
+        task->cancel_requested || runtime->stop_requested ? -ECANCELED : 0;
+    errno = saved_errno;
+    return result;
+}
+
+bool rco_preempt_pending(void)
+{
+    struct rco_runtime *runtime = rco_tls_runtime;
+    return runtime != NULL && runtime->current != NULL &&
+           runtime->current->state == RCO_TASK_RUNNING &&
+           rco_preempt_enabled(runtime) &&
+           runtime->current->preempt_pending != 0;
+}
+
 int rco_close_fd(int fd)
 {
     struct rco_runtime *runtime = rco_tls_runtime;
@@ -1745,6 +2343,16 @@ int rco_sigmask(int how, const sigset_t *set, sigset_t *old_set)
     if (!rco_local_state_enabled(runtime, RCO_LOCAL_STATE_SIGNAL_MASK)) {
         return -ENOTSUP;
     }
+    if (rco_preempt_enabled(runtime) && set != NULL &&
+        (how == SIG_BLOCK || how == SIG_SETMASK)) {
+        int member = sigismember(set, runtime->config.preempt_signal);
+        if (member < 0) {
+            return rco_neg_errno();
+        }
+        if (member != 0) {
+            return -EINVAL;
+        }
+    }
 
     int result = pthread_sigmask(how, set, old_set);
     if (result != 0) {
@@ -1752,6 +2360,11 @@ int rco_sigmask(int how, const sigset_t *set, sigset_t *old_set)
     }
     result = pthread_sigmask(SIG_SETMASK, NULL,
                              runtime->current->signal_mask);
+    if (result == 0 && rco_preempt_enabled(runtime) &&
+        sigdelset(runtime->current->signal_mask,
+                  runtime->config.preempt_signal) != 0) {
+        return rco_neg_errno();
+    }
     return result == 0 ? 0 : -result;
 }
 

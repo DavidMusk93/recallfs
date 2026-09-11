@@ -47,7 +47,9 @@ if(DEFINED RCO_NEGATIVE_NORMAL_LINK AND RCO_NEGATIVE_NORMAL_LINK)
     if(NOT normal_nm_result EQUAL 0)
         message(FATAL_ERROR "nm failed for normal caller:\n${normal_nm_error}")
     endif()
-    foreach(symbol IN ITEMS rco_yield rco_wait_fd rco_sleep_ms)
+    foreach(symbol IN ITEMS rco_yield rco_wait_fd rco_sleep_ms
+                            rco_preempt_point rco_preempt_disable
+                            rco_preempt_enable rco_preempt_pending)
         if(NOT normal_undefined_symbols MATCHES
            "[ \t]${symbol}(\n|$)")
             message(FATAL_ERROR
@@ -94,7 +96,8 @@ if(DEFINED RCO_NEGATIVE_NORMAL_LINK AND RCO_NEGATIVE_NORMAL_LINK)
         message(FATAL_ERROR
                 "normal-ABI caller linked against preserve-none archive")
     endif()
-    foreach(symbol IN ITEMS rco_yield rco_wait_fd rco_sleep_ms)
+    foreach(symbol IN ITEMS rco_yield rco_wait_fd rco_sleep_ms
+                            rco_preempt_point rco_preempt_enable)
         if(NOT normal_link_stderr MATCHES "${symbol}")
             message(FATAL_ERROR
                     "negative link did not reject missing ${symbol}:\n"
@@ -219,7 +222,8 @@ if(RCO_EXPECT_PRESERVE_NONE)
 else()
     set(suspension_suffix "")
 endif()
-foreach(api IN ITEMS rco_yield rco_wait_fd rco_sleep_ms)
+foreach(api IN ITEMS rco_yield rco_wait_fd rco_sleep_ms
+                     rco_preempt_point rco_preempt_enable)
     set(symbol "${api}${suspension_suffix}")
     if(RCO_EXPECT_PRESERVE_NONE)
         if(NOT runtime_llvm MATCHES
@@ -233,11 +237,13 @@ foreach(api IN ITEMS rco_yield rco_wait_fd rco_sleep_ms)
     endif()
 endforeach()
 if(RCO_EXPECT_PRESERVE_NONE)
-    if(NOT probe_llvm MATCHES
-       "call preserve_nonecc i32 @rco_yield_cacs_preserve_none\\(")
-        message(FATAL_ERROR
-                "the external rco_yield caller does not use preserve_none")
-    endif()
+    foreach(api IN ITEMS rco_yield rco_preempt_point rco_preempt_enable)
+        if(NOT probe_llvm MATCHES
+           "call preserve_nonecc i32 @${api}_cacs_preserve_none\\(")
+            message(FATAL_ERROR
+                    "the external ${api} caller does not use preserve_none")
+        endif()
+    endforeach()
 elseif(runtime_llvm MATCHES "preserve_nonecc" OR
        probe_llvm MATCHES "preserve_nonecc")
     message(FATAL_ERROR "plain CACS unexpectedly uses preserve_none")
@@ -280,7 +286,8 @@ if(NOT symbol_nm_result EQUAL 0)
     message(FATAL_ERROR "nm failed for runtime symbol probe:\n"
                         "${symbol_nm_error}")
 endif()
-foreach(api IN ITEMS rco_yield rco_wait_fd rco_sleep_ms)
+foreach(api IN ITEMS rco_yield rco_wait_fd rco_sleep_ms
+                     rco_preempt_point rco_preempt_enable)
     set(symbol "${api}${suspension_suffix}")
     if(NOT runtime_symbols MATCHES "[ \t]${symbol}(\n|$)")
         message(FATAL_ERROR "CACS object does not define ${symbol}")

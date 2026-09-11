@@ -22,13 +22,15 @@ int main(void)
     unsigned ready_events = 0;
     return rco_yield() +
            rco_wait_fd(-1, RCO_EVENT_READ, 0, &ready_events) +
-           rco_sleep_ms(0);
+           rco_sleep_ms(0) + rco_preempt_point() +
+           rco_preempt_disable() + rco_preempt_enable() +
+           (rco_preempt_pending() ? 1 : 0);
 }
 #else
 #if !defined(RCO_RAW_SWITCH_PROBE_ONLY)
 __attribute__((noinline)) int rco_cacs_codegen_probe(void)
 {
-    return rco_yield();
+    return rco_yield() + rco_preempt_point() + rco_preempt_enable();
 }
 #endif
 

@@ -37,6 +37,8 @@ extern "C" {
 #define rco_yield rco_yield_cacs_preserve_none
 #define rco_wait_fd rco_wait_fd_cacs_preserve_none
 #define rco_sleep_ms rco_sleep_ms_cacs_preserve_none
+#define rco_preempt_point rco_preempt_point_cacs_preserve_none
+#define rco_preempt_enable rco_preempt_enable_cacs_preserve_none
 #endif
 
 enum rco_event {
@@ -76,6 +78,9 @@ struct rco_config {
     size_t stack_cache_bytes;
     uint32_t local_state_flags;
     size_t max_tls_keys;
+    uint64_t preempt_quantum_ns;
+    int preempt_signal;
+    size_t preempt_alt_stack_size;
 };
 
 struct rco_stats {
@@ -90,6 +95,8 @@ struct rco_stats {
     size_t active;
     size_t peak_active;
     size_t cached_stack_bytes;
+    uint64_t preemption_requests;
+    uint64_t preemption_switches;
 };
 
 /*
@@ -153,6 +160,10 @@ RCO_SUSPEND_ABI int rco_wait_fd(int fd,
                                 int timeout_ms,
                                 unsigned *out_ready_events);
 RCO_SUSPEND_ABI int rco_sleep_ms(uint64_t delay_ms);
+RCO_SUSPEND_ABI int rco_preempt_point(void);
+int rco_preempt_disable(void);
+RCO_SUSPEND_ABI int rco_preempt_enable(void);
+bool rco_preempt_pending(void);
 /* Also valid from a task finalizer while the runtime is running. */
 int rco_close_fd(int fd);
 bool rco_cancelled(void);

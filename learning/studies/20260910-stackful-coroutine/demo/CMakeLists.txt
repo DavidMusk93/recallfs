@@ -25,7 +25,7 @@ endfunction()
 
 function(rco_configure_library target)
     target_compile_features(${target} PUBLIC c_std_11)
-    target_link_libraries(${target} PUBLIC Threads::Threads)
+    target_link_libraries(${target} PUBLIC Threads::Threads rt)
     target_include_directories(
         ${target}
         PUBLIC

@@ -41,6 +41,10 @@ static void test_public_guards_outside_runtime(void)
     CHECK(rco_yield() == -EPERM);
     CHECK(rco_wait_fd(0, RCO_EVENT_READ, 0, &ready) == -EPERM);
     CHECK(rco_sleep_ms(0) == -EPERM);
+    CHECK(rco_preempt_point() == -EPERM);
+    CHECK(rco_preempt_disable() == -EPERM);
+    CHECK(rco_preempt_enable() == -EPERM);
+    CHECK(!rco_preempt_pending());
     CHECK(rco_close_fd(0) == -EPERM);
     CHECK(rco_tls_get(NULL, 1, &value) == -EINVAL);
     CHECK(rco_tls_set(NULL, 1, value) == -EINVAL);
