@@ -23,6 +23,10 @@ typedef enum bpt_status {
     BPT_CORRUPT = 6,
     BPT_UNSUPPORTED = 7,
     BPT_BUSY = 8,
+    /*
+     * Commit-unknown: a mutation may or may not have been published. This
+     * permanently poisons the current tree handle.
+     */
     BPT_RECOVERY_REQUIRED = 9
 } bpt_status;
 
@@ -32,11 +36,19 @@ typedef struct bpt_page_update {
 } bpt_page_update;
 
 /*
- * read_page copies exactly page_size bytes into data_out.
+ * The tree copies bpt_storage by value during create/open, but context is
+ * borrowed. The context and its provider/backend must outlive every tree that
+ * uses it. bpt_tree_close never closes or destroys storage.
+ *
+ * read_page synchronously copies exactly page_size bytes into caller-owned
+ * data_out; ownership is not transferred.
  * page_count returns the number of addressable logical pages.
- * commit_pages atomically publishes the complete update set. A custom provider
- * must return BPT_RECOVERY_REQUIRED whenever failure can leave an uncertain
- * visible state. The tree never retains data pointers after a callback.
+ * commit_pages synchronously and atomically publishes the complete update set.
+ * The updates array and every page buffer referenced by it are caller-owned,
+ * valid only for the duration of the callback, and must not be retained.
+ *
+ * A custom provider must return BPT_RECOVERY_REQUIRED whenever failure can
+ * leave an uncertain visible state.
  */
 typedef struct bpt_storage {
     void *context;
@@ -61,12 +73,26 @@ typedef struct bpt_stats {
     uint32_t internal_capacity;
 } bpt_stats;
 
+/*
+ * A tree and its borrowed storage context are single-threaded. Serialize all
+ * calls that use either one. Mutations are non-reentrant: do not call put or
+ * delete on the same tree from a storage or scan callback, and do not begin a
+ * second mutation until the first returns.
+ *
+ * When a mutation returns BPT_RECOVERY_REQUIRED, its commit outcome is unknown
+ * and the current tree handle is permanently poisoned. Subsequent
+ * status-returning calls on that handle return BPT_RECOVERY_REQUIRED. For the
+ * file backend, close the tree, close the backend, reopen the backend, reopen
+ * the tree, and inspect persisted state before deciding whether to retry.
+ */
 bpt_status bpt_tree_create(const bpt_storage *storage, bpt_tree **tree_out);
 bpt_status bpt_tree_open(const bpt_storage *storage, bpt_tree **tree_out);
 void bpt_tree_close(bpt_tree *tree);
 
 bpt_status bpt_tree_get(bpt_tree *tree, uint64_t key, uint64_t *value_out);
+/* inserted_out is valid only when bpt_tree_put returns BPT_OK. */
 bpt_status bpt_tree_put(bpt_tree *tree, uint64_t key, uint64_t value, bool *inserted_out);
+/* removed_out is valid only when bpt_tree_delete returns BPT_OK. */
 bpt_status bpt_tree_delete(bpt_tree *tree, uint64_t key, bool *removed_out);
 bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
                          bpt_scan_callback callback, void *context);

@@ -36,6 +36,7 @@ struct bpt_tree {
     bpt_storage storage;
     bpt_metadata metadata;
     bool poisoned;
+    bool scan_active;
 };
 
 typedef struct bpt_validation {
@@ -1583,6 +1584,9 @@ bpt_status bpt_tree_put(bpt_tree *tree, uint64_t key, uint64_t value, bool *inse
     if (tree == NULL || inserted_out == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
+    if (tree->scan_active) {
+        return BPT_BUSY;
+    }
     if (tree->poisoned) {
         return BPT_RECOVERY_REQUIRED;
     }
@@ -1715,6 +1719,9 @@ bpt_status bpt_tree_delete(bpt_tree *tree, uint64_t key, bool *removed_out) {
     if (tree == NULL || removed_out == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
+    if (tree->scan_active) {
+        return BPT_BUSY;
+    }
     if (tree->poisoned) {
         return BPT_RECOVERY_REQUIRED;
     }
@@ -1762,7 +1769,7 @@ bpt_status bpt_tree_delete(bpt_tree *tree, uint64_t key, bool *removed_out) {
 
 bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
                          bpt_scan_callback callback, void *context) {
-    unsigned char *page;
+    unsigned char *page = NULL;
     bpt_node_header header;
     uint64_t page_id;
     uint64_t previous_page_id = 0u;
@@ -1773,6 +1780,9 @@ bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
     if (tree == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
+    if (tree->scan_active) {
+        return BPT_BUSY;
+    }
     if (tree->poisoned) {
         return BPT_RECOVERY_REQUIRED;
     }
@@ -1782,14 +1792,15 @@ bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
     if (callback == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
+    tree->scan_active = true;
     page = malloc((size_t)tree->storage.page_size);
     if (page == NULL) {
-        return BPT_OUT_OF_MEMORY;
+        status = BPT_OUT_OF_MEMORY;
+        goto cleanup;
     }
     status = bpt_find_leaf(tree, begin_key, page, &header);
     if (status != BPT_OK) {
-        free(page);
-        return status;
+        goto cleanup;
     }
     page_id = bpt_load_u64(page + BPT_PAGE_ID_OFFSET);
 
@@ -1797,21 +1808,20 @@ bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
         uint32_t index = 0u;
 
         if (visited++ >= tree->metadata.next_page_id) {
-            free(page);
-            return BPT_CORRUPT;
+            status = BPT_CORRUPT;
+            goto cleanup;
         }
         if (!first_leaf) {
             status = bpt_read_node(tree, &tree->metadata, page_id, page, &header);
             if (status != BPT_OK) {
-                free(page);
-                return status;
+                goto cleanup;
             }
         }
         if (header.type != (uint8_t)BPT_PAGE_LEAF ||
             header.count > bpt_leaf_capacity(tree->storage.page_size) ||
             (!first_leaf && header.previous != previous_page_id)) {
-            free(page);
-            return BPT_CORRUPT;
+            status = BPT_CORRUPT;
+            goto cleanup;
         }
         if (first_leaf) {
             index = bpt_leaf_lower_bound(page, header.count, begin_key);
@@ -1820,21 +1830,24 @@ bpt_status bpt_tree_scan(bpt_tree *tree, uint64_t begin_key, uint64_t end_key,
             uint64_t key = bpt_leaf_key(page, index);
 
             if (key >= end_key) {
-                free(page);
-                return BPT_OK;
+                status = BPT_OK;
+                goto cleanup;
             }
             status = callback(context, key, bpt_leaf_value(page, index));
             if (status != BPT_OK) {
-                free(page);
-                return status;
+                goto cleanup;
             }
         }
         previous_page_id = page_id;
         page_id = header.next;
         first_leaf = false;
     }
+    status = BPT_OK;
+
+cleanup:
     free(page);
-    return BPT_OK;
+    tree->scan_active = false;
+    return status;
 }
 
 bpt_status bpt_tree_validate(bpt_tree *tree, bpt_stats *stats_out, char *error_out,

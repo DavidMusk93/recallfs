@@ -3,7 +3,6 @@ project(bptree VERSION 0.1.0 LANGUAGES C)
 
 option(BPTREE_BUILD_TESTS "Build B+ tree regression tests" ON)
 option(BPTREE_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
-option(BPTREE_ENABLE_TEST_HOOKS "Enable subprocess crash points" OFF)
 
 add_library(bptree STATIC
     src/bptree.c
@@ -21,7 +20,24 @@ add_library(bptree_storage_file STATIC
 )
 add_library(bptree::file ALIAS bptree_storage_file)
 
-foreach(target IN ITEMS bptree bptree_storage_memory bptree_storage_file)
+set(bptree_library_targets
+    bptree
+    bptree_storage_memory
+    bptree_storage_file
+)
+
+if(BPTREE_BUILD_TESTS AND UNIX)
+    add_library(bptree_storage_file_test_hooks STATIC
+        src/bptree_storage_file.c
+    )
+    target_compile_definitions(
+        bptree_storage_file_test_hooks
+        PRIVATE BPTREE_ENABLE_TEST_HOOKS=1
+    )
+    list(APPEND bptree_library_targets bptree_storage_file_test_hooks)
+endif()
+
+foreach(target IN LISTS bptree_library_targets)
     target_compile_features(${target} PUBLIC c_std_11)
     target_include_directories(
         ${target}
@@ -44,22 +60,19 @@ foreach(target IN ITEMS bptree bptree_storage_memory bptree_storage_file)
 endforeach()
 
 if(UNIX)
-    foreach(target IN ITEMS bptree bptree_storage_memory bptree_storage_file)
+    foreach(target IN LISTS bptree_library_targets)
         target_compile_definitions(${target} PRIVATE _POSIX_C_SOURCE=200809L)
     endforeach()
 endif()
 
 target_link_libraries(bptree_storage_file PUBLIC bptree)
 
-if(BPTREE_ENABLE_TEST_HOOKS)
-    target_compile_definitions(
-        bptree_storage_file
-        PRIVATE BPTREE_ENABLE_TEST_HOOKS=1
-    )
+if(TARGET bptree_storage_file_test_hooks)
+    target_link_libraries(bptree_storage_file_test_hooks PUBLIC bptree)
 endif()
 
 if(BPTREE_ENABLE_SANITIZERS)
-    foreach(target IN ITEMS bptree bptree_storage_memory bptree_storage_file)
+    foreach(target IN LISTS bptree_library_targets)
         target_compile_options(
             ${target}
             PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -77,12 +90,7 @@ endif()
 if(BPTREE_BUILD_TESTS)
     enable_testing()
 
-    function(bptree_add_test target source)
-        add_executable(${target} ${source})
-        target_link_libraries(
-            ${target}
-            PRIVATE bptree_storage_memory bptree_storage_file
-        )
+    function(bptree_configure_test target)
         target_compile_options(
             ${target}
             PRIVATE
@@ -106,6 +114,15 @@ if(BPTREE_BUILD_TESTS)
         add_test(NAME ${target} COMMAND ${target})
     endfunction()
 
+    function(bptree_add_test target source)
+        add_executable(${target} ${source})
+        target_link_libraries(
+            ${target}
+            PRIVATE bptree_storage_memory bptree_storage_file
+        )
+        bptree_configure_test(${target})
+    endfunction()
+
     bptree_add_test(bptree_model_test tests/bptree_model_test.c)
     bptree_add_test(bptree_contract_test tests/bptree_contract_test.c)
     bptree_add_test(bptree_backend_test tests/bptree_backend_test.c)
@@ -113,8 +130,13 @@ if(BPTREE_BUILD_TESTS)
     bptree_add_test(bptree_persistence_test tests/bptree_persistence_test.c)
     bptree_add_test(bptree_corruption_test tests/bptree_corruption_test.c)
 
-    if(UNIX AND BPTREE_ENABLE_TEST_HOOKS)
-        bptree_add_test(bptree_crash_test tests/bptree_crash_test.c)
+    if(UNIX)
+        add_executable(bptree_crash_test tests/bptree_crash_test.c)
+        target_link_libraries(
+            bptree_crash_test
+            PRIVATE bptree_storage_file_test_hooks
+        )
+        bptree_configure_test(bptree_crash_test)
     endif()
 endif()
 

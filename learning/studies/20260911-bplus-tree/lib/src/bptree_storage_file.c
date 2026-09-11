@@ -10,12 +10,21 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0
+#endif
 
 enum {
     BPT_FILE_MAGIC_SIZE = 8,
@@ -42,7 +51,8 @@ enum {
     BPT_WAL_TOTAL_SIZE_OFFSET = 72,
     BPT_WAL_CHECKSUM_OFFSET = 80,
     BPT_WAL_HEADER_SIZE = 96,
-    BPT_WAL_PAGE_ID_SIZE = 8
+    BPT_WAL_PAGE_ID_SIZE = 8,
+    BPT_WAL_MAX_TRANSACTION_PAGES = 1024
 };
 
 #define BPT_FILE_FORMAT_VERSION UINT32_C(1)
@@ -59,26 +69,74 @@ struct bpt_file_backend {
     uint32_t page_size;
     uint64_t page_count;
     unsigned char uuid[BPT_FILE_UUID_SIZE];
-    char *wal_path;
+    char *wal_name;
+    char *wal_temp_name;
     bool recovery_required;
 };
+
+static int file_make_cloexec(int fd) {
+    int descriptor_flags;
+    int result;
+    int saved_errno;
+
+    if (fd < 0) {
+        return fd;
+    }
+    do {
+        descriptor_flags = fcntl(fd, F_GETFD);
+    } while (descriptor_flags < 0 && errno == EINTR);
+    if (descriptor_flags >= 0 && (descriptor_flags & FD_CLOEXEC) == 0) {
+        do {
+            result = fcntl(fd, F_SETFD, descriptor_flags | FD_CLOEXEC);
+        } while (result != 0 && errno == EINTR);
+        if (result == 0) {
+            return fd;
+        }
+    } else if (descriptor_flags >= 0) {
+        return fd;
+    }
+
+    saved_errno = errno;
+    (void)close(fd);
+    errno = saved_errno;
+    return -1;
+}
 
 static int file_open_existing(const char *path, int flags) {
     int fd;
 
     do {
-        fd = open(path, flags);
+        fd = open(path, flags | O_CLOEXEC);
     } while (fd < 0 && errno == EINTR);
-    return fd;
+    return file_make_cloexec(fd);
 }
 
 static int file_open_exclusive(const char *path, int flags) {
     int fd;
 
     do {
-        fd = open(path, flags | O_CREAT | O_EXCL, (mode_t)(S_IRUSR | S_IWUSR));
+        fd = open(path, flags | O_CLOEXEC | O_CREAT | O_EXCL, (mode_t)(S_IRUSR | S_IWUSR));
     } while (fd < 0 && errno == EINTR);
-    return fd;
+    return file_make_cloexec(fd);
+}
+
+static int file_open_existing_at(int parent_fd, const char *name, int flags) {
+    int fd;
+
+    do {
+        fd = openat(parent_fd, name, flags | O_CLOEXEC | O_NOFOLLOW);
+    } while (fd < 0 && errno == EINTR);
+    return file_make_cloexec(fd);
+}
+
+static int file_open_exclusive_at(int parent_fd, const char *name, int flags) {
+    int fd;
+
+    do {
+        fd = openat(parent_fd, name, flags | O_CLOEXEC | O_NOFOLLOW | O_CREAT | O_EXCL,
+                    (mode_t)(S_IRUSR | S_IWUSR));
+    } while (fd < 0 && errno == EINTR);
+    return file_make_cloexec(fd);
 }
 
 static bool file_fstat(int fd, struct stat *status_out) {
@@ -90,11 +148,24 @@ static bool file_fstat(int fd, struct stat *status_out) {
     return result == 0;
 }
 
-static bool file_fsync(int fd) {
+static bool file_sync_directory(int fd) {
     int result;
 
     do {
         result = fsync(fd);
+    } while (result != 0 && errno == EINTR);
+    return result == 0;
+}
+
+static bool file_sync_regular(int fd) {
+    int result;
+
+    do {
+#ifdef __APPLE__
+        result = fcntl(fd, F_FULLFSYNC);
+#else
+        result = fsync(fd);
+#endif
     } while (result != 0 && errno == EINTR);
     return result == 0;
 }
@@ -122,6 +193,24 @@ static bool file_unlink(const char *path) {
 
     do {
         result = unlink(path);
+    } while (result != 0 && errno == EINTR);
+    return result == 0;
+}
+
+static bool file_unlink_at(int parent_fd, const char *name) {
+    int result;
+
+    do {
+        result = unlinkat(parent_fd, name, 0);
+    } while (result != 0 && errno == EINTR);
+    return result == 0;
+}
+
+static bool file_rename_at(int parent_fd, const char *old_name, const char *new_name) {
+    int result;
+
+    do {
+        result = renameat(parent_fd, old_name, parent_fd, new_name);
     } while (result != 0 && errno == EINTR);
     return result == 0;
 }
@@ -227,28 +316,45 @@ static bpt_status file_lock_exclusive(int fd) {
     return errno == EACCES || errno == EAGAIN ? BPT_BUSY : BPT_IO;
 }
 
-static bpt_status file_build_paths(const char *path, char **wal_path_out, char **parent_path_out) {
+static bpt_status file_build_paths(const char *path, char **wal_name_out, char **wal_temp_name_out,
+                                   char **parent_path_out) {
     const char *slash;
+    const char *base_name;
     size_t path_length;
+    size_t base_length;
     size_t parent_length;
-    char *wal_path;
+    char *wal_name;
+    char *wal_temp_name;
     char *parent_path;
 
-    if (path == NULL || path[0] == '\0' || wal_path_out == NULL || parent_path_out == NULL) {
+    if (path == NULL || path[0] == '\0' || wal_name_out == NULL || wal_temp_name_out == NULL ||
+        parent_path_out == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
     path_length = strlen(path);
-    if (path[path_length - 1u] == '/' || path_length > SIZE_MAX - 5u) {
+    if (path[path_length - 1u] == '/') {
         return BPT_INVALID_ARGUMENT;
     }
-    wal_path = malloc(path_length + 5u);
-    if (wal_path == NULL) {
+    slash = strrchr(path, '/');
+    base_name = slash == NULL ? path : slash + 1;
+    base_length = strlen(base_name);
+    if (base_length > SIZE_MAX - 9u) {
+        return BPT_INVALID_ARGUMENT;
+    }
+    wal_name = malloc(base_length + 5u);
+    if (wal_name == NULL) {
         return BPT_OUT_OF_MEMORY;
     }
-    memcpy(wal_path, path, path_length);
-    memcpy(wal_path + path_length, ".wal", 5u);
+    memcpy(wal_name, base_name, base_length);
+    memcpy(wal_name + base_length, ".wal", 5u);
+    wal_temp_name = malloc(base_length + 9u);
+    if (wal_temp_name == NULL) {
+        free(wal_name);
+        return BPT_OUT_OF_MEMORY;
+    }
+    memcpy(wal_temp_name, base_name, base_length);
+    memcpy(wal_temp_name + base_length, ".wal.tmp", 9u);
 
-    slash = strrchr(path, '/');
     if (slash == NULL) {
         parent_path = malloc(2u);
         if (parent_path != NULL) {
@@ -270,11 +376,13 @@ static bpt_status file_build_paths(const char *path, char **wal_path_out, char *
         }
     }
     if (parent_path == NULL) {
-        free(wal_path);
+        free(wal_temp_name);
+        free(wal_name);
         return BPT_OUT_OF_MEMORY;
     }
 
-    *wal_path_out = wal_path;
+    *wal_name_out = wal_name;
+    *wal_temp_name_out = wal_temp_name;
     *parent_path_out = parent_path;
     return BPT_OK;
 }
@@ -294,17 +402,37 @@ static bpt_status file_open_parent(const char *parent_path, int *fd_out) {
     return BPT_OK;
 }
 
-static bpt_status file_require_absent(const char *path) {
+static bpt_status file_require_absent_at(int parent_fd, const char *name) {
     struct stat status;
     int result;
+    int flags = 0;
 
+#ifdef AT_SYMLINK_NOFOLLOW
+    flags = AT_SYMLINK_NOFOLLOW;
+#endif
     do {
-        result = lstat(path, &status);
+        result = fstatat(parent_fd, name, &status, flags);
     } while (result != 0 && errno == EINTR);
     if (result == 0) {
         return BPT_BUSY;
     }
     return errno == ENOENT ? BPT_OK : BPT_IO;
+}
+
+static bpt_status file_remove_stale_wal_temp(bpt_file_backend *backend) {
+    bpt_status status = file_require_absent_at(backend->parent_fd, backend->wal_temp_name);
+
+    if (status == BPT_OK) {
+        return BPT_OK;
+    }
+    if (status != BPT_BUSY) {
+        return status;
+    }
+    if (!file_unlink_at(backend->parent_fd, backend->wal_temp_name) ||
+        !file_sync_directory(backend->parent_fd)) {
+        return BPT_IO;
+    }
+    return BPT_OK;
 }
 
 static bpt_status file_random_uuid(unsigned char uuid[BPT_FILE_UUID_SIZE]) {
@@ -462,6 +590,9 @@ static bpt_status file_validate_updates(const bpt_file_backend *backend,
     if (update_count != 0u && updates == NULL) {
         return BPT_INVALID_ARGUMENT;
     }
+    if (update_count > (size_t)BPT_WAL_MAX_TRANSACTION_PAGES) {
+        return BPT_OUT_OF_MEMORY;
+    }
     for (index = 0u; index < update_count; ++index) {
         size_t other;
         off_t offset;
@@ -506,7 +637,8 @@ static bpt_status file_build_wal(const bpt_file_backend *backend, const bpt_page
     unsigned char *wal;
     size_t index;
 
-    if (update_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
+    if (update_count > (size_t)BPT_WAL_MAX_TRANSACTION_PAGES ||
+        update_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
         return BPT_OUT_OF_MEMORY;
     }
     wal_size = BPT_WAL_HEADER_SIZE + update_count * record_size;
@@ -547,6 +679,37 @@ static bpt_status file_build_wal(const bpt_file_backend *backend, const bpt_page
     return BPT_OK;
 }
 
+static bpt_status file_wal_preflight(const bpt_file_backend *backend,
+                                     const unsigned char header[BPT_WAL_HEADER_SIZE],
+                                     uint64_t wal_file_size, size_t *wal_size_out) {
+    uint64_t record_count;
+    uint64_t total_size;
+    size_t record_size = BPT_WAL_PAGE_ID_SIZE + (size_t)backend->page_size;
+    size_t expected_size;
+
+    if (wal_file_size < BPT_WAL_HEADER_SIZE || wal_file_size > (uint64_t)SIZE_MAX ||
+        memcmp(header, bpt_wal_magic, BPT_WAL_MAGIC_SIZE) != 0 ||
+        bpt_load_u32(header + BPT_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
+        bpt_load_u32(header + BPT_WAL_HEADER_SIZE_OFFSET) != BPT_WAL_HEADER_SIZE) {
+        return BPT_CORRUPT;
+    }
+
+    record_count = bpt_load_u64(header + BPT_WAL_RECORD_COUNT_OFFSET);
+    total_size = bpt_load_u64(header + BPT_WAL_TOTAL_SIZE_OFFSET);
+    if (record_count == 0u || record_count > BPT_WAL_MAX_TRANSACTION_PAGES ||
+        record_count > (uint64_t)SIZE_MAX ||
+        (size_t)record_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
+        return BPT_CORRUPT;
+    }
+    expected_size = BPT_WAL_HEADER_SIZE + (size_t)record_count * record_size;
+    if (total_size != wal_file_size || expected_size != (size_t)wal_file_size) {
+        return BPT_CORRUPT;
+    }
+
+    *wal_size_out = expected_size;
+    return BPT_OK;
+}
+
 static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wal, size_t wal_size,
                                     uint64_t data_file_size, uint64_t *final_page_count_out) {
     uint64_t record_count;
@@ -563,25 +726,16 @@ static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wa
     uint32_t actual_checksum;
 
     if (wal_size < BPT_WAL_HEADER_SIZE || memcmp(wal, bpt_wal_magic, BPT_WAL_MAGIC_SIZE) != 0 ||
-        bpt_load_u32(wal + BPT_WAL_VERSION_OFFSET) != BPT_WAL_FORMAT_VERSION ||
-        bpt_load_u32(wal + BPT_WAL_FILE_VERSION_OFFSET) != BPT_FILE_FORMAT_VERSION ||
-        bpt_load_u32(wal + BPT_WAL_TREE_VERSION_OFFSET) != BPTREE_FORMAT_VERSION ||
         bpt_load_u32(wal + BPT_WAL_PAGE_SIZE_OFFSET) != backend->page_size ||
-        bpt_load_u32(wal + BPT_WAL_FLAGS_OFFSET) != 0u ||
-        bpt_load_u32(wal + BPT_WAL_HEADER_SIZE_OFFSET) != BPT_WAL_HEADER_SIZE ||
-        memcmp(wal + BPT_WAL_UUID_OFFSET, backend->uuid, BPT_FILE_UUID_SIZE) != 0) {
+        bpt_load_u32(wal + BPT_WAL_HEADER_SIZE_OFFSET) != BPT_WAL_HEADER_SIZE) {
         return BPT_CORRUPT;
-    }
-    for (index = BPT_WAL_CHECKSUM_OFFSET + sizeof(uint32_t); index < BPT_WAL_HEADER_SIZE; ++index) {
-        if (wal[index] != 0u) {
-            return BPT_CORRUPT;
-        }
     }
 
     record_count = bpt_load_u64(wal + BPT_WAL_RECORD_COUNT_OFFSET);
     original_page_count = bpt_load_u64(wal + BPT_WAL_ORIGINAL_PAGE_COUNT_OFFSET);
     final_page_count = bpt_load_u64(wal + BPT_WAL_FINAL_PAGE_COUNT_OFFSET);
-    if (record_count == 0u || record_count > (uint64_t)SIZE_MAX ||
+    if (record_count == 0u || record_count > BPT_WAL_MAX_TRANSACTION_PAGES ||
+        record_count > (uint64_t)SIZE_MAX ||
         (size_t)record_count > (SIZE_MAX - BPT_WAL_HEADER_SIZE) / record_size) {
         return BPT_CORRUPT;
     }
@@ -595,6 +749,20 @@ static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wa
     actual_checksum = file_checksum(wal, wal_size, BPT_WAL_CHECKSUM_OFFSET);
     if (stored_checksum != actual_checksum) {
         return BPT_CORRUPT;
+    }
+    if (memcmp(wal + BPT_WAL_UUID_OFFSET, backend->uuid, BPT_FILE_UUID_SIZE) != 0) {
+        return BPT_CORRUPT;
+    }
+    if (bpt_load_u32(wal + BPT_WAL_VERSION_OFFSET) != BPT_WAL_FORMAT_VERSION ||
+        bpt_load_u32(wal + BPT_WAL_FILE_VERSION_OFFSET) != BPT_FILE_FORMAT_VERSION ||
+        bpt_load_u32(wal + BPT_WAL_TREE_VERSION_OFFSET) != BPTREE_FORMAT_VERSION ||
+        bpt_load_u32(wal + BPT_WAL_FLAGS_OFFSET) != 0u) {
+        return BPT_UNSUPPORTED;
+    }
+    for (index = BPT_WAL_CHECKSUM_OFFSET + sizeof(uint32_t); index < BPT_WAL_HEADER_SIZE; ++index) {
+        if (wal[index] != 0u) {
+            return BPT_CORRUPT;
+        }
     }
     if (final_page_count < original_page_count ||
         !file_size_for_page_count(original_page_count, backend->page_size, &original_file_size) ||
@@ -638,16 +806,17 @@ static bpt_status file_wal_validate(bpt_file_backend *backend, unsigned char *wa
 }
 
 static bpt_status file_remove_wal(bpt_file_backend *backend) {
-    if (!file_unlink(backend->wal_path)) {
+    if (!file_unlink_at(backend->parent_fd, backend->wal_name)) {
         return BPT_RECOVERY_REQUIRED;
     }
-    if (!file_fsync(backend->parent_fd)) {
+    if (!file_sync_directory(backend->parent_fd)) {
         return BPT_RECOVERY_REQUIRED;
     }
     return BPT_OK;
 }
 
 static bpt_status file_recover_wal(bpt_file_backend *backend) {
+    unsigned char wal_header[BPT_WAL_HEADER_SIZE];
     uint64_t wal_file_size;
     uint64_t data_file_size;
     uint64_t final_page_count;
@@ -659,7 +828,7 @@ static bpt_status file_recover_wal(bpt_file_backend *backend) {
     int wal_fd;
     bpt_status status;
 
-    wal_fd = file_open_existing(backend->wal_path, O_RDONLY);
+    wal_fd = file_open_existing_at(backend->parent_fd, backend->wal_name, O_RDONLY);
     if (wal_fd < 0) {
         if (errno == ENOENT) {
             return file_refresh_page_count(backend);
@@ -680,11 +849,19 @@ static bpt_status file_recover_wal(bpt_file_backend *backend) {
         }
         return file_refresh_page_count(backend);
     }
-    if (wal_file_size > (uint64_t)SIZE_MAX) {
+    if (wal_file_size < BPT_WAL_HEADER_SIZE) {
         (void)close(wal_fd);
         return BPT_CORRUPT;
     }
-    wal_size = (size_t)wal_file_size;
+    if (!file_read_exact_at(wal_fd, wal_header, sizeof(wal_header), 0)) {
+        (void)close(wal_fd);
+        return BPT_IO;
+    }
+    status = file_wal_preflight(backend, wal_header, wal_file_size, &wal_size);
+    if (status != BPT_OK) {
+        (void)close(wal_fd);
+        return status;
+    }
     wal = malloc(wal_size);
     if (wal == NULL) {
         (void)close(wal_fd);
@@ -730,7 +907,7 @@ static bpt_status file_recover_wal(bpt_file_backend *backend) {
         uint64_t final_size;
 
         if (!file_size_for_page_count(final_page_count, backend->page_size, &final_size) ||
-            !file_ftruncate(backend->fd, (off_t)final_size) || !file_fsync(backend->fd)) {
+            !file_ftruncate(backend->fd, (off_t)final_size) || !file_sync_regular(backend->fd)) {
             free(wal);
             return BPT_RECOVERY_REQUIRED;
         }
@@ -795,7 +972,7 @@ static bpt_status file_commit_pages(void *context, const bpt_page_update *update
     uint64_t final_page_count;
     uint64_t measured_page_count;
     size_t index;
-    int wal_fd;
+    int wal_fd = -1;
     bpt_status status;
 
     if (backend == NULL) {
@@ -820,32 +997,59 @@ static bpt_status file_commit_pages(void *context, const bpt_page_update *update
         return status;
     }
 
-    wal_fd = file_open_exclusive(backend->wal_path, O_WRONLY);
-    if (wal_fd < 0) {
+    status = file_require_absent_at(backend->parent_fd, backend->wal_name);
+    if (status != BPT_OK) {
         free(wal);
-        if (errno == EEXIST) {
+        if (status == BPT_BUSY) {
             backend->recovery_required = true;
             return BPT_RECOVERY_REQUIRED;
         }
+        return status;
+    }
+    status = file_remove_stale_wal_temp(backend);
+    if (status != BPT_OK) {
+        free(wal);
+        return status;
+    }
+    wal_fd = file_open_exclusive_at(backend->parent_fd, backend->wal_temp_name, O_WRONLY);
+    if (wal_fd < 0) {
+        free(wal);
+        return BPT_IO;
+    }
+    file_test_crash("wal_created");
+    if (!file_write_exact_at(wal_fd, wal, wal_size, 0) || !file_sync_regular(wal_fd)) {
+        free(wal);
+        (void)close(wal_fd);
+        (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
+        return BPT_IO;
+    }
+    if (close(wal_fd) != 0) {
+        free(wal);
+        (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
+        return BPT_IO;
+    }
+    file_test_crash("wal_temp_synced");
+    status = file_require_absent_at(backend->parent_fd, backend->wal_name);
+    if (status != BPT_OK) {
+        free(wal);
+        (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
+        if (status == BPT_BUSY) {
+            backend->recovery_required = true;
+            return BPT_RECOVERY_REQUIRED;
+        }
+        return status;
+    }
+    if (!file_rename_at(backend->parent_fd, backend->wal_temp_name, backend->wal_name)) {
+        free(wal);
+        (void)file_unlink_at(backend->parent_fd, backend->wal_temp_name);
         return BPT_IO;
     }
     backend->recovery_required = true;
-    if (!file_fchmod_private(wal_fd) || !file_fsync(backend->parent_fd)) {
+    if (!file_sync_directory(backend->parent_fd)) {
         free(wal);
-        (void)close(wal_fd);
-        return BPT_RECOVERY_REQUIRED;
-    }
-    file_test_crash("wal_created");
-    if (!file_write_exact_at(wal_fd, wal, wal_size, 0) || !file_fsync(wal_fd)) {
-        free(wal);
-        (void)close(wal_fd);
         return BPT_RECOVERY_REQUIRED;
     }
     file_test_crash("wal_synced");
-    if (close(wal_fd) != 0) {
-        free(wal);
-        return BPT_RECOVERY_REQUIRED;
-    }
 
     for (index = 0u; index < update_count; ++index) {
         off_t page_offset;
@@ -864,7 +1068,7 @@ static bpt_status file_commit_pages(void *context, const bpt_page_update *update
         uint64_t final_size;
 
         if (!file_size_for_page_count(final_page_count, backend->page_size, &final_size) ||
-            !file_ftruncate(backend->fd, (off_t)final_size) || !file_fsync(backend->fd)) {
+            !file_ftruncate(backend->fd, (off_t)final_size) || !file_sync_regular(backend->fd)) {
             free(wal);
             return BPT_RECOVERY_REQUIRED;
         }
@@ -891,7 +1095,8 @@ static void file_backend_release(bpt_file_backend *backend) {
     if (backend->parent_fd >= 0) {
         (void)close(backend->parent_fd);
     }
-    free(backend->wal_path);
+    free(backend->wal_name);
+    free(backend->wal_temp_name);
     free(backend);
 }
 
@@ -916,18 +1121,13 @@ bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
     backend->fd = -1;
     backend->parent_fd = -1;
     backend->page_size = page_size;
-    status = file_build_paths(path, &backend->wal_path, &parent_path);
+    status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
     if (status != BPT_OK) {
         file_backend_release(backend);
         return status;
     }
     status = file_open_parent(parent_path, &backend->parent_fd);
     free(parent_path);
-    if (status != BPT_OK) {
-        file_backend_release(backend);
-        return status;
-    }
-    status = file_require_absent(backend->wal_path);
     if (status != BPT_OK) {
         file_backend_release(backend);
         return status;
@@ -939,6 +1139,12 @@ bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
     }
     created = true;
     status = file_lock_exclusive(backend->fd);
+    if (status == BPT_OK) {
+        status = file_require_absent_at(backend->parent_fd, backend->wal_name);
+    }
+    if (status == BPT_OK) {
+        status = file_remove_stale_wal_temp(backend);
+    }
     if (status == BPT_OK && !file_fchmod_private(backend->fd)) {
         status = BPT_IO;
     }
@@ -954,7 +1160,7 @@ bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
     if (status == BPT_OK) {
         file_header_encode(header, page_size, backend->uuid);
         if (!file_write_exact_at(backend->fd, header, (size_t)page_size, 0) ||
-            !file_fsync(backend->fd) || !file_fsync(backend->parent_fd)) {
+            !file_sync_regular(backend->fd) || !file_sync_directory(backend->parent_fd)) {
             status = BPT_IO;
         }
     }
@@ -966,7 +1172,7 @@ bpt_status bpt_file_backend_create(const char *path, uint32_t page_size,
         }
         if (created) {
             (void)file_unlink(path);
-            (void)file_fsync(backend->parent_fd);
+            (void)file_sync_directory(backend->parent_fd);
         }
         file_backend_release(backend);
         return status;
@@ -993,7 +1199,7 @@ bpt_status bpt_file_backend_open(const char *path, bpt_file_backend **backend_ou
     }
     backend->fd = -1;
     backend->parent_fd = -1;
-    status = file_build_paths(path, &backend->wal_path, &parent_path);
+    status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
     if (status != BPT_OK) {
         file_backend_release(backend);
         return status;
@@ -1012,6 +1218,9 @@ bpt_status bpt_file_backend_open(const char *path, bpt_file_backend **backend_ou
     status = file_lock_exclusive(backend->fd);
     if (status == BPT_OK) {
         status = file_read_header(backend->fd, &backend->page_size, backend->uuid);
+    }
+    if (status == BPT_OK) {
+        status = file_remove_stale_wal_temp(backend);
     }
     if (status == BPT_OK) {
         status = file_recover_wal(backend);
@@ -1037,7 +1246,8 @@ bpt_status bpt_file_backend_close(bpt_file_backend *backend) {
     if (backend->parent_fd >= 0 && close(backend->parent_fd) != 0) {
         close_failed = true;
     }
-    free(backend->wal_path);
+    free(backend->wal_name);
+    free(backend->wal_temp_name);
     free(backend);
     return close_failed ? BPT_IO : BPT_OK;
 }

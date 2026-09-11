@@ -40,6 +40,7 @@ static inline void test_temp_path(char *path, size_t capacity) {
 
 static inline void test_remove_database(const char *path) {
     char wal_path[512];
+    char wal_temp_path[512];
     int length;
 
     (void)unlink(path);
@@ -47,6 +48,10 @@ static inline void test_remove_database(const char *path) {
     TEST_CHECK(length > 0);
     TEST_CHECK((size_t)length < sizeof(wal_path));
     (void)unlink(wal_path);
+    length = snprintf(wal_temp_path, sizeof(wal_temp_path), "%s.wal.tmp", path);
+    TEST_CHECK(length > 0);
+    TEST_CHECK((size_t)length < sizeof(wal_temp_path));
+    (void)unlink(wal_temp_path);
 }
 
 static inline void test_validate(bpt_tree *tree) {

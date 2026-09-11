@@ -8,8 +8,32 @@
 struct bpt_memory_backend {
     unsigned char *pages;
     uint64_t page_count;
+    uint64_t capacity_pages;
     uint32_t page_size;
 };
+
+static bpt_status memory_growth_capacity(const bpt_memory_backend *backend, uint64_t required_pages,
+                                         uint64_t *capacity_out) {
+    uint64_t capacity = backend->capacity_pages;
+    uint64_t max_capacity = (uint64_t)(SIZE_MAX / (size_t)backend->page_size);
+
+    if (required_pages > max_capacity || capacity > max_capacity) {
+        return BPT_OUT_OF_MEMORY;
+    }
+    if (capacity == 0u) {
+        capacity = 1u;
+    }
+    while (capacity < required_pages) {
+        if (capacity > max_capacity / 2u) {
+            capacity = max_capacity;
+        } else {
+            capacity *= 2u;
+        }
+    }
+
+    *capacity_out = capacity;
+    return BPT_OK;
+}
 
 static bpt_status memory_page_count(void *context, uint64_t *count_out) {
     bpt_memory_backend *backend = context;
@@ -108,17 +132,28 @@ static bpt_status memory_commit_pages(void *context, const bpt_page_update *upda
                (size_t)backend->page_size);
     }
 
-    if (new_page_count > backend->page_count) {
-        size_t old_size = (size_t)backend->page_count * (size_t)backend->page_size;
-        size_t new_size = (size_t)new_page_count * (size_t)backend->page_size;
-        unsigned char *expanded = realloc(backend->pages, new_size);
+    if (new_page_count > backend->capacity_pages) {
+        uint64_t new_capacity;
+        size_t old_capacity_size;
+        size_t new_capacity_size;
+        unsigned char *expanded;
+
+        status = memory_growth_capacity(backend, new_page_count, &new_capacity);
+        if (status != BPT_OK) {
+            free(staged);
+            return status;
+        }
+        old_capacity_size = (size_t)backend->capacity_pages * (size_t)backend->page_size;
+        new_capacity_size = (size_t)new_capacity * (size_t)backend->page_size;
+        expanded = realloc(backend->pages, new_capacity_size);
 
         if (expanded == NULL) {
             free(staged);
             return BPT_OUT_OF_MEMORY;
         }
+        memset(expanded + old_capacity_size, 0, new_capacity_size - old_capacity_size);
         backend->pages = expanded;
-        memset(backend->pages + old_size, 0, new_size - old_size);
+        backend->capacity_pages = new_capacity;
     }
 
     for (index = 0u; index < update_count; ++index) {

@@ -1,11 +1,14 @@
 #include "bptree_backends.h"
 #include "test_support.h"
 
+enum { SPY_MAX_UPDATE_PAGE_IDS = 128, MULTI_LEVEL_ITEM_COUNT = 512 };
+
 typedef struct spy_storage {
     bpt_storage inner;
     size_t read_count;
     size_t commit_count;
     size_t last_update_count;
+    uint64_t last_update_page_ids[SPY_MAX_UPDATE_PAGE_IDS];
     bpt_status next_commit_status;
 } spy_storage;
 
@@ -25,9 +28,15 @@ static bpt_status spy_page_count(void *context, uint64_t *count_out) {
 static bpt_status spy_commit_pages(void *context, const bpt_page_update *updates,
                                    size_t update_count) {
     spy_storage *spy = context;
+    size_t index;
 
     spy->commit_count++;
     spy->last_update_count = update_count;
+    TEST_CHECK(update_count <= SPY_MAX_UPDATE_PAGE_IDS);
+    memset(spy->last_update_page_ids, 0, sizeof(spy->last_update_page_ids));
+    for (index = 0u; index < update_count; ++index) {
+        spy->last_update_page_ids[index] = updates[index].page_id;
+    }
     if (spy->next_commit_status != BPT_OK) {
         bpt_status status = spy->next_commit_status;
 
@@ -48,12 +57,40 @@ static bpt_storage spy_interface(spy_storage *spy) {
     return storage;
 }
 
+static void spy_reset_observations(spy_storage *spy) {
+    spy->read_count = 0u;
+    spy->commit_count = 0u;
+    spy->last_update_count = 0u;
+    memset(spy->last_update_page_ids, 0, sizeof(spy->last_update_page_ids));
+}
+
 static bpt_status stop_after_first(void *context, uint64_t key, uint64_t value) {
     uint64_t *seen = context;
 
     TEST_CHECK(key == 7u);
     TEST_CHECK(value == 71u);
     (*seen)++;
+    return BPT_STOPPED;
+}
+
+typedef struct scan_reentry_context {
+    bpt_tree *tree;
+    size_t callback_count;
+    uint64_t nested_seen;
+} scan_reentry_context;
+
+static bpt_status attempt_scan_reentry(void *context, uint64_t key, uint64_t value) {
+    scan_reentry_context *reentry = context;
+    bool inserted = false;
+    bool removed = false;
+
+    TEST_CHECK(reentry->callback_count == 0u);
+    TEST_STATUS(bpt_tree_put(reentry->tree, key, value + 1u, &inserted), BPT_BUSY);
+    TEST_STATUS(bpt_tree_delete(reentry->tree, key, &removed), BPT_BUSY);
+    TEST_STATUS(
+        bpt_tree_scan(reentry->tree, key, key + 1u, stop_after_first, &reentry->nested_seen),
+        BPT_BUSY);
+    reentry->callback_count++;
     return BPT_STOPPED;
 }
 
@@ -103,6 +140,83 @@ static void test_page_local_commits(void) {
     spy.next_commit_status = BPT_RECOVERY_REQUIRED;
     TEST_STATUS(bpt_tree_put(tree, 9u, 90u, &inserted), BPT_RECOVERY_REQUIRED);
     TEST_STATUS(bpt_tree_get(tree, 7u, &value), BPT_RECOVERY_REQUIRED);
+
+    bpt_tree_close(tree);
+    bpt_memory_backend_destroy(backend);
+}
+
+static void test_multilevel_existing_update_write_set(void) {
+    bpt_memory_backend *backend = NULL;
+    spy_storage spy;
+    bpt_storage storage;
+    bpt_tree *tree = NULL;
+    bpt_stats before;
+    bpt_stats after;
+    uint64_t key;
+    uint64_t value;
+    bool inserted;
+
+    TEST_STATUS(bpt_memory_backend_create(512u, &backend), BPT_OK);
+    memset(&spy, 0, sizeof(spy));
+    spy.inner = bpt_memory_backend_storage(backend);
+    storage = spy_interface(&spy);
+    TEST_STATUS(bpt_tree_create(&storage, &tree), BPT_OK);
+    for (key = 0u; key < MULTI_LEVEL_ITEM_COUNT; ++key) {
+        TEST_STATUS(bpt_tree_put(tree, key, key + 11u, &inserted), BPT_OK);
+        TEST_CHECK(inserted);
+    }
+    TEST_STATUS(bpt_tree_validate(tree, &before, NULL, 0u), BPT_OK);
+    TEST_CHECK(before.height >= 3u);
+
+    spy_reset_observations(&spy);
+    TEST_STATUS(bpt_tree_put(tree, MULTI_LEVEL_ITEM_COUNT / 2u, UINT64_C(0xfeedface), &inserted),
+                BPT_OK);
+    TEST_CHECK(!inserted);
+    TEST_CHECK(spy.commit_count == 1u);
+    TEST_CHECK(spy.last_update_count == 2u);
+    TEST_CHECK(before.allocated_pages > spy.last_update_count);
+    TEST_CHECK((spy.last_update_page_ids[0] == 0u && spy.last_update_page_ids[1] != 0u) ||
+               (spy.last_update_page_ids[0] != 0u && spy.last_update_page_ids[1] == 0u));
+
+    TEST_STATUS(bpt_tree_validate(tree, &after, NULL, 0u), BPT_OK);
+    TEST_CHECK(after.item_count == before.item_count);
+    TEST_CHECK(after.allocated_pages == before.allocated_pages);
+    TEST_CHECK(after.live_pages == before.live_pages);
+    TEST_CHECK(after.free_pages == before.free_pages);
+    TEST_CHECK(after.height == before.height);
+    TEST_STATUS(bpt_tree_get(tree, MULTI_LEVEL_ITEM_COUNT / 2u, &value), BPT_OK);
+    TEST_CHECK(value == UINT64_C(0xfeedface));
+
+    bpt_tree_close(tree);
+    bpt_memory_backend_destroy(backend);
+}
+
+static void test_scan_reentrancy_is_busy(void) {
+    bpt_memory_backend *backend = NULL;
+    bpt_storage storage;
+    bpt_tree *tree = NULL;
+    scan_reentry_context reentry;
+    uint64_t seen = 0u;
+    uint64_t value;
+    bool inserted;
+
+    TEST_STATUS(bpt_memory_backend_create(512u, &backend), BPT_OK);
+    storage = bpt_memory_backend_storage(backend);
+    TEST_STATUS(bpt_tree_create(&storage, &tree), BPT_OK);
+    TEST_STATUS(bpt_tree_put(tree, 7u, 71u, &inserted), BPT_OK);
+    TEST_CHECK(inserted);
+
+    memset(&reentry, 0, sizeof(reentry));
+    reentry.tree = tree;
+    TEST_STATUS(bpt_tree_scan(tree, 0u, 8u, attempt_scan_reentry, &reentry), BPT_STOPPED);
+    TEST_CHECK(reentry.callback_count == 1u);
+    TEST_CHECK(reentry.nested_seen == 0u);
+
+    TEST_STATUS(bpt_tree_get(tree, 7u, &value), BPT_OK);
+    TEST_CHECK(value == 71u);
+    test_validate(tree);
+    TEST_STATUS(bpt_tree_scan(tree, 0u, 8u, stop_after_first, &seen), BPT_STOPPED);
+    TEST_CHECK(seen == 1u);
 
     bpt_tree_close(tree);
     bpt_memory_backend_destroy(backend);
@@ -175,6 +289,8 @@ static void test_supported_page_sizes(void) {
 
 int main(void) {
     test_page_local_commits();
+    test_multilevel_existing_update_write_set();
+    test_scan_reentrancy_is_busy();
     test_argument_contract();
     test_supported_page_sizes();
     return 0;
