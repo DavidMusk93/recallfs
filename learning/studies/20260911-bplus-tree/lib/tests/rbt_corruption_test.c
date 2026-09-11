@@ -19,6 +19,8 @@ enum {
     TEST_META_NEXT_PAGE_OFFSET = 88,
     TEST_META_SCHEMA_HEAD_OFFSET = 104,
     TEST_META_SCHEMA_SIZE_OFFSET = 112,
+    TEST_META_SCHEMA_PAGE_COUNT_OFFSET = 120,
+    TEST_MAX_SCHEMA_SIZE = 24 + 64 * 16,
     TEST_SLOT_SIZE = 8,
     TEST_LEAF_CELL_HEADER_SIZE = 8,
     TEST_VALUE_DESCRIPTOR_SIZE = 16,
@@ -273,6 +275,41 @@ static void test_truncated_schema_chain(void) {
     rbt_test_remove_database(path);
 }
 
+static void test_oversized_schema_size(void) {
+    char path[256];
+    unsigned char metadata[TEST_PAGE_SIZE];
+    int descriptor;
+
+    rbt_test_temp_path(path, sizeof(path));
+    populate_database(path, 1u, 1u);
+    descriptor = open(path, O_RDWR);
+    RBT_TEST_CHECK(descriptor >= 0);
+    read_page(descriptor, 0u, metadata);
+    rbt_test_store_u64(metadata + TEST_META_SCHEMA_SIZE_OFFSET, TEST_MAX_SCHEMA_SIZE + 1u);
+    write_page(descriptor, 0u, metadata);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+    expect_tree_corrupt(path);
+    rbt_test_remove_database(path);
+}
+
+static void test_inconsistent_schema_page_count(void) {
+    char path[256];
+    unsigned char metadata[TEST_PAGE_SIZE];
+    int descriptor;
+
+    rbt_test_temp_path(path, sizeof(path));
+    populate_database(path, 1u, 1u);
+    descriptor = open(path, O_RDWR);
+    RBT_TEST_CHECK(descriptor >= 0);
+    read_page(descriptor, 0u, metadata);
+    RBT_TEST_CHECK(rbt_test_load_u64(metadata + TEST_META_SCHEMA_PAGE_COUNT_OFFSET) == 1u);
+    rbt_test_store_u64(metadata + TEST_META_SCHEMA_PAGE_COUNT_OFFSET, 2u);
+    write_page(descriptor, 0u, metadata);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+    expect_tree_corrupt(path);
+    rbt_test_remove_database(path);
+}
+
 static uint64_t locate_overflow(int descriptor, unsigned char leaf[TEST_PAGE_SIZE],
                                 uint64_t *out_leaf_id, unsigned char **out_descriptor) {
     uint64_t leaf_id = find_page_with_type(descriptor, TEST_PAGE_LEAF, 1u, leaf);
@@ -404,6 +441,8 @@ int main(void) {
     test_leaf_link_cycle();
     test_malformed_schema_chain();
     test_truncated_schema_chain();
+    test_oversized_schema_size();
+    test_inconsistent_schema_page_count();
     test_overflow_cycle();
     test_overflow_wrong_column();
     test_overflow_wrong_length();

@@ -9,10 +9,22 @@ enum {
     OLD_ITEM_COUNT = 6,
     NEW_KEY = 7,
     LARGE_VALUE_SIZE = 1536,
+    TEST_FILE_UUID_OFFSET = 24,
     TEST_WAL_VERSION_OFFSET = 8,
+    TEST_WAL_PAGE_SIZE_OFFSET = 12,
+    TEST_WAL_HEADER_SIZE_OFFSET = 20,
+    TEST_WAL_UUID_OFFSET = 24,
+    TEST_WAL_RECORD_COUNT_OFFSET = 40,
+    TEST_WAL_ORIGINAL_COUNT_OFFSET = 48,
+    TEST_WAL_FINAL_COUNT_OFFSET = 56,
+    TEST_WAL_TOTAL_SIZE_OFFSET = 64,
     TEST_WAL_CHECKSUM_OFFSET = 72,
     TEST_WAL_HEADER_SIZE = 80,
+    TEST_WAL_PAGE_ID_SIZE = 8,
+    TEST_LARGE_WAL_RECORD_COUNT = 4096,
 };
+
+static const unsigned char TEST_WAL_MAGIC[8] = {'R', 'B', 'T', 'W', 'A', 'L', '0', '1'};
 
 static void fill_large_value(unsigned char value[LARGE_VALUE_SIZE]) {
     size_t index;
@@ -227,6 +239,103 @@ static void write_active_wal(const char *wal_path, const unsigned char *wal, siz
     RBT_TEST_CHECK(close(descriptor) == 0);
 }
 
+static void fill_recovery_page(uint64_t page_id, unsigned char page[TEST_PAGE_SIZE]) {
+    size_t index;
+
+    for (index = 0u; index < TEST_PAGE_SIZE; ++index) {
+        page[index] = (unsigned char)((page_id * UINT64_C(37) + index) & UINT64_C(0xff));
+    }
+}
+
+static void test_large_wal_recovery(void) {
+    char path[256];
+    char wal_path[512];
+    unsigned char file_header[TEST_PAGE_SIZE];
+    unsigned char expected[TEST_PAGE_SIZE];
+    unsigned char actual[TEST_PAGE_SIZE];
+    const size_t record_size = TEST_WAL_PAGE_ID_SIZE + TEST_PAGE_SIZE;
+    const size_t wal_size = TEST_WAL_HEADER_SIZE + TEST_LARGE_WAL_RECORD_COUNT * record_size;
+    unsigned char *wal;
+    struct rbt_file *file = NULL;
+    struct rbt_storage storage;
+    uint64_t page_count = UINT64_MAX;
+    size_t index;
+    int descriptor;
+    int length;
+
+    rbt_test_temp_path(path, sizeof(path));
+    RBT_TEST_OK(rbt_file_create(path, TEST_PAGE_SIZE, &file));
+    RBT_TEST_OK(rbt_file_close(file));
+
+    descriptor = open(path, O_RDONLY);
+    RBT_TEST_CHECK(descriptor >= 0);
+    rbt_test_read_exact_at(descriptor, file_header, sizeof(file_header), 0);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+
+    wal = calloc(1u, wal_size);
+    RBT_TEST_CHECK(wal != NULL);
+    memcpy(wal, TEST_WAL_MAGIC, sizeof(TEST_WAL_MAGIC));
+    rbt_test_store_u32(wal + TEST_WAL_VERSION_OFFSET, RBT_FORMAT_VERSION);
+    rbt_test_store_u32(wal + TEST_WAL_PAGE_SIZE_OFFSET, TEST_PAGE_SIZE);
+    rbt_test_store_u32(wal + TEST_WAL_HEADER_SIZE_OFFSET, TEST_WAL_HEADER_SIZE);
+    memcpy(wal + TEST_WAL_UUID_OFFSET, file_header + TEST_FILE_UUID_OFFSET, 16u);
+    rbt_test_store_u64(wal + TEST_WAL_RECORD_COUNT_OFFSET, TEST_LARGE_WAL_RECORD_COUNT);
+    rbt_test_store_u64(wal + TEST_WAL_ORIGINAL_COUNT_OFFSET, 0u);
+    rbt_test_store_u64(wal + TEST_WAL_FINAL_COUNT_OFFSET, TEST_LARGE_WAL_RECORD_COUNT);
+    rbt_test_store_u64(wal + TEST_WAL_TOTAL_SIZE_OFFSET, wal_size);
+    for (index = 0u; index < TEST_LARGE_WAL_RECORD_COUNT; ++index) {
+        uint64_t page_id = TEST_LARGE_WAL_RECORD_COUNT - (uint64_t)index - 1u;
+        size_t offset = TEST_WAL_HEADER_SIZE + index * record_size;
+
+        rbt_test_store_u64(wal + offset, page_id);
+        fill_recovery_page(page_id, wal + offset + TEST_WAL_PAGE_ID_SIZE);
+    }
+    rbt_test_store_u32(
+        wal + TEST_WAL_CHECKSUM_OFFSET,
+        rbt_test_crc32c_zeroed(wal, wal_size, TEST_WAL_CHECKSUM_OFFSET, sizeof(uint32_t)));
+
+    length = snprintf(wal_path, sizeof(wal_path), "%s.wal", path);
+    RBT_TEST_CHECK(length > 0);
+    RBT_TEST_CHECK((size_t)length < sizeof(wal_path));
+    descriptor = open(wal_path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    RBT_TEST_CHECK(descriptor >= 0);
+    rbt_test_write_exact_at(descriptor, wal, wal_size, 0);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+
+    rbt_test_store_u64(wal + TEST_WAL_HEADER_SIZE + record_size, TEST_LARGE_WAL_RECORD_COUNT - 1u);
+    rbt_test_store_u32(
+        wal + TEST_WAL_CHECKSUM_OFFSET,
+        rbt_test_crc32c_zeroed(wal, wal_size, TEST_WAL_CHECKSUM_OFFSET, sizeof(uint32_t)));
+    write_active_wal(wal_path, wal, wal_size);
+    file = (struct rbt_file *)(uintptr_t)1u;
+    RBT_TEST_ERRNO(rbt_file_open(path, &file), EBADMSG);
+    RBT_TEST_CHECK(file == NULL);
+
+    rbt_test_store_u64(wal + TEST_WAL_HEADER_SIZE + record_size, TEST_LARGE_WAL_RECORD_COUNT - 2u);
+    rbt_test_store_u32(
+        wal + TEST_WAL_CHECKSUM_OFFSET,
+        rbt_test_crc32c_zeroed(wal, wal_size, TEST_WAL_CHECKSUM_OFFSET, sizeof(uint32_t)));
+    write_active_wal(wal_path, wal, wal_size);
+    free(wal);
+
+    RBT_TEST_OK(rbt_file_open(path, &file));
+    RBT_TEST_OK(rbt_file_storage(file, &storage));
+    RBT_TEST_OK(storage.page_count(storage.context, &page_count));
+    RBT_TEST_CHECK(page_count == TEST_LARGE_WAL_RECORD_COUNT);
+    for (index = 0u; index < 3u; ++index) {
+        static const uint64_t PAGE_IDS[] = {0u, TEST_LARGE_WAL_RECORD_COUNT / 2u,
+                                            TEST_LARGE_WAL_RECORD_COUNT - 1u};
+        uint64_t page_id = PAGE_IDS[index];
+
+        fill_recovery_page(page_id, expected);
+        RBT_TEST_OK(storage.read_page(storage.context, page_id, actual));
+        RBT_TEST_CHECK(memcmp(actual, expected, sizeof(actual)) == 0);
+    }
+    RBT_TEST_OK(rbt_file_close(file));
+    expect_wal_absent(path);
+    rbt_test_remove_database(path);
+}
+
 static void expect_wal_open_error(const char *path, int expected_errno) {
     struct rbt_file *file = (struct rbt_file *)(uintptr_t)1u;
 
@@ -305,5 +414,6 @@ int main(void) {
     run_recovery_crash_case("recovery_data_synced");
     test_every_nonempty_truncated_wal_prefix();
     test_wal_version_and_checksum();
+    test_large_wal_recovery();
     return 0;
 }

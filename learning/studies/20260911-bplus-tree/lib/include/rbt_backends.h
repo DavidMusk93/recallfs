@@ -12,8 +12,9 @@ struct rbt_file;
 
 /*
  * A backend owns the context referenced by its storage value and must outlive
- * every tree borrowing that storage. Required out parameters are initialized
- * defensively before validation or I/O can fail.
+ * every tree borrowing that storage. Destroying or closing an attached backend
+ * returns -EBUSY. Required out parameters are initialized defensively before
+ * validation or I/O can fail.
  */
 int rbt_mem_create(uint32_t page_size, struct rbt_mem **out_mem);
 int rbt_mem_destroy(struct rbt_mem *memory);

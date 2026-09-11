@@ -46,12 +46,14 @@ struct rbt {
     uint32_t inline_threshold;
     bool poisoned;
     bool scan_active;
+    bool storage_acquired;
 };
 
 struct rbt_row {
-    const struct rbt_schema *schema;
     struct rbt_value *key;
     struct rbt_value *value;
+    size_t key_count;
+    size_t value_count;
     bool callback_lifetime;
 };
 
@@ -121,10 +123,12 @@ struct rbt_validation {
 static int rbt_txn_load_typed_page(struct rbt_txn *transaction, uint64_t page_id,
                                    uint8_t expected_type, unsigned char **out_page,
                                    struct rbt_page_header *out_header);
+static int rbt_txn_free_overflow(struct rbt_txn *transaction, uint64_t first_page, uint64_t column,
+                                 uint32_t logical_size);
 
 static bool rbt_storage_valid(const struct rbt_storage *storage) {
-    return storage != NULL && rbt_page_size_valid(storage->page_size) &&
-           storage->read_page != NULL && storage->page_count != NULL &&
+    return storage != NULL && rbt_page_size_valid(storage->page_size) && storage->acquire != NULL &&
+           storage->release != NULL && storage->read_page != NULL && storage->page_count != NULL &&
            storage->commit_pages != NULL;
 }
 
@@ -147,6 +151,17 @@ static int rbt_page_count(struct rbt *tree, uint64_t *out_count) {
         return -EOWNERDEAD;
     }
     return rbt_backend_result(tree, tree->storage.page_count(tree->storage.context, out_count));
+}
+
+static bool rbt_allocation_count_fits(uint64_t count, size_t element_size) {
+    return count <= (uint64_t)SIZE_MAX && (size_t)count <= SIZE_MAX / element_size;
+}
+
+static int rbt_page_count_validate(uint64_t page_count) {
+    if (!rbt_allocation_count_fits(page_count, sizeof(uint64_t))) {
+        return -EBADMSG;
+    }
+    return 0;
 }
 
 static int rbt_commit(struct rbt *tree, const struct rbt_page_update *updates,
@@ -603,13 +618,13 @@ static void rbt_row_release(struct rbt_row *row) {
     if (row == NULL) {
         return;
     }
-    for (index = 0u; index < row->schema->key_column_count; ++index) {
+    for (index = 0u; index < row->key_count; ++index) {
         if (!row->key[index].is_null &&
             (row->key[index].type == RBT_TYPE_BYTES || row->key[index].type == RBT_TYPE_UTF8)) {
             free((void *)row->key[index].as.bytes.data);
         }
     }
-    for (index = 0u; index < row->schema->value_column_count; ++index) {
+    for (index = 0u; index < row->value_count; ++index) {
         if (!row->value[index].is_null &&
             (row->value[index].type == RBT_TYPE_BYTES || row->value[index].type == RBT_TYPE_UTF8)) {
             free((void *)row->value[index].as.bytes.data);
@@ -929,7 +944,8 @@ static int rbt_row_from_cell_source(struct rbt *tree, struct rbt_txn *transactio
     if (row == NULL) {
         return -ENOMEM;
     }
-    row->schema = &tree->schema;
+    row->key_count = tree->schema.key_column_count;
+    row->value_count = tree->schema.value_column_count;
     row->key = calloc(tree->schema.key_column_count, sizeof(*row->key));
     row->value = calloc(tree->schema.value_column_count, sizeof(*row->value));
     if (row->key == NULL || (tree->schema.value_column_count != 0u && row->value == NULL)) {
@@ -1629,14 +1645,22 @@ static int rbt_txn_build_overflow(struct rbt_txn *transaction, uint64_t column,
 
 static int rbt_txn_build_leaf_cell(struct rbt_txn *transaction, const unsigned char *key,
                                    uint32_t key_size, const struct rbt_record *record,
+                                   const struct rbt_cell_image *existing_cell,
+                                   const struct rbt_value *existing_values,
                                    struct rbt_cell_image *out_cell) {
     const struct rbt *tree = transaction->tree;
     size_t directory_size = tree->schema.value_column_count * RBT_VALUE_DESCRIPTOR_SIZE;
     size_t size = RBT_LEAF_CELL_HEADER_SIZE + key_size + directory_size;
+    const unsigned char *existing_descriptors = NULL;
     size_t inline_offset;
     size_t index;
     unsigned char *cell;
 
+    if (existing_cell != NULL) {
+        uint32_t existing_key_size = rbt_load_u32(existing_cell->data);
+
+        existing_descriptors = existing_cell->data + RBT_LEAF_CELL_HEADER_SIZE + existing_key_size;
+    }
     for (index = 0u; index < tree->schema.value_column_count; ++index) {
         const struct rbt_value *value = &record->value[index];
         size_t field_size = rbt_scalar_size(value->type);
@@ -1664,6 +1688,24 @@ static int rbt_txn_build_leaf_cell(struct rbt_txn *transaction, const unsigned c
         size_t field_size = rbt_scalar_size(value->type);
         uint32_t logical_size;
 
+        if (existing_values != NULL && rbt_values_equal(&existing_values[index], value, 1u) &&
+            existing_descriptors[index * RBT_VALUE_DESCRIPTOR_SIZE] == RBT_VALUE_OVERFLOW) {
+            memcpy(descriptor, existing_descriptors + index * RBT_VALUE_DESCRIPTOR_SIZE,
+                   RBT_VALUE_DESCRIPTOR_SIZE);
+            continue;
+        }
+        if (existing_descriptors != NULL &&
+            existing_descriptors[index * RBT_VALUE_DESCRIPTOR_SIZE] == RBT_VALUE_OVERFLOW) {
+            const unsigned char *existing_descriptor =
+                existing_descriptors + index * RBT_VALUE_DESCRIPTOR_SIZE;
+            int result = rbt_txn_free_overflow(transaction, rbt_load_u64(existing_descriptor + 8u),
+                                               index, rbt_load_u32(existing_descriptor + 4u));
+
+            if (result != 0) {
+                free(cell);
+                return result;
+            }
+        }
         if (value->is_null) {
             descriptor[0] = RBT_VALUE_NULL;
             continue;
@@ -2933,6 +2975,10 @@ static int rbt_read_metadata(struct rbt *tree, uint64_t page_count,
     struct rbt_page_header header;
     int result;
 
+    result = rbt_page_count_validate(page_count);
+    if (result != 0) {
+        return result;
+    }
     if (page_count < 3u) {
         return -EBADMSG;
     }
@@ -2952,6 +2998,11 @@ static int rbt_read_metadata(struct rbt *tree, uint64_t page_count,
         result = -EBADMSG;
     }
     if (result == 0) {
+        uint64_t schema_payload = tree->storage.page_size - RBT_PAGE_HEADER_SIZE;
+        uint64_t maximum_schema_size =
+            RBT_SCHEMA_HEADER_SIZE + (uint64_t)RBT_MAX_COLUMNS * RBT_SCHEMA_COLUMN_SIZE;
+        uint64_t expected_schema_pages;
+
         out_metadata->root_page_id = rbt_load_u64(page + RBT_META_ROOT_OFFSET);
         out_metadata->free_head = rbt_load_u64(page + RBT_META_FREE_HEAD_OFFSET);
         out_metadata->item_count = rbt_load_u64(page + RBT_META_ITEM_COUNT_OFFSET);
@@ -2960,14 +3011,20 @@ static int rbt_read_metadata(struct rbt *tree, uint64_t page_count,
         out_metadata->schema_head = rbt_load_u64(page + RBT_META_SCHEMA_HEAD_OFFSET);
         out_metadata->schema_size = rbt_load_u64(page + RBT_META_SCHEMA_SIZE_OFFSET);
         out_metadata->schema_page_count = rbt_load_u64(page + RBT_META_SCHEMA_PAGE_COUNT_OFFSET);
+        expected_schema_pages = out_metadata->schema_size / schema_payload +
+                                (out_metadata->schema_size % schema_payload != 0u);
         if (out_metadata->next_page_id != page_count || out_metadata->root_page_id == 0u ||
             out_metadata->root_page_id >= out_metadata->next_page_id ||
             out_metadata->height == 0u || out_metadata->height > 64u ||
             out_metadata->schema_head == 0u ||
             out_metadata->schema_head >= out_metadata->next_page_id ||
             out_metadata->schema_size < RBT_SCHEMA_HEADER_SIZE ||
+            out_metadata->schema_size > maximum_schema_size ||
             out_metadata->schema_page_count == 0u ||
-            out_metadata->schema_page_count >= out_metadata->next_page_id ||
+            out_metadata->schema_page_count != expected_schema_pages ||
+            !rbt_allocation_count_fits(out_metadata->schema_page_count,
+                                       sizeof(*tree->schema_pages)) ||
+            out_metadata->schema_page_count > out_metadata->next_page_id - 2u ||
             (out_metadata->free_head != 0u &&
              out_metadata->free_head >= out_metadata->next_page_id)) {
             result = -EBADMSG;
@@ -2987,7 +3044,7 @@ static int rbt_load_schema(struct rbt *tree) {
     int result = 0;
 
     if (tree->metadata.schema_size > SIZE_MAX ||
-        tree->metadata.schema_page_count > SIZE_MAX / sizeof(*tree->schema_pages)) {
+        !rbt_allocation_count_fits(tree->metadata.schema_page_count, sizeof(*tree->schema_pages))) {
         return -ENOMEM;
     }
     encoded = malloc((size_t)tree->metadata.schema_size);
@@ -3055,7 +3112,7 @@ static int rbt_configure_schema(struct rbt *tree) {
 static int rbt_create_pages(struct rbt *tree, const unsigned char *schema_data,
                             size_t schema_size) {
     uint32_t payload = tree->storage.page_size - RBT_PAGE_HEADER_SIZE;
-    uint64_t schema_pages = (schema_size + payload - 1u) / payload;
+    uint64_t schema_pages = schema_size / payload + (schema_size % payload != 0u);
     uint64_t root_page_id = schema_pages + 1u;
     size_t update_count = (size_t)schema_pages + 2u;
     struct rbt_page_update *updates;
@@ -3135,6 +3192,10 @@ static void rbt_release(struct rbt *tree) {
     }
     free(tree->schema_pages);
     free(tree->columns);
+    if (tree->storage_acquired) {
+        tree->storage_acquired = false;
+        tree->storage.release(tree->storage.context);
+    }
     free(tree);
 }
 
@@ -3158,9 +3219,13 @@ int rbt_create(const struct rbt_config *config, struct rbt **out_rbt) {
     }
     tree->storage = *config->storage;
     tree->schema = *config->schema;
-    result = rbt_configure_schema(tree);
+    result = tree->storage.acquire(tree->storage.context);
     if (result == 0) {
-        result = tree->storage.page_count(tree->storage.context, &page_count);
+        tree->storage_acquired = true;
+        result = rbt_configure_schema(tree);
+    }
+    if (result == 0) {
+        result = rbt_page_count(tree, &page_count);
     }
     if (result == 0 && page_count != 0u) {
         result = -EINVAL;
@@ -3211,7 +3276,11 @@ int rbt_open(const struct rbt_storage *storage, struct rbt **out_rbt) {
         return -ENOMEM;
     }
     tree->storage = *storage;
-    result = rbt_page_count(tree, &page_count);
+    result = tree->storage.acquire(tree->storage.context);
+    if (result == 0) {
+        tree->storage_acquired = true;
+        result = rbt_page_count(tree, &page_count);
+    }
     if (result == 0) {
         result = rbt_read_metadata(tree, page_count, &tree->metadata);
     }
@@ -3238,6 +3307,9 @@ int rbt_open(const struct rbt_storage *storage, struct rbt **out_rbt) {
 int rbt_destroy(struct rbt *tree) {
     if (tree == NULL) {
         return -EINVAL;
+    }
+    if (tree->scan_active) {
+        return -EBUSY;
     }
     rbt_release(tree);
     return 0;
@@ -3368,18 +3440,16 @@ int rbt_put(struct rbt *tree, const struct rbt_record *record, bool *out_inserte
                 rbt_txn_destroy(&transaction);
                 return 0;
             }
-            rbt_row_release(existing_row);
             if (result == 0) {
                 result = rbt_leaf_collect(tree, leaf, &leaf_header, 0u, &cells);
                 cell_count = leaf_header.count;
             }
             if (result == 0) {
-                result = rbt_txn_free_cell_overflow(&transaction, &cells[position]);
+                result =
+                    rbt_txn_build_leaf_cell(&transaction, encoded_key, encoded_size, record,
+                                            &cells[position], existing_row->value, &replacement);
             }
-            if (result == 0) {
-                result = rbt_txn_build_leaf_cell(&transaction, encoded_key, encoded_size, record,
-                                                 &replacement);
-            }
+            rbt_row_release(existing_row);
             if (result == 0) {
                 free(cells[position].data);
                 cells[position] = replacement;
@@ -3412,8 +3482,8 @@ int rbt_put(struct rbt *tree, const struct rbt_record *record, bool *out_inserte
                 (size_t)(cell_count - position) * sizeof(*cells));
         memset(&cells[position], 0, sizeof(*cells));
         ++cell_count;
-        result = rbt_txn_build_leaf_cell(&transaction, encoded_key, encoded_size, record,
-                                         &cells[position]);
+        result = rbt_txn_build_leaf_cell(&transaction, encoded_key, encoded_size, record, NULL,
+                                         NULL, &cells[position]);
     }
     if (result == 0) {
         ++transaction.metadata.item_count;
@@ -3723,7 +3793,7 @@ int rbt_row_get_key(const struct rbt_row *row, size_t index, const struct rbt_va
     if (out_value != NULL) {
         *out_value = NULL;
     }
-    if (row == NULL || out_value == NULL || index >= row->schema->key_column_count) {
+    if (row == NULL || out_value == NULL || index >= row->key_count) {
         return -EINVAL;
     }
     *out_value = &row->key[index];
@@ -3734,7 +3804,7 @@ int rbt_row_get_value(const struct rbt_row *row, size_t index, const struct rbt_
     if (out_value != NULL) {
         *out_value = NULL;
     }
-    if (row == NULL || out_value == NULL || index >= row->schema->value_column_count) {
+    if (row == NULL || out_value == NULL || index >= row->value_count) {
         return -EINVAL;
     }
     *out_value = &row->value[index];
@@ -4154,13 +4224,13 @@ int rbt_validate(struct rbt *tree, struct rbt_stats *out_stats, char *error_out,
 }
 
 const char *rbt_strerror(int error) {
+    unsigned int magnitude;
+
     if (error == 0) {
         return "success";
     }
-    if (error < 0) {
-        error = -error;
-    }
-    switch (error) {
+    magnitude = error < 0 ? 0u - (unsigned int)error : (unsigned int)error;
+    switch (magnitude) {
     case ENOENT:
         return "not found";
     case EINVAL:

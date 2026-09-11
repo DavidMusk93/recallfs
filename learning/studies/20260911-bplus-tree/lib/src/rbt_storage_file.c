@@ -69,15 +69,12 @@ struct rbt_file {
     char *wal_name;
     char *wal_temp_name;
     bool poisoned;
+    bool attached;
 };
 
 static int rbt_file_close_descriptor(int descriptor) {
-    int result;
-
-    do {
-        result = close(descriptor);
-    } while (result != 0 && errno == EINTR);
-    return result;
+    /* EINTR may still release the descriptor, so retrying could close a reused descriptor. */
+    return close(descriptor);
 }
 
 static int rbt_file_cloexec(int descriptor) {
@@ -549,9 +546,17 @@ static int rbt_file_build_wal(const struct rbt_file *file, const struct rbt_page
     return 0;
 }
 
+static int rbt_file_page_id_compare(const void *left, const void *right) {
+    uint64_t left_id = *(const uint64_t *)left;
+    uint64_t right_id = *(const uint64_t *)right;
+
+    return left_id < right_id ? -1 : left_id > right_id ? 1 : 0;
+}
+
 static int rbt_file_validate_wal(struct rbt_file *file, unsigned char *wal, size_t wal_size,
                                  uint64_t data_size, uint64_t *out_final_count) {
     size_t record_size = RBT_WAL_PAGE_ID_SIZE + (size_t)file->page_size;
+    uint64_t *page_ids;
     uint64_t record_count;
     uint64_t original_count;
     uint64_t final_count;
@@ -593,20 +598,20 @@ static int rbt_file_validate_wal(struct rbt_file *file, unsigned char *wal, size
         data_size < original_size || data_size > final_size) {
         return -EBADMSG;
     }
+    page_ids = malloc((size_t)record_count * sizeof(*page_ids));
+    if (page_ids == NULL) {
+        return -ENOMEM;
+    }
     maximum = original_count;
     for (index = 0u; index < (size_t)record_count; ++index) {
         size_t offset = RBT_WAL_HEADER_SIZE + index * record_size;
         uint64_t page_id = rbt_load_u64(wal + offset);
-        size_t other;
 
         if (page_id >= final_count) {
+            free(page_ids);
             return -EBADMSG;
         }
-        for (other = 0u; other < index; ++other) {
-            if (rbt_load_u64(wal + RBT_WAL_HEADER_SIZE + other * record_size) == page_id) {
-                return -EBADMSG;
-            }
-        }
+        page_ids[index] = page_id;
         if (page_id >= original_count) {
             ++new_ids;
         }
@@ -614,6 +619,14 @@ static int rbt_file_validate_wal(struct rbt_file *file, unsigned char *wal, size
             maximum = page_id + 1u;
         }
     }
+    qsort(page_ids, (size_t)record_count, sizeof(*page_ids), rbt_file_page_id_compare);
+    for (index = 1u; index < (size_t)record_count; ++index) {
+        if (page_ids[index - 1u] == page_ids[index]) {
+            free(page_ids);
+            return -EBADMSG;
+        }
+    }
+    free(page_ids);
     if (maximum != final_count || final_count - original_count != new_ids) {
         return -EBADMSG;
     }
@@ -705,6 +718,27 @@ static int rbt_file_recover(struct rbt_file *file) {
     return 0;
 }
 
+static int rbt_file_acquire(void *context) {
+    struct rbt_file *file = context;
+
+    if (file == NULL) {
+        return -EINVAL;
+    }
+    if (file->attached) {
+        return -EBUSY;
+    }
+    file->attached = true;
+    return 0;
+}
+
+static void rbt_file_release_lease(void *context) {
+    struct rbt_file *file = context;
+
+    if (file != NULL) {
+        file->attached = false;
+    }
+}
+
 static int rbt_file_page_count(void *context, uint64_t *out_count) {
     struct rbt_file *file = context;
     uint64_t measured;
@@ -778,7 +812,11 @@ static int rbt_file_commit_pages(void *context, const struct rbt_page_update *up
     result = rbt_file_absent(file->parent_fd, file->wal_name);
     if (result != 0) {
         free(wal);
-        return result == -EBUSY ? -EOWNERDEAD : result;
+        if (result == -EBUSY) {
+            file->poisoned = true;
+            return -EOWNERDEAD;
+        }
+        return result;
     }
     result = rbt_file_remove_temp(file);
     if (result != 0) {
@@ -992,6 +1030,9 @@ int rbt_file_close(struct rbt_file *file) {
     if (file == NULL) {
         return -EINVAL;
     }
+    if (file->attached) {
+        return -EBUSY;
+    }
     if (file->fd >= 0 && rbt_file_close_descriptor(file->fd) != 0) {
         failed = true;
     }
@@ -1013,6 +1054,8 @@ int rbt_file_storage(struct rbt_file *file, struct rbt_storage *out_storage) {
     }
     out_storage->context = file;
     out_storage->page_size = file->page_size;
+    out_storage->acquire = rbt_file_acquire;
+    out_storage->release = rbt_file_release_lease;
     out_storage->read_page = rbt_file_read_page;
     out_storage->page_count = rbt_file_page_count;
     out_storage->commit_pages = rbt_file_commit_pages;

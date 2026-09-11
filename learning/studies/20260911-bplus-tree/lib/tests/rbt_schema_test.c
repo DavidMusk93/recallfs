@@ -26,6 +26,21 @@ struct scan_expectation {
     size_t seen;
 };
 
+struct operations_during_scan {
+    struct rbt *tree;
+    int put_result;
+    int delete_result;
+    int scan_result;
+    int validate_result;
+    int destroy_result;
+    bool inserted;
+    bool deleted;
+    struct rbt_stats stats;
+    char error[32];
+    size_t calls;
+    size_t nested_calls;
+};
+
 static void expect_schema(const struct rbt_schema *schema) {
     RBT_TEST_CHECK(schema != NULL);
     RBT_TEST_CHECK(schema->id == UINT64_C(0x7262740000000001));
@@ -105,6 +120,49 @@ static enum rbt_scan_action stop_after_one(void *context, const struct rbt_row *
     return RBT_SCAN_STOP;
 }
 
+static enum rbt_scan_action count_nested_scan(void *context, const struct rbt_row *row) {
+    size_t *calls = context;
+
+    RBT_TEST_CHECK(row != NULL);
+    ++(*calls);
+    return RBT_SCAN_CONTINUE;
+}
+
+static enum rbt_scan_action attempt_operations_during_scan(void *context,
+                                                           const struct rbt_row *row) {
+    static const unsigned char PUT_KEY_BYTES[] = {'b', 'u', 's', 'y'};
+    static const unsigned char DELETE_KEY_BYTES[] = {'z'};
+    struct operations_during_scan *attempt = context;
+    struct rbt_value put_keys[2] = {
+        rbt_test_i64(5),
+        rbt_test_bytes(PUT_KEY_BYTES, sizeof(PUT_KEY_BYTES)),
+    };
+    struct rbt_value put_values[3] = {
+        rbt_test_bool(true),
+        rbt_test_u64(99u),
+        rbt_test_utf8("blocked", 7u),
+    };
+    struct rbt_record put_record = rbt_test_record(put_keys, 2u, put_values, 3u);
+    struct rbt_value delete_keys[2] = {
+        rbt_test_i64(INT64_MIN),
+        rbt_test_bytes(DELETE_KEY_BYTES, sizeof(DELETE_KEY_BYTES)),
+    };
+    struct rbt_record delete_key = rbt_test_key(delete_keys, 2u);
+    const struct rbt_value *key = NULL;
+
+    RBT_TEST_OK(rbt_row_get_key(row, 0u, &key));
+    RBT_TEST_CHECK(key != NULL);
+    attempt->put_result = rbt_put(attempt->tree, &put_record, &attempt->inserted);
+    attempt->delete_result = rbt_delete(attempt->tree, &delete_key, &attempt->deleted);
+    attempt->scan_result =
+        rbt_scan(attempt->tree, NULL, NULL, count_nested_scan, &attempt->nested_calls);
+    attempt->validate_result =
+        rbt_validate(attempt->tree, &attempt->stats, attempt->error, sizeof(attempt->error));
+    attempt->destroy_result = rbt_destroy(attempt->tree);
+    ++attempt->calls;
+    return RBT_SCAN_STOP;
+}
+
 static void test_persisted_schema_and_rows(void) {
     static const int64_t EXPECTED_I64[] = {INT64_MIN, 0, 0, INT64_MAX};
     static const unsigned char *const EXPECTED_BYTES[] = {
@@ -155,6 +213,7 @@ static void test_persisted_schema_and_rows(void) {
     };
     const struct rbt_value *actual_bool = NULL;
     const struct rbt_value *actual_text = NULL;
+    struct operations_during_scan operation_attempt;
     size_t stopped = 0u;
 
     rbt_test_temp_path(path, sizeof(path));
@@ -187,6 +246,29 @@ static void test_persisted_schema_and_rows(void) {
     RBT_TEST_CHECK(expected.seen == expected.count);
     RBT_TEST_OK(rbt_scan(tree, NULL, NULL, stop_after_one, &stopped));
     RBT_TEST_CHECK(stopped == 1u);
+    memset(&operation_attempt, 0xa5, sizeof(operation_attempt));
+    operation_attempt.tree = tree;
+    operation_attempt.inserted = true;
+    operation_attempt.deleted = true;
+    operation_attempt.calls = 0u;
+    operation_attempt.nested_calls = 0u;
+    RBT_TEST_OK(rbt_scan(tree, NULL, NULL, attempt_operations_during_scan, &operation_attempt));
+    RBT_TEST_ERRNO(operation_attempt.put_result, EBUSY);
+    RBT_TEST_ERRNO(operation_attempt.delete_result, EBUSY);
+    RBT_TEST_ERRNO(operation_attempt.scan_result, EBUSY);
+    RBT_TEST_ERRNO(operation_attempt.validate_result, EBUSY);
+    RBT_TEST_ERRNO(operation_attempt.destroy_result, EBUSY);
+    RBT_TEST_CHECK(!operation_attempt.inserted);
+    RBT_TEST_CHECK(!operation_attempt.deleted);
+    RBT_TEST_CHECK(operation_attempt.calls == 1u);
+    RBT_TEST_CHECK(operation_attempt.nested_calls == 0u);
+    {
+        const unsigned char zero[sizeof(operation_attempt.stats)] = {0};
+
+        RBT_TEST_CHECK(memcmp(&operation_attempt.stats, zero, sizeof(operation_attempt.stats)) ==
+                       0);
+    }
+    RBT_TEST_CHECK(operation_attempt.error[0] == '\0');
 
     RBT_TEST_OK(rbt_row_get_value(owned_row, 0u, &actual_bool));
     RBT_TEST_CHECK(actual_bool->type == RBT_TYPE_BOOL);
@@ -197,6 +279,18 @@ static void test_persisted_schema_and_rows(void) {
     RBT_TEST_OK(rbt_row_destroy(owned_row));
     owned_row = NULL;
 
+    put_row(tree, 5, "busy", 4u, rbt_test_bool(true), 99u, rbt_test_utf8("after", 5u));
+    {
+        struct rbt_value delete_keys[2] = {
+            rbt_test_i64(5),
+            rbt_test_bytes("busy", 4u),
+        };
+        struct rbt_record delete_key = rbt_test_key(delete_keys, 2u);
+        bool deleted = false;
+
+        RBT_TEST_OK(rbt_delete(tree, &delete_key, &deleted));
+        RBT_TEST_CHECK(deleted);
+    }
     RBT_TEST_CHECK(rbt_test_validate(tree).item_count == 4u);
     RBT_TEST_OK(rbt_destroy(tree));
     tree = NULL;
@@ -209,11 +303,14 @@ static void test_persisted_schema_and_rows(void) {
     RBT_TEST_OK(rbt_get_schema(tree, &actual_schema));
     expect_schema(actual_schema);
     RBT_TEST_OK(rbt_get(tree, &lookup, &owned_row));
+    RBT_TEST_OK(rbt_destroy(tree));
+    tree = NULL;
+    RBT_TEST_OK(rbt_row_get_key(owned_row, 0u, &actual_bool));
+    RBT_TEST_CHECK(actual_bool->type == RBT_TYPE_I64);
+    RBT_TEST_CHECK(actual_bool->as.i64 == 0);
     RBT_TEST_OK(rbt_row_get_value(owned_row, 2u, &actual_text));
     RBT_TEST_BYTES(&actual_text->as.bytes, "hello", 5u);
     RBT_TEST_OK(rbt_row_destroy(owned_row));
-
-    RBT_TEST_OK(rbt_destroy(tree));
     RBT_TEST_OK(rbt_file_close(file));
     rbt_test_remove_database(path);
 }
@@ -348,6 +445,7 @@ static void test_defensive_out_parameters(void) {
     struct rbt_row *row = (struct rbt_row *)(uintptr_t)1u;
     const struct rbt_schema *schema = (const struct rbt_schema *)(uintptr_t)1u;
     struct rbt_storage storage;
+    struct rbt_storage invalid_storage;
     struct rbt_stats stats;
 
     RBT_TEST_ERRNO(rbt_mem_create(511u, &memory), EINVAL);
@@ -359,6 +457,8 @@ static void test_defensive_out_parameters(void) {
     RBT_TEST_ERRNO(rbt_mem_storage(NULL, &storage), EINVAL);
     RBT_TEST_CHECK(storage.context == NULL);
     RBT_TEST_CHECK(storage.page_size == 0u);
+    RBT_TEST_CHECK(storage.acquire == NULL);
+    RBT_TEST_CHECK(storage.release == NULL);
     RBT_TEST_CHECK(storage.read_page == NULL);
     RBT_TEST_CHECK(storage.page_count == NULL);
     RBT_TEST_CHECK(storage.commit_pages == NULL);
@@ -373,6 +473,20 @@ static void test_defensive_out_parameters(void) {
     RBT_TEST_ERRNO(rbt_get(NULL, NULL, &row), EINVAL);
     RBT_TEST_CHECK(row == NULL);
 
+    RBT_TEST_OK(rbt_mem_create(512u, &memory));
+    RBT_TEST_OK(rbt_mem_storage(memory, &storage));
+    invalid_storage = storage;
+    invalid_storage.acquire = NULL;
+    tree = (struct rbt *)(uintptr_t)1u;
+    RBT_TEST_ERRNO(rbt_open(&invalid_storage, &tree), EINVAL);
+    RBT_TEST_CHECK(tree == NULL);
+    invalid_storage = storage;
+    invalid_storage.release = NULL;
+    tree = (struct rbt *)(uintptr_t)1u;
+    RBT_TEST_ERRNO(rbt_open(&invalid_storage, &tree), EINVAL);
+    RBT_TEST_CHECK(tree == NULL);
+    RBT_TEST_OK(rbt_mem_destroy(memory));
+
     memset(&stats, 0xa5, sizeof(stats));
     RBT_TEST_ERRNO(rbt_validate(NULL, &stats, NULL, 0u), EINVAL);
     {
@@ -380,6 +494,7 @@ static void test_defensive_out_parameters(void) {
 
         RBT_TEST_CHECK(memcmp(&stats, zero, sizeof(stats)) == 0);
     }
+    RBT_TEST_CHECK(strcmp(rbt_strerror(INT_MIN), "unknown error") == 0);
 }
 
 int main(void) {

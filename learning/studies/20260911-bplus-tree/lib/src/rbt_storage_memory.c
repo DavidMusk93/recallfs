@@ -11,7 +11,29 @@ struct rbt_mem {
     uint64_t page_count;
     uint64_t capacity_pages;
     uint32_t page_size;
+    bool attached;
 };
+
+static int rbt_mem_acquire(void *context) {
+    struct rbt_mem *memory = context;
+
+    if (memory == NULL) {
+        return -EINVAL;
+    }
+    if (memory->attached) {
+        return -EBUSY;
+    }
+    memory->attached = true;
+    return 0;
+}
+
+static void rbt_mem_release_lease(void *context) {
+    struct rbt_mem *memory = context;
+
+    if (memory != NULL) {
+        memory->attached = false;
+    }
+}
 
 static int rbt_mem_page_count(void *context, uint64_t *out_count) {
     struct rbt_mem *memory = context;
@@ -136,6 +158,9 @@ int rbt_mem_destroy(struct rbt_mem *memory) {
     if (memory == NULL) {
         return -EINVAL;
     }
+    if (memory->attached) {
+        return -EBUSY;
+    }
     free(memory->pages);
     free(memory);
     return 0;
@@ -150,6 +175,8 @@ int rbt_mem_storage(struct rbt_mem *memory, struct rbt_storage *out_storage) {
     }
     out_storage->context = memory;
     out_storage->page_size = memory->page_size;
+    out_storage->acquire = rbt_mem_acquire;
+    out_storage->release = rbt_mem_release_lease;
     out_storage->read_page = rbt_mem_read_page;
     out_storage->page_count = rbt_mem_page_count;
     out_storage->commit_pages = rbt_mem_commit_pages;

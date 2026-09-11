@@ -93,8 +93,11 @@ struct rbt_page_update {
 
 /*
  * The tree copies this callback table by value; context remains borrowed and
- * must outlive every tree using it. read_page copies exactly page_size bytes
- * into caller-owned memory. page_count writes the number of addressable pages.
+ * must outlive every tree using it. acquire reserves one tree lease and returns
+ * -EBUSY when the provider cannot support another tree. release relinquishes a
+ * successfully acquired lease and must not fail. Both callbacks are mandatory.
+ * read_page copies exactly page_size bytes into caller-owned memory. page_count
+ * writes the number of addressable pages.
  *
  * commit_pages synchronously and atomically publishes the complete page set.
  * Every page ID occurs at most once. The updates array and page buffers remain
@@ -105,6 +108,8 @@ struct rbt_page_update {
 struct rbt_storage {
     void *context;
     uint32_t page_size;
+    int (*acquire)(void *context);
+    void (*release)(void *context);
     int (*read_page)(void *context, uint64_t page_id, void *data_out);
     int (*page_count)(void *context, uint64_t *out_count);
     int (*commit_pages)(void *context, const struct rbt_page_update *updates, size_t update_count);
@@ -155,6 +160,7 @@ struct rbt_stats {
 int rbt_create(const struct rbt_config *config, struct rbt **out_rbt);
 /* Open loads the persisted schema and accepts no caller-supplied schema. */
 int rbt_open(const struct rbt_storage *storage, struct rbt **out_rbt);
+/* Destroy returns -EBUSY while a scan callback is active. */
 int rbt_destroy(struct rbt *rbt);
 int rbt_get_schema(const struct rbt *rbt, const struct rbt_schema **out_schema);
 
