@@ -1,0 +1,52 @@
+target=rco
+file=CMakeFiles/rco.dir/link.txt
+command=/usr/bin/ar qc librco.a CMakeFiles/rco.dir/src/rco.c.o CMakeFiles/rco.dir/src/rco_pool.c.o CMakeFiles/rco.dir/src/rco_context_x86_64.S.o /usr/bin/ranlib librco.a 
+
+target=rco_bench
+file=CMakeFiles/rco_bench.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_bench.dir/bench/rco_bench.c.o -o rco_bench  librco.a -lpthread -lrt  
+
+target=rco_guard_test
+file=CMakeFiles/rco_guard_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o -o rco_guard_test  librco.a -lpthread -lrt  
+
+target=rco_high_concurrency_bench_sysv
+file=CMakeFiles/rco_high_concurrency_bench_sysv.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o -o rco_high_concurrency_bench_sysv  librco.a -lpthread -lrt  
+
+target=rco_l4_epoll_test
+file=CMakeFiles/rco_l4_epoll_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o -o rco_l4_epoll_test  
+
+target=rco_l4_forwarder
+file=CMakeFiles/rco_l4_forwarder.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o -o rco_l4_forwarder  librco.a -lpthread -lrt  
+
+target=rco_l4_forwarder_epoll
+file=CMakeFiles/rco_l4_forwarder_epoll.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o -o rco_l4_forwarder_epoll  
+
+target=rco_l4_wait_test
+file=CMakeFiles/rco_l4_wait_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o -o rco_l4_wait_test  librco.a -lpthread -lrt  
+
+target=rco_local_state_test
+file=CMakeFiles/rco_local_state_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_local_state_test.dir/tests/rco_local_state_test.c.o -o rco_local_state_test  librco.a -lpthread -lrt  
+
+target=rco_pool_bench_sysv
+file=CMakeFiles/rco_pool_bench_sysv.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_pool_bench_sysv.dir/bench/rco_pool_bench.c.o -o rco_pool_bench_sysv  librco.a -lpthread -lrt  
+
+target=rco_pool_test_sysv
+file=CMakeFiles/rco_pool_test_sysv.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_pool_test_sysv.dir/tests/rco_pool_test.c.o -o rco_pool_test_sysv  librco.a -lpthread -lrt  
+
+target=rco_preempt_test
+file=CMakeFiles/rco_preempt_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_preempt_test.dir/tests/rco_preempt_test.c.o -o rco_preempt_test  librco.a -lpthread -lrt  
+
+target=rco_test
+file=CMakeFiles/rco_test.dir/link.txt
+command=/usr/bin/gcc -O3 -DNDEBUG -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch CMakeFiles/rco_test.dir/tests/rco_test.c.o -o rco_test  librco.a -lm -lpthread -lrt  
+

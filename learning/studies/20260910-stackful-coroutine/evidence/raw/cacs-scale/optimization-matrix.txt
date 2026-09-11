@@ -1,79 +1,127 @@
 profile=o0
-Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-Test project /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
+Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/work/o0-build
+Test project /root/recallfs/.tmp/rco-cacs/work/o0-build
       Start  1: rco_native
- 1/16 Test  #1: rco_native .....................................   Passed    0.01 sec
-      Start  2: rco_guard_page
- 2/16 Test  #2: rco_guard_page .................................   Passed    0.05 sec
-      Start  3: rco_native_cacs
- 3/16 Test  #3: rco_native_cacs ................................   Passed    0.01 sec
-      Start  4: rco_guard_page_cacs
- 4/16 Test  #4: rco_guard_page_cacs ............................   Passed    0.04 sec
-      Start  5: rco_cacs_abi_cacs
- 5/16 Test  #5: rco_cacs_abi_cacs ..............................   Passed    0.01 sec
-      Start  6: rco_cacs_codegen_cacs
- 6/16 Test  #6: rco_cacs_codegen_cacs ..........................   Passed    0.09 sec
-      Start  7: rco_native_cacs_preserve_none
- 7/16 Test  #7: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
-      Start  8: rco_guard_page_cacs_preserve_none
- 8/16 Test  #8: rco_guard_page_cacs_preserve_none ..............   Passed    0.04 sec
-      Start  9: rco_cacs_abi_cacs_preserve_none
- 9/16 Test  #9: rco_cacs_abi_cacs_preserve_none ................   Passed    0.01 sec
-      Start 10: rco_cacs_codegen_cacs_preserve_none
-10/16 Test #10: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.09 sec
-      Start 11: rco_cacs_preserve_none_rejects_normal_caller
-11/16 Test #11: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.08 sec
-      Start 12: rco_high_concurrency_arguments
-12/16 Test #12: rco_high_concurrency_arguments .................   Passed    0.12 sec
-      Start 13: rco_high_concurrency_oracle
-13/16 Test #13: rco_high_concurrency_oracle ....................   Passed    0.16 sec
-      Start 14: rco_high_concurrency_csv
-14/16 Test #14: rco_high_concurrency_csv .......................   Passed    0.15 sec
-      Start 15: rco_high_concurrency_timeout
-15/16 Test #15: rco_high_concurrency_timeout ...................   Passed    0.80 sec
-      Start 16: rco_high_concurrency_integration
-16/16 Test #16: rco_high_concurrency_integration ...............   Passed    0.32 sec
+ 1/28 Test  #1: rco_native .....................................   Passed    0.01 sec
+      Start  2: rco_pool_sysv
+ 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.02 sec
+      Start  3: rco_local_state
+ 3/28 Test  #3: rco_local_state ................................   Passed    0.06 sec
+      Start  4: rco_preempt_sysv
+ 4/28 Test  #4: rco_preempt_sysv ...............................   Passed    0.37 sec
+      Start  5: rco_guard_page
+ 5/28 Test  #5: rco_guard_page .................................   Passed    0.05 sec
+      Start  6: rco_native_cacs
+ 6/28 Test  #6: rco_native_cacs ................................   Passed    0.01 sec
+      Start  7: rco_local_state_cacs
+ 7/28 Test  #7: rco_local_state_cacs ...........................   Passed    0.06 sec
+      Start  8: rco_preempt_cacs
+ 8/28 Test  #8: rco_preempt_cacs ...............................   Passed    0.37 sec
+      Start  9: rco_guard_page_cacs
+ 9/28 Test  #9: rco_guard_page_cacs ............................   Passed    0.05 sec
+      Start 10: rco_cacs_abi_cacs
+10/28 Test #10: rco_cacs_abi_cacs ..............................   Passed    0.01 sec
+      Start 11: rco_cacs_codegen_cacs
+11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.37 sec
+      Start 12: rco_native_cacs_preserve_none
+12/28 Test #12: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
+      Start 13: rco_local_state_cacs_preserve_none
+13/28 Test #13: rco_local_state_cacs_preserve_none .............   Passed    0.07 sec
+      Start 14: rco_preempt_cacs_preserve_none
+14/28 Test #14: rco_preempt_cacs_preserve_none .................   Passed    0.37 sec
+      Start 15: rco_guard_page_cacs_preserve_none
+15/28 Test #15: rco_guard_page_cacs_preserve_none ..............   Passed    0.05 sec
+      Start 16: rco_cacs_abi_cacs_preserve_none
+16/28 Test #16: rco_cacs_abi_cacs_preserve_none ................   Passed    0.01 sec
+      Start 17: rco_cacs_codegen_cacs_preserve_none
+17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.37 sec
+      Start 18: rco_pool_cacs
+18/28 Test #18: rco_pool_cacs ..................................   Passed    0.03 sec
+      Start 19: rco_pool_cacs_preserve_none
+19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.02 sec
+      Start 20: rco_cacs_preserve_none_rejects_normal_caller
+20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.09 sec
+      Start 21: rco_pool_bench_smoke_sysv
+21/28 Test #21: rco_pool_bench_smoke_sysv ......................   Passed    0.01 sec
+      Start 22: rco_pool_bench_smoke_cacs
+22/28 Test #22: rco_pool_bench_smoke_cacs ......................   Passed    0.01 sec
+      Start 23: rco_pool_bench_smoke_cacs_preserve_none
+23/28 Test #23: rco_pool_bench_smoke_cacs_preserve_none ........   Passed    0.01 sec
+      Start 24: rco_high_concurrency_arguments
+24/28 Test #24: rco_high_concurrency_arguments .................   Passed    0.12 sec
+      Start 25: rco_high_concurrency_oracle
+25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.16 sec
+      Start 26: rco_high_concurrency_csv
+26/28 Test #26: rco_high_concurrency_csv .......................   Passed    0.15 sec
+      Start 27: rco_high_concurrency_timeout
+27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.79 sec
+      Start 28: rco_high_concurrency_integration
+28/28 Test #28: rco_high_concurrency_integration ...............   Passed    0.32 sec
 
-100% tests passed, 0 tests failed out of 16
+100% tests passed, 0 tests failed out of 28
 
-Total Test time (real) =   1.99 sec
+Total Test time (real) =   3.99 sec
 
 profile=o2
-Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o2-build
-Test project /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o2-build
+Internal ctest changing into directory: /root/recallfs/.tmp/rco-cacs/work/o2-build
+Test project /root/recallfs/.tmp/rco-cacs/work/o2-build
       Start  1: rco_native
- 1/16 Test  #1: rco_native .....................................   Passed    0.01 sec
-      Start  2: rco_guard_page
- 2/16 Test  #2: rco_guard_page .................................   Passed    0.04 sec
-      Start  3: rco_native_cacs
- 3/16 Test  #3: rco_native_cacs ................................   Passed    0.01 sec
-      Start  4: rco_guard_page_cacs
- 4/16 Test  #4: rco_guard_page_cacs ............................   Passed    0.03 sec
-      Start  5: rco_cacs_abi_cacs
- 5/16 Test  #5: rco_cacs_abi_cacs ..............................   Passed    0.00 sec
-      Start  6: rco_cacs_codegen_cacs
- 6/16 Test  #6: rco_cacs_codegen_cacs ..........................   Passed    0.08 sec
-      Start  7: rco_native_cacs_preserve_none
- 7/16 Test  #7: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
-      Start  8: rco_guard_page_cacs_preserve_none
- 8/16 Test  #8: rco_guard_page_cacs_preserve_none ..............   Passed    0.03 sec
-      Start  9: rco_cacs_abi_cacs_preserve_none
- 9/16 Test  #9: rco_cacs_abi_cacs_preserve_none ................   Passed    0.00 sec
-      Start 10: rco_cacs_codegen_cacs_preserve_none
-10/16 Test #10: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.08 sec
-      Start 11: rco_cacs_preserve_none_rejects_normal_caller
-11/16 Test #11: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.08 sec
-      Start 12: rco_high_concurrency_arguments
-12/16 Test #12: rco_high_concurrency_arguments .................   Passed    0.11 sec
-      Start 13: rco_high_concurrency_oracle
-13/16 Test #13: rco_high_concurrency_oracle ....................   Passed    0.14 sec
-      Start 14: rco_high_concurrency_csv
-14/16 Test #14: rco_high_concurrency_csv .......................   Passed    0.11 sec
-      Start 15: rco_high_concurrency_timeout
-15/16 Test #15: rco_high_concurrency_timeout ...................   Passed    0.99 sec
-      Start 16: rco_high_concurrency_integration
-16/16 Test #16: rco_high_concurrency_integration ...............   Passed    0.23 sec
+ 1/28 Test  #1: rco_native .....................................   Passed    0.01 sec
+      Start  2: rco_pool_sysv
+ 2/28 Test  #2: rco_pool_sysv ..................................   Passed    0.01 sec
+      Start  3: rco_local_state
+ 3/28 Test  #3: rco_local_state ................................   Passed    0.01 sec
+      Start  4: rco_preempt_sysv
+ 4/28 Test  #4: rco_preempt_sysv ...............................   Passed    0.31 sec
+      Start  5: rco_guard_page
+ 5/28 Test  #5: rco_guard_page .................................   Passed    0.04 sec
+      Start  6: rco_native_cacs
+ 6/28 Test  #6: rco_native_cacs ................................   Passed    0.01 sec
+      Start  7: rco_local_state_cacs
+ 7/28 Test  #7: rco_local_state_cacs ...........................   Passed    0.01 sec
+      Start  8: rco_preempt_cacs
+ 8/28 Test  #8: rco_preempt_cacs ...............................   Passed    0.31 sec
+      Start  9: rco_guard_page_cacs
+ 9/28 Test  #9: rco_guard_page_cacs ............................   Passed    0.03 sec
+      Start 10: rco_cacs_abi_cacs
+10/28 Test #10: rco_cacs_abi_cacs ..............................   Passed    0.00 sec
+      Start 11: rco_cacs_codegen_cacs
+11/28 Test #11: rco_cacs_codegen_cacs ..........................   Passed    0.36 sec
+      Start 12: rco_native_cacs_preserve_none
+12/28 Test #12: rco_native_cacs_preserve_none ..................   Passed    0.01 sec
+      Start 13: rco_local_state_cacs_preserve_none
+13/28 Test #13: rco_local_state_cacs_preserve_none .............   Passed    0.01 sec
+      Start 14: rco_preempt_cacs_preserve_none
+14/28 Test #14: rco_preempt_cacs_preserve_none .................   Passed    0.35 sec
+      Start 15: rco_guard_page_cacs_preserve_none
+15/28 Test #15: rco_guard_page_cacs_preserve_none ..............   Passed    0.04 sec
+      Start 16: rco_cacs_abi_cacs_preserve_none
+16/28 Test #16: rco_cacs_abi_cacs_preserve_none ................   Passed    0.00 sec
+      Start 17: rco_cacs_codegen_cacs_preserve_none
+17/28 Test #17: rco_cacs_codegen_cacs_preserve_none ............   Passed    0.35 sec
+      Start 18: rco_pool_cacs
+18/28 Test #18: rco_pool_cacs ..................................   Passed    0.01 sec
+      Start 19: rco_pool_cacs_preserve_none
+19/28 Test #19: rco_pool_cacs_preserve_none ....................   Passed    0.01 sec
+      Start 20: rco_cacs_preserve_none_rejects_normal_caller
+20/28 Test #20: rco_cacs_preserve_none_rejects_normal_caller ...   Passed    0.08 sec
+      Start 21: rco_pool_bench_smoke_sysv
+21/28 Test #21: rco_pool_bench_smoke_sysv ......................   Passed    0.00 sec
+      Start 22: rco_pool_bench_smoke_cacs
+22/28 Test #22: rco_pool_bench_smoke_cacs ......................   Passed    0.00 sec
+      Start 23: rco_pool_bench_smoke_cacs_preserve_none
+23/28 Test #23: rco_pool_bench_smoke_cacs_preserve_none ........   Passed    0.00 sec
+      Start 24: rco_high_concurrency_arguments
+24/28 Test #24: rco_high_concurrency_arguments .................   Passed    0.11 sec
+      Start 25: rco_high_concurrency_oracle
+25/28 Test #25: rco_high_concurrency_oracle ....................   Passed    0.14 sec
+      Start 26: rco_high_concurrency_csv
+26/28 Test #26: rco_high_concurrency_csv .......................   Passed    0.11 sec
+      Start 27: rco_high_concurrency_timeout
+27/28 Test #27: rco_high_concurrency_timeout ...................   Passed    0.79 sec
+      Start 28: rco_high_concurrency_integration
+28/28 Test #28: rco_high_concurrency_integration ...............   Passed    0.22 sec
 
-100% tests passed, 0 tests failed out of 16
+100% tests passed, 0 tests failed out of 28
 
-Total Test time (real) =   1.95 sec
+Total Test time (real) =   3.35 sec

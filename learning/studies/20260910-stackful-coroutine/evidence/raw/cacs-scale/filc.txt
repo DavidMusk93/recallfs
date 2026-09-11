@@ -2,11 +2,11 @@
 clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/llvm-project-deluge.git 0f06037def80573162db5cfcda000af31006720e)
 Target: x86_64-unknown-linux-gnu
 Thread model: posix
-InstalledDir: /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/fil-c/dist/build/bin
+InstalledDir: /root/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-+ .tmp/fil-c/bin/filcc -DRCO_FILC -std=c11 -O2 -g -Wall -Wextra -Werror -I learning/studies/20260910-stackful-coroutine/demo/include -I learning/studies/20260910-stackful-coroutine/demo/src learning/studies/20260910-stackful-coroutine/demo/src/rco.c learning/studies/20260910-stackful-coroutine/demo/tests/rco_context_filc.c learning/studies/20260910-stackful-coroutine/demo/tests/rco_filc_test.c -o .tmp/rco-cacs/work/filc-runtime
++ .tmp/fil-c/bin/filcc -DRCO_FILC -std=c11 -O2 -g -Wall -Wextra -Werror -I learning/studies/20260910-stackful-coroutine/demo/include -I learning/studies/20260910-stackful-coroutine/demo/src learning/studies/20260910-stackful-coroutine/demo/src/rco.c learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c learning/studies/20260910-stackful-coroutine/demo/tests/rco_context_filc.c learning/studies/20260910-stackful-coroutine/demo/tests/rco_filc_test.c -o .tmp/rco-cacs/work/filc-runtime
 + .tmp/fil-c/bin/filrun .tmp/rco-cacs/work/filc-runtime
-FIL-C rco tests passed: 3 suites
+FIL-C rco tests passed: 5 suites
 + .tmp/fil-c/bin/filcc -DRCO_FILC -std=c11 -O2 -g -Wall -Wextra -Werror -I learning/studies/20260910-stackful-coroutine/demo/include -I learning/studies/20260910-stackful-coroutine/demo/src learning/studies/20260910-stackful-coroutine/demo/src/rco.c learning/studies/20260910-stackful-coroutine/demo/tests/rco_context_filc.c learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c -o .tmp/rco-cacs/work/filc-scale
 + set +e
 + .tmp/fil-c/bin/filrun .tmp/rco-cacs/work/filc-scale --tasks 0 --stack-bytes 32768 --touch-bytes 4096 --yields-per-task 1
@@ -16,6 +16,6 @@ FIL-C rco tests passed: 3 suites
 + grep -q tasks must be .tmp/rco-cacs/work/filc-parser.stderr
 + cat .tmp/rco-cacs/work/filc-parser.stdout
 + cat .tmp/rco-cacs/work/filc-parser.stderr
-+ printf FIL-C high-concurrency parser/bounds PASS\n
 tasks must be in [1, 16384]
++ printf FIL-C high-concurrency parser/bounds PASS\n
 FIL-C high-concurrency parser/bounds PASS

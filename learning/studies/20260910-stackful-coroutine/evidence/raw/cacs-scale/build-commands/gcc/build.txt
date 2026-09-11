@@ -1,0 +1,41 @@
+[  3%] Building C object CMakeFiles/rco.dir/src/rco.c.o
+[  7%] Building C object CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o
+[ 10%] Linking C executable rco_l4_forwarder_epoll
+[ 10%] Built target rco_l4_forwarder_epoll
+[ 14%] Building C object CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o
+[ 17%] Building C object CMakeFiles/rco.dir/src/rco_pool.c.o
+[ 21%] Linking C executable rco_l4_epoll_test
+[ 21%] Built target rco_l4_epoll_test
+[ 25%] Building ASM object CMakeFiles/rco.dir/src/rco_context_x86_64.S.o
+[ 28%] Linking C static library librco.a
+[ 28%] Built target rco
+[ 32%] Building C object CMakeFiles/rco_test.dir/tests/rco_test.c.o
+[ 35%] Building C object CMakeFiles/rco_pool_test_sysv.dir/tests/rco_pool_test.c.o
+[ 39%] Linking C executable rco_test
+[ 39%] Built target rco_test
+[ 42%] Building C object CMakeFiles/rco_local_state_test.dir/tests/rco_local_state_test.c.o
+[ 46%] Linking C executable rco_pool_test_sysv
+[ 50%] Linking C executable rco_local_state_test
+[ 50%] Built target rco_pool_test_sysv
+[ 53%] Building C object CMakeFiles/rco_preempt_test.dir/tests/rco_preempt_test.c.o
+[ 53%] Built target rco_local_state_test
+[ 57%] Building C object CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o
+[ 60%] Linking C executable rco_guard_test
+[ 60%] Built target rco_guard_test
+[ 64%] Building C object CMakeFiles/rco_bench.dir/bench/rco_bench.c.o
+[ 67%] Linking C executable rco_bench
+[ 67%] Built target rco_bench
+[ 71%] Linking C executable rco_preempt_test
+[ 75%] Building C object CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o
+[ 75%] Built target rco_preempt_test
+[ 78%] Building C object CMakeFiles/rco_pool_bench_sysv.dir/bench/rco_pool_bench.c.o
+[ 82%] Linking C executable rco_high_concurrency_bench_sysv
+[ 82%] Built target rco_high_concurrency_bench_sysv
+[ 85%] Building C object CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o
+[ 89%] Linking C executable rco_pool_bench_sysv
+[ 89%] Built target rco_pool_bench_sysv
+[ 92%] Building C object CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o
+[ 96%] Linking C executable rco_l4_forwarder
+[ 96%] Built target rco_l4_forwarder
+[100%] Linking C executable rco_l4_wait_test
+[100%] Built target rco_l4_wait_test

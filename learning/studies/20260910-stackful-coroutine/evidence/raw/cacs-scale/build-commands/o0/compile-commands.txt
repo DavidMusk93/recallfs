@@ -1,156 +1,246 @@
 target=rco
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 output=CMakeFiles/rco.dir/src/rco.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco.dir/src/rco.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco.dir/src/rco.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 
 target=rco
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
 output=CMakeFiles/rco.dir/src/rco_context_x86_64.S.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco.dir/src/rco_context_x86_64.S.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco.dir/src/rco_context_x86_64.S.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_x86_64.S
+
+target=rco
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
+output=CMakeFiles/rco.dir/src/rco_pool.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco.dir/src/rco_pool.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
 
 target=rco_bench
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 output=CMakeFiles/rco_bench.dir/bench/rco_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench.dir/bench/rco_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench.dir/bench/rco_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 
 target=rco_bench_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 output=CMakeFiles/rco_bench_cacs.dir/bench/rco_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench_cacs.dir/bench/rco_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench_cacs.dir/bench/rco_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 
 target=rco_bench_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 output=CMakeFiles/rco_bench_cacs_preserve_none.dir/bench/rco_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench_cacs_preserve_none.dir/bench/rco_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_bench_cacs_preserve_none.dir/bench/rco_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_bench.c
 
 target=rco_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 output=CMakeFiles/rco_cacs.dir/src/rco.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs.dir/src/rco.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs.dir/src/rco.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 
 target=rco_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
 output=CMakeFiles/rco_cacs.dir/src/rco_context_cacs_x86_64.S.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco_cacs.dir/src/rco_context_cacs_x86_64.S.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco_cacs.dir/src/rco_context_cacs_x86_64.S.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+
+target=rco_cacs
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
+output=CMakeFiles/rco_cacs.dir/src/rco_pool.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs.dir/src/rco_pool.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
 
 target=rco_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 output=CMakeFiles/rco_cacs_preserve_none.dir/src/rco.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_preserve_none.dir/src/rco.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_preserve_none.dir/src/rco.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco.c
 
 target=rco_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
 output=CMakeFiles/rco_cacs_preserve_none.dir/src/rco_context_cacs_x86_64.S.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco_cacs_preserve_none.dir/src/rco_context_cacs_x86_64.S.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -fcf-protection=branch -fcf-protection=branch -o CMakeFiles/rco_cacs_preserve_none.dir/src/rco_context_cacs_x86_64.S.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_context_cacs_x86_64.S
+
+target=rco_cacs_preserve_none
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
+output=CMakeFiles/rco_cacs_preserve_none.dir/src/rco_pool.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_preserve_none.dir/src/rco_pool.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src/rco_pool.c
 
 target=rco_cacs_test_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
 output=CMakeFiles/rco_cacs_test_cacs.dir/tests/rco_cacs_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_EXPECT_PRESERVE_NONE=0 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_test_cacs.dir/tests/rco_cacs_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_EXPECT_PRESERVE_NONE=0 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_test_cacs.dir/tests/rco_cacs_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
 
 target=rco_cacs_test_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
 output=CMakeFiles/rco_cacs_test_cacs_preserve_none.dir/tests/rco_cacs_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -DRCO_EXPECT_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/src -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_test_cacs_preserve_none.dir/tests/rco_cacs_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -DRCO_EXPECT_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/src -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_cacs_test_cacs_preserve_none.dir/tests/rco_cacs_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_cacs_test.c
 
 target=rco_guard_test
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 output=CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test.dir/tests/rco_guard_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 
 target=rco_guard_test_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 output=CMakeFiles/rco_guard_test_cacs.dir/tests/rco_guard_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test_cacs.dir/tests/rco_guard_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test_cacs.dir/tests/rco_guard_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 
 target=rco_guard_test_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 output=CMakeFiles/rco_guard_test_cacs_preserve_none.dir/tests/rco_guard_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test_cacs_preserve_none.dir/tests/rco_guard_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_guard_test_cacs_preserve_none.dir/tests/rco_guard_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_guard_test.c
 
 target=rco_high_concurrency_bench_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 output=CMakeFiles/rco_high_concurrency_bench_cacs.dir/bench/rco_high_concurrency_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_cacs.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_cacs.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 
 target=rco_high_concurrency_bench_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 output=CMakeFiles/rco_high_concurrency_bench_cacs_preserve_none.dir/bench/rco_high_concurrency_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_cacs_preserve_none.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_cacs_preserve_none.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 
 target=rco_high_concurrency_bench_sysv
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 output=CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_high_concurrency_bench_sysv.dir/bench/rco_high_concurrency_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_high_concurrency_bench.c
 
 target=rco_l4_epoll_test
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_epoll_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_epoll_test.c
 output=CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc   -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -o CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_epoll_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc   -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -o CMakeFiles/rco_l4_epoll_test.dir/tests/l4_forwarder_epoll_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_epoll_test.c
 
 target=rco_l4_forwarder
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 output=CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder.dir/examples/l4_forwarder.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 
 target=rco_l4_forwarder_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 output=CMakeFiles/rco_l4_forwarder_cacs.dir/examples/l4_forwarder.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder_cacs.dir/examples/l4_forwarder.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder_cacs.dir/examples/l4_forwarder.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 
 target=rco_l4_forwarder_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 output=CMakeFiles/rco_l4_forwarder_cacs_preserve_none.dir/examples/l4_forwarder.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder_cacs_preserve_none.dir/examples/l4_forwarder.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_forwarder_cacs_preserve_none.dir/examples/l4_forwarder.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder.c
 
 target=rco_l4_forwarder_epoll
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
 output=CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc   -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -o CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
+command=/root/recallfs/.tmp/zig/dist/zig cc   -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -o CMakeFiles/rco_l4_forwarder_epoll.dir/examples/l4_forwarder_epoll.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/examples/l4_forwarder_epoll.c
 
 target=rco_l4_wait_test
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_test.c
 output=CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_l4_wait_test.dir/tests/l4_forwarder_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/l4_forwarder_test.c
+
+target=rco_local_state_test
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+output=CMakeFiles/rco_local_state_test.dir/tests/rco_local_state_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_local_state_test.dir/tests/rco_local_state_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+
+target=rco_local_state_test_cacs
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+output=CMakeFiles/rco_local_state_test_cacs.dir/tests/rco_local_state_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_local_state_test_cacs.dir/tests/rco_local_state_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+
+target=rco_local_state_test_cacs_preserve_none
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+output=CMakeFiles/rco_local_state_test_cacs_preserve_none.dir/tests/rco_local_state_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_local_state_test_cacs_preserve_none.dir/tests/rco_local_state_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_local_state_test.c
+
+target=rco_pool_bench_cacs
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+output=CMakeFiles/rco_pool_bench_cacs.dir/bench/rco_pool_bench.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_bench_cacs.dir/bench/rco_pool_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+
+target=rco_pool_bench_cacs_preserve_none
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+output=CMakeFiles/rco_pool_bench_cacs_preserve_none.dir/bench/rco_pool_bench.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_bench_cacs_preserve_none.dir/bench/rco_pool_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+
+target=rco_pool_bench_sysv
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+output=CMakeFiles/rco_pool_bench_sysv.dir/bench/rco_pool_bench.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_bench_sysv.dir/bench/rco_pool_bench.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/bench/rco_pool_bench.c
+
+target=rco_pool_test_cacs
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+output=CMakeFiles/rco_pool_test_cacs.dir/tests/rco_pool_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_test_cacs.dir/tests/rco_pool_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+
+target=rco_pool_test_cacs_preserve_none
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+output=CMakeFiles/rco_pool_test_cacs_preserve_none.dir/tests/rco_pool_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_test_cacs_preserve_none.dir/tests/rco_pool_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+
+target=rco_pool_test_sysv
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+output=CMakeFiles/rco_pool_test_sysv.dir/tests/rco_pool_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_pool_test_sysv.dir/tests/rco_pool_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_pool_test.c
+
+target=rco_preempt_test
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
+output=CMakeFiles/rco_preempt_test.dir/tests/rco_preempt_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_preempt_test.dir/tests/rco_preempt_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
+
+target=rco_preempt_test_cacs
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
+output=CMakeFiles/rco_preempt_test_cacs.dir/tests/rco_preempt_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_preempt_test_cacs.dir/tests/rco_preempt_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
+
+target=rco_preempt_test_cacs_preserve_none
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
+output=CMakeFiles/rco_preempt_test_cacs_preserve_none.dir/tests/rco_preempt_test.c.o
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_preempt_test_cacs_preserve_none.dir/tests/rco_preempt_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_preempt_test.c
 
 target=rco_test
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 output=CMakeFiles/rco_test.dir/tests/rco_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc  -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test.dir/tests/rco_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc  -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test.dir/tests/rco_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 
 target=rco_test_cacs
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 output=CMakeFiles/rco_test_cacs.dir/tests/rco_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test_cacs.dir/tests/rco_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test_cacs.dir/tests/rco_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 
 target=rco_test_cacs_preserve_none
-directory=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/rco-cacs/work/o0-build
-file=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+directory=/root/recallfs/.tmp/rco-cacs/work/o0-build
+file=/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 output=CMakeFiles/rco_test_cacs_preserve_none.dir/tests/rco_test.c.o
-command=/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test_cacs_preserve_none.dir/tests/rco_test.c.o -c /root/recallfs/.tmp/rco-cacs/final-repro-fa5edc8/repo/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
+command=/root/recallfs/.tmp/zig/dist/zig cc -DRCO_CACS=1 -DRCO_CACS_PRESERVE_NONE=1 -I/root/recallfs/learning/studies/20260910-stackful-coroutine/demo/include -O0 -g -march=native -mtune=native -Wall -Wextra -Werror -fno-omit-frame-pointer -fcf-protection=branch -Wall -Wextra -Werror -fno-omit-frame-pointer -mno-red-zone -fcf-protection=branch -o CMakeFiles/rco_test_cacs_preserve_none.dir/tests/rco_test.c.o -c /root/recallfs/learning/studies/20260910-stackful-coroutine/demo/tests/rco_test.c
 

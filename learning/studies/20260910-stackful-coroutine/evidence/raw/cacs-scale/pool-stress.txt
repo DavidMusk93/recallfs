@@ -1,0 +1,3 @@
+pool_stress backend=sysv binary_sha256=c5c6526d77c3479f16318f96d2003d2730f09074e58dec88717d4befec4e1bb7 runs=500 PASS
+pool_stress backend=cacs binary_sha256=59f51b53ca94c271696c9adab4032cddbad3aa711ee5a8c2351990b879ead2db runs=500 PASS
+pool_stress backend=cacs-preserve-none binary_sha256=ce452c99f369d11cfdae67570808624fc5b9e5f1f87849d3d0ac689ba4500995 runs=500 PASS

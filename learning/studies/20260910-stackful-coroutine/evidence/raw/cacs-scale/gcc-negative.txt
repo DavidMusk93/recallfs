@@ -6,7 +6,14 @@
 -- Check for working C compiler: /usr/bin/gcc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
-CMake Error at CMakeLists.txt:55 (message):
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE  
+CMake Error at CMakeLists.txt:59 (message):
   RCO_BUILD_CACS requires Zig cc/Clang 21 or newer
 
 
