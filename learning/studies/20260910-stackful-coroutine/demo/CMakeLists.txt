@@ -47,6 +47,7 @@ endif()
 
 add_library(rco
     src/rco.c
+    src/rco_pool.c
     src/rco_context_x86_64.S
 )
 add_library(rco::rco ALIAS rco)
@@ -89,6 +90,7 @@ if(RCO_BUILD_CACS)
         add_library(
             ${target}
             src/rco.c
+            src/rco_pool.c
             src/rco_context_cacs_x86_64.S
         )
         rco_configure_library(${target})
@@ -125,10 +127,24 @@ if(RCO_BUILD_TESTS)
         add_test(NAME ${test_name} COMMAND ${target})
     endfunction()
 
+    function(rco_add_pool_test target test_name library)
+        add_executable(${target} tests/rco_pool_test.c)
+        target_link_libraries(${target} PRIVATE ${library} Threads::Threads)
+        rco_enable_c_warnings(${target})
+        add_test(NAME ${test_name} COMMAND ${target})
+        set_tests_properties(${test_name} PROPERTIES TIMEOUT 15)
+    endfunction()
+
     add_executable(rco_test tests/rco_test.c)
     target_link_libraries(rco_test PRIVATE rco m)
     rco_enable_c_warnings(rco_test)
     add_test(NAME rco_native COMMAND rco_test)
+
+    rco_add_pool_test(
+        rco_pool_test_sysv
+        rco_pool_sysv
+        rco
+    )
 
     rco_add_local_state_test(
         rco_local_state_test
@@ -207,6 +223,17 @@ if(RCO_BUILD_TESTS)
 
         rco_add_cacs_tests(cacs rco_cacs 0)
         rco_add_cacs_tests(cacs_preserve_none rco_cacs_preserve_none 1)
+
+        rco_add_pool_test(
+            rco_pool_test_cacs
+            rco_pool_cacs
+            rco_cacs
+        )
+        rco_add_pool_test(
+            rco_pool_test_cacs_preserve_none
+            rco_pool_cacs_preserve_none
+            rco_cacs_preserve_none
+        )
 
         add_test(
             NAME rco_cacs_preserve_none_rejects_normal_caller
@@ -417,5 +444,5 @@ endif()
 
 include(GNUInstallDirs)
 install(TARGETS rco ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES include/rco.h include/rco_local.h
+install(FILES include/rco.h include/rco_local.h include/rco_pool.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
