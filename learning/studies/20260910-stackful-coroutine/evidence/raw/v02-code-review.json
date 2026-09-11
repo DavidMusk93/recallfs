@@ -1,0 +1,49 @@
+{
+  "schema": "rco-code-review-v2",
+  "run_id": "20260911-174115-96315ecf",
+  "scope": {
+    "base": "860f59a",
+    "reviewed_head": "0a7dc4d",
+    "fix_commit": "d3f48b9",
+    "files": 14
+  },
+  "status": "complete",
+  "reviewers_completed": [
+    "correctness",
+    "testing",
+    "maintainability",
+    "performance",
+    "reliability",
+    "api-contract",
+    "project-standards"
+  ],
+  "reviewers_incomplete": [
+    "adversarial"
+  ],
+  "cross_model": {
+    "status": "not-run",
+    "reason": "host serving family could not be attested"
+  },
+  "validator": {
+    "status": "complete",
+    "validated": 8,
+    "rejected": 0
+  },
+  "applied": [
+    "preserve zero-value runtime max_fds in pool workers",
+    "keep batched jobs stealable until immediately before spawn",
+    "expose failed job count and first job error",
+    "document and test failed-start cleanup",
+    "test timed join recovery",
+    "clarify TLS finalizer and reserved-signal contracts",
+    "bound repeated pool stress runs",
+    "enforce multicore speedup thresholds",
+    "record a pool-specific PMU probe",
+    "update the active design and evidence ledger"
+  ],
+  "residual_risks": [
+    "pool queue coordination still uses one mutex; the accepted long-workload gate demonstrates 1.878-1.891x at two workers and 3.104-3.145x at four workers, but short-job contention remains workload-dependent",
+    "rco.c, rco_pool.c, and rco_pool_test.c remain large cohesive files",
+    "the independent adversarial reviewer exceeded the repository review deadline and was terminated"
+  ]
+}

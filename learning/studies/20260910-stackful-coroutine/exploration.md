@@ -313,6 +313,69 @@ cleanup reaps the stopped leader plus TERM-ignoring descendants and requires
 the process group to disappear. A real subprocess test failed before this
 change and passed on d2 afterward.
 
+### 4.10 Coroutine-local process state
+
+The first v0.2 header exposed `sigset_t` and `locale_t` directly from `rco.h`,
+which broke the strict C11 CACS probe. POSIX extensions moved to
+`rco_local.h`; the base header remains independently includable.
+
+TLS initially allocated `max_tls_keys` pointers on first use. At the public
+maximum this cost 512 KiB per task even when one key was set. Values now use
+sorted 32-slot sparse chunks. Key handles encode runtime namespace, slot, and
+generation, so deleted and cross-runtime handles fail without aliasing.
+Destructor callbacks run with task errno/locale restored, may get/set values,
+and receive at most `PTHREAD_DESTRUCTOR_ITERATIONS` passes. Root state is
+restored before the user finalizer.
+
+### 4.11 Deferred preemption
+
+Direct stack switching from an arbitrary signal PC is unsafe for CACS because
+the compiler liveness contract exists only at declared suspension calls. The
+implementation therefore uses a thread-CPU timer whose signal handler only
+sets pending state. `rco_preempt_point()` and the outermost
+`rco_preempt_enable()` perform the normal switch.
+
+The runtime installs a guarded alternate signal stack, owns the selected RT
+signal through a process-wide refcount, and restores handler, mask, timer, and
+alt-stack state on teardown. Tests prove that a loop without safe points is
+not forcibly switched, owner-thread CPU time drives requests, nested disable
+defers one switch, cancellation/stop win, and repeated lifecycle leaves no
+signal resource behind.
+
+### 4.12 Multicore pool and work stealing
+
+The pool uses one owner-only runtime per worker. Initial work stealing claimed
+only queued jobs, but the first implementation scanned every `max_jobs` slot
+on each dispatcher turn and woke every worker for each submit. It was changed
+to intrusive per-worker job/cancellation queues, O(1) counters, eventfd wake
+coalescing, and owner plus one-thief wakeup.
+
+Each job becomes non-stealable before stack allocation and remains on one
+worker/TID after start. Affinity supports ANY, PREFER, and REQUIRE.
+Generation-based handles reject stale cancellation; queued cancellation is
+delivered by the owner worker so finalizers never run on the submitting
+thread. Blocking pool wait/join from a worker returns `-EDEADLK`.
+
+Review later found that claiming an entire dispatch batch marked multiple jobs
+RESERVED before any started, temporarily hiding them from thieves. Claiming
+was changed to one job immediately before spawn while preserving the
+per-dispatch consideration bound. The same review found that nested
+`runtime.max_fds=0` lost the runtime default; v0.2 now shares the public
+65,536-FD default and preserves zero-value configuration.
+
+### 4.13 Pool benchmark distortion
+
+The first pool benchmark checked Linux TID at every preemption point. That
+inserted 131,072 `gettid` syscalls per sample and obscured multicore scaling.
+Worker identity remains checked at every safe point, while TID is now checked
+at entry, exit, and finalizer.
+
+With 1,024 jobs x 65,536 deterministic iterations, the corrected matrix
+observed `1.878-1.891x` paired median speedup at two workers and
+`3.104-3.145x` at four. The evidence validator now enforces `1.50x` and
+`2.50x` minimums, rotates backend/worker/preemption positions, rejects failed
+jobs, and records a separate pool PMU probe.
+
 ## 5. Validation Progression
 
 ```text
@@ -343,11 +406,11 @@ optimized binary inspection
 CPU/NUMA-pinned benchmarks
 ```
 
-The final validation used an isolated d2 copy of source files whose hashes
-matched pushed `master` commit
-`ae0364683fc45e99847872a9f1fe32e5de98c1f4`. Generated binaries and logs stayed
-under `/root/recallfs/.tmp/rco-ab` until the complete evidence set passed
-validation.
+The initial L4 A/B validation used an isolated d2 copy matching
+`ae0364683fc45e99847872a9f1fe32e5de98c1f4`. The final v0.2 validation ran from
+the tracked d2 checkout at
+`d3f48b96964d39760ec75b4e5a2ce7227b9b7947`. Generated binaries and candidate
+logs stayed below `.tmp` until each complete evidence set passed validation.
 
 ## 6. Performance Notes
 
@@ -397,3 +460,11 @@ medians of 25.404, 25.583, 25.522, and 25.145 Gbit/s respectively. Direct
 loopback was 72.284 Gbit/s. CACS/SysV paired ratio median was 1.002753,
 confirming that the scheduler-only win is
 below the resolution of this kernel-dominated forwarding workload.
+
+The final v0.2 evidence supersedes those CACS measurements for the expanded
+runtime. It reports SysV/CACS/CACS+PN `rco_yield` medians of
+`51.964/27.728/27.562 ns`; default coroutine-local errno accounts for part of
+the higher absolute cost. At 16,384 tasks the CPU cost is
+`229.00/115.86/195.06 ns` per measured yield. The final five-mode L4 medians
+are direct `73.716`, SysV `25.215`, CACS `25.436`, CACS+PN `25.099`, and epoll
+`25.324 Gbit/s`, again showing forwarder parity.

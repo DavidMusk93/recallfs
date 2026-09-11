@@ -17,13 +17,17 @@ verified_by:
   - CORO-RA-7
   - CORO-RA-8
   - CORO-RA-9
+  - CORO-RA-10
+  - CORO-RA-11
+  - CORO-RA-12
 ---
 
 # rco Demo
 
-`rco` is a C11 stackful coroutine runtime for one Linux x86-64 thread. The
-same project builds correctness tests, a context-switch benchmark, a coroutine
-TCP layer-4 forwarder, and a non-coroutine epoll baseline.
+`rco` is a C11 stackful coroutine runtime for Linux x86-64. The project also
+builds coroutine-local state, deferred preemption, a multicore work-stealing
+pool, correctness tests, benchmarks, a coroutine TCP layer-4 forwarder, and a
+non-coroutine epoll baseline.
 
 ## Contract
 
@@ -49,7 +53,8 @@ capacity and tail-latency SLOs.
 
 | Input | Output |
 | --- | --- |
-| Linux x86-64 source tree and pinned compilers | default runtime, two experimental CACS runtimes, tests, four forwarders |
+| Linux x86-64 source tree and pinned compilers | default runtime, two experimental CACS runtimes, tests, pool, four forwarders |
+| Worker count, task spec, affinity, shutdown mode | exact-once completion, pre-start stealing, failure and wake statistics |
 | Four forwarder binaries and CPU/NUMA settings | five-mode aggregate, per-stream, process-resource, and rotation CSV |
 
 ### Interfaces And Ownership
@@ -68,6 +73,10 @@ validation, manifest generation, and promotion to the declared raw root.
   Zig/Clang; FIL-C timing is never benchmark evidence.
 - SysV/CACS/CACS+PN comparisons use one Zig version, identical flags, context
   size, benchmark source and run-order policy.
+- a pool worker owns its runtime and every started coroutine for their full
+  lifetime; migration statistics remain zero;
+- job entry failures are observable in pool statistics and do not stop
+  unrelated jobs.
 
 ### Failure Semantics
 
@@ -86,7 +95,7 @@ run-order rows.
 
 ### Reconciliation Anchors
 
-See `CORO-RA-1` through `CORO-RA-9` in [`../README.md`](../README.md).
+See `CORO-RA-1` through `CORO-RA-12` in [`../README.md`](../README.md).
 
 ### Evidence And Unknowns
 
@@ -101,16 +110,17 @@ long-duration behavior remain outside this runbook.
 | --- | --- |
 | OS | Linux |
 | Architecture | x86-64, System V AMD64 ABI |
-| Scheduler | One OS thread, cooperative, FIFO |
+| Runtime scheduler | One owner OS thread, FIFO, optional deferred preemption |
+| Pool scheduler | One runtime per worker; only unstarted jobs are stealable |
 | I/O | Level-triggered `epoll` with `EPOLLONESHOT` rearm |
 | Stack | Fixed-size private `mmap`, one guard page on each side |
 | Cancellation | Cooperative at yield, wait, and sleep points |
-| Unsupported | Thread migration, preemption, dynamic stacks, CET shadow stack |
+| Local state | `errno` by default; sparse TLS; opt-in signal mask and locale |
+| Unsupported | Arbitrary-PC preemption, started-task migration, dynamic stacks, CET shadow stack |
 
-The runtime returns negative `errno` values. It does not virtualize `errno`,
-TLS, signal masks, locale, or blocking library calls. An FD registered with
-`rco_wait_fd()` must be closed with `rco_close_fd()` while the runtime is
-active.
+The runtime returns negative errno-style values. It does not hook blocking
+library calls. An FD registered with `rco_wait_fd()` must be closed with
+`rco_close_fd()` while the runtime is active.
 
 ## Build And Test
 
@@ -129,6 +139,10 @@ The CTest targets cover:
 
 - nested stack suspension and FIFO scheduling;
 - cancellation before first resume and while blocked;
+- coroutine-local errno, sparse TLS/destructors, signal mask, and locale;
+- deferred preemption request/safe-point behavior and signal/timer restoration;
+- concurrent pool submission, pre-start stealing, affinity, cancellation,
+  shutdown, timed join recovery, failure statistics, and zero migration;
 - timer timeout and nonblocking pipe wakeup;
 - callee-saved GPR and floating-point control preservation;
 - stack cache reuse and guard-page overflow;
@@ -163,7 +177,8 @@ docker run --rm --network none \
     filrun=.tmp/fil-c/bin/filrun
     $filcc -DRCO_FILC -std=c11 -O2 -g \
       -Wall -Wextra -Werror -I "$src/include" -I "$src/src" \
-      "$src/src/rco.c" "$src/tests/rco_context_filc.c" \
+      "$src/src/rco.c" "$src/src/rco_pool.c" \
+      "$src/tests/rco_context_filc.c" \
       "$src/tests/rco_filc_test.c" -o .tmp/rco-filc-test
     $filrun .tmp/rco-filc-test
     $filcc -DRCO_FILC -std=c11 -O2 -g \
@@ -228,11 +243,11 @@ ctest --test-dir .tmp/rco-cacs-build --output-on-failure
 
 Generated runtime/benchmark targets:
 
-| Mode | Library | Yield benchmark | L4 E2E binary |
-| --- | --- | --- | --- |
-| SysV | `rco` | `rco_bench` | `rco_l4_forwarder` |
-| CACS | `rco_cacs` | `rco_bench_cacs` | `rco_l4_forwarder_cacs` |
-| CACS + PN | `rco_cacs_preserve_none` | `rco_bench_cacs_preserve_none` | `rco_l4_forwarder_cacs_preserve_none` |
+| Mode | Library | Yield benchmark | Pool benchmark | L4 E2E binary |
+| --- | --- | --- | --- | --- |
+| SysV | `rco` | `rco_bench` | `rco_pool_bench_sysv` | `rco_l4_forwarder` |
+| CACS | `rco_cacs` | `rco_bench_cacs` | `rco_pool_bench_cacs` | `rco_l4_forwarder_cacs` |
+| CACS + PN | `rco_cacs_preserve_none` | `rco_bench_cacs_preserve_none` | `rco_pool_bench_cacs_preserve_none` | `rco_l4_forwarder_cacs_preserve_none` |
 
 The CACS libraries are experimental and are not installed. The preserve-none
 compile definition is public because every caller must use the same unstable
@@ -271,6 +286,72 @@ int main(void)
     return result == 0 ? 0 : 1;
 }
 ```
+
+## Coroutine-Local State
+
+Zero `local_state_flags` enables `RCO_LOCAL_STATE_ERRNO`. Use
+`RCO_LOCAL_STATE_NONE` only for the explicit legacy low-overhead path.
+`RCO_LOCAL_STATE_SIGNAL_MASK` and `RCO_LOCAL_STATE_LOCALE` are opt-in.
+Including [`rco_local.h`](include/rco_local.h) requires `_GNU_SOURCE`.
+
+TLS keys belong to one runtime. Values are task-local and allocated in sparse
+32-slot chunks. Deleting a key clears values without running destructors. Task
+exit runs up to `PTHREAD_DESTRUCTOR_ITERATIONS` destructor passes before the
+user finalizer. TLS access remains valid inside TLS destructors, but not inside
+the user finalizer.
+
+When preemption is enabled, `config.preempt_signal` is reserved. A task may
+query or change its local signal mask with `rco_sigmask()`, but blocking that
+signal via `SIG_BLOCK` or `SIG_SETMASK` returns `-EINVAL`.
+
+## Deferred Preemption
+
+Set `preempt_quantum_ns` and a realtime `preempt_signal` in `rco_config`.
+The runtime creates one `CLOCK_THREAD_CPUTIME_ID` timer on the owner thread and
+uses a guarded alternate signal stack. The signal handler only records a
+pending request. Actual switching occurs at `rco_preempt_point()` or when the
+outermost `rco_preempt_enable()` observes a pending request.
+
+`rco_preempt_disable()` nests. Cancellation and runtime stop take precedence
+over a pending preemption. This is not arbitrary-PC hard preemption: code that
+does not call a suspension API or safe point is not forcibly switched.
+
+## Multicore Pool
+
+[`rco_pool.h`](include/rco_pool.h) creates one owner-only `rco_runtime` per
+worker. Only queued, unstarted jobs may be stolen. Once claimed, a job keeps
+the same worker, TID, stack, epoll instance, and timer owner until finalization.
+
+```c
+struct rco_pool_config config = {
+    .worker_count = 4,
+    .max_jobs = 4096,
+    .dispatch_batch = 8,
+    .first_cpu = 0,
+    .pin_workers = true,
+};
+struct rco_pool *pool = NULL;
+
+if (rco_pool_create(&config, &pool) != 0 ||
+    rco_pool_start(pool) != 0) {
+    return 1;
+}
+```
+
+`RCO_AFFINITY_ANY` balances submissions, `PREFER` permits pre-start stealing,
+and `REQUIRE` pins a job before it starts. `rco_submit_local()` pins a child to
+the current worker. Blocking pool wait/join calls from a pool worker return
+`-EDEADLK`.
+
+A successful submit transfers finalizer ownership to the pool. The finalizer
+runs exactly once, including queued cancellation and shutdown. A nonzero job
+entry result does not stop unrelated jobs: it increments `stats.failed`, and
+the first result is retained in `stats.first_job_error`. `wait_idle()` and
+`join()` report pool/runtime lifecycle errors.
+
+Use `RCO_SHUTDOWN_DRAIN` to complete accepted work or `RCO_SHUTDOWN_CANCEL` to
+cancel it. A failed `rco_pool_start()` internally joins created workers and
+leaves the pool destroyable.
 
 ## L4 Forwarder
 
@@ -360,6 +441,25 @@ before timed execution. `SIGINT` and `SIGTERM` are converted into the harness
 error path so an interrupted parent resumes and terminates the complete active
 process group.
 
+Multicore pool matrix:
+
+```bash
+.tmp/rco-cacs-build/rco_pool_bench_cacs \
+  --workers 4 \
+  --jobs 1024 \
+  --iterations 65536 \
+  --preempt-quantum-ns 1000000 \
+  --pin-first-cpu 0
+```
+
+The evidence driver runs SysV/CACS/CACS+PN with 1/2/4 workers, preemption
+disabled/enabled, five position-rotated runs per cell, and three backend stress
+loops of 500 iterations. A sample is accepted only with the deterministic
+checksum, exact-once entry/finalizer counts, all workers used, pre-start steals
+for multiworker cases, zero migrations, zero job failures, and empty queues.
+The final gate requires median speedup of at least `1.50x` for two workers and
+`2.50x` for four workers.
+
 L4 direct-versus-proxy benchmark:
 
 ```bash
@@ -394,10 +494,14 @@ The driver runs only on Linux x86-64. It uses only
 `.tmp/zig/dist/zig` and `.tmp/fil-c`, derives the checked-out source commit,
 and writes builds plus candidate evidence below `.tmp`. It enables
 `CMAKE_EXPORT_COMPILE_COMMANDS`, records complete compile and link commands for
-O0, O2, O3, and sanitizer builds, and validates compiler, backend, binary-hash,
-schema, count, and workload oracles before creating `validation.txt` and
-`SHA256SUMS`. Only a fully validated candidate is promoted to
+O0, O2, O3, sanitizer, and GCC SysV builds, and validates compiler, backend,
+binary-hash, schema, count, scaling, and workload oracles before creating
+`validation.txt` and `SHA256SUMS`. Only a fully validated candidate is promoted to
 `learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale`.
+
+The current L4 example remains one runtime on one thread. A multicore CACS L4
+forwarder should create one `SO_REUSEPORT` listener per pool worker and keep
+each accepted connection on that worker for its full lifetime.
 
 The L4 script requires `iperf3`, `jq`, `numactl`, and Python 3. It pins proxy,
 server, and client to CPUs 0, 1, and 2 on NUMA node 0. Each run interleaves

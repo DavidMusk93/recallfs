@@ -11,6 +11,7 @@ supersedes: []
 verified_by:
   - review run 20260910-184406-b37f2090
   - review run 20260911-000014-f8811338
+  - review run 20260911-174115-96315ecf
 ---
 
 # Code Review Closure
@@ -128,7 +129,48 @@ The validator dropped the proposed broad `-diff` attributes for generated
 payloads as review-policy preference. The two CRLF CSV files remain explicitly
 `-text`, and the staged Git blobs match the 130-entry SHA-256 manifest.
 
-The final d2 evidence source is
+That CACS review iteration used d2 evidence source
 `57f7ce3163adb14ea8023c51b9d0f7272176f8d1`. Its tracked focused log records
 19/19 high-concurrency harness tests; native O3 and sanitizer suites report
 25/25 and 22/22 targets.
+
+## v0.2 Local-State, Preemption, And Pool Review
+
+| Field | Value |
+| --- | --- |
+| Review run | `20260911-174115-96315ecf` |
+| Reviewed range | `860f59a..0a7dc4d` |
+| Review status | Complete with degraded adversarial coverage |
+| Completed reviewers | correctness, testing, maintainability, performance, reliability, API contract, project standards |
+| Incomplete reviewer | adversarial terminated at the repository 10-minute review limit |
+| Independent validation | 8 findings validated, 0 rejected |
+| Fix commit | `d3f48b96964d39760ec75b4e5a2ce7227b9b7947` |
+| Raw receipt | [`raw/v02-code-review.json`](raw/v02-code-review.json) |
+
+Applied findings:
+
+| Finding | Resolution | Verification |
+| --- | --- | --- |
+| Zero nested `max_fds` lost the runtime default | Share `RCO_MAX_FDS_DEFAULT` and expand only when the control FD requires it | Required-worker FD wait with descriptor opened after pool start |
+| Whole dispatch batch became non-stealable | Claim each job immediately before spawn | `dispatch_batch > 1` regression proves peer worker steals remaining jobs |
+| Job entry errors were invisible | Add `failed` and `first_job_error`; keep wait/join scoped to infrastructure | Mixed zero/negative/positive job-result test |
+| Failed start lifecycle was undocumented | Specify internal join and destroyability | Invalid nested runtime config, rejected submit, repeat join, destroy |
+| Timed join retry was untested | Add blocked multiworker timeout and successful retry | Three backend pool suites |
+| TLS/finalizer wording was ambiguous | Limit task TLS access to TLS destructors; finalizer sees root state | finalizer `get/set == -EPERM` assertions |
+| Reserved preemption signal was undocumented | Specify `SIG_BLOCK`/`SIG_SETMASK` rejection | local-state and preemption suites |
+| Pool evidence could hang or false-pass scaling | Add per-run timeout, worker speedup gates, failure fields, and pool PMU probe | 1,500 stress runs, 90 samples, 139-entry manifest |
+| Active design contradicted v0.2 | Update study, runbook, evidence ledger, and exploration | frontmatter DAG and local-link checks |
+
+Residual findings:
+
+- `rco.c`, `rco_pool.c`, and `rco_pool_test.c` remain large. Splitting them now
+  would move tightly coupled private invariants across translation units after
+  correctness stabilization; defer until a concrete ownership boundary pays
+  for that risk.
+- pool queue metadata uses one mutex. Corrected long-workload evidence passes
+  `1.50x`/`2.50x` minimum gates and observes `1.878-1.891x` at two workers and
+  `3.104-3.145x` at four, so this is not a current blocker. Short-job
+  contention remains workload-dependent.
+- the embedded Python evidence validator remains in the shell driver. It is
+  large but keeps one promotion transaction; extracting it is maintenance
+  work, not a correctness prerequisite.

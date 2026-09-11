@@ -19,6 +19,9 @@ verified_by:
   - CORO-RA-7
   - CORO-RA-8
   - CORO-RA-9
+  - CORO-RA-10
+  - CORO-RA-11
+  - CORO-RA-12
 ---
 
 # Evidence Ledger
@@ -36,7 +39,8 @@ not substitutes for one another.
 
 This ledger covers the runtime, coroutine and epoll L4 implementations, four
 compiled forwarder variants, the A/B harness, three context-switch backends,
-the high-concurrency matrix, compiler cross-checks, and binary inspection.
+the high-concurrency matrix, coroutine-local state, deferred preemption,
+multicore pool/work stealing, compiler cross-checks, and binary inspection.
 
 ### Non-goals
 
@@ -47,9 +51,10 @@ production overload behavior, or a universal coroutine/event-loop ranking.
 
 | Input | Output |
 | --- | --- |
-| Commits `ae03646` and `57f7ce3`, pinned tools, d2 topology | correctness logs, hashes, and benchmark samples |
+| Commits `ae03646` and `d3f48b9`, pinned tools, d2 topology | correctness logs, hashes, and benchmark samples |
 | 5 interleaved runs x 3 modes x 4 streams | 15 aggregates and 60 nonzero per-stream records |
 | 5 interleaved runs x 5 modes x 4 streams | 25 aggregates and 100 nonzero per-stream records |
+| 5 runs x 3 backends x 3 worker counts x 2 preemption modes | 90 validated pool samples |
 
 ### Interfaces And Ownership
 
@@ -74,6 +79,11 @@ Its five modes are direct, SysV coroutine, CACS, CACS with
 `preserve_none`, and epoll. The latter four are distinct forwarder binaries;
 five runs at four streams must produce 25 aggregate rows, 100 stream rows,
 20 forwarder-resource rows, and 25 rotation rows.
+
+The pool matrix pins workers to CPUs 0-3 and rotates backend, worker-count, and
+preemption positions. It validates deterministic work, exact-once finalizers,
+pre-start steals, all-worker participation, zero started-coroutine migration,
+empty queues, zero failed jobs, and minimum 2/4-worker speedup.
 
 Before promotion, the promotion driver resolves the repository root and
 rejects any configured path if it is absolute, empty, `.`, contains a `..`
@@ -132,14 +142,14 @@ promotion. A missing PMU counter does not abort, but is recorded as
 
 ### Worked Example
 
-For paired run 3, coroutine throughput is `24.883 Gbit/s` and epoll throughput
-is `25.423 Gbit/s`; their ratio is `0.978739`. All five ratios are retained,
-whose median is `0.993377` and mean is `0.986512`. Opposite signs around 1.0
-support parity, not a winner.
+In the final five-mode run, SysV/CACS/CACS+PN/epoll medians are
+`25.215/25.436/25.099/25.324 Gbit/s`. The CACS/SysV paired-ratio median is
+`1.015959`; CACS+PN/SysV is `0.995533`. Opposite directions around 1.0 support
+parity, not a winner.
 
 ### Reconciliation Anchors
 
-The stable `CORO-RA-1` through `CORO-RA-9` definitions live in
+The stable `CORO-RA-1` through `CORO-RA-12` definitions live in
 [`../README.md`](../README.md); each raw path cited below is its observed
 evidence.
 
@@ -157,7 +167,7 @@ long-run memory, and connection-count scaling remain unknown.
 | --- | --- |
 | Target | `ssh d2` / host `n37-125-152` |
 | Default L4 code/benchmark commit | `ae0364683fc45e99847872a9f1fe32e5de98c1f4` |
-| CACS/high-concurrency evidence source commit | `57f7ce3163adb14ea8023c51b9d0f7272176f8d1` |
+| v0.2 CACS/pool evidence source commit | `d3f48b96964d39760ec75b4e5a2ce7227b9b7947` |
 | Kernel | Linux `5.15.198.bsk.1-amd64` |
 | CPU | Intel Xeon Platinum 8457C, 2 sockets, 64 cores, no SMT |
 | Native compiler | GCC 8.3.0 |
@@ -173,7 +183,10 @@ measurements ran directly on the d2 host.
 
 Full A/B environment:
 [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/l4/environment.txt`](raw/ab/l4/environment.txt).
-Review receipt and closure: [`review.md`](review.md).
+Review receipts:
+[`raw/cacs-code-review.json`](raw/cacs-code-review.json) and
+[`raw/v02-code-review.json`](raw/v02-code-review.json). Closure:
+[`review.md`](review.md).
 
 ## 2. Source And Binary Identity
 
@@ -203,24 +216,31 @@ Build flags:
 Raw record:
 [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/build-info.txt`](raw/ab/build-info.txt).
 
-### CACS scale (`57f7ce3`)
+### CACS and pool scale (`d3f48b9`)
 
 | Artifact | SHA-256 |
 | --- | --- |
-| `demo/src/rco.c` | `7afa62fa6a77b654e469f0528bbf8e7a6d9574d9fb7e0e07c898740752f75e0b` |
+| `demo/src/rco.c` | `dc543861f6d6f84170f0077ede3e283f5c3247e5f04474395ea6d0321036c3ef` |
+| `demo/src/rco_pool.c` | `4c768f757480b755e832ba296a16cbc6947a32725c484b2ef29363955848745f` |
 | `demo/src/rco_internal.h` | `df07019a25d15932b0789d8ac104215196c946b27f33a0ee4143ac8bbb0b09ed` |
 | `demo/src/rco_context_cacs_x86_64.S` | `37e56ccad8e5068e3cca79955255ad2381640be5e729d3b8a5c94dd0757b3589` |
-| `demo/include/rco.h` | `f3575521f350878ca585f46f5fead862a45a80cff1f88c131b6a251188750137` |
+| `demo/include/rco.h` | `2c88266d476555b1c49c2945b8341361ef16a6f62f518944a29263298f46f78a` |
+| `demo/include/rco_local.h` | `1e2989be9b11baf361fe4e469f9c8d44ceb5ab40c6623f86759713002d7b049b` |
+| `demo/include/rco_pool.h` | `8713e4f68c4c0d82d30957e679b1c66f112c26f55a1de0689f701a5904505645` |
 | `demo/bench/rco_high_concurrency_bench.py` | `972ab6ab83c941cba3ffeeaefb68e16650bc4c8f2b2e6b0acb9655e4753de107` |
+| `demo/bench/rco_pool_bench.c` | `91908fa6d0ebad05aa90c31d6f5bb54b4d3aa9d546e9d7b7ec2cf358f4c70d5c` |
 | `demo/bench/l4_bench.sh` | `0616e610b9dd0b963da0c0c1221cfc13c69b86a43bb7b8fc31cdc13ef0ac6397` |
-| `demo/bench/cacs_scale_evidence.sh` | `5246db76bd516a60b6e0a73a164f53808fbae200d147b49f4a39063bb242ec01` |
-| high-concurrency SysV binary | `1aa82e4aa0b33dca8dcfeee78275cf420031c101eac95b315930d236935a7e0f` |
-| high-concurrency CACS binary | `9b9763c07f3b42052a77e7018de9a611c57e11af7df398496b6dd4dfa19c23af` |
-| high-concurrency CACS+PN binary | `f9ff6390d0da0320f088eda34bfceaaaf3f70b97758d8e195bd4e423ce6258db` |
-| L4 SysV coroutine binary | `6976eae1061c5ca1fa5d36548df0e0f7fd944bff10a6f1c262700035bba788ab` |
-| L4 CACS binary | `ef0fb49d36b4758bbfde4cba76aa4d53e828c957689200acb431ebcfc50a1bf0` |
-| L4 CACS+PN binary | `468e78674647a4766be78a4f9cc0815568aacc8bc944a55156a3673d79489737` |
-| L4 epoll binary | `3b14ac307ee997f814085db94803707cacc9b7450adfa5e8e2b9c2735413200b` |
+| `demo/bench/cacs_scale_evidence.sh` | `701faa05bfda63c64777820d72b33b8c0a53b752cc0f4c5f49b9dd279915c53e` |
+| high-concurrency SysV binary | `dbdee0f72ce0fcd900b20ce8531ec820c42ffd07ff5da1300a0eadbd4f4a9f88` |
+| high-concurrency CACS binary | `fbd4a0d5f1253474de42a46cdaf7dff935cdbe7e8dfc9c5de09752a6f2163c82` |
+| high-concurrency CACS+PN binary | `80bc30eed3c708ec9d4af8ab0dd614d60b44e2518fc9caee582e2e77d0e91508` |
+| pool SysV binary | `1840d5010c4b0018d083dd99017f79a42bd2ddd6bd4dfebe187f6dc98356657c` |
+| pool CACS binary | `6cd71ba6bb0bab0af08f9755374b36d5eda3f5803b2bf1a20a7b6306f78dc750` |
+| pool CACS+PN binary | `8762f581122be6b09e3e343cd43f5614810b31584966d1119fb3b16fe6588b4e` |
+| L4 SysV coroutine binary | `49cef6f8ba39e3858c6114080a2b02a245018eefeed85ed92fdd5817d93f328a` |
+| L4 CACS binary | `2d6e134117beacc7dd8a3d3051ddb113a12afddfe6975a8770de85a21f8aa9be` |
+| L4 CACS+PN binary | `edcc9de1c25d73e8890bcc11f3465fc5171dc52ef2ffb82f78ede9140519d34a` |
+| L4 epoll binary | `a88e4a727808b40460d7228beba86e9fbdb4aef47d27b4f5d0e564eb060ab63f` |
 
 Full compiler, source and binary identity:
 [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/environment.txt`](raw/cacs-scale/environment.txt).
@@ -237,13 +257,17 @@ Full compiler, source and binary identity:
 | Zig LLVM frontend | Runtime, coroutine, and epoll O0/O2/O3 passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/zig-validation.txt`](raw/ab/zig-validation.txt) |
 | CACS matrix | Three backends pass O0/O2/O3, ABI, codegen and guard tests | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/optimization-matrix.txt`](raw/cacs-scale/optimization-matrix.txt) |
 | CACS L4 integration | SysV, CACS and CACS+PN pass the same L4 E2E | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/native-tests.txt`](raw/cacs-scale/native-tests.txt) |
-| CACS native CTest | 25/25 targets passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/native-tests.txt`](raw/cacs-scale/native-tests.txt) |
-| CACS ASan + UBSan | 22/22 targets passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/sanitizer-tests.txt`](raw/cacs-scale/sanitizer-tests.txt) |
+| CACS native CTest | 37/37 targets passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/native-tests.txt`](raw/cacs-scale/native-tests.txt) |
+| CACS ASan + UBSan | 34/34 targets passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/sanitizer-tests.txt`](raw/cacs-scale/sanitizer-tests.txt) |
+| GCC SysV CTest | 13/13 targets passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/gcc-tests.txt`](raw/cacs-scale/gcc-tests.txt) |
 | FIL-C scale parser/bounds | Invalid high-concurrency bounds rejected before stack switching | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/filc.txt`](raw/cacs-scale/filc.txt) |
+| FIL-C v0.2 guards | 5 local-state/runtime/pool suites passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/filc.txt`](raw/cacs-scale/filc.txt) |
+| Pool contracts | 3 backends x 500 repeats passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/pool-stress.txt`](raw/cacs-scale/pool-stress.txt) |
+| Pool scaling | 90 samples pass checksum, exact-once, stealing, worker coverage, failure, migration, and speedup gates | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/pool-bench.jsonl`](raw/cacs-scale/pool-bench.jsonl) |
 | High concurrency | 150/150 samples pass checksum, switch, sentinel and lifecycle oracles | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/high-concurrency/samples.csv`](raw/cacs-scale/high-concurrency/samples.csv) |
-| CACS evidence manifest | 130/130 payload paths and SHA-256 digests passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/SHA256SUMS`](raw/cacs-scale/SHA256SUMS) |
+| CACS evidence manifest | 139/139 payload paths and SHA-256 digests passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/SHA256SUMS`](raw/cacs-scale/SHA256SUMS) |
 | Parent signal cleanup | 19/19 focused tests; launch-window signal, stopped leader and TERM-ignoring descendant reaped | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/high-concurrency-focused-tests.txt`](raw/cacs-scale/high-concurrency-focused-tests.txt) |
-| Complete build commands | O0/O2/O3/ASan compile and link commands captured and target-bound | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/build-commands/`](raw/cacs-scale/build-commands/) |
+| Complete build commands | O0/O2/O3/ASan/GCC compile and link commands captured and target-bound | [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/build-commands/`](raw/cacs-scale/build-commands/) |
 | Zig ASan + UBSan | Both concurrent L4 and forced drain runs passed | [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/sanitizers-coroutine.txt`](raw/ab/sanitizers-coroutine.txt), [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/sanitizers-epoll.txt`](raw/ab/sanitizers-epoll.txt) |
 | ABI disassembly | Expected save/restore sequence present | [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/context-switch-disassembly.txt`](raw/ab/context-switch-disassembly.txt) |
 | Executable stack | Both binaries have `GNU_STACK` as `RW` | [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/gnu-stack-coroutine.txt`](raw/ab/gnu-stack-coroutine.txt), [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/gnu-stack-epoll.txt`](raw/ab/gnu-stack-epoll.txt) |
@@ -256,7 +280,7 @@ whose switch function aborts if called.
 It validates executed C allocation and lifecycle paths but does not claim to
 validate assembly, stack alignment, native epoll timing, or performance.
 
-## 4. Context Benchmark
+## 4. Original A/B Context Benchmark
 
 Five independent runs, each taking the median of 11 samples with 1,000,000
 iterations, pinned to CPU 0 and NUMA node 0:
@@ -272,7 +296,7 @@ sample retained a nonzero observable sink and exact task/switch-count checks.
 Raw samples:
 [`learning/studies/20260910-stackful-coroutine/evidence/raw/ab/context-switch.csv`](raw/ab/context-switch.csv).
 
-## 5. L4 Benchmark
+## 5. Original Three-Mode L4 Benchmark
 
 iperf3 configuration:
 
@@ -326,25 +350,25 @@ Zig 0.16.0/Clang 21.1.0 optimized build.
 
 | Backend | Median `rco_yield` | Ratio vs SysV |
 | --- | ---: | ---: |
-| SysV | `35.657 ns` | `1.000` |
-| CACS | `13.322 ns` | `0.374` |
-| CACS + explicit `preserve_none` | `13.330 ns` | `0.374` |
+| SysV | `51.964 ns` | `1.000` |
+| CACS | `27.728 ns` | `0.534` |
+| CACS + explicit `preserve_none` | `27.562 ns` | `0.530` |
 
 Representative scaling results:
 
 | Case | SysV CPU ns/measured-yield | CACS | CACS+PN |
 | --- | ---: | ---: | ---: |
-| 256 tasks, 4 KiB touched | 74.76 | 23.62 | 24.34 |
-| 4,096 tasks, 4 KiB touched | 164.85 | 45.94 | 47.99 |
-| 16,384 tasks, 4 KiB touched | 290.18 | 76.92 | 76.00 |
-| 1,024 tasks, 128 KiB touched | 664.90 | 425.16 | 420.53 |
-| 1,024 tasks, 256 KiB touched | 1,463.69 | 1,230.50 | 1,240.46 |
-| 1,024 tasks, 1,024 yields/task | 136.83 | 39.79 | 38.33 |
+| 256 tasks, 4 KiB touched | 62.98 | 34.26 | 44.83 |
+| 4,096 tasks, 4 KiB touched | 175.97 | 89.62 | 119.53 |
+| 16,384 tasks, 4 KiB touched | 229.00 | 115.86 | 195.06 |
+| 1,024 tasks, 128 KiB touched | 623.76 | 456.06 | 495.79 |
+| 1,024 tasks, 256 KiB touched | 1,413.30 | 1,252.80 | 1,295.36 |
+| 1,024 tasks, 1,024 yields/task | 136.21 | 64.85 | 97.61 |
 
-At 16,384 tasks, median PSS is 200,838/200,838/200,838 KiB for
+At 16,384 tasks, median PSS is 201,238/201,238/201,238 KiB for
 SysV/CACS/CACS+PN. Identical context size and stack configuration remove
 layout as an explanation for the CPU result. Increasing touched stack from
-32 KiB to 256 KiB reduces the CACS advantage from about 67% to 16%, showing
+32 KiB to 256 KiB reduces the CACS advantage from about 45% to 11%, showing
 that memory work eventually dominates switch cost.
 
 Raw matrix, environment, IR, disassembly and sanitizer evidence:
@@ -355,17 +379,40 @@ position-rotated runs:
 
 | L4 path | Median |
 | --- | ---: |
-| Direct loopback | `72.284 Gbit/s` |
-| SysV coroutine | `25.404 Gbit/s` |
-| CACS | `25.583 Gbit/s` |
-| CACS + `preserve_none` | `25.522 Gbit/s` |
-| epoll state machine | `25.145 Gbit/s` |
+| Direct loopback | `73.716 Gbit/s` |
+| SysV coroutine | `25.215 Gbit/s` |
+| CACS | `25.436 Gbit/s` |
+| CACS + `preserve_none` | `25.099 Gbit/s` |
+| epoll state machine | `25.324 Gbit/s` |
 
-CACS/SysV paired throughput ratio has median `1.002753`; CACS+PN/SysV is
-`1.004652`. The scheduler-only CPU reduction therefore does not propagate to
+CACS/SysV paired throughput ratio has median `1.015959`; CACS+PN/SysV is
+`0.995533`. The scheduler-only CPU reduction therefore does not propagate to
 this kernel-TCP-dominated throughput test.
 
-## 7. PMU Limitation
+## 7. Multicore Pool
+
+The pool matrix contains 90 samples: three backends, 1/2/4 workers,
+preemption disabled/enabled, and five rotated runs per cell. Every sample
+passed deterministic checksum, exact-once entry/finalizer, worker coverage,
+pre-start stealing, zero migration, zero failed jobs, empty queues, and wake
+coalescing checks.
+
+| Backend | Preemption | 1 worker jobs/s | 2 worker speedup | 4 worker speedup |
+| --- | --- | ---: | ---: | ---: |
+| SysV | off | 7,402 | `1.889x` | `3.117x` |
+| CACS | off | 7,421 | `1.891x` | `3.135x` |
+| CACS+PN | off | 7,421 | `1.885x` | `3.104x` |
+| SysV | 1 ms | 7,275 | `1.880x` | `3.110x` |
+| CACS | 1 ms | 7,226 | `1.883x` | `3.145x` |
+| CACS+PN | 1 ms | 7,271 | `1.878x` | `3.141x` |
+
+The validator requires at least `1.50x` at two workers and `2.50x` at four
+workers. Three backend-specific pool suites also passed 500 consecutive runs
+each. Raw samples and stress binary identities are in
+[`pool-bench.jsonl`](raw/cacs-scale/pool-bench.jsonl) and
+[`pool-stress.txt`](raw/cacs-scale/pool-stress.txt).
+
+## 8. PMU Limitation
 
 The required hardware counters were requested with:
 
@@ -379,12 +426,16 @@ recorded CPU/NUMA topology, fixed affinity, source/binary digests, complete
 flags, repeated wall-time samples, and observable sinks. See
 [`learning/studies/20260910-stackful-coroutine/evidence/raw/cacs-scale/perf-stat.txt`](raw/cacs-scale/perf-stat.txt).
 
+The representative 4-worker pool probe returned the same unavailable result;
+see [`perf-pool-stat.txt`](raw/cacs-scale/perf-pool-stat.txt). Pool scaling is
+therefore topology + wall/process CPU evidence, not a cache/TLB/branch claim.
+
 The KVM exposes no cpufreq policy directories, `intel_pstate/no_turbo`, or
 generic cpufreq boost control. Both context and L4 environment records state
 that frequency policy and turbo state are unavailable instead of silently
 omitting them.
 
-## 8. Document DAG Validation
+## 9. Document DAG Validation
 
 The final metadata graph was checked against every tracked `doc_id`:
 
