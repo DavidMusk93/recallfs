@@ -267,7 +267,31 @@ if(RCO_BUILD_BENCHMARKS)
         rco_enable_c_warnings(${target})
     endfunction()
 
+    function(rco_add_pool_bench target test_name library)
+        add_executable(${target} bench/rco_pool_bench.c)
+        target_link_libraries(${target} PRIVATE ${library})
+        rco_enable_c_warnings(${target})
+        if(RCO_BUILD_TESTS)
+            add_test(
+                NAME ${test_name}
+                COMMAND
+                    ${target}
+                    --workers 2
+                    --jobs 8
+                    --iterations 4096
+                    --preempt-quantum-ns 1000000
+                    --pin-first-cpu -1
+            )
+            set_tests_properties(${test_name} PROPERTIES TIMEOUT 15)
+        endif()
+    endfunction()
+
     rco_add_high_concurrency_bench(rco_high_concurrency_bench_sysv rco)
+    rco_add_pool_bench(
+        rco_pool_bench_sysv
+        rco_pool_bench_smoke_sysv
+        rco
+    )
 
     if(RCO_BUILD_CACS)
         add_executable(rco_bench_cacs bench/rco_bench.c)
@@ -287,6 +311,16 @@ if(RCO_BUILD_BENCHMARKS)
         )
         rco_add_high_concurrency_bench(
             rco_high_concurrency_bench_cacs_preserve_none
+            rco_cacs_preserve_none
+        )
+        rco_add_pool_bench(
+            rco_pool_bench_cacs
+            rco_pool_bench_smoke_cacs
+            rco_cacs
+        )
+        rco_add_pool_bench(
+            rco_pool_bench_cacs_preserve_none
+            rco_pool_bench_smoke_cacs_preserve_none
             rco_cacs_preserve_none
         )
     endif()
