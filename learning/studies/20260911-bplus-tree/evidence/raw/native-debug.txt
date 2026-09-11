@@ -1,69 +1,173 @@
-source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
-command: cmake Debug build + CTest
--- The C compiler identification is AppleClang 21.0.0.21000101
+source_commit=5c936d1e70a293fe2e5acbf1f6d23016b49f43f8
+compiler=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc
+command: cmake Debug build + CTest with pinned Zig 0.16.0
+-- The C compiler identification is Clang 21.1.0
 -- Detecting C compiler ABI info
 -- Detecting C compiler ABI info - done
--- Check for working C compiler: /usr/bin/cc - skipped
+-- Check for working C compiler: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (0.4s)
+-- Configuring done (5.4s)
 -- Generating done (0.1s)
 -- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2
-[ 12%] Building C object CMakeFiles/btree.dir/src/btree.c.o
+Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2'
+
+Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile -j
+/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 --check-build-system CMakeFiles/Makefile.cmake 0
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2//CMakeFiles/progress.marks
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/Makefile2 all
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree.dir/build.make CMakeFiles/btree.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_memory.dir/build.make CMakeFiles/btree_storage_memory.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_storage_memory.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree.dir/build.make CMakeFiles/btree.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_memory.dir/build.make CMakeFiles/btree_storage_memory.dir/build
+[  8%] Building C object CMakeFiles/btree.dir/src/btree.c.o
+[  8%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
 [ 12%] Building C object CMakeFiles/btree.dir/src/btree_crc32c.c.o
-[ 12%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -MF CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o.d -o CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_memory.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree.dir/src/btree.c.o -MF CMakeFiles/btree.dir/src/btree.c.o.d -o CMakeFiles/btree.dir/src/btree.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree.dir/src/btree_crc32c.c.o -MF CMakeFiles/btree.dir/src/btree_crc32c.c.o.d -o CMakeFiles/btree.dir/src/btree_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_crc32c.c
 [ 16%] Linking C static library libbtree_storage_memory.a
+/opt/homebrew/bin/cmake -P CMakeFiles/btree_storage_memory.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_storage_memory.dir/link.txt --verbose=1
 [ 20%] Linking C static library libbtree.a
-[ 20%] Built target btree_storage_memory
+/opt/homebrew/bin/cmake -P CMakeFiles/btree.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree.dir/link.txt --verbose=1
+/usr/bin/ar qc libbtree_storage_memory.a CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
+/usr/local/bin/llvm-ranlib libbtree_storage_memory.a
+/usr/bin/ar qc libbtree.a CMakeFiles/btree.dir/src/btree.c.o CMakeFiles/btree.dir/src/btree_crc32c.c.o
+/usr/local/bin/llvm-ranlib libbtree.a
 [ 20%] Built target btree
+[ 20%] Built target btree_storage_memory
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file.dir/build.make CMakeFiles/btree_storage_file.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file_test_hooks.dir/build.make CMakeFiles/btree_storage_file_test_hooks.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_storage_file.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_storage_file_test_hooks.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file.dir/build.make CMakeFiles/btree_storage_file.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file_test_hooks.dir/build.make CMakeFiles/btree_storage_file_test_hooks.dir/build
+[ 24%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -MF CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o.d -o CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
 [ 28%] Building C object CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o
-[ 28%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -DBTREE_ENABLE_TEST_HOOKS=1 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o -MF CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o.d -o CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
+[ 32%] Linking C static library libbtree_storage_file_test_hooks.a
 [ 36%] Linking C static library libbtree_storage_file.a
-[ 36%] Linking C static library libbtree_storage_file_test_hooks.a
+/opt/homebrew/bin/cmake -P CMakeFiles/btree_storage_file_test_hooks.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -P CMakeFiles/btree_storage_file.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_storage_file_test_hooks.dir/link.txt --verbose=1
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_storage_file.dir/link.txt --verbose=1
+/usr/bin/ar qc libbtree_storage_file_test_hooks.a CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o
+/usr/local/bin/llvm-ranlib libbtree_storage_file_test_hooks.a
+/usr/bin/ar qc libbtree_storage_file.a CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
+/usr/local/bin/llvm-ranlib libbtree_storage_file.a
 [ 36%] Built target btree_storage_file_test_hooks
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_crash_test.dir/build.make CMakeFiles/btree_crash_test.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_crash_test.dir/DependInfo.cmake "--color="
 [ 36%] Built target btree_storage_file
-[ 44%] Building C object CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o
-[ 44%] Building C object CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o
-[ 60%] Building C object CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o
-[ 60%] Building C object CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_model_test.dir/build.make CMakeFiles/btree_model_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_generic_test.dir/build.make CMakeFiles/btree_generic_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_contract_test.dir/build.make CMakeFiles/btree_contract_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_backend_test.dir/build.make CMakeFiles/btree_backend_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_structure_test.dir/build.make CMakeFiles/btree_structure_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_persistence_test.dir/build.make CMakeFiles/btree_persistence_test.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_corruption_test.dir/build.make CMakeFiles/btree_corruption_test.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_generic_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_model_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_contract_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_backend_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_structure_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_corruption_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles/btree_persistence_test.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_backend_test.dir/build.make CMakeFiles/btree_backend_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_structure_test.dir/build.make CMakeFiles/btree_structure_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_persistence_test.dir/build.make CMakeFiles/btree_persistence_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_contract_test.dir/build.make CMakeFiles/btree_contract_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_model_test.dir/build.make CMakeFiles/btree_model_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_corruption_test.dir/build.make CMakeFiles/btree_corruption_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_generic_test.dir/build.make CMakeFiles/btree_generic_test.dir/build
+[ 40%] Building C object CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o -MF CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o.d -o CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_model_test.c
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_crash_test.dir/build.make CMakeFiles/btree_crash_test.dir/build
+[ 44%] Building C object CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o -MF CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o.d -o CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_backend_test.c
+[ 48%] Building C object CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o -MF CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o.d -o CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_structure_test.c
+[ 52%] Building C object CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o
+[ 56%] Building C object CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o -MF CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o.d -o CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_contract_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o -MF CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o.d -o CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_persistence_test.c
 [ 60%] Building C object CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o
-[ 60%] Building C object CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o
-[ 64%] Building C object CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o
-[ 68%] Building C object CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o
-[ 72%] Linking C executable btree_structure_test
-[ 80%] Linking C executable btree_model_test
-[ 80%] Linking C executable btree_persistence_test
-[ 84%] Linking C executable btree_generic_test
-[ 92%] Linking C executable btree_corruption_test
-[ 92%] Linking C executable btree_contract_test
-[ 96%] Linking C executable btree_crash_test
-[100%] Linking C executable btree_backend_test
-[100%] Built target btree_model_test
+[ 64%] Building C object CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o -MF CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o.d -o CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_corruption_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o -MF CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o.d -o CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_generic_test.c
+[ 68%] Building C object CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o -MF CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o.d -o CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_crash_test.c
+[ 72%] Linking C executable btree_persistence_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_persistence_test.dir/link.txt --verbose=1
+[ 76%] Linking C executable btree_corruption_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_corruption_test.dir/link.txt --verbose=1
+[ 84%] Linking C executable btree_crash_test
+[ 84%] Linking C executable btree_backend_test
+[ 88%] Linking C executable btree_contract_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_crash_test.dir/link.txt --verbose=1
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_backend_test.dir/link.txt --verbose=1
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_contract_test.dir/link.txt --verbose=1
+[ 92%] Linking C executable btree_generic_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_generic_test.dir/link.txt --verbose=1
+[ 96%] Linking C executable btree_model_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_model_test.dir/link.txt --verbose=1
+[100%] Linking C executable btree_structure_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_structure_test.dir/link.txt --verbose=1
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o -o btree_structure_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o -o btree_corruption_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o -o btree_crash_test  libbtree_storage_file_test_hooks.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o -o btree_contract_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o -o btree_persistence_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o -o btree_generic_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o -o btree_model_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o -o btree_backend_test  libbtree_storage_memory.a libbtree_storage_file.a libbtree.a
 [100%] Built target btree_persistence_test
-[100%] Built target btree_structure_test
-[100%] Built target btree_generic_test
+[100%] Built target btree_crash_test
 [100%] Built target btree_corruption_test
+[100%] Built target btree_structure_test
 [100%] Built target btree_contract_test
 [100%] Built target btree_backend_test
-[100%] Built target btree_crash_test
+[100%] Built target btree_model_test
+[100%] Built target btree_generic_test
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2/CMakeFiles 0
+
+compile_commands:
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree.dir/src/btree.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree.dir/src/btree_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_crc32c.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_memory.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -DBTREE_ENABLE_TEST_HOOKS=1 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_model_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_generic_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_contract_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_backend_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_structure_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_persistence_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_corruption_test.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/btree_crash_test.c
 Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-debug-v2
     Start 1: btree_model_test
-1/8 Test #1: btree_model_test .................   Passed    3.35 sec
+1/8 Test #1: btree_model_test .................   Passed    5.45 sec
     Start 2: btree_generic_test
-2/8 Test #2: btree_generic_test ...............   Passed    1.17 sec
+2/8 Test #2: btree_generic_test ...............   Passed    1.85 sec
     Start 3: btree_contract_test
-3/8 Test #3: btree_contract_test ..............   Passed    6.86 sec
+3/8 Test #3: btree_contract_test ..............   Passed   11.48 sec
     Start 4: btree_backend_test
-4/8 Test #4: btree_backend_test ...............   Passed    2.76 sec
+4/8 Test #4: btree_backend_test ...............   Passed    2.52 sec
     Start 5: btree_structure_test
-5/8 Test #5: btree_structure_test .............   Passed    1.09 sec
+5/8 Test #5: btree_structure_test .............   Passed    1.64 sec
     Start 6: btree_persistence_test
-6/8 Test #6: btree_persistence_test ...........   Passed   34.05 sec
+6/8 Test #6: btree_persistence_test ...........   Passed   35.81 sec
     Start 7: btree_corruption_test
-7/8 Test #7: btree_corruption_test ............   Passed   92.88 sec
+7/8 Test #7: btree_corruption_test ............   Passed   82.07 sec
     Start 8: btree_crash_test
-8/8 Test #8: btree_crash_test .................   Passed    7.89 sec
+8/8 Test #8: btree_crash_test .................   Passed    6.03 sec
 
 100% tests passed, 0 tests failed out of 8
 
-Total Test time (real) = 150.26 sec
+Total Test time (real) = 147.04 sec

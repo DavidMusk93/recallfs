@@ -10,7 +10,7 @@ depends_on:
   - recallfs-evidence-bplus-tree-v1
 supersedes: []
 verified_by:
-  - review run 20260911-143717-b9a08456
+  - review run 20260911-183036-ed93668c
   - post-review full regression
 ---
 
@@ -18,14 +18,15 @@ verified_by:
 
 ## Scope
 
-- Base: `db65f4c`
-- Initial implementation commit: `bafd0e0`
-- Review fixes: `d388274`
-- WAL bound follow-up: `0f6c17b`
-- Public header clarification: `fe17463`
-- Review run: `20260911-143717-b9a08456`
-- Reviewed scope: `learning/studies/20260911-bplus-tree/lib`
-- Excluded: unrelated concurrent coroutine changes and untracked study docs
+- Base: `0a7dc4d`
+- Generic implementation: `25f09fe`
+- Public option cleanup: `d114cc2`
+- Simplification: `3f72391`
+- Package-consumer test: `b2c4bd8`
+- Generic review fixes: `07914cc`, `f2c2949`, `5c936d1`
+- Review run: `20260911-183036-ed93668c`
+- Reviewed scope: `learning/studies/20260911-bplus-tree/**`
+- Excluded: interleaved coroutine commits and `projects/clipvault`
 
 ## Review Coverage
 
@@ -36,57 +37,52 @@ route did not run because the host serving family could not be attested; the
 local adversarial reviewer covered that lens without claiming cross-model
 corroboration.
 
-The mechanical merge produced 22 semantically distinct candidates after
-deduplicating repeated crash-test, WAL-publication, and close-on-exec reports.
-A fresh validator accepted 12 and rejected 10 as unsupported preferences,
-explicit non-goals, or scenarios outside the stated operating contract.
+The merge produced nine candidates after combining two reports of the same
+odd-capacity split defect. A fresh validator accepted four current findings,
+rejected three as pre-existing or outside the documented error precedence, and
+routed two non-blocking architecture/performance concerns to residual risk.
 
 ## Applied Findings
 
 | Finding | Resolution |
 | --- | --- |
-| Default CTest skipped crash recovery | Build a hook-enabled test-only file backend and always register the Unix crash suite |
-| Storage ownership was underspecified | Document borrowed provider lifetime and synchronous callback-buffer lifetime in the public header |
-| Recovery-required was underspecified | Document commit-unknown output and mandatory close/reopen inspection |
-| WAL allocation was unbounded | Validate the fixed header first and cap one transaction at 256 page images |
-| Relative WAL paths drifted after `chdir` | Bind WAL operations to the opened parent directory with `openat`/`renameat`/`unlinkat` |
-| macOS durability barrier was too weak | Use `F_FULLFSYNC` for regular files and directory `fsync` for namespace changes |
-| Crash tests used only an in-place leaf update | Force page-growing root split at every commit and replay crash point |
-| Future WAL versions returned corruption | Return `BPT_UNSUPPORTED` after checksum-valid compatibility parsing |
-| Descriptors survived `exec` | Use `O_CLOEXEC` plus an `FD_CLOEXEC` fallback and a fork/exec lock regression |
-| Scan callback could mutate live topology | Reject nested scan and callback-time put/delete with `BPT_BUSY` |
-| Memory storage grew one page at a time | Add checked geometric capacity growth |
-| Locality proof used a root leaf only | Assert exact metadata-plus-leaf writes on a multi-level tree |
+| Odd-capacity right-edge split underfilled the new leaf | Remove the position-dependent split adjustment and add a 13-byte/21-byte ascending split, validate, and reopen regression |
+| Comparator callback could commit a nested mutation | Track comparator activity, return `BTREE_BUSY` from same-tree status APIs, and test that no nested key is installed |
+| Native evidence used an undeclared system compiler | Run Debug, Release, sanitizer, install, consumer, and C++ checks through pinned Zig 0.16.0 and record its archive SHA-256 plus full compile commands |
+| `scan-build` could report success without instrumented compilation | Configure from a clean tree through `scan-build`, assert `CMAKE_C_COMPILER` is `ccc-analyzer`, and use `--status-bugs` |
 
-The WAL publication fix also changed the protocol from direct active-WAL writes
-to `<db>.wal.tmp` plus durable atomic rename. Open removes only that known
-unpublished temporary sidecar. This closes the partial-WAL recovery dead end
-identified during review.
+The security reviewer also found a pre-existing namespace hazard: the database
+path followed a final-component symlink while WAL files were opened relative to
+the lexical parent. The final implementation opens the data basename and both
+sidecars through one retained directory descriptor with `O_NOFOLLOW`, rejects
+non-regular files, and covers symlink rejection plus relative reopen.
 
-## Rejected Findings
+## Disposition
 
-- Splitting the two large C files was a maintainability preference without a
-  demonstrated correctness defect.
-- Full validation during open is an intentional design contract.
-- Multi-operation batching is an explicit v1 non-goal and had no measured
-  performance requirement.
-- A stale same-UUID WAL and online pathname replacement require external file
-  manipulation outside the supported ownership protocol.
-- The existing CMake toolchain interface is sufficient for explicit FIL-C
-  invocation; the actual FIL-C gate is recorded in the evidence ledger.
-- A scan callback may propagate any `bpt_status`; only tree mutation and nested
-  scan are forbidden during callback execution.
+- Callback-time close behavior predates the generic revision. The public header
+  now explicitly forbids destroying the active tree from scan or comparator
+  callbacks; status-returning reentry is rejected.
+- Invalid option layouts return `BTREE_INVALID_ARGUMENT`. Only otherwise valid
+  options that differ from persisted widths or comparator identity return
+  `BTREE_SCHEMA_MISMATCH`; the runbook now states this precedence.
+- Reusing page scratch and splitting the 2,108-line core remain non-blocking
+  optimization/maintenance candidates. Neither has a hotspot benchmark or
+  demonstrated correctness defect, so no speculative refactor was applied.
+- Physical power-loss, controller-cache, network-filesystem, concurrent-access,
+  and exhaustive syscall-failure qualification remain outside the stated
+  production boundary.
 
 ## Verification
 
 After all fixes:
 
-- Debug CTest: 7/7 passed.
-- Release CTest: 7/7 passed.
-- ASan/UBSan CTest: 7/7 passed.
-- FIL-C 0.684: 7/7 standalone suites passed.
-- Clang static analyzer: no bugs found.
+- Zig 0.16.0 Debug CTest: 8/8 passed.
+- Zig 0.16.0 Release CTest: 8/8 passed.
+- Zig 0.16.0 ASan/UBSan CTest: 8/8 passed.
+- FIL-C 0.684: 8/8 standalone suites passed.
+- Clang static analyzer: `ccc-analyzer` binding confirmed; no bugs found.
 - `clang-format --dry-run --Werror`: passed.
-- Installed-header C11 consumer and C++17 header compile: passed.
+- Installed `find_package` C11 consumer and Zig C++17 header compile: passed.
+- Every raw evidence digest and every source digest verifies.
 
 Actionable findings remaining: none.

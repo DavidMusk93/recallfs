@@ -125,11 +125,13 @@ a deterministic strict-total-order callback and a stable
 `comparator_id >= BTREE_COMPARATOR_USER_MIN`.
 
 The metadata page persists key width, value width, and comparator ID. Reopen
-requires all three to match and returns `BTREE_SCHEMA_MISMATCH` otherwise.
-Comparator code and context are not serialized; the application owns them for
-the full tree lifetime. A comparator ID identifies ordering semantics, not a
-function address. Reusing an ID for changed semantics can invalidate ordering
-and is an application error.
+requires all three valid option fields to match and returns
+`BTREE_SCHEMA_MISMATCH` otherwise. Invalid options still return
+`BTREE_INVALID_ARGUMENT`. Comparator code and context are not serialized; the
+application owns them for the full tree lifetime. A comparator ID identifies
+ordering semantics, not a function address. Reusing an ID for changed semantics
+can invalidate ordering and is an application error. Same-tree API reentry from
+a comparator is rejected with `BTREE_BUSY`.
 
 ## Buffer Pool Integration
 
@@ -207,6 +209,10 @@ length, and an aggregate CRC32C. Open removes the fixed unpublished temporary
 sidecar, then replays a complete valid active WAL idempotently before exposing
 the provider. A malformed nonempty active WAL is preserved and open fails with
 `BTREE_CORRUPT`.
+
+The database basename and both sidecars are opened relative to one retained
+parent-directory descriptor. Final-component database symlinks are rejected so
+the data file cannot escape the WAL namespace.
 
 Before the temporary WAL is published, a write or sync failure returns
 `BTREE_IO` and leaves data pages untouched. After atomic rename publishes the

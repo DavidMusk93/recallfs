@@ -1,19 +1,28 @@
-utc=2026-09-11T10:25:26Z
+utc=2026-09-11T11:15:38Z
 Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
 ProductName:		macOS
 ProductVersion:		26.6.2
 BuildVersion:		25G83
-Apple clang version 21.0.0 (clang-2100.1.1.101)
-Target: arm64-apple-darwin25.6.0
+native_c_frontend=.tmp/zig/dist-macos-0.16.0/zig cc
+native_cxx_frontend=.tmp/zig/dist-macos-0.16.0/zig c++
+zig_version=0.16.0
+b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/zig-aarch64-macos-0.16.0.tar.xz
+clang version 21.1.0
+Target: aarch64-apple-macosx26.6.2-unknown
 Thread model: posix
-InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/dist-macos-0.16.0
 cmake version 4.0.3
 
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
+scan_build=/opt/homebrew/bin/scan-build
+Homebrew clang version 16.0.6
+Target: arm64-apple-darwin25.6.0
+Thread model: posix
+InstalledDir: /opt/homebrew/Cellar/llvm@16/16.0.6_1/bin
 clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
 Target: aarch64-unknown-linux-gnu
 Thread model: posix
 InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-source_commit=b2c4bd8f6e922b06ee58aecf764f8278365a9801
+source_commit=5c936d1e70a293fe2e5acbf1f6d23016b49f43f8
 source_tree_clean=true

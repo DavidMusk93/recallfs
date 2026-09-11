@@ -123,6 +123,7 @@ The final deterministic suites cover:
 - 512, 4,096, and 65,536 byte pages;
 - repeated clean file reopen;
 - process-exclusive lock and `0600` file mode;
+- final-component database symlink rejection and dirfd-bound data/WAL names;
 - commit crashes before WAL content, after WAL sync, after one data page, and
   after data sync;
 - a second crash during recovery after one replayed page and after data sync;
@@ -154,6 +155,13 @@ empty-subtree flag and a duplicate CMake feature definition. It deliberately
 kept independent test codecs separate from private serialization helpers and
 rejected refactors that would change observable comparator calls or
 allocation-failure behavior without a measured need.
+
+The generic review found an odd-capacity split bug: a right-edge insertion
+changed a natural 7/7 split into 8/6 while validation required at least seven
+records per non-root leaf. The position-dependent adjustment was removed and a
+file reopen regression now exercises the exact 13-byte/21-byte schema. The same
+review added a comparator-active guard so comparator callbacks cannot commit a
+nested mutation over stale outer transaction pages.
 
 ## 9. Remaining Unknowns
 

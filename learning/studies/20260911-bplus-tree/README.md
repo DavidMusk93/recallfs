@@ -38,7 +38,8 @@ verified_by:
 - `btree_storage` 只暴露 page copy 与 atomic page-set commit，buffer pool 可由
   调用方独立实现；
 - memory backend 使用几何扩容；file backend 使用排他锁、CRC32C、
-  full-page redo WAL、dirfd-relative sidecar、`CLOEXEC` 和恢复期重放；
+  full-page redo WAL、dirfd-relative data/WAL、final-component symlink
+  rejection、`CLOEXEC` 和恢复期重放；
 - macOS regular-file barrier 使用 `F_FULLFSYNC`，其他 POSIX 平台使用
   `fsync`；namespace 变更使用 directory `fsync`；
 - `btree_open()` 会执行全量结构校验，避免在打开后才暴露损坏拓扑。
@@ -47,6 +48,8 @@ verified_by:
 通过。Crash suite 覆盖 split 导致的 page growth、commit 五个阶段、recovery
 两个阶段、有效 WAL 的每个非空截断前缀，以及 checksum/version/size 损坏。
 安装后的 CMake package 也由仓内独立 consumer 通过 `find_package` 验收。
+泛型 v2 的独立 review 验证并关闭了四个 finding，另修复了一个既有的 data/WAL
+symlink namespace 风险；当前无未解决 actionable finding。
 
 这支持在本文声明的单线程、单写者、本地 POSIX 文件系统边界内进入生产集成和
 更高层 E2E。它不等价于真实断电、存储控制器、network filesystem 或并发事务
@@ -250,15 +253,15 @@ never exposed.
 | `BPT-RA-2` | delete through redistribution, merge, empty root and reuse | validator passes after every boundary; high-water page count stops growing when free pages exist | `btree_structure_test` |
 | `BPT-RA-3` | file close/reopen after mutations | exact item count and ordered contents survive every reopen | `btree_persistence_test` |
 | `BPT-RA-4` | crash before WAL publish, after publish, during data write, during replay, and after data sync | reopen yields the exact old or committed post-state and no active WAL | `btree_crash_test` |
-| `BPT-RA-5` | bad header, page checksum, child ID, sibling cycle and malformed WAL | operation returns `BTREE_CORRUPT` without loop, OOB access or silent repair | `btree_corruption_test` |
+| `BPT-RA-5` | bad header/checksum/child/link/WAL or symlinked database path | corruption is bounded and symlink paths are rejected without crossing the WAL directory | `btree_corruption_test`, `btree_backend_test` |
 | `BPT-RA-6` | all deterministic suites under FIL-C and native sanitizers | zero test failures and zero reported memory/UB defects | evidence commands in `evidence/README.md` |
-| `BPT-RA-7` | 13-byte/21-byte records plus custom 8-byte comparator schema | byte-exact copy, ordered scan, schema reopen/mismatch, split/delete all pass | `btree_generic_test` |
+| `BPT-RA-7` | 13-byte/21-byte records plus custom 8-byte comparator schema | byte-exact copy, ordered scan, schema reopen/mismatch, odd-capacity split, comparator reentry rejection, and delete all pass | `btree_generic_test` |
 
 ### Evidence And Unknowns
 
 Observed evidence is recorded in [`evidence/README.md`](evidence/README.md).
 The current ledger is bound to source commit
-`b2c4bd8f6e922b06ee58aecf764f8278365a9801` plus per-file SHA-256 values.
+`5c936d1e70a293fe2e5acbf1f6d23016b49f43f8` plus per-file SHA-256 values.
 Unknowns outside 1.0 include multi-writer scheduling, buffer-pool eviction
 behavior, physical power-loss testing, network filesystem semantics, and
 workload-specific performance.

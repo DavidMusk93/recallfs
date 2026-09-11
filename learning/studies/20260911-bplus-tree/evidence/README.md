@@ -23,7 +23,7 @@ verified_by:
 ## Result
 
 All seven reconciliation anchors passed for the generic API and disk format at
-source commit `b2c4bd8f6e922b06ee58aecf764f8278365a9801`.
+source commit `5c936d1e70a293fe2e5acbf1f6d23016b49f43f8`.
 
 | Gate | Result | Raw evidence |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ source commit `b2c4bd8f6e922b06ee58aecf764f8278365a9801`.
 | Format/install | Format, install, tracked `find_package` consumer, and C++17 headers passed | [`format-install.txt`](raw/format-install.txt) |
 | Identity | Environment and every source/test digest recorded | [`environment.txt`](raw/environment.txt), [`source-sha256.txt`](raw/source-sha256.txt) |
 | Evidence integrity | Every raw log digest verifies | [`SHA256SUMS`](raw/SHA256SUMS) |
-| Review | v1 closure retained; generic v2 review pending | [`review.md`](review.md) |
+| Review | 4 generic-v2 findings fixed; no actionable findings remain | [`review.md`](review.md) |
 
 Leak detection was disabled for the sanitizer run because this macOS ASan
 runtime does not provide a reliable LeakSanitizer path. FIL-C ownership checks
@@ -103,7 +103,8 @@ CRC32C where needed. It rejects:
 
 The backend suite verifies mode `0600`, exclusive lock behavior, stale active
 WAL preservation, unpublished temporary WAL cleanup, relative-path stability
-after `chdir`, and descriptor closure across `exec`.
+after `chdir`, final-component symlink rejection, and descriptor closure across
+`exec`.
 
 Result: passed in all four toolchain modes.
 
@@ -111,10 +112,12 @@ Result: passed in all four toolchain modes.
 
 - Strict warnings: `-Wall -Wextra -Wpedantic -Werror -Wconversion
   -Wsign-conversion`.
-- AppleClang: 21.0.0.
+- Native compiler: Zig 0.16.0 `zig cc`/`zig c++`, Clang 21.1.0 frontend.
+- Zig macOS arm64 archive SHA-256:
+  `b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489`.
 - FIL-C: 0.684, Clang 20.1.8 frontend.
 - CMake: 4.0.3.
-- Clang static analyzer: no findings.
+- Clang static analyzer 16.0.6: `ccc-analyzer` binding asserted; no findings.
 - `clang-format --dry-run --Werror`: passed.
 - Installed static libraries linked from the tracked
   `tests/package_consumer` CMake project through `find_package(btree 1 CONFIG
@@ -125,8 +128,9 @@ Result: passed in all four toolchain modes.
 
 `btree_generic_test` covers 13-byte keys, 21-byte values, embedded NUL bytes,
 caller-buffer overwrite after put, file reopen, schema inspection, schema
-mismatch, and a custom comparator over 2,048 shuffled keys through internal
-split and delete paths.
+mismatch, balanced odd-capacity right-edge split, comparator reentry rejection,
+and a custom comparator over 2,048 shuffled keys through internal split and
+delete paths.
 
 Result: passed in all four toolchain modes.
 
@@ -135,19 +139,25 @@ Result: passed in all four toolchain modes.
 Native:
 
 ```bash
+ZIG_CC="$PWD/.tmp/scripts/zig-cc"
 cmake -S learning/studies/20260911-bplus-tree/lib \
-  -B .tmp/btree-build -DCMAKE_BUILD_TYPE=Debug
-cmake --build .tmp/btree-build --parallel
+  -B .tmp/btree-build -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER="$ZIG_CC" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build .tmp/btree-build --parallel --verbose
 ctest --test-dir .tmp/btree-build --output-on-failure
 ```
 
 Sanitizers:
 
 ```bash
+ZIG_CC="$PWD/.tmp/scripts/zig-cc"
 cmake -S learning/studies/20260911-bplus-tree/lib \
   -B .tmp/btree-sanitized \
-  -DBTREE_ENABLE_SANITIZERS=ON -DCMAKE_BUILD_TYPE=Debug
-cmake --build .tmp/btree-sanitized --parallel
+  -DBTREE_ENABLE_SANITIZERS=ON -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER="$ZIG_CC" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build .tmp/btree-sanitized --parallel --verbose
 ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 \
 UBSAN_OPTIONS=halt_on_error=1 \
 ctest --test-dir .tmp/btree-sanitized --output-on-failure
