@@ -112,8 +112,14 @@ void btree_options_init(btree_options *options, uint32_t key_size, uint32_t valu
 /*
  * A custom comparator must define a deterministic strict total order and use a
  * stable comparator_id >= BTREE_COMPARATOR_USER_MIN. The comparator and its
- * borrowed context must remain valid for the tree lifetime. Reopen requires
- * the same key size, value size, comparator ID, and comparator semantics.
+ * borrowed context must remain valid for the tree lifetime. The left_key and
+ * right_key pointers are valid only for the duration of the callback and must
+ * not be retained.
+ *
+ * A comparator must not reenter a public operation on the same tree.
+ * Status-returning operations reject such attempts with BTREE_BUSY;
+ * btree_close must not be called from the comparator. Reopen requires the same
+ * key size, value size, comparator ID, and comparator semantics.
  */
 btree_status btree_create(const btree_storage *storage, const btree_options *options,
                           btree **tree_out);

@@ -5,12 +5,14 @@ enum {
     BYTE_KEY_SIZE = 13,
     BYTE_VALUE_SIZE = 21,
     BYTE_ITEM_COUNT = 96,
+    ODD_SPLIT_ITEM_COUNT = 14,
     NUMERIC_KEY_SIZE = 8,
     NUMERIC_VALUE_SIZE = 5,
     NUMERIC_ITEM_COUNT = 2048
 };
 
 #define NUMERIC_COMPARATOR_ID (BTREE_COMPARATOR_USER_MIN + UINT64_C(17))
+#define REENTRANT_COMPARATOR_ID (BTREE_COMPARATOR_USER_MIN + UINT64_C(18))
 
 typedef struct byte_scan_context {
     uint64_t expected;
@@ -20,6 +22,16 @@ typedef struct byte_scan_context {
 typedef struct numeric_compare_context {
     uint64_t calls;
 } numeric_compare_context;
+
+typedef struct reentrant_compare_context {
+    btree *tree;
+    bool attempt_nested_put;
+    bool nested_put_called;
+    btree_status nested_status;
+    bool nested_inserted;
+    unsigned char nested_key[NUMERIC_KEY_SIZE];
+    unsigned char nested_value[NUMERIC_VALUE_SIZE];
+} reentrant_compare_context;
 
 typedef struct numeric_scan_context {
     uint64_t expected;
@@ -111,6 +123,26 @@ static int compare_bytes(void *context, const void *left_key, const void *right_
                          size_t key_size) {
     TEST_CHECK(context == NULL);
     return memcmp(left_key, right_key, key_size);
+}
+
+static int compare_with_nested_put(void *context, const void *left_key, const void *right_key,
+                                   size_t key_size) {
+    reentrant_compare_context *comparison = context;
+    uint64_t left_value;
+    uint64_t right_value;
+
+    TEST_CHECK(comparison != NULL);
+    TEST_CHECK(key_size == NUMERIC_KEY_SIZE);
+    if (comparison->attempt_nested_put) {
+        comparison->attempt_nested_put = false;
+        comparison->nested_put_called = true;
+        comparison->nested_status =
+            btree_put(comparison->tree, comparison->nested_key, comparison->nested_value,
+                      &comparison->nested_inserted);
+    }
+    left_value = decode_u64_little_endian(left_key);
+    right_value = decode_u64_little_endian(right_key);
+    return (left_value > right_value) - (left_value < right_value);
 }
 
 static btree_scan_action check_numeric_item(void *context, const void *key, const void *value) {
@@ -214,6 +246,62 @@ static void test_file_byte_schema_and_copy_semantics(void) {
     test_remove_database(path);
 }
 
+static void test_file_odd_capacity_leaf_split(void) {
+    char path[256];
+    btree_file *backend = NULL;
+    btree_storage storage;
+    btree_options options;
+    btree_stats stats;
+    btree *tree = NULL;
+    uint64_t index;
+
+    test_temp_path(path, sizeof(path));
+    btree_options_init(&options, BYTE_KEY_SIZE, BYTE_VALUE_SIZE);
+    TEST_STATUS(btree_file_create(path, 512u, &backend), BTREE_OK);
+    storage = btree_file_storage(backend);
+    TEST_STATUS(btree_create(&storage, &options, &tree), BTREE_OK);
+
+    for (index = 0u; index < ODD_SPLIT_ITEM_COUNT; ++index) {
+        unsigned char key[BYTE_KEY_SIZE];
+        unsigned char value[BYTE_VALUE_SIZE];
+        bool inserted = false;
+
+        byte_key(index, key);
+        byte_value(index, value);
+        TEST_STATUS(btree_put(tree, key, value, &inserted), BTREE_OK);
+        TEST_CHECK(inserted);
+    }
+    TEST_STATUS(btree_validate(tree, &stats, NULL, 0u), BTREE_OK);
+    TEST_CHECK(stats.item_count == ODD_SPLIT_ITEM_COUNT);
+    TEST_CHECK(stats.leaf_capacity == 13u);
+    TEST_CHECK(stats.height == 2u);
+
+    btree_close(tree);
+    tree = NULL;
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
+    backend = NULL;
+    TEST_STATUS(btree_file_open(path, &backend), BTREE_OK);
+    storage = btree_file_storage(backend);
+    TEST_STATUS(btree_open(&storage, &options, &tree), BTREE_OK);
+    TEST_STATUS(btree_validate(tree, &stats, NULL, 0u), BTREE_OK);
+    TEST_CHECK(stats.item_count == ODD_SPLIT_ITEM_COUNT);
+
+    for (index = 0u; index < ODD_SPLIT_ITEM_COUNT; ++index) {
+        unsigned char key[BYTE_KEY_SIZE];
+        unsigned char expected[BYTE_VALUE_SIZE];
+        unsigned char actual[BYTE_VALUE_SIZE];
+
+        byte_key(index, key);
+        byte_value(index, expected);
+        TEST_STATUS(btree_get(tree, key, actual), BTREE_OK);
+        TEST_CHECK(memcmp(actual, expected, sizeof(actual)) == 0);
+    }
+
+    btree_close(tree);
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
+    test_remove_database(path);
+}
+
 static void test_invalid_comparator_configuration(void) {
     btree_mem *backend = NULL;
     btree_storage storage;
@@ -253,6 +341,59 @@ static void test_invalid_comparator_configuration(void) {
     TEST_STATUS(btree_open(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
 
+    btree_mem_destroy(backend);
+}
+
+static void test_custom_comparator_reentry_is_busy(void) {
+    btree_mem *backend = NULL;
+    btree_storage storage;
+    btree_options options;
+    btree_stats stats;
+    btree *tree = NULL;
+    reentrant_compare_context comparison;
+    unsigned char first_key[NUMERIC_KEY_SIZE];
+    unsigned char first_value[NUMERIC_VALUE_SIZE];
+    unsigned char second_key[NUMERIC_KEY_SIZE];
+    unsigned char second_value[NUMERIC_VALUE_SIZE];
+    unsigned char actual[NUMERIC_VALUE_SIZE];
+    bool inserted = false;
+
+    memset(&comparison, 0, sizeof(comparison));
+    btree_options_init(&options, NUMERIC_KEY_SIZE, NUMERIC_VALUE_SIZE);
+    options.comparator_id = REENTRANT_COMPARATOR_ID;
+    options.compare = compare_with_nested_put;
+    options.compare_context = &comparison;
+    TEST_STATUS(btree_mem_create(512u, &backend), BTREE_OK);
+    storage = btree_mem_storage(backend);
+    TEST_STATUS(btree_create(&storage, &options, &tree), BTREE_OK);
+    comparison.tree = tree;
+
+    encode_u64_little_endian(UINT64_C(1), first_key);
+    numeric_value(UINT64_C(1), first_value);
+    TEST_STATUS(btree_put(tree, first_key, first_value, &inserted), BTREE_OK);
+    TEST_CHECK(inserted);
+
+    encode_u64_little_endian(UINT64_C(3), comparison.nested_key);
+    numeric_value(UINT64_C(3), comparison.nested_value);
+    encode_u64_little_endian(UINT64_C(2), second_key);
+    numeric_value(UINT64_C(2), second_value);
+    inserted = false;
+    comparison.attempt_nested_put = true;
+    TEST_STATUS(btree_put(tree, second_key, second_value, &inserted), BTREE_OK);
+    TEST_CHECK(inserted);
+    TEST_CHECK(comparison.nested_put_called);
+    TEST_STATUS(comparison.nested_status, BTREE_BUSY);
+    TEST_CHECK(!comparison.nested_inserted);
+
+    TEST_STATUS(btree_validate(tree, &stats, NULL, 0u), BTREE_OK);
+    TEST_CHECK(stats.item_count == 2u);
+    TEST_STATUS(btree_get(tree, comparison.nested_key, actual), BTREE_NOT_FOUND);
+    TEST_STATUS(btree_get(tree, first_key, actual), BTREE_OK);
+    TEST_CHECK(memcmp(actual, first_value, sizeof(actual)) == 0);
+    TEST_STATUS(btree_get(tree, second_key, actual), BTREE_OK);
+    TEST_CHECK(memcmp(actual, second_value, sizeof(actual)) == 0);
+
+    btree_close(tree);
     btree_mem_destroy(backend);
 }
 
@@ -336,7 +477,9 @@ static void test_custom_little_endian_comparator(void) {
 
 int main(void) {
     test_file_byte_schema_and_copy_semantics();
+    test_file_odd_capacity_leaf_split();
     test_invalid_comparator_configuration();
+    test_custom_comparator_reentry_is_busy();
     test_custom_little_endian_comparator();
     return 0;
 }

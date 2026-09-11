@@ -39,6 +39,7 @@ struct btree {
     uint32_t internal_capacity;
     bool poisoned;
     bool scan_active;
+    bool comparator_active;
 };
 
 typedef struct btree_validation {
@@ -114,10 +115,15 @@ static void btree_configure(btree *tree, const btree_storage *storage, const btr
     tree->internal_capacity = internal_capacity;
 }
 
-static int btree_compare_keys(const btree *tree, const void *left_key, const void *right_key) {
+static int btree_compare_keys(btree *tree, const void *left_key, const void *right_key) {
     if (tree->compare != NULL) {
-        return tree->compare(tree->compare_context, left_key, right_key,
-                             (size_t)tree->schema.key_size);
+        int result;
+
+        tree->comparator_active = true;
+        result = tree->compare(tree->compare_context, left_key, right_key,
+                               (size_t)tree->schema.key_size);
+        tree->comparator_active = false;
+        return result;
     }
     return memcmp(left_key, right_key, (size_t)tree->schema.key_size);
 }
@@ -886,7 +892,7 @@ static btree_status btree_txn_commit(btree_txn *transaction) {
     return status;
 }
 
-static uint32_t btree_leaf_lower_bound(const btree *tree, const unsigned char *page, uint32_t count,
+static uint32_t btree_leaf_lower_bound(btree *tree, const unsigned char *page, uint32_t count,
                                        const void *key) {
     uint32_t first = 0u;
     uint32_t length = count;
@@ -905,8 +911,8 @@ static uint32_t btree_leaf_lower_bound(const btree *tree, const unsigned char *p
     return first;
 }
 
-static uint32_t btree_internal_child_index(const btree *tree, const unsigned char *page,
-                                           uint32_t count, const void *key) {
+static uint32_t btree_internal_child_index(btree *tree, const unsigned char *page, uint32_t count,
+                                           const void *key) {
     uint32_t first = 0u;
     uint32_t length = count;
 
@@ -1744,7 +1750,13 @@ btree_status btree_get(btree *tree, const void *key, void *value_out) {
     uint32_t first;
     btree_status status;
 
-    if (tree == NULL || key == NULL || value_out == NULL) {
+    if (tree == NULL) {
+        return BTREE_INVALID_ARGUMENT;
+    }
+    if (tree->comparator_active) {
+        return BTREE_BUSY;
+    }
+    if (key == NULL || value_out == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
     if (tree->poisoned) {
@@ -1782,13 +1794,13 @@ btree_status btree_put(btree *tree, const void *key, const void *value, bool *in
     if (inserted_out != NULL) {
         *inserted_out = false;
     }
-    if (tree == NULL || inserted_out == NULL) {
+    if (tree == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
-    if (tree->scan_active) {
+    if (tree->comparator_active || tree->scan_active) {
         return BTREE_BUSY;
     }
-    if (key == NULL || value == NULL) {
+    if (inserted_out == NULL || key == NULL || value == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
     if (tree->poisoned) {
@@ -1843,7 +1855,7 @@ btree_status btree_put(btree *tree, const void *key, const void *value, bool *in
         }
     } else {
         uint32_t total_count = capacity + 1u;
-        uint32_t left_count = total_count / 2u;
+        uint32_t left_count = total_count - total_count / 2u;
         uint32_t right_count;
         unsigned char *entries = malloc((size_t)total_count * tree->leaf_stride);
         unsigned char *new_entry;
@@ -1861,9 +1873,6 @@ btree_status btree_put(btree *tree, const void *key, const void *value, bool *in
         memcpy(new_entry + tree->leaf_stride,
                leaf + BTREE_PAGE_PAYLOAD_OFFSET + (size_t)position * tree->leaf_stride,
                (size_t)(leaf_header.count - position) * tree->leaf_stride);
-        if (position >= left_count) {
-            left_count++;
-        }
         right_count = total_count - left_count;
         status = btree_txn_allocate_page(&transaction, (uint8_t)BTREE_PAGE_LEAF, 0u, &right_page_id,
                                          &right_page);
@@ -1921,13 +1930,13 @@ btree_status btree_delete(btree *tree, const void *key, bool *removed_out) {
     if (removed_out != NULL) {
         *removed_out = false;
     }
-    if (tree == NULL || removed_out == NULL) {
+    if (tree == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
-    if (tree->scan_active) {
+    if (tree->comparator_active || tree->scan_active) {
         return BTREE_BUSY;
     }
-    if (key == NULL) {
+    if (removed_out == NULL || key == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
     if (tree->poisoned) {
@@ -1990,7 +1999,7 @@ btree_status btree_scan(btree *tree, const void *begin_key, const void *end_key,
     if (tree == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
-    if (tree->scan_active) {
+    if (tree->comparator_active || tree->scan_active) {
         return BTREE_BUSY;
     }
     if (tree->poisoned) {
@@ -2071,6 +2080,9 @@ btree_status btree_validate(btree *tree, btree_stats *stats_out, char *error_out
     }
     if (tree == NULL || (error_out == NULL && error_capacity != 0u)) {
         return BTREE_INVALID_ARGUMENT;
+    }
+    if (tree->comparator_active) {
+        return BTREE_BUSY;
     }
     if (tree->poisoned) {
         return BTREE_RECOVERY_REQUIRED;
