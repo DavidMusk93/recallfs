@@ -69,6 +69,7 @@ struct btree_file {
     uint32_t page_size;
     uint64_t page_count;
     unsigned char uuid[BTREE_FILE_UUID_SIZE];
+    char *data_name;
     char *wal_name;
     char *wal_temp_name;
     bool recovery_required;
@@ -107,15 +108,6 @@ static int file_open_existing(const char *path, int flags) {
 
     do {
         fd = open(path, flags | O_CLOEXEC);
-    } while (fd < 0 && errno == EINTR);
-    return file_make_cloexec(fd);
-}
-
-static int file_open_exclusive(const char *path, int flags) {
-    int fd;
-
-    do {
-        fd = open(path, flags | O_CLOEXEC | O_CREAT | O_EXCL, (mode_t)(S_IRUSR | S_IWUSR));
     } while (fd < 0 && errno == EINTR);
     return file_make_cloexec(fd);
 }
@@ -184,15 +176,6 @@ static bool file_fchmod_private(int fd) {
 
     do {
         result = fchmod(fd, (mode_t)(S_IRUSR | S_IWUSR));
-    } while (result != 0 && errno == EINTR);
-    return result == 0;
-}
-
-static bool file_unlink(const char *path) {
-    int result;
-
-    do {
-        result = unlink(path);
     } while (result != 0 && errno == EINTR);
     return result == 0;
 }
@@ -304,6 +287,12 @@ static bool file_descriptor_size(int fd, uint64_t *size_out) {
     return (off_t)*size_out == status.st_size;
 }
 
+static bool file_descriptor_is_regular(int fd) {
+    struct stat status;
+
+    return file_fstat(fd, &status) && S_ISREG(status.st_mode);
+}
+
 static btree_status file_lock_exclusive(int fd) {
     int result;
 
@@ -316,19 +305,20 @@ static btree_status file_lock_exclusive(int fd) {
     return errno == EACCES || errno == EAGAIN ? BTREE_BUSY : BTREE_IO;
 }
 
-static btree_status file_build_paths(const char *path, char **wal_name_out,
+static btree_status file_build_paths(const char *path, char **data_name_out, char **wal_name_out,
                                      char **wal_temp_name_out, char **parent_path_out) {
     const char *slash;
     const char *base_name;
     size_t path_length;
     size_t base_length;
     size_t parent_length;
+    char *data_name;
     char *wal_name;
     char *wal_temp_name;
     char *parent_path;
 
-    if (path == NULL || path[0] == '\0' || wal_name_out == NULL || wal_temp_name_out == NULL ||
-        parent_path_out == NULL) {
+    if (path == NULL || path[0] == '\0' || data_name_out == NULL || wal_name_out == NULL ||
+        wal_temp_name_out == NULL || parent_path_out == NULL) {
         return BTREE_INVALID_ARGUMENT;
     }
     path_length = strlen(path);
@@ -341,8 +331,14 @@ static btree_status file_build_paths(const char *path, char **wal_name_out,
     if (base_length > SIZE_MAX - 9u) {
         return BTREE_INVALID_ARGUMENT;
     }
+    data_name = malloc(base_length + 1u);
+    if (data_name == NULL) {
+        return BTREE_OUT_OF_MEMORY;
+    }
+    memcpy(data_name, base_name, base_length + 1u);
     wal_name = malloc(base_length + 5u);
     if (wal_name == NULL) {
+        free(data_name);
         return BTREE_OUT_OF_MEMORY;
     }
     memcpy(wal_name, base_name, base_length);
@@ -350,6 +346,7 @@ static btree_status file_build_paths(const char *path, char **wal_name_out,
     wal_temp_name = malloc(base_length + 9u);
     if (wal_temp_name == NULL) {
         free(wal_name);
+        free(data_name);
         return BTREE_OUT_OF_MEMORY;
     }
     memcpy(wal_temp_name, base_name, base_length);
@@ -378,9 +375,11 @@ static btree_status file_build_paths(const char *path, char **wal_name_out,
     if (parent_path == NULL) {
         free(wal_temp_name);
         free(wal_name);
+        free(data_name);
         return BTREE_OUT_OF_MEMORY;
     }
 
+    *data_name_out = data_name;
     *wal_name_out = wal_name;
     *wal_temp_name_out = wal_temp_name;
     *parent_path_out = parent_path;
@@ -1096,6 +1095,7 @@ static void file_backend_release(btree_file *backend) {
     if (backend->parent_fd >= 0) {
         (void)close(backend->parent_fd);
     }
+    free(backend->data_name);
     free(backend->wal_name);
     free(backend->wal_temp_name);
     free(backend);
@@ -1121,7 +1121,8 @@ btree_status btree_file_create(const char *path, uint32_t page_size, btree_file 
     backend->fd = -1;
     backend->parent_fd = -1;
     backend->page_size = page_size;
-    status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
+    status = file_build_paths(path, &backend->data_name, &backend->wal_name,
+                              &backend->wal_temp_name, &parent_path);
     if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
@@ -1132,13 +1133,15 @@ btree_status btree_file_create(const char *path, uint32_t page_size, btree_file 
         file_backend_release(backend);
         return status;
     }
-    backend->fd = file_open_exclusive(path, O_RDWR);
+    backend->fd = file_open_exclusive_at(backend->parent_fd, backend->data_name, O_RDWR);
     if (backend->fd < 0) {
+        int open_errno = errno;
+
         file_backend_release(backend);
-        return errno == EEXIST ? BTREE_BUSY : BTREE_IO;
+        return open_errno == EEXIST ? BTREE_BUSY : BTREE_IO;
     }
     created = true;
-    status = file_lock_exclusive(backend->fd);
+    status = file_descriptor_is_regular(backend->fd) ? file_lock_exclusive(backend->fd) : BTREE_IO;
     if (status == BTREE_OK) {
         status = file_require_absent_at(backend->parent_fd, backend->wal_name);
     }
@@ -1171,7 +1174,7 @@ btree_status btree_file_create(const char *path, uint32_t page_size, btree_file 
             backend->fd = -1;
         }
         if (created) {
-            (void)file_unlink(path);
+            (void)file_unlink_at(backend->parent_fd, backend->data_name);
             (void)file_sync_directory(backend->parent_fd);
         }
         file_backend_release(backend);
@@ -1199,7 +1202,8 @@ btree_status btree_file_open(const char *path, btree_file **backend_out) {
     }
     backend->fd = -1;
     backend->parent_fd = -1;
-    status = file_build_paths(path, &backend->wal_name, &backend->wal_temp_name, &parent_path);
+    status = file_build_paths(path, &backend->data_name, &backend->wal_name,
+                              &backend->wal_temp_name, &parent_path);
     if (status != BTREE_OK) {
         file_backend_release(backend);
         return status;
@@ -1210,8 +1214,12 @@ btree_status btree_file_open(const char *path, btree_file **backend_out) {
         file_backend_release(backend);
         return status;
     }
-    backend->fd = file_open_existing(path, O_RDWR);
+    backend->fd = file_open_existing_at(backend->parent_fd, backend->data_name, O_RDWR);
     if (backend->fd < 0) {
+        file_backend_release(backend);
+        return BTREE_IO;
+    }
+    if (!file_descriptor_is_regular(backend->fd)) {
         file_backend_release(backend);
         return BTREE_IO;
     }
@@ -1246,6 +1254,7 @@ btree_status btree_file_close(btree_file *backend) {
     if (backend->parent_fd >= 0 && close(backend->parent_fd) != 0) {
         close_failed = true;
     }
+    free(backend->data_name);
     free(backend->wal_name);
     free(backend->wal_temp_name);
     free(backend);

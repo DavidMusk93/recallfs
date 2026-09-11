@@ -101,6 +101,37 @@ static void test_stale_temp_is_removed_on_open(void) {
     test_remove_database(path);
 }
 
+static void test_final_component_symlink_is_rejected(void) {
+    char target_directory[] = "/tmp/btree-target-directory-XXXXXX";
+    char link_directory[] = "/tmp/btree-link-directory-XXXXXX";
+    char target_path[PATH_MAX];
+    char link_path[PATH_MAX];
+    int length;
+    btree_file *backend = NULL;
+
+    TEST_CHECK(mkdtemp(target_directory) != NULL);
+    TEST_CHECK(mkdtemp(link_directory) != NULL);
+    length = snprintf(target_path, sizeof(target_path), "%s/tree.db", target_directory);
+    TEST_CHECK(length > 0);
+    TEST_CHECK((size_t)length < sizeof(target_path));
+    length = snprintf(link_path, sizeof(link_path), "%s/tree.db", link_directory);
+    TEST_CHECK(length > 0);
+    TEST_CHECK((size_t)length < sizeof(link_path));
+
+    TEST_STATUS(btree_file_create(target_path, 512u, &backend), BTREE_OK);
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
+    backend = NULL;
+    TEST_CHECK(symlink(target_path, link_path) == 0);
+
+    TEST_STATUS(btree_file_open(link_path, &backend), BTREE_IO);
+    TEST_CHECK(backend == NULL);
+
+    TEST_CHECK(unlink(link_path) == 0);
+    test_remove_database(target_path);
+    TEST_CHECK(rmdir(link_directory) == 0);
+    TEST_CHECK(rmdir(target_directory) == 0);
+}
+
 static void test_relative_path_survives_chdir(void) {
     char original_directory[PATH_MAX];
     char directory[] = "/tmp/btree-directory-XXXXXX";
@@ -118,6 +149,12 @@ static void test_relative_path_survives_chdir(void) {
     TEST_STATUS(btree_file_create("tree.db", 512u, &backend), BTREE_OK);
     storage = btree_file_storage(backend);
     TEST_STATUS(test_btree_create_u64(&storage, &tree), BTREE_OK);
+    btree_close(tree);
+    TEST_STATUS(btree_file_close(backend), BTREE_OK);
+
+    TEST_STATUS(btree_file_open("tree.db", &backend), BTREE_OK);
+    storage = btree_file_storage(backend);
+    TEST_STATUS(test_btree_open_u64(&storage, &tree), BTREE_OK);
     TEST_CHECK(chdir("/") == 0);
     TEST_STATUS(test_btree_put_u64(tree, 17u, 19u, &inserted), BTREE_OK);
     TEST_CHECK(inserted);
@@ -208,6 +245,7 @@ int main(int argc, char **argv) {
     test_file_mode_and_lock();
     test_stale_wal_blocks_create();
     test_stale_temp_is_removed_on_open();
+    test_final_component_symlink_is_rejected();
     test_relative_path_survives_chdir();
     test_descriptors_close_on_exec(argv[0]);
     test_backend_arguments();
