@@ -75,9 +75,9 @@ typedef struct bpt_stats {
 
 /*
  * A tree and its borrowed storage context are single-threaded. Serialize all
- * calls that use either one. Mutations are non-reentrant: do not call put or
- * delete on the same tree from a storage or scan callback, and do not begin a
- * second mutation until the first returns.
+ * calls that use either one. Put, delete, and nested scan calls made from a
+ * scan callback return BPT_BUSY. Do not begin a second mutation until the first
+ * returns.
  *
  * When a mutation returns BPT_RECOVERY_REQUIRED, its commit outcome is unknown
  * and the current tree handle is permanently poisoned. Subsequent
