@@ -10,13 +10,14 @@ depends_on:
   - recallfs-source-bplus-tree-study-v1
 supersedes: []
 verified_by:
-  - BPT-RA-1
-  - BPT-RA-2
-  - BPT-RA-3
-  - BPT-RA-4
-  - BPT-RA-5
-  - BPT-RA-6
-  - BPT-RA-7
+  - RBT-RA-1
+  - RBT-RA-2
+  - RBT-RA-3
+  - RBT-RA-4
+  - RBT-RA-5
+  - RBT-RA-6
+  - RBT-RA-7
+  - RBT-RA-8
 ---
 
 # Exploration Log
@@ -28,173 +29,167 @@ body was extracted from the DOM. A separate HTTP retrieval produced a
 134,525-byte response with SHA-256
 `572aec598464c7e80d932705b98009dd43e55ad4ecb54c8b038eccaa158a2adc`.
 
-The reusable mechanism is not the article's MySQL-specific primary-key advice.
-It is the fixed-page B+ tree shape: high-fanout internal pages, values in
-leaves, and an ordered leaf chain.
+The reusable mechanism is the fixed-page B+ tree shape: high-fanout internal
+pages, values in linked leaves, and bounded root-to-leaf traversal.
 
-## 2. Boundary Decision
+## 2. Historical Prototypes And Rejections
 
-The first design question was where the buffer pool belongs. Exposing frame
-pointers, pin counts, or dirty bits would couple the tree to one cache. The
-chosen interface instead copies pages through `read_page` and atomically
-publishes a page-image write set through `commit_pages`.
+The first prototype used public names such as `bpt_tree_put` and a
+`uint64_t -> uint64_t` data model. A later `btree` revision supported
+fixed-width opaque keys and values plus comparator IDs. Both are historical
+study stages, not compatibility targets.
 
-This makes three implementations possible without changing tree code:
+The final library deliberately made a clean break:
 
-```text
-tree core -> volatile memory provider
-tree core -> durable file/WAL provider
-tree core -> caller-owned buffer pool adapter
-```
+- package/API namespace is `rbt` 0.1.0;
+- `RBT_FORMAT_VERSION=1` is the only format;
+- old `btree` files fail validation;
+- there is no old-format reader, migration layer, alias, or dual-format path.
 
-The provider, not the tree, owns durability and cache policy.
+Another rejected implementation rebuilt all pages after every mutation. It
+passed functional tests but made writes and WAL size scale with the whole tree.
+The accepted transaction model copies only the search path, changed overflow
+chains, and required siblings, then submits the exact page set once.
 
-## 3. Proof-first Baseline
+## 3. Typed Record Model
 
-Public headers, CMake targets, and black-box tests were written before source
-implementation. The first configure failed as intended:
+The final schema persists a schema ID and every column's ID, type, flags, and
+maximum size. Supported types are `BOOL`, `I64`, `U64`, `BYTES`, and validated
+`UTF8`. Nullability applies to key and value columns; descending order applies
+only to keys. Column IDs are globally unique within the schema.
 
-```text
-Cannot find source file: src/btree.c
-Cannot find source file: src/btree_storage_memory.c
-Cannot find source file: src/btree_storage_file.c
-```
+The composite key codec converts typed values into one canonical byte sequence:
 
-All test translation units independently passed strict C11 syntax checking,
-which separated the expected missing-implementation failure from mistakes in
-the tests.
+- null state participates in ordering;
+- signed and unsigned integers become order-preserving byte sequences;
+- variable bytes use escaping plus a terminator, so components cannot be
+  confused by prefixes or embedded zero bytes;
+- descending components complement their encoded bytes.
 
-## 4. Rejected Implementation
+This removes runtime comparator identity from the persisted contract.
+`rbt_open` reads the complete schema from schema pages and accepts no
+caller-supplied schema. `rbt_get_schema` exposes the tree-owned copy.
 
-An initial core implementation collected every key/value pair and rebuilt
-every page for each mutation. It passed the model and structural tests, but
-was rejected because:
+The schema validator bounds the design at 64 total columns, 1 MiB per variable
+field, and 4 MiB per declared row. It also rejects a key layout whose maximum
+canonical representation leaves fewer than three cells in leaf or internal
+pages at the chosen page size.
 
-- put/delete became `O(N)`;
-- every mutation rewrote all allocated pages;
-- WAL size scaled with the entire tree;
-- the behavior contradicted the split/redistribution/merge design contract.
+## 4. Slotted Pages And Overflow
 
-The accepted implementation retains the search path and builds a transaction
-write set containing only copied pages that are actually changed. A spy
-provider now asserts that an existing-value update submits exactly metadata
-plus one leaf. A same-value upsert submits no write set.
+All six logical page types share one 64-byte checked header: metadata, leaf,
+internal, schema, overflow, and free. Leaf/internal pages have 8-byte slots
+made from `u32 offset` plus `u32 length`; slots grow upward while variable cells
+pack downward.
 
-## 5. Balancing And Page Reuse
+Variable value columns inline small payloads. A large value gets an overflow
+descriptor and its own chain tagged with column index and logical length.
+Separate value columns never share a chain. This mattered operationally:
+updating one large column can retain every page in another unchanged column's
+chain, and replacing a row can free and allocate only the affected chain.
 
-The incremental implementation uses these rules:
+The validator independently checks slot bounds and overlap, page checksums and
+IDs, schema chain size/count, overflow cycles/column tags/lengths, tree
+ownership, leaf links, freelist disjointness, and the page accounting identity.
 
-- leaf overflow splits `capacity + 1` entries into two legal siblings;
-- internal overflow promotes one separator and recursively inserts upward;
-- delete borrows from a sibling before merging;
-- internal merge carries the parent separator into the merged page;
-- a zero-key internal root collapses to its only child;
-- merged pages are rewritten as checked freelist pages;
-- allocation pops the freelist before extending `next_page_id`.
+## 5. Local Mutation And Reuse
 
-The validator uses an independent recursive traversal plus a freelist walk. It
-rejects duplicate ownership, cycles, out-of-range references, bad occupancy,
-wrong levels, leaf-link disagreement, and unowned pages.
+Insertion and deletion retain a search path. The balancing rules are:
 
-## 6. Durability Protocol
+- split an overflowing leaf or internal page into conservative legal siblings;
+- propagate a separator only through the path;
+- borrow from a sibling before merging;
+- carry the parent separator during internal merge;
+- collapse a unary internal root;
+- turn removed tree/overflow pages into checked free pages;
+- allocate from the freelist before extending the high-water mark.
 
-The file backend uses one full-page redo transaction at a time:
+A storage spy established the write boundary, not just the algorithmic intent.
+Existing-row replacement, non-splitting insertion, and non-rebalancing deletion
+each submit one atomic commit containing page `0` metadata and one leaf. A
+same-value put submits no commit. Leaf split, internal split, borrow, merge, and
+root collapse each write fewer pages than the live tree and stay within a
+height-derived path/sibling bound.
 
-1. validate a unique, contiguous-extension write set;
-2. write and durably sync a fixed unpublished `.wal.tmp`;
-3. atomically rename it to `.wal` and sync the parent directory;
-4. install all data pages and durably sync the database;
-5. unlink the active WAL and sync the directory.
+The overflow locality regression separately records page IDs. A scalar update
+beside two large columns writes only metadata and leaf; changing one large
+column excludes the other chain. A failed expanded update leaves the previous
+row and page accounting intact.
 
-The handle is marked recovery-required as soon as WAL creation succeeds. Any
-later error remains commit-unknown. Open replays a valid WAL idempotently.
+## 6. Provider And Lease Boundary
 
-An early gap allowed creation of a new database beside a stale WAL from an old
-database identity. The final create path rejects any pre-existing sidecar and
-preserves it for diagnosis.
+The core copies an `rbt_storage` callback table and borrows its context.
+`read_page` copies into caller memory; `page_count` reports the logical
+high-water mark; `commit_pages` publishes one exact, unique page set atomically.
+No provider pointer survives a callback.
 
-## 7. Regression Expansion
+Mandatory `acquire`/`release` callbacks reserve one live tree per storage
+context. A second `rbt_create` or `rbt_open` returns `-EBUSY`, and backend
+close/destroy also fails while leased.
 
-The final deterministic suites cover:
+A definite provider failure may return a normal negative errno. An unknown
+publication state must return `-EOWNERDEAD`. The tree then poisons the handle so
+all storage-dependent operations continue returning `-EOWNERDEAD`; only
+destroy/close and reopen can recover.
 
-- 30,000 mixed operations against an independent sorted model;
-- ascending and descending 4,096-key trees;
-- leaf/internal split, redistribution, merge, root collapse, and free reuse;
-- 512, 4,096, and 65,536 byte pages;
-- repeated clean file reopen;
-- process-exclusive lock and `0600` file mode;
-- final-component database symlink rejection and dirfd-bound data/WAL names;
-- commit crashes before WAL content, after WAL sync, after one data page, and
-  after data sync;
-- a second crash during recovery after one replayed page and after data sync;
-- every nonempty truncated prefix of a valid WAL plus checksum corruption;
-- page checksum, out-of-range child, leaf-cycle, and malformed-WAL rejection;
-- provider rollback on definite I/O failure and handle poisoning on uncertain
-  commit;
-- 13-byte keys and 21-byte values with embedded NUL bytes and overwritten input
-  buffers;
-- persisted schema inspection and mismatch rejection;
-- custom ordering over 2,048 shuffled keys through split, delete, validate, and
-  reopen;
-- installed-package consumption through a tracked external CMake project.
+## 7. File Durability
 
-## 8. Quality Findings
+The file backend creates mode-`0600` regular files, obtains an exclusive
+nonblocking lock, and keeps a parent directory descriptor. Data and WAL names
+are opened relative to that descriptor with `O_NOFOLLOW` and `CLOEXEC`, which
+binds the data file to the WAL namespace and rejects final-component symlinks.
 
-Clang static analysis initially reported two possible uninitialized split
-entries. The split loops initialize every slot, but using `calloc` made the
-safety property explicit and removed the analyzer ambiguity.
+One commit writes a complete full-page redo image set to `.wal.tmp`, syncs it,
+renames it to `.wal`, syncs the directory, installs all data pages, syncs the
+database, then removes the WAL and syncs the directory. macOS regular files use
+`F_FULLFSYNC`; other POSIX targets use `fsync`.
 
-The simplification pass removed duplicated lower-bound and internal-entry
-operations, a dead node field, a dead crash-test CLI path, and duplicate
-page-size predicates. It also made same-value upsert a true no-op. Larger
-rebalance refactors were intentionally deferred because they increased change
-risk without changing the tested contract.
+Publication makes later errors commit-unknown. The backend returns
+`-EOWNERDEAD` and stays poisoned. Reopen validates and replays a complete WAL
+idempotently; malformed nonempty WAL remains for diagnosis. Crash tests cover
+mutation and recovery hooks, every nonempty truncated prefix, and a synthetic
+4,096-record WAL.
 
-The generic revision's simplification pass removed an unreachable non-root
-empty-subtree flag and a duplicate CMake feature definition. It deliberately
-kept independent test codecs separate from private serialization helpers and
-rejected refactors that would change observable comparator calls or
-allocation-failure behavior without a measured need.
+## 8. Regression Expansion
 
-The generic review found an odd-capacity split bug: a right-edge insertion
-changed a natural 7/7 split into 8/6 while validation required at least seven
-records per non-root leaf. The position-dependent adjustment was removed and a
-file reopen regression now exercises the exact 13-byte/21-byte schema. The same
-review added a comparator-active guard so comparator callbacks cannot commit a
-nested mutation over stale outer transaction pages.
+The final eight suites are:
 
-## 9. Remaining Unknowns
+| Suite | Main coverage |
+| --- | --- |
+| `rbt_schema_test` | all types/flags, canonical order, UTF-8, ownership, schema-free reopen |
+| `rbt_overflow_test` | independent chains, shrink/delete/reuse, 2,048-page replacement |
+| `rbt_locality_test` | exact ordinary write set, balancing bounds, poison propagation |
+| `rbt_structure_test` | growth, delete, root collapse, freelist reuse |
+| `rbt_model_test` | 30,000 typed mixed operations against an independent model |
+| `rbt_backend_test` | 512/4096/65536 matrix, locks, modes, leases, namespace and I/O failures |
+| `rbt_corruption_test` | schema, slot, topology, overflow, file and WAL corruption |
+| `rbt_crash_test` | full-page redo crash/recovery prefixes and 4,096-record WAL |
 
-- subprocess exit is not a physical power-cut or controller-cache test;
-- no concurrent reader/writer protocol is implemented;
-- network filesystem ordering is unsupported;
-- allocation failure is handled, but exhaustive fail-every-allocation
-  instrumentation is not part of 1.0;
-- no workload benchmark supports a performance claim.
+All eight passed under Zig 0.16.0 Debug and Release, ASan/UBSan, and FIL-C
+0.684. The analyzer was bound to `ccc-analyzer` and reported no bugs. The
+installed package consumer uses the public typed API.
 
-## 10. Generic Library Revision
+## 9. Final Review
 
-The first implementation used `uint64_t` keys and values and public names such
-as `bpt_tree_put`. That made the article example the library's data model. It
-was rejected as an insufficiently reusable result even though its tests passed.
+Review run `20260911-221757-4574fb5e` covered base `10c0875`,
+implementations `938f510`, `0892d30`, and `97fbe20`, and fixes `ed68923` and
+`6d82359`. Fourteen validated findings were closed.
 
-The 1.0 API now uses the conventional `btree_*` prefix and fixed-width opaque
-byte records:
+The validator rejected splitting the core monolith as a preference rather than
+a demonstrated defect. It also rejected an extra backend-poison finding as
+already covered by the contract and tests, although backend poisoning was
+still hardened in the final fixes. Cross-model corroboration was unavailable
+because the host model family could not be attested. No actionable findings
+remain.
 
-- `btree_options` defines `key_size`, `value_size`, comparator callback, and a
-  stable comparator ID;
-- the default comparator is unsigned-byte lexicographic order;
-- custom comparators require an application-owned ID at or above
-  `BTREE_COMPARATOR_USER_MIN`;
-- metadata persists both widths and the comparator ID;
-- `btree_read_schema()` permits inspection before open;
-- `btree_open()` rejects mismatched schemas with `BTREE_SCHEMA_MISMATCH`;
-- nullable scan bounds make a true unbounded scan possible without reserving a
-  sentinel key.
+## 10. Reconciliation
 
-Fixed-width records are deliberate. They cover encoded integers, UUIDs,
-hashes, composite keys, fixed records, and row references while retaining
-deterministic page capacity and bounded split/merge proofs. Variable-width
-records require a slotted-page and overflow-page format and remain a separate
-future format feature rather than an unverified extension hidden behind
-`void *`.
+`RBT-RA-1` through `RBT-RA-8` bind schema, overflow, locality, structure,
+model, backend, corruption/crash, and complete qualification evidence
+respectively. Their exact definitions are in the study README and evidence
+ledger.
+
+The remaining boundary is explicit: subprocess crashes are not physical power
+loss; network filesystems are unsupported; one tree lease is not shared-tree
+thread/process concurrency; no online-backup protocol exists; and no benchmark
+result was collected.

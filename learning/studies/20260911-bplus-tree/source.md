@@ -29,24 +29,41 @@ verified_by:
 
 ## Extraction Method
 
-The article was loaded at its canonical URL in a real browser. Its semantic
-`article` headings, paragraphs, lists, and code blocks were extracted from the
-rendered DOM. A separate `curl -L --compressed` request captured the response
-size, headers, and SHA-256.
+The canonical article was loaded in a real browser. Headings, paragraphs,
+lists, and code blocks were extracted from the rendered semantic `article`
+element. A separate `curl -L --compressed` retrieval recorded the response
+size, headers, and digest.
 
 ## Claims Used
 
-| Source claim | Study use |
+| Source claim | Final `rbt` use |
 | --- | --- |
-| Internal B+ tree pages omit values | Fixed-width internal pages store only separator keys and child page IDs |
-| Values reside in leaves | Leaf pages store configured fixed-width key/value byte records |
-| Leaves form an ordered list | Range scans follow checked `next` links |
-| Nodes should match storage units | Every node occupies one configurable fixed-size page |
-| Buffer pools cache pages | The tree depends on a storage interface and contains no eviction policy |
-| Key width affects fanout | The study derives exact capacities from page size and encoded entry width |
+| Internal B+ tree pages omit row values | internal slotted cells persist canonical separators and child page IDs |
+| Values reside in leaves | leaf slotted cells persist composite keys and typed value descriptors |
+| Leaves form an ordered list | `[begin, end)` scans traverse checked sibling links |
+| Nodes should match storage units | every node occupies one configurable 512..65,536-byte page |
+| Buffer pools cache pages | the core depends on a page provider and owns no eviction policy |
+| Key width affects fanout | schema maxima bound canonical key size and conservative occupancy |
+
+## Engineering Extension
+
+The article supplies the structural motivation, not the production contract.
+Persisted column schemas, canonical composite-key encoding, nullable and
+descending semantics, slotted pages, per-value-column overflow chains,
+freelist ownership, atomic page-set commit, storage leases, checksums, WAL
+publication, corruption handling, negative-errno APIs, and package integration
+are original engineering decisions verified by `RBT-RA-1` through
+`RBT-RA-8`.
+
+The library is a clean break from the historical study implementation.
+`RBT_FORMAT_VERSION=1` is the sole `rbt` format; predecessor files are rejected
+and have no compatibility reader, migration layer, alias, or alternate format.
 
 ## Limitations
 
-The source does not specify a recoverable storage format. WAL ordering,
-checksums, freelist ownership, corruption handling, and exact API semantics in
-this study are original engineering decisions and are verified separately.
+The source article does not prove the library's crash behavior, safety,
+locality, or compatibility boundary. Those conclusions are limited to the
+tracked source at commit `6d823594103237e372cfe844ac0cac12fb187e3d` and the
+raw evidence ledger. Neither the article nor this study establishes real
+power-loss behavior, network filesystem guarantees, shared-tree concurrency,
+online backup, or benchmark performance.

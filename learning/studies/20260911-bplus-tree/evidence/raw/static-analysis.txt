@@ -1,5 +1,4 @@
-source_commit=5c936d1e70a293fe2e5acbf1f6d23016b49f43f8
-command: scan-build --status-bugs configure + build with ccc-analyzer assertion
+source_commit=6d823594103237e372cfe844ac0cac12fb187e3d
 scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
 -- The C compiler identification is AppleClang 21.0.0.21000101
 -- Detecting C compiler ABI info
@@ -9,49 +8,50 @@ scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for stati
 -- Detecting C compile features - done
 -- Configuring done (0.8s)
 -- Generating done (0.1s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-scan-v2
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-scan
 scan-build: Analysis run complete.
-scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/btree-evidence-scan-v2/2026-09-11-191212-20380-1' because it contains no reports.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-evidence-scan/2026-09-11-231616-91493-1' because it contains no reports.
 scan-build: No bugs found.
 CMAKE_C_COMPILER:FILEPATH=/opt/homebrew/Cellar/llvm@16/16.0.6_1/libexec/ccc-analyzer
 scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
-[ 12%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
-[ 12%] Building C object CMakeFiles/btree.dir/src/btree_crc32c.c.o
-[ 12%] Building C object CMakeFiles/btree.dir/src/btree.c.o
-[ 16%] Linking C static library libbtree_storage_memory.a
-[ 16%] Built target btree_storage_memory
-[ 20%] Linking C static library libbtree.a
-[ 20%] Built target btree
-[ 28%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
-[ 28%] Building C object CMakeFiles/btree_storage_file_test_hooks.dir/src/btree_storage_file.c.o
-[ 32%] Linking C static library libbtree_storage_file.a
-[ 32%] Built target btree_storage_file
-[ 36%] Building C object CMakeFiles/btree_contract_test.dir/tests/btree_contract_test.c.o
-[ 44%] Building C object CMakeFiles/btree_model_test.dir/tests/btree_model_test.c.o
-[ 44%] Building C object CMakeFiles/btree_structure_test.dir/tests/btree_structure_test.c.o
-[ 48%] Building C object CMakeFiles/btree_generic_test.dir/tests/btree_generic_test.c.o
-[ 52%] Building C object CMakeFiles/btree_persistence_test.dir/tests/btree_persistence_test.c.o
-[ 56%] Building C object CMakeFiles/btree_backend_test.dir/tests/btree_backend_test.c.o
-[ 60%] Building C object CMakeFiles/btree_corruption_test.dir/tests/btree_corruption_test.c.o
-[ 64%] Linking C static library libbtree_storage_file_test_hooks.a
-[ 64%] Built target btree_storage_file_test_hooks
-[ 68%] Building C object CMakeFiles/btree_crash_test.dir/tests/btree_crash_test.c.o
-[ 72%] Linking C executable btree_model_test
-[ 76%] Linking C executable btree_structure_test
-[ 80%] Linking C executable btree_persistence_test
-[ 84%] Linking C executable btree_contract_test
-[ 88%] Linking C executable btree_backend_test
-[ 92%] Linking C executable btree_generic_test
-[ 96%] Linking C executable btree_corruption_test
-[ 96%] Built target btree_model_test
-[100%] Linking C executable btree_crash_test
-[100%] Built target btree_persistence_test
-[100%] Built target btree_structure_test
-[100%] Built target btree_generic_test
-[100%] Built target btree_contract_test
-[100%] Built target btree_backend_test
-[100%] Built target btree_corruption_test
-[100%] Built target btree_crash_test
+[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
+[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt.c.o
+[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_crc32c.c.o
+[ 15%] Linking C static library librbt.a
+[ 15%] Built target rbt
+[ 26%] Building C object CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
+[ 26%] Building C object CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
+[ 26%] Building C object CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
+[ 30%] Linking C static library librbt_storage_memory.a
+[ 30%] Built target rbt_storage_memory
+[ 34%] Linking C static library librbt_storage_file.a
+[ 38%] Linking C static library librbt_storage_file_test_hooks.a
+[ 38%] Built target rbt_storage_file
+[ 38%] Built target rbt_storage_file_test_hooks
+[ 50%] Building C object CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o
+[ 53%] Building C object CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o
+[ 69%] Building C object CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o
+[ 73%] Linking C executable rbt_model_test
+[ 80%] Linking C executable rbt_structure_test
+[ 80%] Linking C executable rbt_schema_test
+[ 84%] Linking C executable rbt_overflow_test
+[ 84%] Built target rbt_model_test
+[ 88%] Linking C executable rbt_crash_test
+[ 88%] Built target rbt_schema_test
+[ 88%] Built target rbt_structure_test
+[ 88%] Built target rbt_overflow_test
+[ 92%] Linking C executable rbt_locality_test
+[ 96%] Linking C executable rbt_backend_test
+[ 96%] Built target rbt_crash_test
+[ 96%] Built target rbt_locality_test
+[ 96%] Built target rbt_backend_test
+[100%] Linking C executable rbt_corruption_test
+[100%] Built target rbt_corruption_test
 scan-build: Analysis run complete.
-scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/btree-evidence-scan-v2/2026-09-11-191213-20691-1' because it contains no reports.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-evidence-scan/2026-09-11-231617-91949-1' because it contains no reports.
 scan-build: No bugs found.

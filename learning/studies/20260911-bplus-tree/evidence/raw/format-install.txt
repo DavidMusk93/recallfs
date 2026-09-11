@@ -1,102 +1,100 @@
-source_commit=5c936d1e70a293fe2e5acbf1f6d23016b49f43f8
-command: clang-format --dry-run --Werror
+source_commit=6d823594103237e372cfe844ac0cac12fb187e3d
 format: PASS
-command: Zig Release install + find_package consumer
 -- The C compiler identification is Clang 21.1.0
 -- Detecting C compiler ABI info
 -- Detecting C compiler ABI info - done
 -- Check for working C compiler: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (4.2s)
--- Generating done (0.0s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2
-Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2'
+-- Configuring done (1.9s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build
+Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build'
 
 Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile -j
-/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 --check-build-system CMakeFiles/Makefile.cmake 0
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2//CMakeFiles/progress.marks
+/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build --check-build-system CMakeFiles/Makefile.cmake 0
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build//CMakeFiles/progress.marks
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/Makefile2 all
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree.dir/build.make CMakeFiles/btree.dir/depend
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_memory.dir/build.make CMakeFiles/btree_storage_memory.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2/CMakeFiles/btree.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2/CMakeFiles/btree_storage_memory.dir/DependInfo.cmake "--color="
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_memory.dir/build.make CMakeFiles/btree_storage_memory.dir/build
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree.dir/build.make CMakeFiles/btree.dir/build
-[ 42%] Building C object CMakeFiles/btree.dir/src/btree_crc32c.c.o
-[ 42%] Building C object CMakeFiles/btree.dir/src/btree.c.o
-[ 42%] Building C object CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree.dir/src/btree_crc32c.c.o -MF CMakeFiles/btree.dir/src/btree_crc32c.c.o.d -o CMakeFiles/btree.dir/src/btree_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_crc32c.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -MF CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o.d -o CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_memory.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree.dir/src/btree.c.o -MF CMakeFiles/btree.dir/src/btree.c.o.d -o CMakeFiles/btree.dir/src/btree.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree.c
-[ 57%] Linking C static library libbtree_storage_memory.a
-/opt/homebrew/bin/cmake -P CMakeFiles/btree_storage_memory.dir/cmake_clean_target.cmake
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_storage_memory.dir/link.txt --verbose=1
-[ 71%] Linking C static library libbtree.a
-/opt/homebrew/bin/cmake -P CMakeFiles/btree.dir/cmake_clean_target.cmake
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree.dir/link.txt --verbose=1
-/usr/bin/ar qc libbtree.a CMakeFiles/btree.dir/src/btree.c.o CMakeFiles/btree.dir/src/btree_crc32c.c.o
-/usr/local/bin/llvm-ranlib libbtree.a
-/usr/bin/ar qc libbtree_storage_memory.a CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o
-/usr/local/bin/llvm-ranlib libbtree_storage_memory.a
-[ 71%] Built target btree
-[ 71%] Built target btree_storage_memory
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file.dir/build.make CMakeFiles/btree_storage_file.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2/CMakeFiles/btree_storage_file.dir/DependInfo.cmake "--color="
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_storage_file.dir/build.make CMakeFiles/btree_storage_file.dir/build
-[ 85%] Building C object CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -MF CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o.d -o CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
-[100%] Linking C static library libbtree_storage_file.a
-/opt/homebrew/bin/cmake -P CMakeFiles/btree_storage_file.dir/cmake_clean_target.cmake
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_storage_file.dir/link.txt --verbose=1
-/usr/bin/ar qc libbtree_storage_file.a CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o
-/usr/local/bin/llvm-ranlib libbtree_storage_file.a
-[100%] Built target btree_storage_file
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-build-v2/CMakeFiles 0
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt.dir/build.make CMakeFiles/rbt.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build/CMakeFiles/rbt.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt.dir/build.make CMakeFiles/rbt.dir/build
+[ 37%] Building C object CMakeFiles/rbt.dir/src/rbt_crc32c.c.o
+[ 37%] Building C object CMakeFiles/rbt.dir/src/rbt.c.o
+[ 37%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -MF CMakeFiles/rbt.dir/src/rbt_crc32c.c.o.d -o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_crc32c.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -MF CMakeFiles/rbt.dir/src/rbt_page_updates.c.o.d -o CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_page_updates.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt.c.o -MF CMakeFiles/rbt.dir/src/rbt.c.o.d -o CMakeFiles/rbt.dir/src/rbt.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt.c
+[ 50%] Linking C static library librbt.a
+/opt/homebrew/bin/cmake -P CMakeFiles/rbt.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt.dir/link.txt --verbose=1
+/usr/bin/ar qc librbt.a CMakeFiles/rbt.dir/src/rbt.c.o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
+/usr/local/bin/llvm-ranlib librbt.a
+[ 50%] Built target rbt
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_memory.dir/build.make CMakeFiles/rbt_storage_memory.dir/depend
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file.dir/build.make CMakeFiles/rbt_storage_file.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build/CMakeFiles/rbt_storage_file.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build/CMakeFiles/rbt_storage_memory.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file.dir/build.make CMakeFiles/rbt_storage_file.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_memory.dir/build.make CMakeFiles/rbt_storage_memory.dir/build
+[ 75%] Building C object CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
+[ 75%] Building C object CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o -MF CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o.d -o CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_file.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -MF CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o.d -o CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_memory.c
+[ 87%] Linking C static library librbt_storage_memory.a
+/opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_memory.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_storage_memory.dir/link.txt --verbose=1
+/usr/bin/ar qc librbt_storage_memory.a CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
+/usr/local/bin/llvm-ranlib librbt_storage_memory.a
+[ 87%] Built target rbt_storage_memory
+[100%] Linking C static library librbt_storage_file.a
+/opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_file.dir/cmake_clean_target.cmake
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_storage_file.dir/link.txt --verbose=1
+/usr/bin/ar qc librbt_storage_file.a CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
+/usr/local/bin/llvm-ranlib librbt_storage_file.a
+[100%] Built target rbt_storage_file
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install-build/CMakeFiles 0
 
-library compile_commands:
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree.dir/src/btree.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree.dir/src/btree_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_crc32c.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_storage_memory.dir/src/btree_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_memory.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/btree_storage_file.dir/src/btree_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/btree_storage_file.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt.dir/src/rbt.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_crc32c.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_page_updates.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_memory.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -O3 -DNDEBUG -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_file.c
 -- Install configuration: "Release"
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree_storage_memory.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree_storage_file.a
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include/btree.h
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include/btree_backends.h
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeTargets.cmake
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeTargets-release.cmake
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeConfig.cmake
--- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/cmake/btree/btreeConfigVersion.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt_storage_memory.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt_storage_file.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/include/rbt.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/include/rbt_backends.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/cmake/rbt/rbtTargets.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/cmake/rbt/rbtTargets-release.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/cmake/rbt/rbtConfig.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/cmake/rbt/rbtConfigVersion.cmake
 -- The C compiler identification is Clang 21.1.0
 -- Detecting C compiler ABI info
 -- Detecting C compiler ABI info - done
 -- Check for working C compiler: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (3.0s)
+-- Configuring done (1.1s)
 -- Generating done (0.0s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2
-Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2'
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer
+Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer'
 
 Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile -j
-/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2 --check-build-system CMakeFiles/Makefile.cmake 0
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2//CMakeFiles/progress.marks
+/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer --check-build-system CMakeFiles/Makefile.cmake 0
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer//CMakeFiles/progress.marks
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/Makefile2 all
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_package_consumer.dir/build.make CMakeFiles/btree_package_consumer.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2 && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2/CMakeFiles/btree_package_consumer.dir/DependInfo.cmake "--color="
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/btree_package_consumer.dir/build.make CMakeFiles/btree_package_consumer.dir/build
-[ 50%] Building C object CMakeFiles/btree_package_consumer.dir/main.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -isystem /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include -std=c11 -arch arm64 -MD -MT CMakeFiles/btree_package_consumer.dir/main.c.o -MF CMakeFiles/btree_package_consumer.dir/main.c.o.d -o CMakeFiles/btree_package_consumer.dir/main.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer/main.c
-[100%] Linking C executable btree_package_consumer
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/btree_package_consumer.dir/link.txt --verbose=1
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/btree_package_consumer.dir/main.c.o -o btree_package_consumer  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree.a /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/lib/libbtree_storage_memory.a
-[100%] Built target btree_package_consumer
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-consumer-v2/CMakeFiles 0
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_package_consumer.dir/build.make CMakeFiles/rbt_package_consumer.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer/CMakeFiles/rbt_package_consumer.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_package_consumer.dir/build.make CMakeFiles/rbt_package_consumer.dir/build
+[ 50%] Building C object CMakeFiles/rbt_package_consumer.dir/main.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -isystem /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/include -std=c11 -arch arm64 -MD -MT CMakeFiles/rbt_package_consumer.dir/main.c.o -MF CMakeFiles/rbt_package_consumer.dir/main.c.o.d -o CMakeFiles/rbt_package_consumer.dir/main.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer/main.c
+[100%] Linking C executable rbt_package_consumer
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_package_consumer.dir/link.txt --verbose=1
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_package_consumer.dir/main.c.o -o rbt_package_consumer  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt.a /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt_storage_memory.a /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt_storage_file.a /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/lib/librbt.a
+[100%] Built target rbt_package_consumer
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-consumer/CMakeFiles 0
 
-consumer compile_commands:
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -isystem /Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include -std=c11 -arch arm64 -o CMakeFiles/btree_package_consumer.dir/main.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer/main.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc  -isystem /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-install/include -std=c11 -arch arm64 -o CMakeFiles/rbt_package_consumer.dir/main.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/package_consumer/main.c
 find_package consumer: PASS
-command: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cxx -std=c++17 -pedantic-errors -x c++ -I/Users/bytedance/Documents/trae_projects/recallfs/.tmp/btree-evidence-install-v2/include -c learning/studies/20260911-bplus-tree/lib/tests/package_consumer/main.c -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/data/btree-header-smoke.o
 C++17 headers: PASS
