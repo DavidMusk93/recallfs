@@ -1,0 +1,52 @@
+command: scan-build --status-bugs cmake/build
+scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /opt/homebrew/Cellar/llvm@16/16.0.6_1/libexec/ccc-analyzer - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-scan
+scan-build: Analysis run complete.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-scan-report/2026-09-11-160704-38861-1' because it contains no reports.
+scan-build: No bugs found.
+scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
+[ 13%] Building C object CMakeFiles/bptree_storage_memory.dir/src/bptree_storage_memory.c.o
+[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree_crc32c.c.o
+[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree.c.o
+[ 17%] Linking C static library libbptree_storage_memory.a
+[ 17%] Built target bptree_storage_memory
+[ 21%] Linking C static library libbptree.a
+[ 21%] Built target bptree
+[ 30%] Building C object CMakeFiles/bptree_storage_file.dir/src/bptree_storage_file.c.o
+[ 30%] Building C object CMakeFiles/bptree_storage_file_test_hooks.dir/src/bptree_storage_file.c.o
+[ 34%] Linking C static library libbptree_storage_file.a
+[ 34%] Built target bptree_storage_file
+[ 39%] Linking C static library libbptree_storage_file_test_hooks.a
+[ 47%] Building C object CMakeFiles/bptree_corruption_test.dir/tests/bptree_corruption_test.c.o
+[ 52%] Building C object CMakeFiles/bptree_contract_test.dir/tests/bptree_contract_test.c.o
+[ 56%] Building C object CMakeFiles/bptree_model_test.dir/tests/bptree_model_test.c.o
+[ 56%] Building C object CMakeFiles/bptree_structure_test.dir/tests/bptree_structure_test.c.o
+[ 65%] Building C object CMakeFiles/bptree_backend_test.dir/tests/bptree_backend_test.c.o
+[ 65%] Building C object CMakeFiles/bptree_persistence_test.dir/tests/bptree_persistence_test.c.o
+[ 65%] Built target bptree_storage_file_test_hooks
+[ 69%] Building C object CMakeFiles/bptree_crash_test.dir/tests/bptree_crash_test.c.o
+[ 73%] Linking C executable bptree_structure_test
+[ 82%] Linking C executable bptree_model_test
+[ 82%] Linking C executable bptree_persistence_test
+[ 86%] Linking C executable bptree_corruption_test
+[ 91%] Linking C executable bptree_contract_test
+[ 95%] Linking C executable bptree_backend_test
+[100%] Linking C executable bptree_crash_test
+[100%] Built target bptree_model_test
+[100%] Built target bptree_corruption_test
+[100%] Built target bptree_persistence_test
+[100%] Built target bptree_structure_test
+[100%] Built target bptree_contract_test
+[100%] Built target bptree_backend_test
+[100%] Built target bptree_crash_test
+scan-build: Analysis run complete.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-scan-report/2026-09-11-160705-39237-1' because it contains no reports.
+scan-build: No bugs found.

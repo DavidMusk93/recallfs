@@ -20,7 +20,32 @@ verified_by:
 
 # Page-oriented B+ Tree Study
 
-## Contract
+## 1. 结论先行
+
+本 study 交付了一个可直接构建和嵌入的 C11 B+ tree library：
+
+- core 使用 search-path transaction；普通 value update 只提交 metadata 和
+  一个 leaf，不做全树重建；
+- insert/delete 完整覆盖 leaf/internal split、borrow、merge、root
+  grow/collapse 和 freelist reuse；
+- `bpt_storage` 只暴露 page copy 与 atomic page-set commit，buffer pool 可由
+  调用方独立实现；
+- memory backend 使用几何扩容；file backend 使用排他锁、CRC32C、
+  full-page redo WAL、dirfd-relative sidecar、`CLOEXEC` 和恢复期重放；
+- macOS regular-file barrier 使用 `F_FULLFSYNC`，其他 POSIX 平台使用
+  `fsync`；namespace 变更使用 directory `fsync`；
+- `bpt_tree_open()` 会执行全量结构校验，避免在打开后才暴露损坏拓扑。
+
+最终 7 个 CTest suites 在 Debug、Release、ASan/UBSan 和 FIL-C 0.684 下全部
+通过。Crash suite 覆盖 split 导致的 page growth、commit 五个阶段、recovery
+两个阶段、有效 WAL 的每个非空截断前缀，以及 checksum/version/size
+损坏。独立 code review 的 12 个 validated finding 已全部修复。
+
+这支持在本文声明的单线程、单写者、本地 POSIX 文件系统边界内进入生产集成和
+更高层 E2E。它不等价于真实断电、存储控制器、network filesystem 或并发事务
+认证；这些能力不得从现有测试外推。
+
+## 2. Contract
 
 ### Decision
 
@@ -149,9 +174,10 @@ memory backend              file backend       buffer pool adapter
 | Reopen with empty abandoned WAL | remove it; data remains unchanged |
 | Reopen with malformed non-empty WAL | `BPT_CORRUPT`; preserve WAL for diagnosis |
 
-The file backend commit point is a complete, checksummed WAL followed by a
-successful WAL `fsync`. It then writes data pages, `fsync`s the data file, and
-only then unlinks the WAL and `fsync`s the parent directory. Recovery replay is
+The file backend first writes and durably syncs `<database>.wal.tmp`, atomically
+renames it to `<database>.wal`, and syncs the parent directory. That publication
+is the commit point. It then writes data pages, durably syncs the data file, and
+only then unlinks the active WAL and syncs the directory. Recovery replay is
 idempotent because records are full page images addressed by logical page ID.
 
 ### Worked Examples
@@ -189,19 +215,18 @@ never exposed.
 | `BPT-RA-1` | ascending, descending and shuffled inserts across multiple levels | every get and full scan equals the independent sorted model | `bptree_model_test` |
 | `BPT-RA-2` | delete through redistribution, merge, empty root and reuse | validator passes after every boundary; high-water page count stops growing when free pages exist | `bptree_structure_test` |
 | `BPT-RA-3` | file close/reopen after mutations | exact item count and ordered contents survive every reopen | `bptree_persistence_test` |
-| `BPT-RA-4` | crash at WAL sync, first data page and data sync | reopen yields the committed post-state and an empty/absent WAL | `bptree_crash_test` |
+| `BPT-RA-4` | crash before WAL publish, after publish, during data write, during replay, and after data sync | reopen yields the exact old or committed post-state and no active WAL | `bptree_crash_test` |
 | `BPT-RA-5` | bad header, page checksum, child ID, sibling cycle and malformed WAL | operation returns `BPT_CORRUPT` without loop, OOB access or silent repair | `bptree_corruption_test` |
 | `BPT-RA-6` | all deterministic suites under FIL-C and native sanitizers | zero test failures and zero reported memory/UB defects | evidence commands in `evidence/README.md` |
 
 ### Evidence And Unknowns
 
 Observed evidence is recorded in [`evidence/README.md`](evidence/README.md).
-Before the gates run, the implementation is a design target rather than a
-validated production artifact. Unknowns that remain outside v1 include
-multi-writer scheduling, buffer-pool eviction behavior, hardware power-loss
-testing, network filesystem semantics, and workload-specific performance.
+Unknowns outside v1 include multi-writer scheduling, buffer-pool eviction
+behavior, physical power-loss testing, network filesystem semantics, and
+workload-specific performance.
 
-## Article To Implementation
+## 3. Article To Implementation
 
 The article explains why broad fixed-size nodes reduce height and why linked
 leaves make ranges efficient. The library turns those shapes into explicit

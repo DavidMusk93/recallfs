@@ -1,0 +1,16 @@
+command: clang-format --dry-run --Werror
+format: PASS
+
+command: install + external consumer
+-- Install configuration: "Release"
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree_storage_memory.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/libbptree_storage_file.a
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/include/bptree.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/include/bptree_backends.h
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/cmake/bptree/bptreeTargets.cmake
+-- Installing: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-install/lib/cmake/bptree/bptreeTargets-release.cmake
+installed consumer: PASS
+
+command: public headers as C++17
+C++17 headers: PASS

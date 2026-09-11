@@ -158,6 +158,7 @@ declares an explicit generation contract. Only local build products such as
 
 | Study | Topic |
 | --- | --- |
+| [Page-oriented B+ tree](studies/20260911-bplus-tree/README.md) | C11 B+ tree, buffer-pool-neutral storage API, durable WAL, recovery, and corruption testing |
 | [Kache build cache](studies/20260910-kache-build-cache/README.md) | Compiler-cache internals, Rust/C++ support boundaries, Blade compatibility, and Jenkins rollout |
 | [Design docs as durable Agent context](studies/20260910-design-docs-as-source/README.md) | Agent-ready docs, dependency DAGs, worked examples, reconciliation anchors, and bounded generation |
 | [Stackful coroutine](studies/20260910-stackful-coroutine/README.md) | C11 guarded-stack runtime, CACS variants, high-concurrency scaling, and L4 A/B |

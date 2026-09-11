@@ -1,0 +1,63 @@
+command: cmake Release + ctest
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-release
+[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree.c.o
+[ 13%] Building C object CMakeFiles/bptree_storage_memory.dir/src/bptree_storage_memory.c.o
+[ 13%] Building C object CMakeFiles/bptree.dir/src/bptree_crc32c.c.o
+[ 17%] Linking C static library libbptree_storage_memory.a
+[ 17%] Built target bptree_storage_memory
+[ 21%] Linking C static library libbptree.a
+[ 21%] Built target bptree
+[ 30%] Building C object CMakeFiles/bptree_storage_file.dir/src/bptree_storage_file.c.o
+[ 30%] Building C object CMakeFiles/bptree_storage_file_test_hooks.dir/src/bptree_storage_file.c.o
+[ 34%] Linking C static library libbptree_storage_file_test_hooks.a
+[ 39%] Linking C static library libbptree_storage_file.a
+[ 39%] Built target bptree_storage_file
+[ 39%] Built target bptree_storage_file_test_hooks
+[ 47%] Building C object CMakeFiles/bptree_corruption_test.dir/tests/bptree_corruption_test.c.o
+[ 47%] Building C object CMakeFiles/bptree_structure_test.dir/tests/bptree_structure_test.c.o
+[ 52%] Building C object CMakeFiles/bptree_backend_test.dir/tests/bptree_backend_test.c.o
+[ 56%] Building C object CMakeFiles/bptree_model_test.dir/tests/bptree_model_test.c.o
+[ 60%] Building C object CMakeFiles/bptree_crash_test.dir/tests/bptree_crash_test.c.o
+[ 69%] Building C object CMakeFiles/bptree_contract_test.dir/tests/bptree_contract_test.c.o
+[ 69%] Building C object CMakeFiles/bptree_persistence_test.dir/tests/bptree_persistence_test.c.o
+[ 78%] Linking C executable bptree_structure_test
+[ 78%] Linking C executable bptree_persistence_test
+[ 82%] Linking C executable bptree_model_test
+[ 91%] Linking C executable bptree_corruption_test
+[ 91%] Linking C executable bptree_backend_test
+[ 95%] Linking C executable bptree_contract_test
+[100%] Linking C executable bptree_crash_test
+[100%] Built target bptree_persistence_test
+[100%] Built target bptree_structure_test
+[100%] Built target bptree_model_test
+[100%] Built target bptree_backend_test
+[100%] Built target bptree_corruption_test
+[100%] Built target bptree_crash_test
+[100%] Built target bptree_contract_test
+Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/bptree-evidence-release
+    Start 1: bptree_model_test
+1/7 Test #1: bptree_model_test ................   Passed    2.30 sec
+    Start 2: bptree_contract_test
+2/7 Test #2: bptree_contract_test .............   Passed    4.51 sec
+    Start 3: bptree_backend_test
+3/7 Test #3: bptree_backend_test ..............   Passed    2.56 sec
+    Start 4: bptree_structure_test
+4/7 Test #4: bptree_structure_test ............   Passed    0.82 sec
+    Start 5: bptree_persistence_test
+5/7 Test #5: bptree_persistence_test ..........   Passed   20.98 sec
+    Start 6: bptree_corruption_test
+6/7 Test #6: bptree_corruption_test ...........   Passed   62.36 sec
+    Start 7: bptree_crash_test
+7/7 Test #7: bptree_crash_test ................   Passed    8.14 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Total Test time (real) = 101.75 sec
