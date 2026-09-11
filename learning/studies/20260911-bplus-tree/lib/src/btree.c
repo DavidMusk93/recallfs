@@ -89,22 +89,24 @@ static bool btree_options_valid(const btree_storage *storage, const btree_option
                                 size_t *leaf_stride_out, size_t *internal_stride_out,
                                 uint32_t *leaf_capacity_out, uint32_t *internal_capacity_out) {
     if (options == NULL ||
-        !btree_schema_layout(storage->page_size, options->schema.key_size,
-                             options->schema.value_size, leaf_stride_out, internal_stride_out,
-                             leaf_capacity_out, internal_capacity_out)) {
+        !btree_schema_layout(storage->page_size, options->key_size, options->value_size,
+                             leaf_stride_out, internal_stride_out, leaf_capacity_out,
+                             internal_capacity_out)) {
         return false;
     }
     if (options->compare == NULL) {
-        return options->schema.comparator_id == BTREE_COMPARATOR_LEXICOGRAPHIC;
+        return options->comparator_id == BTREE_COMPARATOR_LEXICOGRAPHIC;
     }
-    return options->schema.comparator_id >= BTREE_COMPARATOR_USER_MIN;
+    return options->comparator_id >= BTREE_COMPARATOR_USER_MIN;
 }
 
 static void btree_configure(btree *tree, const btree_storage *storage, const btree_options *options,
                             size_t leaf_stride, size_t internal_stride, uint32_t leaf_capacity,
                             uint32_t internal_capacity) {
     tree->storage = *storage;
-    tree->schema = options->schema;
+    tree->schema.key_size = options->key_size;
+    tree->schema.value_size = options->value_size;
+    tree->schema.comparator_id = options->comparator_id;
     tree->compare = options->compare;
     tree->compare_context = options->compare_context;
     tree->leaf_stride = leaf_stride;
@@ -1606,9 +1608,9 @@ void btree_options_init(btree_options *options, uint32_t key_size, uint32_t valu
         return;
     }
     memset(options, 0, sizeof(*options));
-    options->schema.key_size = key_size;
-    options->schema.value_size = value_size;
-    options->schema.comparator_id = BTREE_COMPARATOR_LEXICOGRAPHIC;
+    options->key_size = key_size;
+    options->value_size = value_size;
+    options->comparator_id = BTREE_COMPARATOR_LEXICOGRAPHIC;
 }
 
 btree_status btree_create(const btree_storage *storage, const btree_options *options,

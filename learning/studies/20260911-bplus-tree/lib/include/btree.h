@@ -43,7 +43,9 @@ typedef struct btree_schema {
 } btree_schema;
 
 typedef struct btree_options {
-    btree_schema schema;
+    uint32_t key_size;
+    uint32_t value_size;
+    uint64_t comparator_id;
     btree_compare_fn compare;
     void *compare_context;
 } btree_options;

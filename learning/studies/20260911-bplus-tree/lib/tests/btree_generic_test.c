@@ -190,15 +190,15 @@ static void test_file_byte_schema_and_copy_semantics(void) {
     assert_schema(&schema, BYTE_KEY_SIZE, BYTE_VALUE_SIZE, BTREE_COMPARATOR_LEXICOGRAPHIC);
 
     wrong = options;
-    wrong.schema.key_size++;
+    wrong.key_size++;
     TEST_STATUS(btree_open(&storage, &wrong, &tree), BTREE_SCHEMA_MISMATCH);
     TEST_CHECK(tree == NULL);
     wrong = options;
-    wrong.schema.value_size++;
+    wrong.value_size++;
     TEST_STATUS(btree_open(&storage, &wrong, &tree), BTREE_SCHEMA_MISMATCH);
     TEST_CHECK(tree == NULL);
     wrong = options;
-    wrong.schema.comparator_id = BTREE_COMPARATOR_USER_MIN;
+    wrong.comparator_id = BTREE_COMPARATOR_USER_MIN;
     wrong.compare = compare_bytes;
     TEST_STATUS(btree_open(&storage, &wrong, &tree), BTREE_SCHEMA_MISMATCH);
     TEST_CHECK(tree == NULL);
@@ -226,14 +226,14 @@ static void test_invalid_comparator_configuration(void) {
     btree_options_init(&valid, NUMERIC_KEY_SIZE, NUMERIC_VALUE_SIZE);
 
     invalid = valid;
-    invalid.schema.comparator_id = BTREE_COMPARATOR_USER_MIN;
+    invalid.comparator_id = BTREE_COMPARATOR_USER_MIN;
     TEST_STATUS(btree_create(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
     invalid = valid;
     invalid.compare = compare_bytes;
     TEST_STATUS(btree_create(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
-    invalid.schema.comparator_id = BTREE_COMPARATOR_USER_MIN - UINT64_C(1);
+    invalid.comparator_id = BTREE_COMPARATOR_USER_MIN - UINT64_C(1);
     TEST_STATUS(btree_create(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
 
@@ -242,14 +242,14 @@ static void test_invalid_comparator_configuration(void) {
     tree = NULL;
 
     invalid = valid;
-    invalid.schema.comparator_id = BTREE_COMPARATOR_USER_MIN;
+    invalid.comparator_id = BTREE_COMPARATOR_USER_MIN;
     TEST_STATUS(btree_open(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
     invalid = valid;
     invalid.compare = compare_bytes;
     TEST_STATUS(btree_open(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
-    invalid.schema.comparator_id = BTREE_COMPARATOR_USER_MIN - UINT64_C(1);
+    invalid.comparator_id = BTREE_COMPARATOR_USER_MIN - UINT64_C(1);
     TEST_STATUS(btree_open(&storage, &invalid, &tree), BTREE_INVALID_ARGUMENT);
     TEST_CHECK(tree == NULL);
 
@@ -269,7 +269,7 @@ static void test_custom_little_endian_comparator(void) {
 
     memset(&comparison, 0, sizeof(comparison));
     btree_options_init(&options, NUMERIC_KEY_SIZE, NUMERIC_VALUE_SIZE);
-    options.schema.comparator_id = NUMERIC_COMPARATOR_ID;
+    options.comparator_id = NUMERIC_COMPARATOR_ID;
     options.compare = compare_u64_little_endian;
     options.compare_context = &comparison;
     TEST_STATUS(btree_mem_create(512u, &backend), BTREE_OK);
