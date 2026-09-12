@@ -52,8 +52,8 @@ static void expect_row(struct rbt *tree, uint64_t key_number, uint64_t expected_
     const struct rbt_value *bytes = NULL;
 
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &number));
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &bytes));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &number));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &bytes));
     RBT_TEST_CHECK(number->type == RBT_TYPE_U64);
     RBT_TEST_CHECK(!number->is_null);
     RBT_TEST_CHECK(number->as.u64 == expected_number);

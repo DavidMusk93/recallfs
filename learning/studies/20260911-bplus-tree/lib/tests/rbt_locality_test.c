@@ -252,11 +252,11 @@ static void make_payload(uint64_t key, unsigned char payload[PAYLOAD_SIZE]) {
 
 static struct rbt_record make_record(uint64_t key_number, uint64_t fixed_value,
                                      const unsigned char payload[PAYLOAD_SIZE],
-                                     struct rbt_value key[1], struct rbt_value values[2]) {
-    key[0] = rbt_test_u64(key_number);
-    values[0] = rbt_test_u64(fixed_value);
-    values[1] = rbt_test_bytes(payload, PAYLOAD_SIZE);
-    return rbt_test_record(key, 1u, values, 2u);
+                                     struct rbt_value values[3]) {
+    values[0] = rbt_test_u64(key_number);
+    values[1] = rbt_test_u64(fixed_value);
+    values[2] = rbt_test_bytes(payload, PAYLOAD_SIZE);
+    return rbt_test_record(values, 3u);
 }
 
 static void expect_row(struct rbt *tree, uint64_t key_number, uint64_t fixed_value,
@@ -268,8 +268,8 @@ static void expect_row(struct rbt *tree, uint64_t key_number, uint64_t fixed_val
     const struct rbt_value *actual_variable = NULL;
 
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &actual_fixed));
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &actual_variable));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &actual_fixed));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &actual_variable));
     RBT_TEST_CHECK(actual_fixed->type == RBT_TYPE_U64);
     RBT_TEST_CHECK(!actual_fixed->is_null);
     RBT_TEST_CHECK(actual_fixed->as.u64 == fixed_value);
@@ -294,13 +294,12 @@ static void populate_tree(struct rbt *tree) {
     for (index = 0u; index < ITEM_COUNT; ++index) {
         uint64_t key_number = index * 2u;
         unsigned char payload[PAYLOAD_SIZE];
-        struct rbt_value key[1];
-        struct rbt_value values[2];
+        struct rbt_value values[3];
         struct rbt_record record;
         bool inserted = false;
 
         make_payload(key_number, payload);
-        record = make_record(key_number, key_number * UINT64_C(17) + 3u, payload, key, values);
+        record = make_record(key_number, key_number * UINT64_C(17) + 3u, payload, values);
         RBT_TEST_OK(rbt_put(tree, &record, &inserted));
         RBT_TEST_CHECK(inserted);
     }
@@ -317,13 +316,13 @@ static void fill_overflow_payload(unsigned char *data, size_t size, unsigned cha
 static struct rbt_record make_overflow_locality_record(uint64_t scalar, const unsigned char *first,
                                                        size_t first_size,
                                                        const unsigned char *second,
-                                                       size_t second_size, struct rbt_value key[1],
-                                                       struct rbt_value values[3]) {
-    key[0] = rbt_test_u64(7u);
-    values[0] = rbt_test_u64(scalar);
-    values[1] = rbt_test_bytes(first, first_size);
-    values[2] = rbt_test_bytes(second, second_size);
-    return rbt_test_record(key, 1u, values, 3u);
+                                                       size_t second_size,
+                                                       struct rbt_value values[4]) {
+    values[0] = rbt_test_u64(7u);
+    values[1] = rbt_test_u64(scalar);
+    values[2] = rbt_test_bytes(first, first_size);
+    values[3] = rbt_test_bytes(second, second_size);
+    return rbt_test_record(values, 4u);
 }
 
 static void expect_overflow_locality_row(struct rbt *tree, uint64_t scalar,
@@ -337,9 +336,9 @@ static void expect_overflow_locality_row(struct rbt *tree, uint64_t scalar,
     const struct rbt_value *actual_second = NULL;
 
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &actual_scalar));
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &actual_first));
-    RBT_TEST_OK(rbt_row_get_value(row, 2u, &actual_second));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &actual_scalar));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &actual_first));
+    RBT_TEST_OK(rbt_row_get(row, 3u, &actual_second));
     RBT_TEST_CHECK(actual_scalar->type == RBT_TYPE_U64);
     RBT_TEST_CHECK(!actual_scalar->is_null);
     RBT_TEST_CHECK(actual_scalar->as.u64 == scalar);
@@ -353,23 +352,16 @@ static void expect_overflow_locality_row(struct rbt *tree, uint64_t scalar,
 }
 
 static void test_unchanged_overflow_locality(void) {
-    struct rbt_column key_column = {
-        .id = 1u,
-        .type = RBT_TYPE_U64,
-        .flags = 0u,
-        .max_size = 0u,
-    };
-    struct rbt_column value_columns[3] = {
+    struct rbt_column columns[4] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 2048u},
         {.id = 4u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 2048u},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000011),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = value_columns,
-        .value_column_count = 3u,
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
     unsigned char first[OVERFLOW_VALUE_SIZE];
     unsigned char changed_first[OVERFLOW_VALUE_SIZE];
@@ -385,8 +377,7 @@ static void test_unchanged_overflow_locality(void) {
         .schema = &schema,
     };
     struct rbt *tree = NULL;
-    struct rbt_value key[1];
-    struct rbt_value values[3];
+    struct rbt_value values[4];
     struct rbt_record record;
     struct rbt_stats committed_stats;
     struct rbt_stats reopened_stats;
@@ -409,8 +400,8 @@ static void test_unchanged_overflow_locality(void) {
     spy_storage_init(&spy, &backing_storage, &storage);
     RBT_TEST_OK(rbt_create(&config, &tree));
 
-    record = make_overflow_locality_record(100u, first, sizeof(first), second, sizeof(second), key,
-                                           values);
+    record =
+        make_overflow_locality_record(100u, first, sizeof(first), second, sizeof(second), values);
     spy_reset(&spy);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
     RBT_TEST_CHECK(inserted);
@@ -424,8 +415,8 @@ static void test_unchanged_overflow_locality(void) {
 
     expected_scalar_pages[0] = 0u;
     expected_scalar_pages[1] = leaf_page_id;
-    record = make_overflow_locality_record(101u, first, sizeof(first), second, sizeof(second), key,
-                                           values);
+    record =
+        make_overflow_locality_record(101u, first, sizeof(first), second, sizeof(second), values);
     inserted = true;
     spy_reset(&spy);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
@@ -447,7 +438,7 @@ static void test_unchanged_overflow_locality(void) {
         expected_first_update_pages[2u + index] = first_chain[index];
     }
     record = make_overflow_locality_record(101u, changed_first, sizeof(changed_first), second,
-                                           sizeof(second), key, values);
+                                           sizeof(second), values);
     inserted = true;
     spy_reset(&spy);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
@@ -473,7 +464,7 @@ static void test_unchanged_overflow_locality(void) {
     }
     expected_failed_pages[2u + OVERFLOW_CHAIN_PAGES] = committed_stats.allocated_pages;
     record = make_overflow_locality_record(102u, changed_first, sizeof(changed_first),
-                                           expanded_second, sizeof(expanded_second), key, values);
+                                           expanded_second, sizeof(expanded_second), values);
     inserted = true;
     spy_reset(&spy);
     spy.forced_commit_result = -EIO;
@@ -505,22 +496,15 @@ static void test_unchanged_overflow_locality(void) {
 static void test_mutation_locality(void) {
     static const unsigned char UPDATED_PAYLOAD[PAYLOAD_SIZE] = {'e', 'd', 'i', 't'};
     static const unsigned char INSERTED_PAYLOAD[PAYLOAD_SIZE] = {'n', 'e', 'w', '!'};
-    struct rbt_column key_column = {
-        .id = 1u,
-        .type = RBT_TYPE_U64,
-        .flags = 0u,
-        .max_size = 0u,
-    };
-    struct rbt_column value_columns[2] = {
+    struct rbt_column columns[3] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = PAYLOAD_SIZE},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000003),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = value_columns,
-        .value_column_count = 2u,
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
     struct rbt_mem *memory = NULL;
     struct rbt_storage backing_storage;
@@ -535,8 +519,7 @@ static void test_mutation_locality(void) {
     struct rbt_stats stats;
     uint64_t baseline_tree_pages;
     uint32_t baseline_height;
-    struct rbt_value key[1];
-    struct rbt_value values[2];
+    struct rbt_value values[3];
     struct rbt_record record;
     bool inserted = true;
     bool deleted = false;
@@ -553,7 +536,7 @@ static void test_mutation_locality(void) {
     baseline_tree_pages = stats.tree_pages;
     baseline_height = stats.height;
 
-    record = make_record(200u, UINT64_C(9001), UPDATED_PAYLOAD, key, values);
+    record = make_record(200u, UINT64_C(9001), UPDATED_PAYLOAD, values);
     spy_reset(&spy);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
     RBT_TEST_CHECK(!inserted);
@@ -582,7 +565,7 @@ static void test_mutation_locality(void) {
     RBT_TEST_CHECK(spy.read_page_calls == 0u);
     spy.oversized_page_count = false;
 
-    record = make_record(375u, UINT64_C(6378), INSERTED_PAYLOAD, key, values);
+    record = make_record(375u, UINT64_C(6378), INSERTED_PAYLOAD, values);
     inserted = false;
     spy_reset(&spy);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
@@ -612,7 +595,7 @@ static void test_mutation_locality(void) {
     RBT_TEST_CHECK(stats.tree_pages == baseline_tree_pages);
     RBT_TEST_CHECK(stats.height == baseline_height);
 
-    record = make_record(375u, UINT64_C(6378), INSERTED_PAYLOAD, key, values);
+    record = make_record(375u, UINT64_C(6378), INSERTED_PAYLOAD, values);
     inserted = true;
     spy_reset(&spy);
     spy.forced_commit_result = -EOWNERDEAD;
@@ -637,22 +620,15 @@ static void test_mutation_locality(void) {
 
 static void test_balancing_locality(void) {
     static const unsigned char PAYLOAD[PAYLOAD_SIZE] = {'t', 'r', 'e', 'e'};
-    struct rbt_column key_column = {
-        .id = 1u,
-        .type = RBT_TYPE_U64,
-        .flags = 0u,
-        .max_size = 0u,
-    };
-    struct rbt_column value_columns[2] = {
+    struct rbt_column columns[3] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = PAYLOAD_SIZE},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000013),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = value_columns,
-        .value_column_count = 2u,
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
     struct rbt_mem *memory = NULL;
     struct rbt_storage backing_storage;
@@ -680,10 +656,8 @@ static void test_balancing_locality(void) {
     before = rbt_test_validate(tree);
 
     for (number = 0u; number < ITEM_COUNT && !internal_split.seen; ++number) {
-        struct rbt_value key[1];
-        struct rbt_value values[2];
-        struct rbt_record record =
-            make_record(number, number * UINT64_C(17) + 3u, PAYLOAD, key, values);
+        struct rbt_value values[3];
+        struct rbt_record record = make_record(number, number * UINT64_C(17) + 3u, PAYLOAD, values);
         bool inserted = false;
 
         spy_reset(&spy);

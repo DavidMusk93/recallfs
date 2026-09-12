@@ -109,36 +109,30 @@ static inline struct rbt_value rbt_test_null(enum rbt_type type) {
     return result;
 }
 
-static inline struct rbt_record rbt_test_record(const struct rbt_value *key, size_t key_count,
-                                                const struct rbt_value *value, size_t value_count) {
+static inline struct rbt_record rbt_test_record(const struct rbt_value *values,
+                                                size_t value_count) {
     struct rbt_record result = {
-        .key = key,
-        .key_count = key_count,
-        .value = value,
+        .values = values,
         .value_count = value_count,
     };
 
     return result;
 }
 
-static inline struct rbt_record rbt_test_key(const struct rbt_value *key, size_t key_count) {
-    return rbt_test_record(key, key_count, NULL, 0u);
+static inline struct rbt_record rbt_test_key(const struct rbt_value *values, size_t value_count) {
+    return rbt_test_record(values, value_count);
 }
 
 static inline struct rbt_schema rbt_test_u64_bytes_schema(void) {
-    static const struct rbt_column key_columns[] = {
-        {.id = 1u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
-    };
-    static const struct rbt_column value_columns[] = {
+    static const struct rbt_column columns[] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 8192u},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000010),
-        .key_columns = key_columns,
-        .key_column_count = sizeof(key_columns) / sizeof(key_columns[0]),
-        .value_columns = value_columns,
-        .value_column_count = sizeof(value_columns) / sizeof(value_columns[0]),
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
 
     return schema;
@@ -158,12 +152,12 @@ static inline int rbt_test_create_u64_bytes(const struct rbt_storage *storage,
 static inline int rbt_test_put_u64_bytes(struct rbt *rbt, uint64_t key_number,
                                          uint64_t value_number, const void *bytes,
                                          size_t byte_count, bool *out_inserted) {
-    struct rbt_value key = rbt_test_u64(key_number);
-    struct rbt_value values[2] = {
+    struct rbt_value values[3] = {
+        rbt_test_u64(key_number),
         rbt_test_u64(value_number),
         rbt_test_bytes(bytes, byte_count),
     };
-    struct rbt_record record = rbt_test_record(&key, 1u, values, 2u);
+    struct rbt_record record = rbt_test_record(values, 3u);
 
     return rbt_put(rbt, &record, out_inserted);
 }

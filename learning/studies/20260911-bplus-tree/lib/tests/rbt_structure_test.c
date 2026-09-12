@@ -22,11 +22,11 @@ static void fill_overflow(unsigned char data[OVERFLOW_SIZE]) {
 }
 
 static struct rbt_record make_record(uint64_t number, const void *payload, size_t payload_size,
-                                     struct rbt_value key[1], struct rbt_value values[2]) {
-    key[0] = rbt_test_u64(number);
-    values[0] = rbt_test_u64(number * UINT64_C(17) + 3u);
-    values[1] = rbt_test_bytes(payload, payload_size);
-    return rbt_test_record(key, 1u, values, 2u);
+                                     struct rbt_value values[3]) {
+    values[0] = rbt_test_u64(number);
+    values[1] = rbt_test_u64(number * UINT64_C(17) + 3u);
+    values[2] = rbt_test_bytes(payload, payload_size);
+    return rbt_test_record(values, 3u);
 }
 
 static void expect_record(struct rbt *tree, uint64_t number, const void *payload,
@@ -38,8 +38,8 @@ static void expect_record(struct rbt *tree, uint64_t number, const void *payload
     const struct rbt_value *bytes_value = NULL;
 
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &number_value));
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &bytes_value));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &number_value));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &bytes_value));
     RBT_TEST_CHECK(number_value->as.u64 == number * UINT64_C(17) + 3u);
     RBT_TEST_BYTES(&bytes_value->as.bytes, payload, payload_size);
     RBT_TEST_OK(rbt_row_destroy(row));
@@ -74,22 +74,15 @@ static void make_order(enum insert_order order, uint64_t keys[ITEM_COUNT]) {
 
 static void run_order_case(enum insert_order order) {
     static const unsigned char SMALL_PAYLOAD[] = {'r', 'b', 't'};
-    struct rbt_column key_column = {
-        .id = 1u,
-        .type = RBT_TYPE_U64,
-        .flags = 0u,
-        .max_size = 0u,
-    };
-    struct rbt_column value_columns[2] = {
+    struct rbt_column columns[3] = {
+        {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 2u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 1024u},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000004),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = value_columns,
-        .value_column_count = 2u,
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
     struct rbt_mem *memory = NULL;
     struct rbt_storage storage;
@@ -116,9 +109,8 @@ static void run_order_case(enum insert_order order) {
         uint64_t number = keys[index];
         const void *payload = number == 0u ? overflow : SMALL_PAYLOAD;
         size_t payload_size = number == 0u ? sizeof(overflow) : sizeof(SMALL_PAYLOAD);
-        struct rbt_value key[1];
-        struct rbt_value values[2];
-        struct rbt_record record = make_record(number, payload, payload_size, key, values);
+        struct rbt_value values[3];
+        struct rbt_record record = make_record(number, payload, payload_size, values);
         bool inserted = false;
 
         RBT_TEST_OK(rbt_put(tree, &record, &inserted));
@@ -159,10 +151,9 @@ static void run_order_case(enum insert_order order) {
 
     for (index = 0u; index < ITEM_COUNT - 1u; ++index) {
         uint64_t number = ITEM_COUNT + index;
-        struct rbt_value key[1];
-        struct rbt_value values[2];
+        struct rbt_value values[3];
         struct rbt_record record =
-            make_record(number, SMALL_PAYLOAD, sizeof(SMALL_PAYLOAD), key, values);
+            make_record(number, SMALL_PAYLOAD, sizeof(SMALL_PAYLOAD), values);
         bool inserted = false;
 
         RBT_TEST_OK(rbt_put(tree, &record, &inserted));
@@ -218,18 +209,16 @@ static void make_variable_key(size_t index, char key[VARIABLE_KEY_SIZE]) {
 }
 
 static void test_variable_separators(void) {
-    struct rbt_column key_column = {
+    struct rbt_column column = {
         .id = 1u,
         .type = RBT_TYPE_BYTES,
-        .flags = 0u,
+        .flags = RBT_COLUMN_KEY,
         .max_size = VARIABLE_KEY_SIZE,
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000005),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = NULL,
-        .value_column_count = 0u,
+        .columns = &column,
+        .column_count = 1u,
     };
     struct rbt_mem *memory = NULL;
     struct rbt_storage storage;
@@ -257,7 +246,7 @@ static void test_variable_separators(void) {
 
         make_variable_key(number, key_data);
         key_value = rbt_test_bytes(key_data, strlen(key_data));
-        record = rbt_test_record(&key_value, 1u, NULL, 0u);
+        record = rbt_test_record(&key_value, 1u);
         RBT_TEST_OK(rbt_put(tree, &record, &inserted));
         RBT_TEST_CHECK(inserted);
         if ((index % 13u) == 0u) {

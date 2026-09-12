@@ -33,7 +33,7 @@ static void expect_number(struct rbt *tree, uint64_t key_number, uint64_t expect
     const struct rbt_value *actual = NULL;
 
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_U64);
     RBT_TEST_CHECK(!actual->is_null);
     RBT_TEST_CHECK(actual->as.u64 == expected);
@@ -62,17 +62,16 @@ static void fill_matrix_overflow(unsigned char value[MATRIX_OVERFLOW_SIZE]) {
 static void put_matrix_row(struct rbt *tree, uint64_t number, const void *payload,
                            size_t payload_size) {
     unsigned char key_data[MATRIX_KEY_SIZE];
-    struct rbt_value key;
-    struct rbt_value values[3];
+    struct rbt_value values[4];
     struct rbt_record record;
     bool inserted = false;
 
     make_matrix_key(number, key_data);
-    key = rbt_test_bytes(key_data, sizeof(key_data));
-    values[0] = rbt_test_bool((number & 1u) != 0u);
-    values[1] = rbt_test_u64(number * UINT64_C(17) + 3u);
-    values[2] = rbt_test_bytes(payload, payload_size);
-    record = rbt_test_record(&key, 1u, values, 3u);
+    values[0] = rbt_test_bytes(key_data, sizeof(key_data));
+    values[1] = rbt_test_bool((number & 1u) != 0u);
+    values[2] = rbt_test_u64(number * UINT64_C(17) + 3u);
+    values[3] = rbt_test_bytes(payload, payload_size);
+    record = rbt_test_record(values, 4u);
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
     RBT_TEST_CHECK(inserted);
 }
@@ -91,9 +90,9 @@ static void expect_matrix_row(struct rbt *tree, uint64_t number, const void *pay
     key_value = rbt_test_bytes(key_data, sizeof(key_data));
     key = rbt_test_key(&key_value, 1u);
     RBT_TEST_OK(rbt_get(tree, &key, &row));
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &boolean));
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &scalar));
-    RBT_TEST_OK(rbt_row_get_value(row, 2u, &bytes));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &boolean));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &scalar));
+    RBT_TEST_OK(rbt_row_get(row, 3u, &bytes));
     RBT_TEST_CHECK(boolean->type == RBT_TYPE_BOOL);
     RBT_TEST_CHECK(boolean->as.boolean == ((number & 1u) != 0u));
     RBT_TEST_CHECK(scalar->type == RBT_TYPE_U64);
@@ -106,14 +105,14 @@ static void expect_matrix_row(struct rbt *tree, uint64_t number, const void *pay
 static void expect_matrix_schema(const struct rbt_schema *schema, uint32_t key_max_size) {
     RBT_TEST_CHECK(schema != NULL);
     RBT_TEST_CHECK(schema->id == UINT64_C(0x7262740000000012));
-    RBT_TEST_CHECK(schema->key_column_count == 1u);
-    RBT_TEST_CHECK(schema->value_column_count == 3u);
-    RBT_TEST_CHECK(schema->key_columns[0].type == RBT_TYPE_BYTES);
-    RBT_TEST_CHECK(schema->key_columns[0].max_size == key_max_size);
-    RBT_TEST_CHECK(schema->value_columns[0].type == RBT_TYPE_BOOL);
-    RBT_TEST_CHECK(schema->value_columns[1].type == RBT_TYPE_U64);
-    RBT_TEST_CHECK(schema->value_columns[2].type == RBT_TYPE_BYTES);
-    RBT_TEST_CHECK(schema->value_columns[2].max_size == MATRIX_VALUE_MAX_SIZE);
+    RBT_TEST_CHECK(schema->column_count == 4u);
+    RBT_TEST_CHECK(schema->columns[0].type == RBT_TYPE_BYTES);
+    RBT_TEST_CHECK(schema->columns[0].flags == RBT_COLUMN_KEY);
+    RBT_TEST_CHECK(schema->columns[0].max_size == key_max_size);
+    RBT_TEST_CHECK(schema->columns[1].type == RBT_TYPE_BOOL);
+    RBT_TEST_CHECK(schema->columns[2].type == RBT_TYPE_U64);
+    RBT_TEST_CHECK(schema->columns[3].type == RBT_TYPE_BYTES);
+    RBT_TEST_CHECK(schema->columns[3].max_size == MATRIX_VALUE_MAX_SIZE);
 }
 
 static uint64_t populate_matrix_tree(struct rbt *tree, uint32_t page_size,
@@ -145,23 +144,16 @@ static uint64_t populate_matrix_tree(struct rbt *tree, uint32_t page_size,
 static void run_page_size_matrix_case(enum matrix_backend backend, uint32_t page_size) {
     static const unsigned char SMALL_VALUE[] = {'r', 'b', 't', '\0'};
     uint32_t key_max_size = page_size / 32u;
-    struct rbt_column key_column = {
-        .id = 1u,
-        .type = RBT_TYPE_BYTES,
-        .flags = 0u,
-        .max_size = key_max_size,
-    };
-    struct rbt_column value_columns[3] = {
+    struct rbt_column columns[4] = {
+        {.id = 1u, .type = RBT_TYPE_BYTES, .flags = RBT_COLUMN_KEY, .max_size = key_max_size},
         {.id = 2u, .type = RBT_TYPE_BOOL, .flags = 0u, .max_size = 0u},
         {.id = 3u, .type = RBT_TYPE_U64, .flags = 0u, .max_size = 0u},
         {.id = 4u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = MATRIX_VALUE_MAX_SIZE},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000012),
-        .key_columns = &key_column,
-        .key_column_count = 1u,
-        .value_columns = value_columns,
-        .value_column_count = 3u,
+        .columns = columns,
+        .column_count = sizeof(columns) / sizeof(columns[0]),
     };
     unsigned char overflow[MATRIX_OVERFLOW_SIZE];
     char path[256] = {0};

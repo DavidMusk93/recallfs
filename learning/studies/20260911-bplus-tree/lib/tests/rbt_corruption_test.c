@@ -24,6 +24,8 @@ enum {
     TEST_SLOT_SIZE = 8,
     TEST_LEAF_CELL_HEADER_SIZE = 8,
     TEST_VALUE_DESCRIPTOR_SIZE = 16,
+    TEST_NON_OVERFLOW_COLUMN_ORDINAL = 1,
+    TEST_OVERFLOW_COLUMN_ORDINAL = 2,
 };
 
 static off_t page_offset(uint64_t page_id) {
@@ -374,8 +376,9 @@ static void test_overflow_wrong_column(void) {
     (void)leaf_id;
     (void)descriptor_entry;
     read_page(descriptor, overflow_id, overflow);
-    RBT_TEST_CHECK(rbt_test_load_u64(overflow + TEST_PAGE_AUX_OFFSET) == 1u);
-    rbt_test_store_u64(overflow + TEST_PAGE_AUX_OFFSET, 0u);
+    RBT_TEST_CHECK(rbt_test_load_u64(overflow + TEST_PAGE_AUX_OFFSET) ==
+                   TEST_OVERFLOW_COLUMN_ORDINAL);
+    rbt_test_store_u64(overflow + TEST_PAGE_AUX_OFFSET, TEST_NON_OVERFLOW_COLUMN_ORDINAL);
     write_page(descriptor, overflow_id, overflow);
     RBT_TEST_CHECK(close(descriptor) == 0);
     expect_tree_corrupt(path);

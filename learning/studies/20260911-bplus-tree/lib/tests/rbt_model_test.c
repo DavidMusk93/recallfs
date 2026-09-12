@@ -79,15 +79,15 @@ static void update_model_value(struct model_entry *entry, size_t key_index, uint
 }
 
 static struct rbt_record make_record(size_t key_index, const struct model_entry *entry,
-                                     struct rbt_value keys[2], struct rbt_value values[3],
+                                     struct rbt_value values[5],
                                      unsigned char encoded_key[KEY_BYTES_SIZE]) {
     key_bytes(key_index, encoded_key);
-    keys[0] = rbt_test_i64(key_i64(key_index));
-    keys[1] = rbt_test_bytes(encoded_key, KEY_BYTES_SIZE);
-    values[0] = entry->flag_is_null ? rbt_test_null(RBT_TYPE_BOOL) : rbt_test_bool(entry->flag);
-    values[1] = rbt_test_i64(entry->signed_value);
-    values[2] = rbt_test_bytes(entry->bytes, sizeof(entry->bytes));
-    return rbt_test_record(keys, 2u, values, 3u);
+    values[0] = rbt_test_i64(key_i64(key_index));
+    values[1] = rbt_test_bytes(encoded_key, KEY_BYTES_SIZE);
+    values[2] = entry->flag_is_null ? rbt_test_null(RBT_TYPE_BOOL) : rbt_test_bool(entry->flag);
+    values[3] = rbt_test_i64(entry->signed_value);
+    values[4] = rbt_test_bytes(entry->bytes, sizeof(entry->bytes));
+    return rbt_test_record(values, 5u);
 }
 
 static struct rbt_record make_key(size_t key_index, struct rbt_value keys[2],
@@ -104,26 +104,26 @@ static void expect_row(const struct rbt_row *row, size_t key_index,
     const struct rbt_value *actual = NULL;
 
     key_bytes(key_index, expected_key);
-    RBT_TEST_OK(rbt_row_get_key(row, 0u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 0u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_I64);
     RBT_TEST_CHECK(!actual->is_null);
     RBT_TEST_CHECK(actual->as.i64 == key_i64(key_index));
-    RBT_TEST_OK(rbt_row_get_key(row, 1u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 1u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_BYTES);
     RBT_TEST_CHECK(!actual->is_null);
     RBT_TEST_BYTES(&actual->as.bytes, expected_key, sizeof(expected_key));
 
-    RBT_TEST_OK(rbt_row_get_value(row, 0u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 2u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_BOOL);
     RBT_TEST_CHECK(actual->is_null == entry->flag_is_null);
     if (!actual->is_null) {
         RBT_TEST_CHECK(actual->as.boolean == entry->flag);
     }
-    RBT_TEST_OK(rbt_row_get_value(row, 1u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 3u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_I64);
     RBT_TEST_CHECK(!actual->is_null);
     RBT_TEST_CHECK(actual->as.i64 == entry->signed_value);
-    RBT_TEST_OK(rbt_row_get_value(row, 2u, &actual));
+    RBT_TEST_OK(rbt_row_get(row, 4u, &actual));
     RBT_TEST_CHECK(actual->type == RBT_TYPE_BYTES);
     RBT_TEST_CHECK(!actual->is_null);
     RBT_TEST_BYTES(&actual->as.bytes, entry->bytes, sizeof(entry->bytes));
@@ -173,24 +173,20 @@ static void check_full_model(struct rbt *tree, const struct model_entry model[KE
 }
 
 int main(void) {
-    static const struct rbt_column KEY_COLUMNS[2] = {
-        {.id = 10u, .type = RBT_TYPE_I64, .flags = 0u, .max_size = 0u},
+    static const struct rbt_column COLUMNS[5] = {
+        {.id = 10u, .type = RBT_TYPE_I64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
         {.id = 11u,
          .type = RBT_TYPE_BYTES,
-         .flags = RBT_COLUMN_DESCENDING,
+         .flags = RBT_COLUMN_KEY | RBT_COLUMN_DESCENDING,
          .max_size = KEY_BYTES_SIZE},
-    };
-    static const struct rbt_column VALUE_COLUMNS[3] = {
         {.id = 20u, .type = RBT_TYPE_BOOL, .flags = RBT_COLUMN_NULLABLE, .max_size = 0u},
         {.id = 21u, .type = RBT_TYPE_I64, .flags = 0u, .max_size = 0u},
         {.id = 22u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = VALUE_BYTES_SIZE},
     };
     struct rbt_schema schema = {
         .id = UINT64_C(0x7262740000000011),
-        .key_columns = KEY_COLUMNS,
-        .key_column_count = sizeof(KEY_COLUMNS) / sizeof(KEY_COLUMNS[0]),
-        .value_columns = VALUE_COLUMNS,
-        .value_column_count = sizeof(VALUE_COLUMNS) / sizeof(VALUE_COLUMNS[0]),
+        .columns = COLUMNS,
+        .column_count = sizeof(COLUMNS) / sizeof(COLUMNS[0]),
     };
     struct model_entry model[KEY_SPACE];
     struct rbt_mem *memory = NULL;
@@ -218,13 +214,13 @@ int main(void) {
         struct rbt_record key = make_key(key_index, keys, encoded_key);
 
         if (action < 5u) {
-            struct rbt_value values[3];
+            struct rbt_value values[5];
             struct rbt_record record;
             bool was_present = model[key_index].present;
             bool inserted = !was_present;
 
             update_model_value(&model[key_index], key_index, next_random(&random_state));
-            record = make_record(key_index, &model[key_index], keys, values, encoded_key);
+            record = make_record(key_index, &model[key_index], values, encoded_key);
             RBT_TEST_OK(rbt_put(tree, &record, &inserted));
             RBT_TEST_CHECK(inserted == !was_present);
             model[key_index].present = true;

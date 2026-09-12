@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 #define RBT_VERSION_MAJOR 0
-#define RBT_VERSION_MINOR 1
+#define RBT_VERSION_MINOR 2
 #define RBT_VERSION_PATCH 0
 
 #define RBT_FORMAT_VERSION UINT32_C(1)
@@ -31,6 +31,7 @@ enum rbt_type {
 enum rbt_column_flags {
     RBT_COLUMN_NULLABLE = 1u << 0,
     RBT_COLUMN_DESCENDING = 1u << 1,
+    RBT_COLUMN_KEY = 1u << 2,
 };
 
 struct rbt_column {
@@ -41,21 +42,21 @@ struct rbt_column {
 };
 
 /*
- * Column arrays are borrowed by rbt_create() for the duration of the
- * call. Create validates, copies, and persists the complete schema. Schemas
- * returned by rbt_get_schema() are borrowed from the tree.
+ * The column array is borrowed by rbt_create() for the duration of the call.
+ * Create validates, copies, and persists the complete schema. Schemas returned
+ * by rbt_get_schema() are borrowed from the tree.
  *
  * Fixed scalar columns (BOOL, I64, and U64) require max_size == 0. BYTES and
  * UTF8 columns require 0 < max_size <= RBT_MAX_FIELD_SIZE. Column IDs must be
- * unique across both arrays. A key must contain at least one column, and the
- * total number of key and value columns must not exceed RBT_MAX_COLUMNS.
+ * unique. The array contains 1..RBT_MAX_COLUMNS entries, and at least one
+ * column must have RBT_COLUMN_KEY. Key order is the order of KEY-marked columns
+ * after filtering columns in schema order.
+ * RBT_COLUMN_DESCENDING requires RBT_COLUMN_KEY.
  */
 struct rbt_schema {
     uint64_t id;
-    const struct rbt_column *key_columns;
-    size_t key_column_count;
-    const struct rbt_column *value_columns;
-    size_t value_column_count;
+    const struct rbt_column *columns;
+    size_t column_count;
 };
 
 struct rbt_bytes {
@@ -75,14 +76,14 @@ struct rbt_value {
 };
 
 /*
- * Records borrow both arrays and all byte payloads for the duration of the
- * operation. Get, delete, and scan bounds require value == NULL and
- * value_count == 0. Put requires both counts to match the persisted schema.
+ * Records borrow the values array and all byte payloads for the duration of the
+ * operation. rbt_put() requires one value per schema column in schema order.
+ * rbt_get(), rbt_delete(), and non-null rbt_scan() bounds require only the
+ * KEY-column values, ordered by filtering the schema columns for
+ * RBT_COLUMN_KEY.
  */
 struct rbt_record {
-    const struct rbt_value *key;
-    size_t key_count;
-    const struct rbt_value *value;
+    const struct rbt_value *values;
     size_t value_count;
 };
 
@@ -171,11 +172,12 @@ int rbt_scan(struct rbt *rbt, const struct rbt_record *begin, const struct rbt_r
              rbt_scan_fn callback, void *context);
 
 /*
- * Values returned through these accessors are borrowed from the row. Rows
- * returned by rbt_get() are owned and released with rbt_row_destroy().
+ * A row represents one complete logical row in schema order. Values returned
+ * through rbt_row_get() are borrowed from the row. Rows returned by rbt_get()
+ * are owned and released with rbt_row_destroy().
  */
-int rbt_row_get_key(const struct rbt_row *row, size_t index, const struct rbt_value **out_value);
-int rbt_row_get_value(const struct rbt_row *row, size_t index, const struct rbt_value **out_value);
+int rbt_row_get(const struct rbt_row *row, size_t column_ordinal,
+                const struct rbt_value **out_value);
 int rbt_row_destroy(struct rbt_row *row);
 
 int rbt_validate(struct rbt *rbt, struct rbt_stats *out_stats, char *error_out,
