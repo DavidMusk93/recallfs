@@ -42,7 +42,7 @@ static void expect_row(struct rbt *tree, uint64_t key_number, const void *small_
                        size_t small_size, const void *large_data, size_t large_size,
                        const char *text_data, size_t text_size) {
     struct rbt_value key_value = rbt_test_u64(key_number);
-    struct rbt_record key = rbt_test_key(&key_value, 1u);
+    struct rbt_record key = rbt_test_record(&key_value, 1u);
     struct rbt_row *row = NULL;
     const struct rbt_value *actual_key = NULL;
     const struct rbt_value *actual_small = NULL;
@@ -173,7 +173,7 @@ static void test_overflow_lifecycle(void) {
     RBT_TEST_CHECK(regrow_stats.allocated_pages <= large_stats.allocated_pages);
 
     {
-        struct rbt_record delete_key = rbt_test_key(values, 1u);
+        struct rbt_record delete_key = rbt_test_record(values, 1u);
 
         RBT_TEST_OK(rbt_delete(tree, &delete_key, &deleted));
         RBT_TEST_CHECK(deleted);
@@ -252,7 +252,7 @@ static void test_thousands_page_overflow_replacement(void) {
     values[0] = rbt_test_u64(42u);
     values[1] = rbt_test_bytes(payload, LARGE_MUTATION_SIZE);
     record = rbt_test_record(values, 2u);
-    key_record = rbt_test_key(values, 1u);
+    key_record = rbt_test_record(values, 1u);
 
     RBT_TEST_OK(rbt_mem_create(512u, &memory));
     RBT_TEST_OK(rbt_mem_storage(memory, &storage));

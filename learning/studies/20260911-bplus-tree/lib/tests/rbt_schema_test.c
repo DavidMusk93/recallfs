@@ -146,7 +146,7 @@ static enum rbt_scan_action attempt_operations_during_scan(void *context,
         rbt_test_i64(INT64_MIN),
         rbt_test_bytes(DELETE_KEY_BYTES, sizeof(DELETE_KEY_BYTES)),
     };
-    struct rbt_record delete_key = rbt_test_key(delete_keys, 2u);
+    struct rbt_record delete_key = rbt_test_record(delete_keys, 2u);
     const struct rbt_value *key = NULL;
 
     put_values[BOOL_COLUMN_ORDINAL] = rbt_test_bool(true);
@@ -247,7 +247,7 @@ static void test_persisted_schema_and_rows(void) {
 
     lookup_values[0] = rbt_test_i64(0);
     lookup_values[1] = rbt_test_bytes(KEY_ZERO_HIGH_BYTES, sizeof(KEY_ZERO_HIGH_BYTES));
-    lookup = rbt_test_key(lookup_values, INTERLEAVED_KEY_COUNT);
+    lookup = rbt_test_record(lookup_values, INTERLEAVED_KEY_COUNT);
     RBT_TEST_OK(rbt_get(tree, &lookup, &owned_row));
     RBT_TEST_OK(rbt_scan(tree, NULL, NULL, check_scan_row, &expected));
     RBT_TEST_CHECK(expected.seen == expected.count);
@@ -301,7 +301,7 @@ static void test_persisted_schema_and_rows(void) {
             rbt_test_i64(5),
             rbt_test_bytes("busy", 4u),
         };
-        struct rbt_record delete_key = rbt_test_key(delete_keys, INTERLEAVED_KEY_COUNT);
+        struct rbt_record delete_key = rbt_test_record(delete_keys, INTERLEAVED_KEY_COUNT);
         bool deleted = false;
 
         RBT_TEST_OK(rbt_delete(tree, &delete_key, &deleted));
@@ -411,19 +411,19 @@ static void test_schema_and_record_validation(void) {
     }
     RBT_TEST_OK(rbt_put(tree, &record, &inserted));
     RBT_TEST_CHECK(inserted);
-    key_record = rbt_test_key(values, 1u);
+    key_record = rbt_test_record(values, 1u);
     RBT_TEST_OK(rbt_get(tree, &key_record, &row));
     RBT_TEST_ERRNO(rbt_row_get(row, 4u, &value_view), EINVAL);
     RBT_TEST_CHECK(value_view == NULL);
     RBT_TEST_OK(rbt_row_destroy(row));
 
     {
-        struct rbt_record empty_key = rbt_test_key(NULL, 0u);
+        struct rbt_record empty_key = rbt_test_record(NULL, 0u);
         struct rbt_value excess_key_values[2] = {
             rbt_test_u64(9u),
             rbt_test_u64(10u),
         };
-        struct rbt_record excess_key = rbt_test_key(excess_key_values, 2u);
+        struct rbt_record excess_key = rbt_test_record(excess_key_values, 2u);
 
         row = (struct rbt_row *)(uintptr_t)1u;
         RBT_TEST_ERRNO(rbt_get(tree, &empty_key, &row), EINVAL);
@@ -459,7 +459,7 @@ static void test_schema_and_record_validation(void) {
     }
 
     values[0] = rbt_test_u64(99u);
-    key_record = rbt_test_key(values, 1u);
+    key_record = rbt_test_record(values, 1u);
     row = (struct rbt_row *)(uintptr_t)1u;
     RBT_TEST_ERRNO(rbt_get(tree, &key_record, &row), ENOENT);
     RBT_TEST_CHECK(row == NULL);

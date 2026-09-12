@@ -95,7 +95,7 @@ static struct rbt_record make_key(size_t key_index, struct rbt_value keys[2],
     key_bytes(key_index, encoded_key);
     keys[0] = rbt_test_i64(key_i64(key_index));
     keys[1] = rbt_test_bytes(encoded_key, KEY_BYTES_SIZE);
-    return rbt_test_key(keys, 2u);
+    return rbt_test_record(keys, 2u);
 }
 
 static void expect_row(const struct rbt_row *row, size_t key_index,

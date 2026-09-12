@@ -32,7 +32,7 @@ static struct rbt_record make_record(uint64_t number, const void *payload, size_
 static void expect_record(struct rbt *tree, uint64_t number, const void *payload,
                           size_t payload_size) {
     struct rbt_value key_value = rbt_test_u64(number);
-    struct rbt_record key = rbt_test_key(&key_value, 1u);
+    struct rbt_record key = rbt_test_record(&key_value, 1u);
     struct rbt_row *row = NULL;
     const struct rbt_value *number_value = NULL;
     const struct rbt_value *bytes_value = NULL;
@@ -135,7 +135,7 @@ static void run_order_case(enum insert_order order) {
             continue;
         }
         key_value = rbt_test_u64(number);
-        key = rbt_test_key(&key_value, 1u);
+        key = rbt_test_record(&key_value, 1u);
         RBT_TEST_OK(rbt_delete(tree, &key, &deleted));
         RBT_TEST_CHECK(deleted);
         if ((index % 29u) == 0u || number == 0u) {
@@ -173,7 +173,7 @@ static void run_order_case(enum insert_order order) {
     for (index = 0u; index < ITEM_COUNT - 1u; ++index) {
         uint64_t number = ITEM_COUNT + index;
         struct rbt_value key_value = rbt_test_u64(number);
-        struct rbt_record key = rbt_test_key(&key_value, 1u);
+        struct rbt_record key = rbt_test_record(&key_value, 1u);
         bool deleted = false;
 
         RBT_TEST_OK(rbt_delete(tree, &key, &deleted));
@@ -181,7 +181,7 @@ static void run_order_case(enum insert_order order) {
     }
     {
         struct rbt_value key_value = rbt_test_u64(ITEM_COUNT / 2u);
-        struct rbt_record key = rbt_test_key(&key_value, 1u);
+        struct rbt_record key = rbt_test_record(&key_value, 1u);
         bool deleted = false;
 
         RBT_TEST_OK(rbt_delete(tree, &key, &deleted));
@@ -262,7 +262,7 @@ static void test_variable_separators(void) {
 
         make_variable_key(index, key_data);
         key_value = rbt_test_bytes(key_data, strlen(key_data));
-        key = rbt_test_key(&key_value, 1u);
+        key = rbt_test_record(&key_value, 1u);
         RBT_TEST_OK(rbt_delete(tree, &key, &deleted));
         RBT_TEST_CHECK(deleted);
         if ((index % 11u) == 0u) {

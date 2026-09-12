@@ -46,7 +46,7 @@ static void small_value(uint64_t key, unsigned char value[4]) {
 static void expect_row(struct rbt *tree, uint64_t key_number, uint64_t expected_number,
                        const void *expected_bytes, size_t expected_size) {
     struct rbt_value key_value = rbt_test_u64(key_number);
-    struct rbt_record key = rbt_test_key(&key_value, 1u);
+    struct rbt_record key = rbt_test_record(&key_value, 1u);
     struct rbt_row *row = NULL;
     const struct rbt_value *number = NULL;
     const struct rbt_value *bytes = NULL;
@@ -165,7 +165,7 @@ static void check_reopened_state(const char *path, bool expect_new,
         expect_row(tree, NEW_KEY, UINT64_C(700), large_value, sizeof(large_value));
     } else {
         struct rbt_value key_value = rbt_test_u64(NEW_KEY);
-        struct rbt_record key_record = rbt_test_key(&key_value, 1u);
+        struct rbt_record key_record = rbt_test_record(&key_value, 1u);
         struct rbt_row *row = (struct rbt_row *)(uintptr_t)1u;
 
         RBT_TEST_ERRNO(rbt_get(tree, &key_record, &row), ENOENT);

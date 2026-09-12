@@ -28,7 +28,7 @@ static void put_number(struct rbt *tree, uint64_t key_number, uint64_t value_num
 
 static void expect_number(struct rbt *tree, uint64_t key_number, uint64_t expected) {
     struct rbt_value key_value = rbt_test_u64(key_number);
-    struct rbt_record key = rbt_test_key(&key_value, 1u);
+    struct rbt_record key = rbt_test_record(&key_value, 1u);
     struct rbt_row *row = NULL;
     const struct rbt_value *actual = NULL;
 
@@ -88,7 +88,7 @@ static void expect_matrix_row(struct rbt *tree, uint64_t number, const void *pay
 
     make_matrix_key(number, key_data);
     key_value = rbt_test_bytes(key_data, sizeof(key_data));
-    key = rbt_test_key(&key_value, 1u);
+    key = rbt_test_record(&key_value, 1u);
     RBT_TEST_OK(rbt_get(tree, &key, &row));
     RBT_TEST_OK(rbt_row_get(row, 1u, &boolean));
     RBT_TEST_OK(rbt_row_get(row, 2u, &scalar));

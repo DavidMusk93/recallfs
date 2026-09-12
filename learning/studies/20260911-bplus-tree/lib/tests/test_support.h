@@ -119,10 +119,6 @@ static inline struct rbt_record rbt_test_record(const struct rbt_value *values,
     return result;
 }
 
-static inline struct rbt_record rbt_test_key(const struct rbt_value *values, size_t value_count) {
-    return rbt_test_record(values, value_count);
-}
-
 static inline struct rbt_schema rbt_test_u64_bytes_schema(void) {
     static const struct rbt_column columns[] = {
         {.id = 1u, .type = RBT_TYPE_U64, .flags = RBT_COLUMN_KEY, .max_size = 0u},
