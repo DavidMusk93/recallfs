@@ -24,10 +24,8 @@ verified_by:
 ## Result
 
 The refreshed evidence is bound to source commit
-`ad8e6ee95d766d424249df6894a00bcf354878ce`. `RBT_FORMAT_VERSION=1`
-remains the sole current development format, with `RBTR` schema magic and
-unified-column layout; previous `RBTS` files are rejected without
-compatibility, migration, or alias handling.
+`f41e0976977e5012cd4946fa2dca258e85aebd32`. `RBT_FORMAT_VERSION=1` is
+the sole format, with `RBTR` schema magic and unified-column layout.
 
 | Gate | Result | Raw evidence |
 | --- | --- | --- |
@@ -54,8 +52,9 @@ record representation, complete owned and callback rows, the sole
 `rbt_row_get` accessor, column IDs, all five types, nullable and descending
 flags, maximum sizes, UTF-8 validation, composite canonical ordering,
 input-copy behavior, callback lifetime, and schema-free reopen through
-`rbt_open`. `rbt_corruption_test` verifies `RBTR` schema encoding and explicit
-rejection of prior `RBTS` bytes.
+`rbt_open`. The current `RBTR` schema roundtrip and malformed schema
+chain/size/count handling are covered by `rbt_schema_test` and
+`rbt_corruption_test`.
 
 Result: passed under Debug, Release, ASan/UBSan, and FIL-C.
 
@@ -125,8 +124,8 @@ Result: passed in all four modes.
 `rbt_corruption_test` independently mutates serialized bytes and recomputes
 checksums where necessary. It rejects malformed schema chains and sizes,
 out-of-bounds or overlapping slots, child/link corruption, overflow cycles,
-wrong physical-column overflow identity/length, prior `RBTS` schema magic, bad
-file headers, and malformed WAL.
+wrong physical-column overflow identity/length, bad file headers, and malformed
+WAL.
 
 `rbt_crash_test` exercises full-page redo publication and replay crash points,
 every nonempty truncated prefix of a valid WAL, checksum/version/size failures,
@@ -146,7 +145,7 @@ Result: passed in all four modes.
 - CMake: 4.0.3.
 - Static analyzer: Homebrew Clang 16.0.6 `ccc-analyzer`; no bugs.
 - Installed consumer:
-  `find_package(rbt 0.2 CONFIG REQUIRED)` with `rbt::rbt`,
+  `find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)` with `rbt::rbt`,
   `rbt::memory`, and `rbt::file`.
 - Public headers: C++17 compilation passed.
 - Review run `20260912-110259-0424385b`: one validated stale-version README
@@ -159,14 +158,14 @@ The tracked `raw/SHA256SUMS` contains:
 
 | Raw file | SHA-256 |
 | --- | --- |
-| `environment.txt` | `322da91fa8506030cf4a284fea0dd7f7b22f527687fa5d6127d3a19e8ab8198c` |
-| `filc.txt` | `77615a60dda011d59bb9d074e45bd923f293f9da3ee06a8adf16504ad75735dd` |
-| `format-install.txt` | `014c6d568095a3161fbfcadb8f60b45c57be6f8e0d3616c3cea9ecc033eab22a` |
-| `native-debug.txt` | `c69b59b64a3c3b9520fab69879c81cfccefc23e5335c3de5e8b0f8b3184b7608` |
-| `native-release.txt` | `8faff78cf2719301814afc13f5f66469062c90f69fa89cd63971ac6e62e9fe95` |
-| `sanitizers.txt` | `01e07d3f36d616197680d5bd7d0f87e8332e488dbc7612dda4e8afc8be29febe` |
-| `source-sha256.txt` | `2e7b6b5f3f0168e98f47303bf2503423a9aad671b90be0b2d67437a11a82ca31` |
-| `static-analysis.txt` | `343abbfcd08f3fed9253a3295246c228ca6c6ae0756fe13506e63c30f9be928a` |
+| `environment.txt` | `45b0a6683972c249c3309e124c24e7f9876ca343f7cfe80a4340bead8c0cbd53` |
+| `filc.txt` | `94bd50d3fcdda00e579c478cc0cccc0bbf9ea7580f662e6f4b88fd30b674629a` |
+| `format-install.txt` | `2e38d39fefaea30099f7f36a90184c8fd94c236d1c0d0a013b818d9fa6807529` |
+| `native-debug.txt` | `91cd6bf96d76346a600308ad9e981f7c9148939a3c435b9d68f12453cce7db09` |
+| `native-release.txt` | `4ab17ee14ea54365632c9413d4293d71fd8bca7ce745e8a2f9a17523b2f39a7a` |
+| `sanitizers.txt` | `f74d72f4905948e26ae7e1d8f7afbaa34447865b24c86453f7d0b16f189ef7d0` |
+| `source-sha256.txt` | `ed6105976da47396c396391bbe40c26820e75de091a13526215ec36613436f78` |
+| `static-analysis.txt` | `4e3b0f4bb57a7c7c97dc544f2b991255b5b257b64bfcac0a791dfe081e43934f` |
 
 ## Reproduction
 

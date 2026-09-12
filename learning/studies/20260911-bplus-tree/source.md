@@ -69,17 +69,14 @@ commit, storage leases, checksums, WAL publication, corruption handling,
 negative-errno APIs, and package integration are original engineering
 decisions verified by `RBT-RA-1` through `RBT-RA-8`.
 
-The library is a clean break from the historical study implementation.
-`RBT_FORMAT_VERSION=1` is the sole current development format, but its schema
-encoding magic and unified layout are now `RBTR`. Previous `RBTS` files and
-predecessor files are rejected and have no compatibility reader, migration
-layer, alias, or alternate format.
+`RBT_FORMAT_VERSION=1` is the sole format, with `RBTR` schema encoding and the
+unified-column layout.
 
 ## Limitations
 
-The source article does not prove the library's crash behavior, safety,
-locality, or compatibility boundary. Those conclusions are limited to the
-tracked source at commit `ad8e6ee95d766d424249df6894a00bcf354878ce` and the
-raw evidence ledger. Neither the article nor this study establishes real
-power-loss behavior, network filesystem guarantees, shared-tree concurrency,
-online backup, or benchmark performance.
+The source article does not prove the library's crash behavior, safety, or
+locality. Those conclusions are limited to the tracked source at commit
+`f41e0976977e5012cd4946fa2dca258e85aebd32` and the raw evidence ledger.
+Neither the article nor this study establishes real power-loss behavior,
+network filesystem guarantees, shared-tree concurrency, online backup, or
+benchmark performance.

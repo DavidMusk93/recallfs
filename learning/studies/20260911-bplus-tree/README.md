@@ -31,11 +31,8 @@ operations are `rbt_get`, `rbt_put`, `rbt_delete`, `rbt_scan`, and
 `rbt_validate`. Public symbols use the direct `rbt_*` namespace without an
 extra tree-name segment.
 
-This is a clean-break development format. `RBT_FORMAT_VERSION=1` is the sole
-current development format, and its schema encoding magic and unified layout
-are `RBTR`. Earlier `RBTS` schema files and files from the predecessor
-implementation are rejected: there is no compatibility reader, migration
-layer, API alias, or alternate on-disk format.
+`RBT_FORMAT_VERSION=1` is the sole format. Its schema encoding magic and
+unified layout are `RBTR`.
 
 The implementation persists one ordered typed schema, derives canonical
 composite keys from columns marked `RBT_COLUMN_KEY`, stores variable-length
@@ -45,12 +42,12 @@ non-structural mutation without changed overflow data commits exactly metadata
 plus one leaf, while balancing remains bounded by the path and siblings rather
 than tree size.
 
-At source commit `ad8e6ee95d766d424249df6894a00bcf354878ce`, all eight suites
+At source commit `f41e0976977e5012cd4946fa2dca258e85aebd32`, all eight suites
 passed under Zig Debug, Zig Release, ASan/UBSan, and FIL-C 0.684. The
 `ccc-analyzer` run reported no bugs, package installation and the external
-typed consumer passed, and review run `20260912-110259-0424385b` validated one
-finding: this study still named the pre-unified-row package version. This
-documentation update fixes that finding. No actionable findings remain.
+typed consumer using `find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)` passed,
+and review run `20260912-110259-0424385b` found one stale README statement.
+This documentation update fixes that finding. No actionable findings remain.
 
 The evidence does not establish real power-loss behavior, network filesystem
 ordering, multi-thread or multi-process shared-tree access, online backup, or
@@ -209,14 +206,14 @@ for diagnosis and rejected.
 
 | Anchor | Exact contract | Independent verification |
 | --- | --- | --- |
-| `RBT-RA-1` | unified `columns[]` schema and `values[]` records, KEY-filtered order, complete row reconstruction/access, all types/flags, schema-free open, `RBTR` encoding and `RBTS` rejection | `rbt_schema_test`, `rbt_corruption_test` |
+| `RBT-RA-1` | unified `columns[]` schema and `values[]` records, KEY-filtered order, complete row reconstruction/access, all types/flags, schema-free open, and current `RBTR` schema encoding/corruption | `rbt_schema_test`, `rbt_corruption_test` |
 | `RBT-RA-2` | 4 MiB row, 1 MiB field, 64-column limits; physical-ordinal overflow across interleaved columns, reopen/update/delete, lifecycle and reuse | `rbt_overflow_test` |
 | `RBT-RA-3` | ordinary mutation is metadata+leaf; split/borrow/merge/root collapse remain path/sibling bounded | `rbt_locality_test` |
 | `RBT-RA-4` | conservative occupancy, structural mutation, root collapse, freelist reuse | `rbt_structure_test` |
 | `RBT-RA-5` | 30,000 typed mixed operations equal an independent ordered model | `rbt_model_test` |
 | `RBT-RA-6` | memory/file page-size matrix, leases, `0600`, lock, namespace, poison and reopen behavior | `rbt_backend_test` |
-| `RBT-RA-7` | `RBTS`, schema/slot/physical-ordinal overflow corruption, and 4,096-record WAL/crash-prefix handling are rejected or recovered exactly | `rbt_corruption_test`, `rbt_crash_test` |
-| `RBT-RA-8` | 8/8 suites pass in Debug, Release, ASan/UBSan, and FIL-C; `rbt` 0.2 package and analyzer gates pass; current review finding is closed | `evidence/README.md`, `evidence/review.md` |
+| `RBT-RA-7` | current schema chain/size/count, page checksum, slot, child/link, physical-ordinal overflow, file-header, and WAL corruption plus 4,096-record WAL/crash-prefix handling | `rbt_corruption_test`, `rbt_crash_test` |
+| `RBT-RA-8` | 8/8 suites pass in Debug, Release, ASan/UBSan, and FIL-C; `rbt` 0.2.0 package and analyzer gates pass; current review finding is closed | `evidence/README.md`, `evidence/review.md` |
 
 ## 8. Worked Examples
 
@@ -243,7 +240,7 @@ syncs the file, removes the WAL, and exposes only the committed row set.
 ## 9. Evidence Boundary
 
 The raw ledger is bound to source commit
-`ad8e6ee95d766d424249df6894a00bcf354878ce`; exact log SHA-256 values are in
+`f41e0976977e5012cd4946fa2dca258e85aebd32`; exact log SHA-256 values are in
 [`evidence/README.md`](evidence/README.md). The evidence covers deterministic
 process-crash prefixes and executed-path safety. It does not support claims
 about physical power loss, controller caches, network filesystems, shared-tree

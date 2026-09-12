@@ -1,4 +1,4 @@
-utc=2026-09-12T03:22:25Z
+utc=2026-09-12T03:37:40Z
 Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
 ProductName:		macOS
 ProductVersion:		26.6.2
@@ -24,5 +24,5 @@ Target: aarch64-unknown-linux-gnu
 Thread model: posix
 InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
 Build config: +assertions
-source_commit=ad8e6ee95d766d424249df6894a00bcf354878ce
+source_commit=f41e0976977e5012cd4946fa2dca258e85aebd32
 source_tree_clean=true

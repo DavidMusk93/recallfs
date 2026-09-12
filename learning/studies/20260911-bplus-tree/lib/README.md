@@ -33,10 +33,8 @@ verified_by:
 
 Public symbols use the direct `rbt_*` namespace without an extra tree-name
 segment. Public functions return `0` or negative errno.
-`RBT_FORMAT_VERSION=1` is the sole current development format. Its schema
-encoding magic and unified-column layout are `RBTR`. Previous `RBTS` files and
-predecessor files are rejected, and the package contains no compatibility
-reader, migration layer, alias, or alternate format.
+`RBT_FORMAT_VERSION=1` is the sole format. Its schema encoding magic and
+unified-column layout are `RBTR`.
 
 ## Build, Install, And Consume
 
@@ -50,7 +48,7 @@ cmake --install build --prefix /chosen/prefix
 An installed consumer uses:
 
 ```cmake
-find_package(rbt 0.2 CONFIG REQUIRED)
+find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE rbt::rbt rbt::memory rbt::file)
 ```
 
@@ -233,10 +231,9 @@ order-preserving big-endian transform. All pages have a 64-byte header:
 
 Logical types are metadata, leaf, internal, schema, overflow, and free pages.
 Metadata points to the root, schema chain, and freelist. Schema pages use
-`RBTR`; `RBTS` is rejected. A leaf stores the canonical key once and
-descriptors only for non-key columns. Row decoding merges KEY fields decoded
-from the canonical key with payload descriptors into the full physical schema
-order.
+`RBTR`. A leaf stores the canonical key once and descriptors only for non-key
+columns. Row decoding merges KEY fields decoded from the canonical key with
+payload descriptors into the full physical schema order.
 
 Large variable non-key columns each own an independent overflow chain; keys do
 not spill. Overflow-page `AUX` stores the physical schema column ordinal.

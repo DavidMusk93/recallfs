@@ -21,18 +21,12 @@ verified_by:
 
 | Item | Revision |
 | --- | --- |
-| Prior reviewed series | `10c0875` through `6d82359` |
-| Unified-row implementation | `8307ce9` |
-| Unified-row optimization | `e3625f8` |
-| Format-boundary coverage | `ad8e6ee` |
-| Final source | `ad8e6ee95d766d424249df6894a00bcf354878ce` |
 | Current review run | `20260912-110259-0424385b` |
+| Final source | `f41e0976977e5012cd4946fa2dca258e85aebd32` |
 
-The reviewed implementation is the clean-break `rbt` 0.2.0 API.
-`RBT_FORMAT_VERSION=1` remains the sole current development format, while its
-schema encoding magic and unified layout are now `RBTR`. Previous `RBTS` and
-historical `btree` files are intentionally rejected; there is no compatibility
-reader, migration layer, alias, or alternate format.
+The reviewed implementation is the `rbt` 0.2.0 API.
+`RBT_FORMAT_VERSION=1` is the sole format, with `RBTR` schema encoding and the
+unified-column layout.
 
 ## Review Coverage
 
@@ -48,22 +42,17 @@ not relabel same-family review as independent.
 
 ## Disposition
 
-The prior `20260911-221757-4574fb5e` run closed fourteen validated findings
-covering ownership, overflow replacement, page-set validation, allocation
-overflow/initialization, backend lease and poison behavior, WAL bounds,
-corruption checks, locality assertions, and API failure semantics.
-
 Current run `20260912-110259-0424385b` validated one finding: the README still
-described the pre-unified-row package version after the 0.2.0 change. This
-documentation update fixes that stale contract.
+contained one stale package-version statement. This documentation update fixes
+it.
 
 The validator rejected three candidates:
 
 | Candidate | Disposition |
 | --- | --- |
-| Add a separate public key type | rejected because it contradicts the row-only public model; compact KEY tuples are operation-specific projections of `struct rbt_record` |
-| Allocate each field separately | rejected as a benchmark-less optimization proposal, not a demonstrated defect |
-| Report an interleaved-overflow gap | rejected because physical-column-ordinal corruption coverage plus added reopen/update/delete lifecycle coverage resolves it |
+| Add a separate public key type | rejected because it conflicts with the row-only direction; compact KEY tuples are operation-specific projections of `struct rbt_record` |
+| Allocate each field separately | rejected because it lacked benchmark or hotspot evidence |
+| Report a cross-product interleaved-overflow gap | rejected because it did not establish a defect and later reopen/update/delete lifecycle coverage exists |
 
 No actionable findings remain.
 
@@ -75,10 +64,11 @@ No actionable findings remain.
 - FIL-C 0.684: 8/8 standalone suites passed.
 - `ccc-analyzer`: binding confirmed; no bugs found.
 - `clang-format --dry-run --Werror`: passed.
-- Installed typed `find_package(rbt 0.2 CONFIG REQUIRED)` consumer: passed.
+- Installed typed `find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)` consumer:
+  passed.
 - C++17 public-header compile: passed.
 - Raw evidence SHA-256 ledger and source digest ledger: recorded at final
-  source commit `ad8e6ee95d766d424249df6894a00bcf354878ce`.
+  source commit `f41e0976977e5012cd4946fa2dca258e85aebd32`.
 
 This closes `RBT-RA-8`. No actionable findings remain.
 

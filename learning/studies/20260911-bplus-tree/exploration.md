@@ -32,25 +32,12 @@ body was extracted from the DOM. A separate HTTP retrieval produced a
 The reusable mechanism is the fixed-page B+ tree shape: high-fanout internal
 pages, values in linked leaves, and bounded root-to-leaf traversal.
 
-## 2. Historical Prototypes And Rejections
+## 2. Local Transaction Choice
 
-The first prototype used public names such as `bpt_tree_put` and a
-`uint64_t -> uint64_t` data model. A later `btree` revision supported
-fixed-width opaque keys and values plus comparator IDs. Both are historical
-study stages, not compatibility targets.
-
-The final library deliberately made a clean break:
-
-- package/API namespace is `rbt` 0.2.0;
-- `RBT_FORMAT_VERSION=1` is the sole current development format;
-- its schema encoding magic and unified layout are `RBTR`;
-- previous `RBTS` and old `btree` files fail validation;
-- there is no old-format reader, migration layer, alias, or dual-format path.
-
-Another rejected implementation rebuilt all pages after every mutation. It
-passed functional tests but made writes and WAL size scale with the whole tree.
-The accepted transaction model copies only the search path, changed overflow
-chains, and required siblings, then submits the exact page set once.
+A full-tree rebuild after every mutation was rejected because it made writes
+and WAL size scale with the whole tree. The accepted transaction model copies
+only the search path, changed overflow chains, and required siblings, then
+submits the exact page set once.
 
 ## 3. Typed Record Model
 
@@ -93,7 +80,8 @@ pages at the chosen page size.
 All six logical page types share one 64-byte checked header: metadata, leaf,
 internal, schema, overflow, and free. Leaf/internal pages have 8-byte slots
 made from `u32 offset` plus `u32 length`; slots grow upward while variable cells
-pack downward.
+pack downward. `RBT_FORMAT_VERSION=1` is the sole format, and schema pages use
+the `RBTR` unified-column layout.
 
 Leaf cells persist the canonical key once plus descriptors only for non-key
 columns. Decoding reconstructs the complete row by merging decoded KEY fields
@@ -185,25 +173,21 @@ The final eight suites are:
 | `rbt_crash_test` | full-page redo crash/recovery prefixes and 4,096-record WAL |
 
 All eight passed at source commit
-`ad8e6ee95d766d424249df6894a00bcf354878ce` under Zig 0.16.0 Debug and
+`f41e0976977e5012cd4946fa2dca258e85aebd32` under Zig 0.16.0 Debug and
 Release, ASan/UBSan, and FIL-C 0.684. The analyzer was bound to
 `ccc-analyzer` and reported no bugs. The installed package consumer uses the
-public unified-row API through `find_package(rbt 0.2 CONFIG REQUIRED)`.
+public unified-row API through
+`find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)`.
 
 ## 9. Final Review
 
-The prior review run `20260911-221757-4574fb5e` covered base `10c0875`,
-implementations `938f510`, `0892d30`, and `97fbe20`, and fixes `ed68923` and
-`6d82359`; fourteen validated findings were closed.
-
 Current review run `20260912-110259-0424385b` validated one finding: the
-README contract still identified the pre-unified-row package version. This
-documentation update fixes it. The validator rejected a separate public key
-type because it contradicts the row-only direction; per-field allocation
-because it was a benchmark-less optimization proposal; and an
-interleaved-overflow coverage gap because physical-ordinal corruption coverage
-plus added reopen/update/delete lifecycle coverage resolved it. No actionable
-findings remain.
+README contained one stale package-version statement. This documentation
+update fixes it. The validator rejected a separate public key type because it
+conflicts with the row-only direction; per-field allocation because it lacked
+benchmark or hotspot evidence; and a cross-product interleaved-overflow gap
+because it did not establish a defect and later reopen/update/delete lifecycle
+coverage exists. No actionable findings remain.
 
 ## 10. Reconciliation
 
