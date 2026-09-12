@@ -41,9 +41,10 @@ study stages, not compatibility targets.
 
 The final library deliberately made a clean break:
 
-- package/API namespace is `rbt` 0.1.0;
-- `RBT_FORMAT_VERSION=1` is the only format;
-- old `btree` files fail validation;
+- package/API namespace is `rbt` 0.2.0;
+- `RBT_FORMAT_VERSION=1` is the sole current development format;
+- its schema encoding magic and unified layout are `RBTR`;
+- previous `RBTS` and old `btree` files fail validation;
 - there is no old-format reader, migration layer, alias, or dual-format path.
 
 Another rejected implementation rebuilt all pages after every mutation. It
@@ -53,10 +54,22 @@ chains, and required siblings, then submits the exact page set once.
 
 ## 3. Typed Record Model
 
-The final schema persists a schema ID and every column's ID, type, flags, and
-maximum size. Supported types are `BOOL`, `I64`, `U64`, `BYTES`, and validated
-`UTF8`. Nullability applies to key and value columns; descending order applies
-only to keys. Column IDs are globally unique within the schema.
+The final schema persists a schema ID plus one physical `columns[]` array and
+`column_count`. Every column carries its ID, type, flags, and maximum size.
+`RBT_COLUMN_KEY` marks key columns; their key-tuple order is schema order after
+filtering. `RBT_COLUMN_DESCENDING` requires `RBT_COLUMN_KEY`. There are no
+public key-column and value-column arrays. Supported types are `BOOL`, `I64`,
+`U64`, `BYTES`, and validated `UTF8`. Column IDs are globally unique within
+the schema.
+
+The same unified representation applies to operation input. `struct
+rbt_record` contains one `values[]` array and `value_count`. Put supplies a
+complete physical-schema-order row. Get, delete, and non-null scan bounds
+supply the compact KEY tuple in filtered schema order. This is an
+operation-specific projection of one record type, not a split key/value
+object. Both owned get results and callback-lifetime scan rows are complete
+logical rows in physical schema order and use the single
+`rbt_row_get(row, column_ordinal)` accessor.
 
 The composite key codec converts typed values into one canonical byte sequence:
 
@@ -82,11 +95,15 @@ internal, schema, overflow, and free. Leaf/internal pages have 8-byte slots
 made from `u32 offset` plus `u32 length`; slots grow upward while variable cells
 pack downward.
 
-Variable value columns inline small payloads. A large value gets an overflow
-descriptor and its own chain tagged with column index and logical length.
-Separate value columns never share a chain. This mattered operationally:
-updating one large column can retain every page in another unchanged column's
-chain, and replacing a row can free and allocate only the affected chain.
+Leaf cells persist the canonical key once plus descriptors only for non-key
+columns. Decoding reconstructs the complete row by merging decoded KEY fields
+and payload descriptors into physical schema order. Variable non-key columns
+inline small payloads. A large payload gets an overflow descriptor and its own
+chain tagged in page `AUX` with the physical schema column ordinal and logical
+length. Separate payload columns never share a chain. Tests deliberately
+interleave payload and KEY columns and cover overflow creation, reopen, update,
+delete, and reuse; changing one large payload retains every page in other
+unchanged payload chains.
 
 The validator independently checks slot bounds and overlap, page checksums and
 IDs, schema chain size/count, overflow cycles/column tags/lengths, tree
@@ -114,7 +131,9 @@ height-derived path/sibling bound.
 The overflow locality regression separately records page IDs. A scalar update
 beside two large columns writes only metadata and leaf; changing one large
 column excludes the other chain. A failed expanded update leaves the previous
-row and page accounting intact.
+row and page accounting intact. The interleaved-column regression also checks
+that physical ordinals survive reopen, update, and delete without key/payload
+confusion.
 
 ## 6. Provider And Lease Boundary
 
@@ -156,8 +175,8 @@ The final eight suites are:
 
 | Suite | Main coverage |
 | --- | --- |
-| `rbt_schema_test` | all types/flags, canonical order, UTF-8, ownership, schema-free reopen |
-| `rbt_overflow_test` | independent chains, shrink/delete/reuse, 2,048-page replacement |
+| `rbt_schema_test` | unified columns/records/rows, all types/flags, canonical order, UTF-8, ownership, schema-free reopen |
+| `rbt_overflow_test` | interleaved physical ordinals, reopen/update/delete, independent chains, reuse, 2,048-page replacement |
 | `rbt_locality_test` | exact ordinary write set, balancing bounds, poison propagation |
 | `rbt_structure_test` | growth, delete, root collapse, freelist reuse |
 | `rbt_model_test` | 30,000 typed mixed operations against an independent model |
@@ -165,29 +184,33 @@ The final eight suites are:
 | `rbt_corruption_test` | schema, slot, topology, overflow, file and WAL corruption |
 | `rbt_crash_test` | full-page redo crash/recovery prefixes and 4,096-record WAL |
 
-All eight passed under Zig 0.16.0 Debug and Release, ASan/UBSan, and FIL-C
-0.684. The analyzer was bound to `ccc-analyzer` and reported no bugs. The
-installed package consumer uses the public typed API.
+All eight passed at source commit
+`ad8e6ee95d766d424249df6894a00bcf354878ce` under Zig 0.16.0 Debug and
+Release, ASan/UBSan, and FIL-C 0.684. The analyzer was bound to
+`ccc-analyzer` and reported no bugs. The installed package consumer uses the
+public unified-row API through `find_package(rbt 0.2 CONFIG REQUIRED)`.
 
 ## 9. Final Review
 
-Review run `20260911-221757-4574fb5e` covered base `10c0875`,
+The prior review run `20260911-221757-4574fb5e` covered base `10c0875`,
 implementations `938f510`, `0892d30`, and `97fbe20`, and fixes `ed68923` and
-`6d82359`. Fourteen validated findings were closed.
+`6d82359`; fourteen validated findings were closed.
 
-The validator rejected splitting the core monolith as a preference rather than
-a demonstrated defect. It also rejected an extra backend-poison finding as
-already covered by the contract and tests, although backend poisoning was
-still hardened in the final fixes. Cross-model corroboration was unavailable
-because the host model family could not be attested. No actionable findings
-remain.
+Current review run `20260912-110259-0424385b` validated one finding: the
+README contract still identified the pre-unified-row package version. This
+documentation update fixes it. The validator rejected a separate public key
+type because it contradicts the row-only direction; per-field allocation
+because it was a benchmark-less optimization proposal; and an
+interleaved-overflow coverage gap because physical-ordinal corruption coverage
+plus added reopen/update/delete lifecycle coverage resolved it. No actionable
+findings remain.
 
 ## 10. Reconciliation
 
-`RBT-RA-1` through `RBT-RA-8` bind schema, overflow, locality, structure,
-model, backend, corruption/crash, and complete qualification evidence
-respectively. Their exact definitions are in the study README and evidence
-ledger.
+`RBT-RA-1` through `RBT-RA-8` bind the unified schema/record/row model,
+physical-ordinal overflow, locality, structure, model, backend,
+corruption/crash, and complete qualification evidence respectively. Their
+exact definitions are in the study README and evidence ledger.
 
 The remaining boundary is explicit: subprocess crashes are not physical power
 loss; network filesystems are unsupported; one tree lease is not shared-tree

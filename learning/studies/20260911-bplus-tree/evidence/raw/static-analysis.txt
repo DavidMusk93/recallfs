@@ -1,4 +1,4 @@
-source_commit=6d823594103237e372cfe844ac0cac12fb187e3d
+source_commit=ad8e6ee95d766d424249df6894a00bcf354878ce
 scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
 -- The C compiler identification is AppleClang 21.0.0.21000101
 -- Detecting C compiler ABI info
@@ -6,21 +6,21 @@ scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for stati
 -- Check for working C compiler: /opt/homebrew/Cellar/llvm@16/16.0.6_1/libexec/ccc-analyzer - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (0.8s)
+-- Configuring done (0.9s)
 -- Generating done (0.1s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-scan
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-scan
 scan-build: Analysis run complete.
-scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-evidence-scan/2026-09-11-231616-91493-1' because it contains no reports.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-row-final-scan/2026-09-12-112125-92455-1' because it contains no reports.
 scan-build: No bugs found.
 CMAKE_C_COMPILER:FILEPATH=/opt/homebrew/Cellar/llvm@16/16.0.6_1/libexec/ccc-analyzer
 scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for static analysis
-[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
 [ 11%] Building C object CMakeFiles/rbt.dir/src/rbt.c.o
+[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
 [ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_crc32c.c.o
 [ 15%] Linking C static library librbt.a
 [ 15%] Built target rbt
-[ 26%] Building C object CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
 [ 26%] Building C object CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
+[ 26%] Building C object CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
 [ 26%] Building C object CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
 [ 30%] Linking C static library librbt_storage_memory.a
 [ 30%] Built target rbt_storage_memory
@@ -28,30 +28,30 @@ scan-build: Using '/opt/homebrew/Cellar/llvm@16/16.0.6_1/bin/clang-16' for stati
 [ 38%] Linking C static library librbt_storage_file_test_hooks.a
 [ 38%] Built target rbt_storage_file
 [ 38%] Built target rbt_storage_file_test_hooks
-[ 50%] Building C object CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o
-[ 53%] Building C object CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o
+[ 42%] Building C object CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o
+[ 46%] Building C object CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o
+[ 57%] Building C object CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o
+[ 57%] Building C object CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o
+[ 61%] Building C object CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o
+[ 65%] Building C object CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o
 [ 69%] Building C object CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o
 [ 73%] Linking C executable rbt_model_test
-[ 80%] Linking C executable rbt_structure_test
+[ 76%] Linking C executable rbt_structure_test
 [ 80%] Linking C executable rbt_schema_test
-[ 84%] Linking C executable rbt_overflow_test
-[ 84%] Built target rbt_model_test
-[ 88%] Linking C executable rbt_crash_test
-[ 88%] Built target rbt_schema_test
-[ 88%] Built target rbt_structure_test
-[ 88%] Built target rbt_overflow_test
-[ 92%] Linking C executable rbt_locality_test
-[ 96%] Linking C executable rbt_backend_test
-[ 96%] Built target rbt_crash_test
-[ 96%] Built target rbt_locality_test
-[ 96%] Built target rbt_backend_test
-[100%] Linking C executable rbt_corruption_test
-[100%] Built target rbt_corruption_test
+[ 80%] Built target rbt_model_test
+[ 80%] Built target rbt_structure_test
+[ 84%] Linking C executable rbt_crash_test
+[ 84%] Built target rbt_schema_test
+[ 88%] Linking C executable rbt_locality_test
+[ 92%] Linking C executable rbt_backend_test
+[ 92%] Built target rbt_crash_test
+[ 92%] Built target rbt_locality_test
+[ 92%] Built target rbt_backend_test
+[ 96%] Linking C executable rbt_corruption_test
+[ 96%] Built target rbt_corruption_test
+[100%] Linking C executable rbt_overflow_test
+[100%] Built target rbt_overflow_test
 scan-build: Analysis run complete.
-scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-evidence-scan/2026-09-11-231617-91949-1' because it contains no reports.
+scan-build: Removing directory '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/reports/rbt-row-final-scan/2026-09-12-112126-93364-1' because it contains no reports.
 scan-build: No bugs found.

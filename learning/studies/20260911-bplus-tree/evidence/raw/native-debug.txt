@@ -1,4 +1,4 @@
-source_commit=6d823594103237e372cfe844ac0cac12fb187e3d
+source_commit=ad8e6ee95d766d424249df6894a00bcf354878ce
 compiler=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc
 -- The C compiler identification is Clang 21.1.0
 -- Detecting C compiler ABI info
@@ -6,24 +6,24 @@ compiler=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc
 -- Check for working C compiler: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc - skipped
 -- Detecting C compile features
 -- Detecting C compile features - done
--- Configuring done (2.0s)
+-- Configuring done (2.4s)
 -- Generating done (0.1s)
--- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug
-Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug'
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug
+Change Dir: '/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug'
 
 Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile -j
-/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug --check-build-system CMakeFiles/Makefile.cmake 0
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug//CMakeFiles/progress.marks
+/opt/homebrew/bin/cmake -S/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib -B/Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug --check-build-system CMakeFiles/Makefile.cmake 0
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug//CMakeFiles/progress.marks
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/Makefile2 all
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt.dir/build.make CMakeFiles/rbt.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt.dir/DependInfo.cmake "--color="
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt.dir/build.make CMakeFiles/rbt.dir/build
-[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
-[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt.c.o
-[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_crc32c.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -MF CMakeFiles/rbt.dir/src/rbt_page_updates.c.o.d -o CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_page_updates.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -MF CMakeFiles/rbt.dir/src/rbt_crc32c.c.o.d -o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_crc32c.c
+[  7%] Building C object CMakeFiles/rbt.dir/src/rbt.c.o
+[  7%] Building C object CMakeFiles/rbt.dir/src/rbt_page_updates.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt.c.o -MF CMakeFiles/rbt.dir/src/rbt.c.o.d -o CMakeFiles/rbt.dir/src/rbt.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -MF CMakeFiles/rbt.dir/src/rbt_page_updates.c.o.d -o CMakeFiles/rbt.dir/src/rbt_page_updates.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_page_updates.c
+[ 11%] Building C object CMakeFiles/rbt.dir/src/rbt_crc32c.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -MF CMakeFiles/rbt.dir/src/rbt_crc32c.c.o.d -o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_crc32c.c
 [ 15%] Linking C static library librbt.a
 /opt/homebrew/bin/cmake -P CMakeFiles/rbt.dir/cmake_clean_target.cmake
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt.dir/link.txt --verbose=1
@@ -33,109 +33,109 @@ cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && 
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_memory.dir/build.make CMakeFiles/rbt_storage_memory.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file.dir/build.make CMakeFiles/rbt_storage_file.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file_test_hooks.dir/build.make CMakeFiles/rbt_storage_file_test_hooks.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_storage_memory.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_storage_file.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_storage_file_test_hooks.dir/DependInfo.cmake "--color="
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_memory.dir/build.make CMakeFiles/rbt_storage_memory.dir/build
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_storage_file.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_storage_memory.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_storage_file_test_hooks.dir/DependInfo.cmake "--color="
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file.dir/build.make CMakeFiles/rbt_storage_file.dir/build
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_file_test_hooks.dir/build.make CMakeFiles/rbt_storage_file_test_hooks.dir/build
-[ 19%] Building C object CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_storage_memory.dir/build.make CMakeFiles/rbt_storage_memory.dir/build
+[ 19%] Building C object CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
+[ 26%] Building C object CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
 [ 26%] Building C object CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -MF CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o.d -o CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_memory.c
-[ 26%] Building C object CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -DRBT_ENABLE_TEST_HOOKS=1 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o -MF CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o.d -o CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_file.c
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -MF CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o.d -o CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_memory.c
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o -MF CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o.d -o CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_storage_file.c
 [ 30%] Linking C static library librbt_storage_memory.a
 /opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_memory.dir/cmake_clean_target.cmake
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_storage_memory.dir/link.txt --verbose=1
-[ 38%] Linking C static library librbt_storage_file_test_hooks.a
-[ 38%] Linking C static library librbt_storage_file.a
-/opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_file_test_hooks.dir/cmake_clean_target.cmake
+[ 34%] Linking C static library librbt_storage_file.a
 /opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_file.dir/cmake_clean_target.cmake
-/usr/bin/ar qc librbt_storage_memory.a CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
-/usr/local/bin/llvm-ranlib librbt_storage_memory.a
+[ 38%] Linking C static library librbt_storage_file_test_hooks.a
+/opt/homebrew/bin/cmake -P CMakeFiles/rbt_storage_file_test_hooks.dir/cmake_clean_target.cmake
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_storage_file.dir/link.txt --verbose=1
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_storage_file_test_hooks.dir/link.txt --verbose=1
+/usr/bin/ar qc librbt_storage_memory.a CMakeFiles/rbt_storage_memory.dir/src/rbt_storage_memory.c.o
+/usr/local/bin/llvm-ranlib librbt_storage_memory.a
 [ 38%] Built target rbt_storage_memory
-/usr/bin/ar qc librbt_storage_file_test_hooks.a CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
-/usr/local/bin/llvm-ranlib librbt_storage_file_test_hooks.a
 /usr/bin/ar qc librbt_storage_file.a CMakeFiles/rbt_storage_file.dir/src/rbt_storage_file.c.o
 /usr/local/bin/llvm-ranlib librbt_storage_file.a
-[ 38%] Built target rbt_storage_file_test_hooks
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_crash_test.dir/build.make CMakeFiles/rbt_crash_test.dir/depend
+/usr/bin/ar qc librbt_storage_file_test_hooks.a CMakeFiles/rbt_storage_file_test_hooks.dir/src/rbt_storage_file.c.o
+/usr/local/bin/llvm-ranlib librbt_storage_file_test_hooks.a
 [ 38%] Built target rbt_storage_file
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_schema_test.dir/build.make CMakeFiles/rbt_schema_test.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_overflow_test.dir/build.make CMakeFiles/rbt_overflow_test.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_locality_test.dir/build.make CMakeFiles/rbt_locality_test.dir/depend
+[ 38%] Built target rbt_storage_file_test_hooks
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_structure_test.dir/build.make CMakeFiles/rbt_structure_test.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_model_test.dir/build.make CMakeFiles/rbt_model_test.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_schema_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_overflow_test.dir/DependInfo.cmake "--color="
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_backend_test.dir/build.make CMakeFiles/rbt_backend_test.dir/depend
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_corruption_test.dir/build.make CMakeFiles/rbt_corruption_test.dir/depend
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_crash_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_schema_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_locality_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_overflow_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_structure_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_model_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_backend_test.dir/DependInfo.cmake "--color="
-cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles/rbt_corruption_test.dir/DependInfo.cmake "--color="
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_crash_test.dir/build.make CMakeFiles/rbt_crash_test.dir/build
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_locality_test.dir/build.make CMakeFiles/rbt_locality_test.dir/build
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_locality_test.dir/DependInfo.cmake "--color="
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_crash_test.dir/build.make CMakeFiles/rbt_crash_test.dir/depend
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_model_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_structure_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_backend_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_corruption_test.dir/DependInfo.cmake "--color="
+cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug && /opt/homebrew/bin/cmake -E cmake_depends "Unix Makefiles" /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles/rbt_crash_test.dir/DependInfo.cmake "--color="
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_schema_test.dir/build.make CMakeFiles/rbt_schema_test.dir/build
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_structure_test.dir/build.make CMakeFiles/rbt_structure_test.dir/build
-/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_backend_test.dir/build.make CMakeFiles/rbt_backend_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_locality_test.dir/build.make CMakeFiles/rbt_locality_test.dir/build
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_overflow_test.dir/build.make CMakeFiles/rbt_overflow_test.dir/build
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_model_test.dir/build.make CMakeFiles/rbt_model_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_crash_test.dir/build.make CMakeFiles/rbt_crash_test.dir/build
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_backend_test.dir/build.make CMakeFiles/rbt_backend_test.dir/build
 /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_corruption_test.dir/build.make CMakeFiles/rbt_corruption_test.dir/build
-[ 42%] Building C object CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o
-[ 50%] Building C object CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o
-[ 50%] Building C object CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/rbt_structure_test.dir/build.make CMakeFiles/rbt_structure_test.dir/build
+[ 46%] Building C object CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o
+[ 46%] Building C object CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o -MF CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o.d -o CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_locality_test.c
-[ 53%] Building C object CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o -MF CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o.d -o CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_structure_test.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -MF CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o.d -o CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_crash_test.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -MF CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o.d -o CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_backend_test.c
-[ 61%] Building C object CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o
-[ 61%] Building C object CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o
-[ 65%] Building C object CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o -MF CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o.d -o CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_schema_test.c
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -MF CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o.d -o CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_overflow_test.c
+[ 50%] Building C object CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o -MF CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o.d -o CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_model_test.c
+[ 53%] Building C object CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -MF CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o.d -o CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_overflow_test.c
+[ 57%] Building C object CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -MF CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o.d -o CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_crash_test.c
+[ 61%] Building C object CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -MF CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o.d -o CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_backend_test.c
+[ 65%] Building C object CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o -MF CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o.d -o CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_structure_test.c
 [ 69%] Building C object CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -MD -MT CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o -MF CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o.d -o CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_corruption_test.c
-[ 73%] Linking C executable rbt_locality_test
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_locality_test.dir/link.txt --verbose=1
-[ 84%] Linking C executable rbt_structure_test
-[ 84%] Linking C executable rbt_model_test
-[ 84%] Linking C executable rbt_corruption_test
+[ 73%] Linking C executable rbt_structure_test
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_structure_test.dir/link.txt --verbose=1
+[ 76%] Linking C executable rbt_model_test
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_model_test.dir/link.txt --verbose=1
+[ 80%] Linking C executable rbt_corruption_test
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_corruption_test.dir/link.txt --verbose=1
-[ 88%] Linking C executable rbt_crash_test
+[ 84%] Linking C executable rbt_crash_test
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_crash_test.dir/link.txt --verbose=1
-[ 92%] Linking C executable rbt_overflow_test
-/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_overflow_test.dir/link.txt --verbose=1
-[ 96%] Linking C executable rbt_schema_test
+[ 92%] Linking C executable rbt_locality_test
+[ 92%] Linking C executable rbt_schema_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_locality_test.dir/link.txt --verbose=1
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_schema_test.dir/link.txt --verbose=1
+[ 96%] Linking C executable rbt_overflow_test
+/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_overflow_test.dir/link.txt --verbose=1
 [100%] Linking C executable rbt_backend_test
 /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/rbt_backend_test.dir/link.txt --verbose=1
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o -o rbt_locality_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -o rbt_overflow_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o -o rbt_corruption_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_model_test.dir/tests/rbt_model_test.c.o -o rbt_model_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o -o rbt_schema_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -o rbt_crash_test  librbt_storage_file_test_hooks.a librbt.a
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_structure_test.dir/tests/rbt_structure_test.c.o -o rbt_structure_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
-/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -o rbt_backend_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
-[100%] Built target rbt_locality_test
-[100%] Built target rbt_corruption_test
+[100%] Built target rbt_crash_test
 [100%] Built target rbt_model_test
+[100%] Built target rbt_corruption_test
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_locality_test.dir/tests/rbt_locality_test.c.o -o rbt_locality_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -o rbt_backend_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_schema_test.dir/tests/rbt_schema_test.c.o -o rbt_schema_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/rbt_overflow_test.dir/tests/rbt_overflow_test.c.o -o rbt_overflow_test  librbt_storage_memory.a librbt_storage_file.a librbt.a
+[100%] Built target rbt_structure_test
+[100%] Built target rbt_locality_test
 [100%] Built target rbt_overflow_test
 [100%] Built target rbt_schema_test
-[100%] Built target rbt_crash_test
-[100%] Built target rbt_structure_test
 [100%] Built target rbt_backend_test
-/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug/CMakeFiles 0
+/opt/homebrew/bin/cmake -E cmake_progress_start /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug/CMakeFiles 0
 
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt.dir/src/rbt.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt.c
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt.dir/src/rbt_crc32c.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/src/rbt_crc32c.c
@@ -151,24 +151,24 @@ cd /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug && 
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt_backend_test.dir/tests/rbt_backend_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_backend_test.c
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt_corruption_test.dir/tests/rbt_corruption_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_corruption_test.c
 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/scripts/zig-cc -D_DARWIN_C_SOURCE -I/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/include -g -std=c11 -arch arm64 -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -o CMakeFiles/rbt_crash_test.dir/tests/rbt_crash_test.c.o -c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260911-bplus-tree/lib/tests/rbt_crash_test.c
-Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-evidence-debug
+Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/rbt-row-final-debug
     Start 1: rbt_schema_test
-1/8 Test #1: rbt_schema_test ..................   Passed    1.05 sec
+1/8 Test #1: rbt_schema_test ..................   Passed    0.82 sec
     Start 2: rbt_overflow_test
-2/8 Test #2: rbt_overflow_test ................   Passed    1.11 sec
+2/8 Test #2: rbt_overflow_test ................   Passed    1.18 sec
     Start 3: rbt_locality_test
-3/8 Test #3: rbt_locality_test ................   Passed    1.26 sec
+3/8 Test #3: rbt_locality_test ................   Passed    0.88 sec
     Start 4: rbt_structure_test
-4/8 Test #4: rbt_structure_test ...............   Passed    1.42 sec
+4/8 Test #4: rbt_structure_test ...............   Passed    1.79 sec
     Start 5: rbt_model_test
-5/8 Test #5: rbt_model_test ...................   Passed    6.95 sec
+5/8 Test #5: rbt_model_test ...................   Passed    7.14 sec
     Start 6: rbt_backend_test
-6/8 Test #6: rbt_backend_test .................   Passed    7.40 sec
+6/8 Test #6: rbt_backend_test .................   Passed    7.77 sec
     Start 7: rbt_corruption_test
-7/8 Test #7: rbt_corruption_test ..............   Passed    1.45 sec
+7/8 Test #7: rbt_corruption_test ..............   Passed    1.44 sec
     Start 8: rbt_crash_test
-8/8 Test #8: rbt_crash_test ...................   Passed    9.78 sec
+8/8 Test #8: rbt_crash_test ...................   Passed   10.61 sec
 
 100% tests passed, 0 tests failed out of 8
 
-Total Test time (real) =  30.55 sec
+Total Test time (real) =  31.76 sec

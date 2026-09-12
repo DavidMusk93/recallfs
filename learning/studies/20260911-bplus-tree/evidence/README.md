@@ -24,8 +24,10 @@ verified_by:
 ## Result
 
 The refreshed evidence is bound to source commit
-`6d823594103237e372cfe844ac0cac12fb187e3d` and the sole clean-break format
-`RBT_FORMAT_VERSION=1`.
+`ad8e6ee95d766d424249df6894a00bcf354878ce`. `RBT_FORMAT_VERSION=1`
+remains the sole current development format, with `RBTR` schema magic and
+unified-column layout; previous `RBTS` files are rejected without
+compatibility, migration, or alias handling.
 
 | Gate | Result | Raw evidence |
 | --- | --- | --- |
@@ -36,7 +38,7 @@ The refreshed evidence is bound to source commit
 | Static analysis | `ccc-analyzer` bound; no bugs found | [`static-analysis.txt`](raw/static-analysis.txt) |
 | Format/install | format, install, typed `find_package` consumer, C++17 headers passed | [`format-install.txt`](raw/format-install.txt) |
 | Identity | environment plus every source/test digest recorded | [`environment.txt`](raw/environment.txt), [`source-sha256.txt`](raw/source-sha256.txt) |
-| Review | 14 validated findings closed; none actionable remain | [`review.md`](review.md) |
+| Review | current stale-version finding fixed; no actionable findings remain | [`review.md`](review.md) |
 
 Leak detection was disabled because this macOS ASan runtime does not provide a
 reliable LeakSanitizer path. ASan/UBSan, FIL-C ownership checks, and explicit
@@ -46,10 +48,14 @@ backend teardown tests remained active.
 
 ### RBT-RA-1: Typed Schema And Canonical Keys
 
-`rbt_schema_test` verifies package version 0.1.0, format version 1, column IDs,
-all five types, nullable and descending flags, maximum sizes, UTF-8 validation,
-composite canonical ordering, input-copy behavior, row ownership, scan
-callback lifetime, and schema-free reopen through `rbt_open`.
+`rbt_schema_test` verifies package version 0.2.0, format version 1, one
+schema-order `columns[]` array with KEY-filtered ordering, one `values[]`
+record representation, complete owned and callback rows, the sole
+`rbt_row_get` accessor, column IDs, all five types, nullable and descending
+flags, maximum sizes, UTF-8 validation, composite canonical ordering,
+input-copy behavior, callback lifetime, and schema-free reopen through
+`rbt_open`. `rbt_corruption_test` verifies `RBTR` schema encoding and explicit
+rejection of prior `RBTS` bytes.
 
 Result: passed under Debug, Release, ASan/UBSan, and FIL-C.
 
@@ -59,7 +65,10 @@ Compile-time and runtime checks enforce 64 total columns, 1 MiB per variable
 field, and 4 MiB per row. `rbt_overflow_test` verifies inline-to-overflow
 transition, byte-exact reads, independent per-column chains, shrink/delete/free
 behavior, freelist reuse, and replacement of a row backed by 2,048 overflow
-pages.
+pages. Its interleaved schema places payload columns before, between, and after
+KEY columns and verifies full physical-order reconstruction plus
+physical-column-ordinal `AUX` identity through reopen, update, delete, and
+reuse.
 
 Result: passed in all four modes.
 
@@ -116,7 +125,8 @@ Result: passed in all four modes.
 `rbt_corruption_test` independently mutates serialized bytes and recomputes
 checksums where necessary. It rejects malformed schema chains and sizes,
 out-of-bounds or overlapping slots, child/link corruption, overflow cycles,
-wrong overflow column identity/length, bad file headers, and malformed WAL.
+wrong physical-column overflow identity/length, prior `RBTS` schema magic, bad
+file headers, and malformed WAL.
 
 `rbt_crash_test` exercises full-page redo publication and replay crash points,
 every nonempty truncated prefix of a valid WAL, checksum/version/size failures,
@@ -136,11 +146,12 @@ Result: passed in all four modes.
 - CMake: 4.0.3.
 - Static analyzer: Homebrew Clang 16.0.6 `ccc-analyzer`; no bugs.
 - Installed consumer:
-  `find_package(rbt 0.1 CONFIG REQUIRED)` with `rbt::rbt`,
+  `find_package(rbt 0.2 CONFIG REQUIRED)` with `rbt::rbt`,
   `rbt::memory`, and `rbt::file`.
 - Public headers: C++17 compilation passed.
-- Review run `20260911-221757-4574fb5e`: 14 validated findings closed;
-  no actionable findings remain.
+- Review run `20260912-110259-0424385b`: one validated stale-version README
+  finding fixed by this documentation update; rejected candidates did not
+  establish further defects; no actionable findings remain.
 
 ## Raw SHA-256 Ledger
 
@@ -148,14 +159,14 @@ The tracked `raw/SHA256SUMS` contains:
 
 | Raw file | SHA-256 |
 | --- | --- |
-| `environment.txt` | `b037efb4b2ea999050f51b66adc825ead16bf1efee2bae1c0ab107ab47033e0a` |
-| `filc.txt` | `1937e2e8c85fb10a16cb891f7003320a4aafd5577b73d5dddb51185eff200d55` |
-| `format-install.txt` | `9a1f9af5a854c43b6662925b85dfc1b4b7974b1023430c395b10f2bb5751a367` |
-| `native-debug.txt` | `eaa83c535ad3920dff9742d0583daf76dae3f972e69072c86a8481392e89d5ec` |
-| `native-release.txt` | `671b7edd7f704104bad7bd07eecfb190369ec90525665d0957808dd3185c4f16` |
-| `sanitizers.txt` | `e104de70cb00435839e1dd37d9bfc5ca1516c8060c4b66efd62cd995af5dfa4d` |
-| `source-sha256.txt` | `65fab5af0210c61c27f1825a92833564490d11399b6f2f04102866403581ce27` |
-| `static-analysis.txt` | `bccced06f7423df91f68b6679fa67c74673a040da770aa62d56186280571f3a2` |
+| `environment.txt` | `322da91fa8506030cf4a284fea0dd7f7b22f527687fa5d6127d3a19e8ab8198c` |
+| `filc.txt` | `77615a60dda011d59bb9d074e45bd923f293f9da3ee06a8adf16504ad75735dd` |
+| `format-install.txt` | `014c6d568095a3161fbfcadb8f60b45c57be6f8e0d3616c3cea9ecc033eab22a` |
+| `native-debug.txt` | `c69b59b64a3c3b9520fab69879c81cfccefc23e5335c3de5e8b0f8b3184b7608` |
+| `native-release.txt` | `8faff78cf2719301814afc13f5f66469062c90f69fa89cd63971ac6e62e9fe95` |
+| `sanitizers.txt` | `01e07d3f36d616197680d5bd7d0f87e8332e488dbc7612dda4e8afc8be29febe` |
+| `source-sha256.txt` | `2e7b6b5f3f0168e98f47303bf2503423a9aad671b90be0b2d67437a11a82ca31` |
+| `static-analysis.txt` | `343abbfcd08f3fed9253a3295246c228ca6c6ae0756fe13506e63c30f9be928a` |
 
 ## Reproduction
 

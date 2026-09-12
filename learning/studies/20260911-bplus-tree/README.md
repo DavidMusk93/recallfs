@@ -24,36 +24,42 @@ verified_by:
 
 ## 1. Conclusion
 
-This study delivers `rbt` 0.1.0, a reusable C11 typed-record B+ tree library.
+This study delivers `rbt` 0.2.0, a reusable C11 typed-record B+ tree library.
 Its public handle is the opaque `struct rbt`; lifecycle functions are
 `rbt_create`, `rbt_open`, `rbt_destroy`, and `rbt_get_schema`, and data
 operations are `rbt_get`, `rbt_put`, `rbt_delete`, `rbt_scan`, and
 `rbt_validate`. Public symbols use the direct `rbt_*` namespace without an
 extra tree-name segment.
 
-This is a clean-break development format. `RBT_FORMAT_VERSION=1` is the only
-supported format. Files from the predecessor implementation are rejected:
-there is no compatibility reader, migration layer, API alias, or second
-on-disk format.
+This is a clean-break development format. `RBT_FORMAT_VERSION=1` is the sole
+current development format, and its schema encoding magic and unified layout
+are `RBTR`. Earlier `RBTS` schema files and files from the predecessor
+implementation are rejected: there is no compatibility reader, migration
+layer, API alias, or alternate on-disk format.
 
-The implementation persists a typed schema, canonicalizes composite keys,
-stores variable-length rows in slotted pages, gives each large variable value
-column its own overflow chain, and updates only the search path and required
-siblings. A non-structural mutation without changed overflow data commits
-exactly metadata plus one leaf, while balancing remains bounded by the path and
-siblings rather than tree size.
+The implementation persists one ordered typed schema, derives canonical
+composite keys from columns marked `RBT_COLUMN_KEY`, stores variable-length
+rows in slotted pages, gives each large non-key variable column its own
+overflow chain, and updates only the search path and required siblings. A
+non-structural mutation without changed overflow data commits exactly metadata
+plus one leaf, while balancing remains bounded by the path and siblings rather
+than tree size.
 
-At source commit `6d823594103237e372cfe844ac0cac12fb187e3d`, all eight suites
+At source commit `ad8e6ee95d766d424249df6894a00bcf354878ce`, all eight suites
 passed under Zig Debug, Zig Release, ASan/UBSan, and FIL-C 0.684. The
 `ccc-analyzer` run reported no bugs, package installation and the external
-typed consumer passed, and review run `20260911-221757-4574fb5e` closed all 14
-validated findings. No actionable findings remain.
+typed consumer passed, and review run `20260912-110259-0424385b` validated one
+finding: this study still named the pre-unified-row package version. This
+documentation update fixes that finding. No actionable findings remain.
 
 The evidence does not establish real power-loss behavior, network filesystem
 ordering, multi-thread or multi-process shared-tree access, online backup, or
 performance results.
 
 ## 2. Public Contract
+
+Row is the only public data model; key and payload handling are projections of
+that model rather than separate public object types.
 
 All status-returning public operations return `0` on success or a negative errno value.
 Documented failures include `-ENOENT`, `-EINVAL`, `-ENOMEM`, `-EIO`,
@@ -67,13 +73,20 @@ supports schema-free open. `rbt_get_schema` returns a tree-owned borrowed view.
 `rbt_destroy` releases the lease and rejects destruction during a scan
 callback.
 
-Records borrow their key/value arrays and byte payloads only for the call.
-`rbt_put` copies the record. `rbt_get` returns an owned `struct rbt_row`, which
-the caller releases with `rbt_row_destroy`; values obtained from row accessors
-are borrowed from that row. Scan rows and all their views exist only during the
-callback and cannot be destroyed by the callback. `RBT_SCAN_STOP` ends the scan
-successfully. Mutating or destroying the same tree from a scan callback is
-rejected with `-EBUSY`.
+`struct rbt_record` has one `values` array and `value_count`; it borrows that
+array and byte payloads only for the call. `rbt_put` requires and copies a
+complete row in physical schema order. `rbt_get`, `rbt_delete`, and non-null
+scan bounds require a compact tuple containing only `RBT_COLUMN_KEY` values in
+filtered schema order. This is an operation-specific projection of the same
+record representation, not a public split key/value object.
+
+`rbt_get` returns an owned `struct rbt_row` containing one complete logical row
+in physical schema order; the caller releases it with `rbt_row_destroy`.
+`rbt_row_get(row, column_ordinal)` is the sole value accessor, and its result is
+borrowed from the row. Scan callbacks receive the same complete logical row,
+but the row and all views exist only during the callback and cannot be
+destroyed by it. `RBT_SCAN_STOP` ends the scan successfully. Mutating or
+destroying the same tree from a scan callback is rejected with `-EBUSY`.
 
 Scans use `[begin, end)` bounds; either bound may be `NULL`. Equal or reversed
 bounds produce an empty successful scan. Replacing an existing row reports
@@ -82,19 +95,22 @@ bounds produce an empty successful scan. Replacing an existing row reports
 
 ## 3. Persisted Schema And Keys
 
-Each schema has a 64-bit schema ID and ordered key/value column arrays. Every
-column persists:
+Each schema has a 64-bit schema ID, one ordered `columns` array, and
+`column_count`. There are no public split key/payload arrays. Every column
+persists:
 
 | Field | Contract |
 | --- | --- |
-| `id` | unique `uint32_t` across key and value columns |
+| `id` | unique `uint32_t` across all columns |
 | `type` | `BOOL`, `I64`, `U64`, `BYTES`, or validated `UTF8` |
-| `flags` | `NULLABLE`; key columns may also be `DESCENDING` |
+| `flags` | `RBT_COLUMN_NULLABLE`, `RBT_COLUMN_KEY`, and `RBT_COLUMN_DESCENDING`; `DESCENDING` requires `KEY` |
 | `max_size` | zero for scalar types; `1..1 MiB` for `BYTES`/`UTF8` |
 
-A schema must have at least one key column and at most 64 total columns.
-Maximum declared field size is 1 MiB and maximum declared row size is 4 MiB.
-Descending is invalid on value columns. Null values require `NULLABLE`.
+A schema must have at least one column marked `RBT_COLUMN_KEY` and at most 64
+total columns. Key order is physical schema order after filtering for that
+flag. Maximum declared field size is 1 MiB and maximum declared row size is
+4 MiB. `RBT_COLUMN_DESCENDING` without `RBT_COLUMN_KEY` is invalid. Null values
+require `RBT_COLUMN_NULLABLE`.
 
 Composite keys are encoded column by column into one canonical byte string.
 Each component carries null ordering; signed integers are sign-normalized,
@@ -115,10 +131,10 @@ CRC32C, and an auxiliary field.
 | Page type | Role |
 | --- | --- |
 | metadata | root, freelist, item count, high-water mark, height, schema chain |
-| leaf | canonical key plus typed value descriptors/payload |
+| leaf | canonical key plus descriptors/payload for non-key columns |
 | internal | canonical separator plus child reference |
-| schema | persisted schema bytes |
-| overflow | one variable value column's payload chain |
+| schema | `RBTR` unified-column schema bytes |
+| overflow | one variable non-key column's payload chain |
 | free | reusable page linked from the freelist |
 
 Leaf and internal pages use 8-byte slots: a `u32` cell offset and `u32` cell
@@ -126,11 +142,15 @@ length. Slots grow upward from the header and variable cells pack downward from
 the page end. Slot bounds, non-overlap, checksums, page IDs, links, types, and
 ownership are validated before use.
 
-Large `BYTES` or `UTF8` value columns spill independently. Each column has its
-own overflow chain, so changing one large value does not rewrite another
-unchanged column's chain. Keys remain inline and schema sizing rejects a key
-whose maximum canonical representation cannot support conservative page
-capacity.
+The leaf stores its canonical key once and descriptors only for non-key
+columns. Reads decode the key fields and merge them with payload descriptors to
+reconstruct the complete row in physical schema order. Large non-key `BYTES`
+or `UTF8` columns spill independently. Overflow-page `AUX` identifies the
+physical schema column ordinal, so interleaved key and payload columns retain
+their identity through reopen, update, and delete. Changing one large payload
+does not rewrite another unchanged column's chain. Keys remain inline and
+schema sizing rejects a key whose maximum canonical representation cannot
+support conservative page capacity.
 
 Occupancy is deliberately conservative: create rejects schemas that cannot
 provide at least three leaf and internal cells at the selected page size, and
@@ -189,14 +209,14 @@ for diagnosis and rejected.
 
 | Anchor | Exact contract | Independent verification |
 | --- | --- | --- |
-| `RBT-RA-1` | persisted IDs/types/flags/max sizes, all five types, nullable/descending keys, schema-free open | `rbt_schema_test` |
-| `RBT-RA-2` | 4 MiB row, 1 MiB field, 64-column limits; per-column overflow lifecycle and reuse | `rbt_overflow_test` |
+| `RBT-RA-1` | unified `columns[]` schema and `values[]` records, KEY-filtered order, complete row reconstruction/access, all types/flags, schema-free open, `RBTR` encoding and `RBTS` rejection | `rbt_schema_test`, `rbt_corruption_test` |
+| `RBT-RA-2` | 4 MiB row, 1 MiB field, 64-column limits; physical-ordinal overflow across interleaved columns, reopen/update/delete, lifecycle and reuse | `rbt_overflow_test` |
 | `RBT-RA-3` | ordinary mutation is metadata+leaf; split/borrow/merge/root collapse remain path/sibling bounded | `rbt_locality_test` |
 | `RBT-RA-4` | conservative occupancy, structural mutation, root collapse, freelist reuse | `rbt_structure_test` |
 | `RBT-RA-5` | 30,000 typed mixed operations equal an independent ordered model | `rbt_model_test` |
 | `RBT-RA-6` | memory/file page-size matrix, leases, `0600`, lock, namespace, poison and reopen behavior | `rbt_backend_test` |
-| `RBT-RA-7` | schema/slot/overflow corruption and 4,096-record WAL/crash-prefix handling are rejected or recovered exactly | `rbt_corruption_test`, `rbt_crash_test` |
-| `RBT-RA-8` | 8/8 suites pass in Debug, Release, ASan/UBSan, and FIL-C; package and analyzer gates pass; 14 review findings are closed | `evidence/README.md`, `evidence/review.md` |
+| `RBT-RA-7` | `RBTS`, schema/slot/physical-ordinal overflow corruption, and 4,096-record WAL/crash-prefix handling are rejected or recovered exactly | `rbt_corruption_test`, `rbt_crash_test` |
+| `RBT-RA-8` | 8/8 suites pass in Debug, Release, ASan/UBSan, and FIL-C; `rbt` 0.2 package and analyzer gates pass; current review finding is closed | `evidence/README.md`, `evidence/review.md` |
 
 ## 8. Worked Examples
 
@@ -207,10 +227,14 @@ destroying the tree and reopening the backend, `rbt_open(&storage, &tree)`
 recovers the schema without caller input; `rbt_get_schema` returns its borrowed
 tree-owned representation.
 
-**Independent overflow update.** A row has two 4 KiB `BYTES` value columns on a
-512-byte tree. Each value owns a separate overflow chain. Updating only the
-first column submits metadata, leaf, and the first column's replacement/free
-pages; the second chain's page IDs are absent from the commit.
+**Interleaved row and overflow update.** A schema places a large `BYTES`
+payload before two key columns, another payload between them, and a third
+payload after them. Put supplies all values in that physical order; get and
+delete supply only the two key values in filtered schema order. Reopen returns
+the complete row through `rbt_row_get` at physical ordinals. Each payload owns
+a separate overflow chain whose `AUX` is that physical ordinal. Updating the
+first payload preserves the other chains, and deleting the row releases all
+three.
 
 **Crash after WAL publication.** A mutation publishes a valid full-page WAL,
 writes one data page, and exits at a test hook. Reopen replays the complete WAL,
@@ -219,7 +243,7 @@ syncs the file, removes the WAL, and exposes only the committed row set.
 ## 9. Evidence Boundary
 
 The raw ledger is bound to source commit
-`6d823594103237e372cfe844ac0cac12fb187e3d`; exact log SHA-256 values are in
+`ad8e6ee95d766d424249df6894a00bcf354878ce`; exact log SHA-256 values are in
 [`evidence/README.md`](evidence/README.md). The evidence covers deterministic
 process-crash prefixes and executed-path safety. It does not support claims
 about physical power loss, controller caches, network filesystems, shared-tree
