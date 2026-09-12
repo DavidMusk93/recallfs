@@ -1672,7 +1672,8 @@ static int rbt_txn_build_leaf_cell(struct rbt_txn *transaction, const unsigned c
         size_t field_size = rbt_scalar_size(value->type);
         uint32_t logical_size;
 
-        if (existing_values != NULL && rbt_value_equal(&existing_values[column_ordinal], value) &&
+        if (existing_values != NULL && existing_descriptors != NULL &&
+            rbt_value_equal(&existing_values[column_ordinal], value) &&
             existing_descriptors[index * RBT_VALUE_DESCRIPTOR_SIZE] == RBT_VALUE_OVERFLOW) {
             memcpy(descriptor, existing_descriptors + index * RBT_VALUE_DESCRIPTOR_SIZE,
                    RBT_VALUE_DESCRIPTOR_SIZE);

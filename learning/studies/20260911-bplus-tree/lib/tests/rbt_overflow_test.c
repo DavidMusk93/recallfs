@@ -1,20 +1,105 @@
 #include "test_support.h"
 
+#include <fcntl.h>
+
 enum {
     LARGE_BYTES_SIZE = 4096,
     LARGE_TEXT_SIZE = 1536,
     LARGE_MUTATION_SIZE = 448 * 2048,
+    INTERLEAVED_PAYLOAD_SIZE = 900,
+    INTERLEAVED_PAGE_SIZE = 512,
+    INTERLEAVED_PAGE_TYPE_OFFSET = 6,
+    INTERLEAVED_PAGE_LINK0_OFFSET = 32,
+    INTERLEAVED_PAGE_AUX_OFFSET = 56,
+    INTERLEAVED_PAGE_HEADER_SIZE = 64,
+    INTERLEAVED_META_NEXT_PAGE_OFFSET = 88,
+    INTERLEAVED_PAGE_OVERFLOW = 4,
+    INTERLEAVED_CHAIN_MAX_PAGES = 4,
+    BEFORE_KEY_COLUMN_ORDINAL = 0,
+    NULLABLE_KEY_COLUMN_ORDINAL = 1,
+    BETWEEN_KEYS_COLUMN_ORDINAL = 2,
+    DESCENDING_KEY_COLUMN_ORDINAL = 3,
+    AFTER_KEYS_COLUMN_ORDINAL = 4,
+    INTERLEAVED_COLUMN_COUNT = 5,
+    INTERLEAVED_KEY_COUNT = 2,
+    INTERLEAVED_ROW_COUNT = 3,
     KEY_COLUMN_ORDINAL = 0,
     SMALL_COLUMN_ORDINAL = 1,
     LARGE_COLUMN_ORDINAL = 2,
     TEXT_COLUMN_ORDINAL = 3,
 };
 
+struct overflow_chain_snapshot {
+    uint64_t page_ids[INTERLEAVED_CHAIN_MAX_PAGES];
+    unsigned char pages[INTERLEAVED_CHAIN_MAX_PAGES][INTERLEAVED_PAGE_SIZE];
+    size_t page_count;
+};
+
+static off_t interleaved_page_offset(uint64_t page_id) {
+    return (off_t)((page_id + 1u) * INTERLEAVED_PAGE_SIZE);
+}
+
+static void read_interleaved_page(int descriptor, uint64_t page_id,
+                                  unsigned char page[INTERLEAVED_PAGE_SIZE]) {
+    rbt_test_read_exact_at(descriptor, page, INTERLEAVED_PAGE_SIZE,
+                           interleaved_page_offset(page_id));
+}
+
+static void snapshot_overflow_chain(int descriptor, uint64_t column_ordinal,
+                                    unsigned char first_byte,
+                                    struct overflow_chain_snapshot *snapshot) {
+    unsigned char metadata[INTERLEAVED_PAGE_SIZE];
+    unsigned char page[INTERLEAVED_PAGE_SIZE];
+    uint64_t next_page;
+    uint64_t page_id;
+
+    memset(snapshot, 0, sizeof(*snapshot));
+    read_interleaved_page(descriptor, 0u, metadata);
+    next_page = rbt_test_load_u64(metadata + INTERLEAVED_META_NEXT_PAGE_OFFSET);
+    for (page_id = 1u; page_id < next_page; ++page_id) {
+        read_interleaved_page(descriptor, page_id, page);
+        if (page[INTERLEAVED_PAGE_TYPE_OFFSET] == INTERLEAVED_PAGE_OVERFLOW &&
+            rbt_test_load_u64(page + INTERLEAVED_PAGE_AUX_OFFSET) == column_ordinal &&
+            page[INTERLEAVED_PAGE_HEADER_SIZE] == first_byte) {
+            break;
+        }
+    }
+    RBT_TEST_CHECK(page_id < next_page);
+    while (page_id != 0u) {
+        RBT_TEST_CHECK(snapshot->page_count < INTERLEAVED_CHAIN_MAX_PAGES);
+        read_interleaved_page(descriptor, page_id, page);
+        RBT_TEST_CHECK(page[INTERLEAVED_PAGE_TYPE_OFFSET] == INTERLEAVED_PAGE_OVERFLOW);
+        RBT_TEST_CHECK(rbt_test_load_u64(page + INTERLEAVED_PAGE_AUX_OFFSET) == column_ordinal);
+        snapshot->page_ids[snapshot->page_count] = page_id;
+        memcpy(snapshot->pages[snapshot->page_count], page, INTERLEAVED_PAGE_SIZE);
+        ++snapshot->page_count;
+        page_id = rbt_test_load_u64(page + INTERLEAVED_PAGE_LINK0_OFFSET);
+    }
+}
+
+static void expect_overflow_chain_unchanged(int descriptor,
+                                            const struct overflow_chain_snapshot *snapshot) {
+    unsigned char page[INTERLEAVED_PAGE_SIZE];
+    size_t index;
+
+    for (index = 0u; index < snapshot->page_count; ++index) {
+        read_interleaved_page(descriptor, snapshot->page_ids[index], page);
+        RBT_TEST_CHECK(memcmp(page, snapshot->pages[index], INTERLEAVED_PAGE_SIZE) == 0);
+    }
+}
+
 static void fill_binary(unsigned char *data, size_t size) {
     size_t index;
 
     for (index = 0u; index < size; ++index) {
         data[index] = (unsigned char)((index * 37u + 11u) & 0xffu);
+    }
+}
+
+static void fill_tagged(unsigned char *data, size_t size, unsigned char tag) {
+    memset(data, 'x', size);
+    if (size != 0u) {
+        data[0] = tag;
     }
 }
 
@@ -72,6 +157,200 @@ static void expect_page_accounting(const struct rbt_stats *stats) {
     RBT_TEST_CHECK(stats->allocated_pages == stats->live_pages + stats->free_pages);
     RBT_TEST_CHECK(stats->live_pages ==
                    1u + stats->schema_pages + stats->tree_pages + stats->overflow_pages);
+}
+
+static struct rbt_record
+make_interleaved_record(const void *before_key, const char *nullable_key, size_t nullable_key_size,
+                        const void *between_keys, uint64_t descending_key, const char *after_keys,
+                        struct rbt_value values[INTERLEAVED_COLUMN_COUNT]) {
+    values[BEFORE_KEY_COLUMN_ORDINAL] = rbt_test_bytes(before_key, INTERLEAVED_PAYLOAD_SIZE);
+    values[NULLABLE_KEY_COLUMN_ORDINAL] = nullable_key == NULL
+                                              ? rbt_test_null(RBT_TYPE_UTF8)
+                                              : rbt_test_utf8(nullable_key, nullable_key_size);
+    values[BETWEEN_KEYS_COLUMN_ORDINAL] = rbt_test_bytes(between_keys, INTERLEAVED_PAYLOAD_SIZE);
+    values[DESCENDING_KEY_COLUMN_ORDINAL] = rbt_test_u64(descending_key);
+    values[AFTER_KEYS_COLUMN_ORDINAL] = rbt_test_utf8(after_keys, INTERLEAVED_PAYLOAD_SIZE);
+    return rbt_test_record(values, INTERLEAVED_COLUMN_COUNT);
+}
+
+static void expect_interleaved_row(struct rbt *tree, const char *nullable_key,
+                                   size_t nullable_key_size, uint64_t descending_key,
+                                   const void *before_key, const void *between_keys,
+                                   const char *after_keys) {
+    struct rbt_value key_values[INTERLEAVED_KEY_COUNT];
+    struct rbt_record key;
+    struct rbt_row *row = NULL;
+    const struct rbt_value *actual[INTERLEAVED_COLUMN_COUNT] = {NULL};
+    size_t ordinal;
+
+    key_values[0] = nullable_key == NULL ? rbt_test_null(RBT_TYPE_UTF8)
+                                         : rbt_test_utf8(nullable_key, nullable_key_size);
+    key_values[1] = rbt_test_u64(descending_key);
+    key = rbt_test_record(key_values, INTERLEAVED_KEY_COUNT);
+    RBT_TEST_OK(rbt_get(tree, &key, &row));
+    for (ordinal = 0u; ordinal < INTERLEAVED_COLUMN_COUNT; ++ordinal) {
+        RBT_TEST_OK(rbt_row_get(row, ordinal, &actual[ordinal]));
+    }
+
+    RBT_TEST_CHECK(actual[BEFORE_KEY_COLUMN_ORDINAL]->type == RBT_TYPE_BYTES);
+    RBT_TEST_CHECK(!actual[BEFORE_KEY_COLUMN_ORDINAL]->is_null);
+    RBT_TEST_BYTES(&actual[BEFORE_KEY_COLUMN_ORDINAL]->as.bytes, before_key,
+                   INTERLEAVED_PAYLOAD_SIZE);
+    RBT_TEST_CHECK(actual[NULLABLE_KEY_COLUMN_ORDINAL]->type == RBT_TYPE_UTF8);
+    RBT_TEST_CHECK(actual[NULLABLE_KEY_COLUMN_ORDINAL]->is_null == (nullable_key == NULL));
+    if (nullable_key != NULL) {
+        RBT_TEST_BYTES(&actual[NULLABLE_KEY_COLUMN_ORDINAL]->as.bytes, nullable_key,
+                       nullable_key_size);
+    }
+    RBT_TEST_CHECK(actual[BETWEEN_KEYS_COLUMN_ORDINAL]->type == RBT_TYPE_BYTES);
+    RBT_TEST_CHECK(!actual[BETWEEN_KEYS_COLUMN_ORDINAL]->is_null);
+    RBT_TEST_BYTES(&actual[BETWEEN_KEYS_COLUMN_ORDINAL]->as.bytes, between_keys,
+                   INTERLEAVED_PAYLOAD_SIZE);
+    RBT_TEST_CHECK(actual[DESCENDING_KEY_COLUMN_ORDINAL]->type == RBT_TYPE_U64);
+    RBT_TEST_CHECK(!actual[DESCENDING_KEY_COLUMN_ORDINAL]->is_null);
+    RBT_TEST_CHECK(actual[DESCENDING_KEY_COLUMN_ORDINAL]->as.u64 == descending_key);
+    RBT_TEST_CHECK(actual[AFTER_KEYS_COLUMN_ORDINAL]->type == RBT_TYPE_UTF8);
+    RBT_TEST_CHECK(!actual[AFTER_KEYS_COLUMN_ORDINAL]->is_null);
+    RBT_TEST_BYTES(&actual[AFTER_KEYS_COLUMN_ORDINAL]->as.bytes, after_keys,
+                   INTERLEAVED_PAYLOAD_SIZE);
+    RBT_TEST_OK(rbt_row_destroy(row));
+}
+
+static void test_interleaved_physical_columns(void) {
+    static const char *const NULLABLE_KEYS[INTERLEAVED_ROW_COUNT] = {NULL, "alpha", "alpha"};
+    static const size_t NULLABLE_KEY_SIZES[INTERLEAVED_ROW_COUNT] = {0u, 5u, 5u};
+    static const uint64_t DESCENDING_KEYS[INTERLEAVED_ROW_COUNT] = {30u, 20u, 10u};
+    struct rbt_column columns[INTERLEAVED_COLUMN_COUNT] = {
+        {.id = 1u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 2048u},
+        {.id = 2u,
+         .type = RBT_TYPE_UTF8,
+         .flags = RBT_COLUMN_KEY | RBT_COLUMN_NULLABLE,
+         .max_size = 8u},
+        {.id = 3u, .type = RBT_TYPE_BYTES, .flags = 0u, .max_size = 2048u},
+        {.id = 4u,
+         .type = RBT_TYPE_U64,
+         .flags = RBT_COLUMN_KEY | RBT_COLUMN_DESCENDING,
+         .max_size = 0u},
+        {.id = 5u, .type = RBT_TYPE_UTF8, .flags = 0u, .max_size = 2048u},
+    };
+    struct rbt_schema schema = {
+        .id = UINT64_C(0x7262740000000011),
+        .columns = columns,
+        .column_count = INTERLEAVED_COLUMN_COUNT,
+    };
+    unsigned char before_key[INTERLEAVED_ROW_COUNT][INTERLEAVED_PAYLOAD_SIZE];
+    unsigned char between_keys[INTERLEAVED_ROW_COUNT][INTERLEAVED_PAYLOAD_SIZE];
+    unsigned char after_keys[INTERLEAVED_ROW_COUNT][INTERLEAVED_PAYLOAD_SIZE];
+    unsigned char updated_before_key[INTERLEAVED_PAYLOAD_SIZE];
+    char path[256];
+    struct rbt_file *file = NULL;
+    struct rbt_storage storage;
+    struct rbt_config create_config = {
+        .storage = &storage,
+        .schema = &schema,
+    };
+    struct rbt *tree = NULL;
+    struct rbt_value values[INTERLEAVED_COLUMN_COUNT];
+    struct rbt_record record;
+    struct rbt_stats stats;
+    struct overflow_chain_snapshot before_chain;
+    struct overflow_chain_snapshot between_chain;
+    struct overflow_chain_snapshot after_chain;
+    struct overflow_chain_snapshot updated_chain;
+    size_t row_index;
+    int descriptor;
+    bool inserted;
+    bool deleted = false;
+
+    for (row_index = 0u; row_index < INTERLEAVED_ROW_COUNT; ++row_index) {
+        fill_tagged(before_key[row_index], INTERLEAVED_PAYLOAD_SIZE,
+                    (unsigned char)('A' + row_index * 3u));
+        fill_tagged(between_keys[row_index], INTERLEAVED_PAYLOAD_SIZE,
+                    (unsigned char)('B' + row_index * 3u));
+        fill_tagged(after_keys[row_index], INTERLEAVED_PAYLOAD_SIZE,
+                    (unsigned char)('C' + row_index * 3u));
+    }
+    fill_tagged(updated_before_key, INTERLEAVED_PAYLOAD_SIZE, (unsigned char)'J');
+
+    rbt_test_temp_path(path, sizeof(path));
+    RBT_TEST_OK(rbt_file_create(path, INTERLEAVED_PAGE_SIZE, &file));
+    RBT_TEST_OK(rbt_file_storage(file, &storage));
+    RBT_TEST_OK(rbt_create(&create_config, &tree));
+    for (row_index = 0u; row_index < INTERLEAVED_ROW_COUNT; ++row_index) {
+        record = make_interleaved_record(before_key[row_index], NULLABLE_KEYS[row_index],
+                                         NULLABLE_KEY_SIZES[row_index], between_keys[row_index],
+                                         DESCENDING_KEYS[row_index],
+                                         (const char *)after_keys[row_index], values);
+        inserted = false;
+        RBT_TEST_OK(rbt_put(tree, &record, &inserted));
+        RBT_TEST_CHECK(inserted);
+    }
+    stats = rbt_test_validate(tree);
+    expect_page_accounting(&stats);
+    RBT_TEST_CHECK(stats.item_count == INTERLEAVED_ROW_COUNT);
+    RBT_TEST_CHECK(stats.overflow_pages == 27u);
+
+    RBT_TEST_OK(rbt_destroy(tree));
+    tree = NULL;
+    RBT_TEST_OK(rbt_file_close(file));
+    file = NULL;
+    RBT_TEST_OK(rbt_file_open(path, &file));
+    RBT_TEST_OK(rbt_file_storage(file, &storage));
+    RBT_TEST_OK(rbt_open(&storage, &tree));
+    for (row_index = 0u; row_index < INTERLEAVED_ROW_COUNT; ++row_index) {
+        expect_interleaved_row(tree, NULLABLE_KEYS[row_index], NULLABLE_KEY_SIZES[row_index],
+                               DESCENDING_KEYS[row_index], before_key[row_index],
+                               between_keys[row_index], (const char *)after_keys[row_index]);
+    }
+
+    descriptor = open(path, O_RDONLY);
+    RBT_TEST_CHECK(descriptor >= 0);
+    snapshot_overflow_chain(descriptor, BEFORE_KEY_COLUMN_ORDINAL, before_key[1][0], &before_chain);
+    snapshot_overflow_chain(descriptor, BETWEEN_KEYS_COLUMN_ORDINAL, between_keys[1][0],
+                            &between_chain);
+    snapshot_overflow_chain(descriptor, AFTER_KEYS_COLUMN_ORDINAL, after_keys[1][0], &after_chain);
+    RBT_TEST_CHECK(before_chain.page_count == 3u);
+    RBT_TEST_CHECK(between_chain.page_count == 3u);
+    RBT_TEST_CHECK(after_chain.page_count == 3u);
+
+    record = make_interleaved_record(updated_before_key, NULLABLE_KEYS[1], NULLABLE_KEY_SIZES[1],
+                                     between_keys[1], DESCENDING_KEYS[1],
+                                     (const char *)after_keys[1], values);
+    inserted = true;
+    RBT_TEST_OK(rbt_put(tree, &record, &inserted));
+    RBT_TEST_CHECK(!inserted);
+    expect_overflow_chain_unchanged(descriptor, &between_chain);
+    expect_overflow_chain_unchanged(descriptor, &after_chain);
+    snapshot_overflow_chain(descriptor, BEFORE_KEY_COLUMN_ORDINAL, updated_before_key[0],
+                            &updated_chain);
+    RBT_TEST_CHECK(updated_chain.page_count == 3u);
+    expect_interleaved_row(tree, NULLABLE_KEYS[1], NULLABLE_KEY_SIZES[1], DESCENDING_KEYS[1],
+                           updated_before_key, between_keys[1], (const char *)after_keys[1]);
+    stats = rbt_test_validate(tree);
+    RBT_TEST_CHECK(stats.overflow_pages == 27u);
+
+    {
+        struct rbt_value key_values[INTERLEAVED_KEY_COUNT] = {
+            rbt_test_utf8(NULLABLE_KEYS[1], NULLABLE_KEY_SIZES[1]),
+            rbt_test_u64(DESCENDING_KEYS[1]),
+        };
+        struct rbt_record key = rbt_test_record(key_values, INTERLEAVED_KEY_COUNT);
+        struct rbt_row *row = (struct rbt_row *)(uintptr_t)1u;
+
+        RBT_TEST_OK(rbt_delete(tree, &key, &deleted));
+        RBT_TEST_CHECK(deleted);
+        RBT_TEST_ERRNO(rbt_get(tree, &key, &row), ENOENT);
+        RBT_TEST_CHECK(row == NULL);
+    }
+    stats = rbt_test_validate(tree);
+    expect_page_accounting(&stats);
+    RBT_TEST_CHECK(stats.item_count == INTERLEAVED_ROW_COUNT - 1u);
+    RBT_TEST_CHECK(stats.overflow_pages == 18u);
+
+    RBT_TEST_CHECK(close(descriptor) == 0);
+    RBT_TEST_OK(rbt_destroy(tree));
+    RBT_TEST_OK(rbt_file_close(file));
+    rbt_test_remove_database(path);
 }
 
 static void test_overflow_lifecycle(void) {
@@ -277,6 +556,7 @@ static void test_thousands_page_overflow_replacement(void) {
 }
 
 int main(void) {
+    test_interleaved_physical_columns();
     test_overflow_lifecycle();
     test_thousands_page_overflow_replacement();
     return 0;

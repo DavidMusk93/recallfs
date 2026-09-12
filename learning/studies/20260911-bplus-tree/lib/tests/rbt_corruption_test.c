@@ -2,6 +2,8 @@
 
 #include <fcntl.h>
 
+_Static_assert(RBT_FORMAT_VERSION == 1u, "clean-break test assumes format version 1");
+
 enum {
     TEST_PAGE_SIZE = 512,
     TEST_PAGE_LEAF = 1,
@@ -260,6 +262,37 @@ static void test_malformed_schema_chain(void) {
     rbt_test_remove_database(path);
 }
 
+static void test_predecessor_schema_magic(void) {
+    char path[256];
+    unsigned char metadata[TEST_PAGE_SIZE];
+    unsigned char schema_page[TEST_PAGE_SIZE];
+    unsigned char preserved_page[TEST_PAGE_SIZE];
+    uint64_t schema_id;
+    int descriptor;
+
+    rbt_test_temp_path(path, sizeof(path));
+    populate_database(path, 1u, 1u);
+    descriptor = open(path, O_RDWR);
+    RBT_TEST_CHECK(descriptor >= 0);
+    read_page(descriptor, 0u, metadata);
+    schema_id = rbt_test_load_u64(metadata + TEST_META_SCHEMA_HEAD_OFFSET);
+    read_page(descriptor, schema_id, schema_page);
+    RBT_TEST_CHECK(schema_page[TEST_PAGE_TYPE_OFFSET] == TEST_PAGE_SCHEMA);
+    RBT_TEST_CHECK(memcmp(schema_page + TEST_PAGE_HEADER_SIZE, "RBTR", 4u) == 0);
+    memcpy(schema_page + TEST_PAGE_HEADER_SIZE, "RBTS", 4u);
+    write_page(descriptor, schema_id, schema_page);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+
+    expect_tree_corrupt(path);
+    RBT_TEST_CHECK(access(path, F_OK) == 0);
+    descriptor = open(path, O_RDONLY);
+    RBT_TEST_CHECK(descriptor >= 0);
+    read_page(descriptor, schema_id, preserved_page);
+    RBT_TEST_CHECK(memcmp(preserved_page, schema_page, TEST_PAGE_SIZE) == 0);
+    RBT_TEST_CHECK(close(descriptor) == 0);
+    rbt_test_remove_database(path);
+}
+
 static void test_truncated_schema_chain(void) {
     char path[256];
     unsigned char metadata[TEST_PAGE_SIZE];
@@ -443,6 +476,7 @@ int main(void) {
     test_invalid_child_id();
     test_leaf_link_cycle();
     test_malformed_schema_chain();
+    test_predecessor_schema_magic();
     test_truncated_schema_chain();
     test_oversized_schema_size();
     test_inconsistent_schema_page_count();
