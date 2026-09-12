@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-find_package(rbt 0.2 CONFIG REQUIRED)
+find_package(rbt 0.2.0 EXACT CONFIG REQUIRED)
 
 add_executable(rbt_package_consumer main.c)
 target_link_libraries(
