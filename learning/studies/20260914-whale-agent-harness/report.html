@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>WHALE：高效 Agent 交互不是提示词技巧，而是 Harness 优化</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f5f5f7;
+      --surface: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #606067;
+      --line: #d2d2d7;
+      --info: #075ca8;
+      --info-soft: #eaf3fb;
+      --success: #08783e;
+      --success-soft: #e8f7ee;
+      --warning: #8a4b08;
+      --warning-soft: #fff5df;
+      --danger: #a13232;
+      --danger-soft: #fbeaea;
+    }
+
+    * { box-sizing: border-box; }
+    html { max-width: 100%; overflow-x: hidden; }
+    body {
+      margin: 0;
+      min-width: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 42px 0 64px;
+    }
+    header {
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      max-width: 920px;
+      margin: 8px 0 14px;
+      font-size: 40px;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.28;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+    p, li { max-width: 72ch; }
+    a { color: var(--info); }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    p code, dd code, td code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .eyebrow {
+      margin: 0;
+      color: var(--info);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .lede {
+      max-width: 74ch;
+      margin: 0 0 18px;
+      color: #3d3d42;
+      font-size: 18px;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 5px 16px;
+      max-width: 780px;
+      margin: 18px 0 0;
+      font-size: 14px;
+    }
+    .meta dt { color: var(--muted); }
+    .meta dd { min-width: 0; margin: 0; }
+    .conclusion {
+      max-width: 76ch;
+      padding: 17px 19px;
+      border: 1px solid #b8cee2;
+      border-radius: 6px;
+      background: var(--info-soft);
+      color: #123f65;
+      font-weight: 650;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+    .metric {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .metric strong {
+      display: block;
+      font-size: 26px;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    section {
+      min-width: 0;
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .mechanism {
+      width: 100%;
+      margin: 18px 0 4px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .mechanism svg {
+      display: block;
+      width: 100%;
+      min-width: 760px;
+      height: auto;
+    }
+    .callout {
+      max-width: 76ch;
+      margin: 18px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .callout.success { background: var(--success-soft); color: #064d29; }
+    .callout.warning { background: var(--warning-soft); color: #663806; }
+    .callout.danger { background: var(--danger-soft); color: #712424; }
+    .contrast {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+    .contrast article {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .contrast article p:last-child { margin-bottom: 0; }
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #ececf0;
+      color: #353539;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    tr:last-child td { border-bottom: 0; }
+    th.measure, td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+    .steps li {
+      position: relative;
+      max-width: 76ch;
+      min-height: 42px;
+      padding: 8px 12px 8px 50px;
+      border-bottom: 1px solid var(--line);
+      counter-increment: step;
+    }
+    .steps li::before {
+      position: absolute;
+      top: 7px;
+      left: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #e4e4e8;
+      content: counter(step);
+      color: #303035;
+      font-weight: 700;
+      line-height: 34px;
+      text-align: center;
+    }
+    .code-block {
+      max-width: 100%;
+      margin: 18px 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      counter-reset: line;
+      border: 1px solid #30343a;
+      border-radius: 8px;
+      background: #17191d;
+      color: #f2f4f8;
+      font: 13px/1.58 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .code-block::before {
+      display: block;
+      padding: 8px 13px;
+      border-bottom: 1px solid #3d424a;
+      content: attr(data-language);
+      color: #bdc4ce;
+      font-size: 12px;
+    }
+    .code-block code {
+      display: block;
+      min-width: max-content;
+      padding: 13px 0;
+    }
+    .code-line {
+      display: block;
+      padding-right: 16px;
+      white-space: pre;
+      counter-increment: line;
+    }
+    .code-line::before {
+      display: inline-block;
+      width: 3ch;
+      margin-right: 1.25rem;
+      content: counter(line);
+      color: #8e96a3;
+      text-align: right;
+      user-select: none;
+    }
+    .tok-keyword { color: #8cc8ff; }
+    .tok-string { color: #a9dc9f; }
+    .tok-comment { color: #9da5b0; }
+    .facts {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 8px 18px;
+      max-width: 880px;
+    }
+    .facts dt { color: var(--muted); }
+    .facts dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+    footer {
+      padding-top: 22px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (max-width: 700px) {
+      main {
+        width: min(100% - 24px, 1080px);
+        padding-top: 26px;
+      }
+      h1 { font-size: 31px; }
+      h2 { font-size: 21px; }
+      .lede { font-size: 16px; }
+      .meta, .facts { grid-template-columns: 1fr; gap: 2px; }
+      .meta dd, .facts dd { margin-bottom: 9px; }
+      .metrics, .contrast { grid-template-columns: 1fr; }
+      .metric strong { font-size: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .surface { background: var(--surface); backdrop-filter: none; }
+    }
+    @media (prefers-contrast: more) {
+      :root { --line: #707075; }
+      .metric, .table-wrap, .callout, .mechanism { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">论文学习 / Agent 工程</p>
+      <h1>WHALE：高效 Agent 交互不是提示词技巧，而是 Harness 优化</h1>
+      <p class="lede">
+        论文把 Agent 视为模型参数与可执行 harness 的联合系统。对无法训练权重的日常协作，
+        最重要的迁移不是照搬训练算法，而是系统化优化上下文、工具、控制流、错误反馈和终止条件，
+        并用独立任务集判断瓶颈究竟在 harness 还是模型。
+      </p>
+      <aside class="conclusion">
+        可复用规范应该是“任务合同 + Harness 合同 + 评测与交替迭代协议”，而不是一份越来越长的万能提示词。
+      </aside>
+      <dl class="meta">
+        <dt>Date</dt>
+        <dd>2026-09-14</dd>
+        <dt>Input shape</dt>
+        <dd>concept</dd>
+        <dt>Subject</dt>
+        <dd>WHALE (arXiv 2609.00196) 与高效、可复用的 Agent 交互规范</dd>
+      </dl>
+      <div class="metrics" aria-label="关键实验量">
+        <article class="metric">
+          <strong>3</strong>
+          <span>SearchQA、数学推理、国际象棋任务域</span>
+        </article>
+        <article class="metric">
+          <strong>+7.67–24.38</strong>
+          <span>相对最弱单组件基线的论文报告百分点区间</span>
+        </article>
+        <article class="metric">
+          <strong>+4.15–13.00</strong>
+          <span>相对 prompt-only 联合优化 FST 的百分点区间</span>
+        </article>
+        <article class="metric">
+          <strong>8 × H200</strong>
+          <span>作者公开复现说明中的单机训练配置</span>
+        </article>
+      </div>
+    </header>
+
+    <section aria-labelledby="mechanism-title">
+      <h2 id="mechanism-title">核心机制：性能属于系统，不属于模型</h2>
+      <p>
+        论文将模型参数记为 <code>theta</code>，将系统指令、工具 schema、上下文管理、
+        parser、执行逻辑、错误反馈与终止策略统称为 <code>harness h</code>。二者共同产生轨迹，
+        verifier 再把轨迹映射为奖励。只改其中一侧，另一侧就可能成为移动中的瓶颈。
+      </p>
+      <div class="mechanism">
+        <svg viewBox="0 0 960 300" role="img" aria-labelledby="diagram-title diagram-desc">
+          <title id="diagram-title">WHALE 交替优化流程</title>
+          <desc id="diagram-desc">
+            固定 harness 更新模型，再固定更新后的模型搜索 harness，使用 verifier 评估后进入下一轮。
+          </desc>
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3"
+              orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#52606d"/>
+            </marker>
+          </defs>
+          <rect x="42" y="96" width="188" height="94" rx="7" fill="#eaf3fb" stroke="#075ca8"/>
+          <text x="136" y="128" text-anchor="middle" font-size="18" font-weight="700" fill="#123f65">Model theta</text>
+          <text x="136" y="157" text-anchor="middle" font-size="14" fill="#123f65">reasoning capability</text>
+          <rect x="386" y="96" width="188" height="94" rx="7" fill="#fff5df" stroke="#8a4b08"/>
+          <text x="480" y="128" text-anchor="middle" font-size="18" font-weight="700" fill="#663806">Harness h</text>
+          <text x="480" y="157" text-anchor="middle" font-size="14" fill="#663806">context, tools, control</text>
+          <rect x="730" y="96" width="188" height="94" rx="7" fill="#e8f7ee" stroke="#08783e"/>
+          <text x="824" y="128" text-anchor="middle" font-size="18" font-weight="700" fill="#064d29">Verifier R</text>
+          <text x="824" y="157" text-anchor="middle" font-size="14" fill="#064d29">task outcome</text>
+          <line x1="230" y1="143" x2="376" y2="143" stroke="#52606d" stroke-width="2" marker-end="url(#arrow)"/>
+          <line x1="574" y1="143" x2="720" y2="143" stroke="#52606d" stroke-width="2" marker-end="url(#arrow)"/>
+          <path d="M824 199 C824 262, 136 262, 136 200" fill="none" stroke="#52606d" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="480" y="282" text-anchor="middle" font-size="14" fill="#3d3d42">
+            alternate small updates; retain only measured improvements
+          </text>
+          <text x="303" y="128" text-anchor="middle" font-size="13" fill="#606067">trajectories</text>
+          <text x="650" y="128" text-anchor="middle" font-size="13" fill="#606067">score</text>
+        </svg>
+      </div>
+      <p>
+        WHALE 的更新式是：先在当前 harness 下更新模型
+        <code>theta[k+1] = ModelUpdate(theta[k]; h[k])</code>，再在新模型固定时搜索
+        <code>h[k+1] = HarnessSearch(h[k]; theta[k+1])</code>。交替的价值来自减少
+        “对随后会变化的另一半过拟合”。
+      </p>
+    </section>
+
+    <section aria-labelledby="evidence-title">
+      <h2 id="evidence-title">论文证据：结论成立，但范围比口号窄</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,measure,measure,measure,measure">
+          <colgroup>
+            <col style="width:28%">
+            <col style="width:18%">
+            <col style="width:18%">
+            <col style="width:18%">
+            <col style="width:18%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>任务域</th>
+              <th class="measure">Harness-only</th>
+              <th class="measure">Weight-only</th>
+              <th class="measure">Prompt+weight</th>
+              <th class="measure">WHALE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>SearchQA</td>
+              <td class="measure">38.29%</td>
+              <td class="measure">38.27%</td>
+              <td class="measure">35.34%</td>
+              <td class="measure">48.34%</td>
+            </tr>
+            <tr>
+              <td>数学推理</td>
+              <td class="measure">0.42%</td>
+              <td class="measure">15.42%</td>
+              <td class="measure">17.92%</td>
+              <td class="measure">24.79%</td>
+            </tr>
+            <tr>
+              <td>国际象棋</td>
+              <td class="measure">19.82%</td>
+              <td class="measure">22.17%</td>
+              <td class="measure">25.68%</td>
+              <td class="measure">29.83%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        同一固定调度 <code>(E, I) = (0.6, 6)</code> 在三个任务域都优于对照组。
+        更强的证据来自机制分解：SearchQA 中 harness search 用 weight-only
+        约 <code>5.79%</code> 的 rollout 数达到相近峰值；数学任务中 harness-only
+        几乎无效，先做小幅权重更新后，同类 harness 搜索才开始有效。
+      </p>
+      <aside class="callout warning">
+        论文的 rollout 成本不含 harness proposer 的计算；每个配置没有报告多随机种子、
+        方差或置信区间；图表与表格使用运行过程中最佳 test mean@8 点，因此不能把峰值差异
+        直接解释为稳定部署收益。
+      </aside>
+    </section>
+
+    <section aria-labelledby="interaction-title">
+      <h2 id="interaction-title">如何与 Agent 高效交互</h2>
+      <p>
+        先判断失败属于哪一层，再决定改什么。高效不是减少所有沟通，而是让每次沟通都消除一个
+        可观测瓶颈，并保持其他变量稳定。
+      </p>
+      <div class="contrast">
+        <article>
+          <h3>Harness 瓶颈</h3>
+          <p>
+            典型症状是没有读取关键文件、工具参数不稳定、上下文被噪声挤占、错误后重复同一路径、
+            过早结束、交付字段缺失。优先修改输入合同、工具、上下文选择、失败反馈和停止条件。
+          </p>
+        </article>
+        <article>
+          <h3>模型瓶颈</h3>
+          <p>
+            在上下文充分、工具正确、oracle 清晰、预算足够后，仍持续出现同类推理或生成错误。
+            此时才切换更强模型、增加独立 reviewer，或在有数据与训练能力时更新权重。
+          </p>
+        </article>
+      </div>
+      <ol class="steps">
+        <li><strong>先给任务合同。</strong>明确目标产物、范围、非目标、权威输入、可修改边界和验收证据。</li>
+        <li><strong>让 Agent 先取证再修改。</strong>要求读取 governing docs、当前实现和真实失败，不接受只基于摘要猜测。</li>
+        <li><strong>一次只改变一个机制。</strong>例如只改变上下文选择或错误恢复；不要同时换模型、prompt、工具和验收口径。</li>
+        <li><strong>用保留任务验收。</strong>当前案例用于定位与修复，独立案例用于判断是否泛化；最终门禁不能与生成逻辑同源。</li>
+        <li><strong>小步交替。</strong>短周期改 harness，必要时再切模型或训练；每轮达到最小证据量后，连续无改进即停止。</li>
+        <li><strong>保留可回退证据。</strong>记录基线、变更、结果、失败样本、保留或回退决定，以及后继任务 ID。</li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="spec-title">
+      <h2 id="spec-title">可复用规范：固定结构，不固定答案</h2>
+      <p>
+        可以形成规范，但规范应约束协作协议和评测循环，不应固化某一任务的长 prompt。
+        最小可复用对象有四层。
+      </p>
+      <div class="table-wrap">
+        <table data-column-kinds="identifier,text,text">
+          <colgroup>
+            <col style="width:22%">
+            <col style="width:38%">
+            <col style="width:40%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>层</th>
+              <th>稳定字段</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>task</code></td>
+              <td>objective、deliverables、scope、non-goals</td>
+              <td>阻止 Agent 把模糊目标替换成容易完成的近似任务。</td>
+            </tr>
+            <tr>
+              <td><code>context</code></td>
+              <td>policy、governing docs、evidence、dependency order</td>
+              <td>把上下文选择变成显式边界，而不是全库搜索的偶然结果。</td>
+            </tr>
+            <tr>
+              <td><code>execution</code></td>
+              <td>authority、tools、checkpoints、rollback、stop rule</td>
+              <td>明确何时自主执行、何时阻断、如何恢复和何时停止优化。</td>
+            </tr>
+            <tr>
+              <td><code>verification</code></td>
+              <td>oracle、held-out cases、evidence ledger、handoff schema</td>
+              <td>区分“Agent 说完成了”和“外部证据证明满足合同”。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="code-block" data-language="text"><code><span class="code-line"><span class="tok-keyword">Objective:</span> &lt;one observable outcome&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Deliverables:</span> &lt;owned paths or concrete outputs&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Scope / non-goals:</span> &lt;explicit boundary&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Authoritative context:</span> &lt;policy and governing-doc paths&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Execution authority:</span> investigate, edit, test, commit, push; stop on &lt;conditions&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Verification:</span> &lt;independent oracle, E2E cases, thresholds&gt;</span><!--
+--><span class="code-line"><span class="tok-keyword">Return exactly:</span> docs_read, anchor_results, ambiguities, changed_artifacts,</span><!--
+--><span class="code-line">                verification_evidence, successor_id</span></code></pre>
+      <p>
+        这段模板只提供入口和完成协议。长期事实留在版本化文档中，工具契约留在 harness，
+        运行结果留在 evidence ledger；不要把三者复制进每次 prompt。
+      </p>
+    </section>
+
+    <section aria-labelledby="limits-title">
+      <h2 id="limits-title">采用边界</h2>
+      <aside class="callout danger">
+        不应从论文推出“Agent 越自主越好”或“自动搜索 harness 一定省钱”。论文依赖固定 binary
+        verifier、明确任务分布和大量 rollout；在真实工程里，错误 oracle 会稳定地奖励错误行为，
+        安全约束也不能交给搜索过程自行发现。
+      </aside>
+      <ul>
+        <li>只在结果可验证、样本可隔离、失败可回退的范围自动优化 harness。</li>
+        <li>安全、权限、数据边界和不可逆操作是固定 policy，不属于可搜索变量。</li>
+        <li>不要在最终 E2E 集上挑“最好的一次”；另设 development 与 held-out gate。</li>
+        <li>评估总成本时计入 proposer、人工审阅、工具调用、失败重试和维护成本。</li>
+        <li>跨模型复用的是合同和评测集，不是某个模型上偶然胜出的提示词文本。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="provenance-title">
+      <h2 id="provenance-title">来源与验证状态</h2>
+      <dl class="facts">
+        <dt>论文</dt>
+        <dd>arXiv 2609.00196v1，提交于 2026-08-31，28 页</dd>
+        <dt>本地 PDF</dt>
+        <dd><code>learning/sources/20260914-whale-joint-harness-weight-v1.pdf</code></dd>
+        <dt>PDF SHA-256</dt>
+        <dd><code>f4307846da7686ee75ef070fdc53112c8eb8ca557b9318da0a88838e56b9e602</code></dd>
+        <dt>作者代码</dt>
+        <dd><code>krafton-ai/WHALE</code> at <code>fbe125eb7abea7f760c99ab9acc1a6261e708fc6</code></dd>
+        <dt>本次验证</dt>
+        <dd>arXiv 页面与 PDF 浏览器可达；PDF metadata/digest；作者仓库静态阅读；非 vendored Python 文件语法检查通过</dd>
+        <dt>未验证</dt>
+        <dd>未在 8 × H200、完整数据集、检索服务和外部 API 环境下独立复现实验</dd>
+      </dl>
+    </section>
+
+    <footer>Composed 2026-09-14 by ce-explain</footer>
+  </main>
+</body>
+</html>
