@@ -1,0 +1,198 @@
++ cd /Users/bytedance/Documents/trae_projects/recallfs
++ sha256_check learning/studies/20260915-affine-decision-tree-point-location/demo/source-manifest.sha256
++ /sbin/sha256sum -c learning/studies/20260915-affine-decision-tree-point-location/demo/source-manifest.sha256
+learning/studies/20260915-affine-decision-tree-point-location/demo/.clang-format: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/CMakeLists.txt: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/include/odt.h: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/include/point_location_example.h: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/.python-version: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/point_location_oracle.py: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/pyproject.toml: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/tests/test_cli.py: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/tests/test_differential.py: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/python/uv.lock: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/src/main.c: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c: OK
+learning/studies/20260915-affine-decision-tree-point-location/demo/verify.sh: OK
++ printf '%s\n' '== toolchain =='
+== toolchain ==
++ printf 'repo_root=%s\n' /Users/bytedance/Documents/trae_projects/recallfs
+repo_root=/Users/bytedance/Documents/trae_projects/recallfs
++ printf 'sha256=%s\n' /sbin/sha256sum
+sha256=/sbin/sha256sum
++ printf 'zig=%s\n' '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig'
+zig=/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig
++ '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig' version
+0.16.0
++ sha256 '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig'
++ /sbin/sha256sum '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig'
+e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec  /Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig
++ printf 'filcc=%s\n' /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc
+filcc=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc --version
+clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
+Target: aarch64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/dist/build/bin
+Build config: +assertions
++ printf 'filrun=%s\n' /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun
+filrun=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun
++ sha256 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun
++ /sbin/sha256sum /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun
+a49080d7ef3272df39e8ceadcafede78f2732adb882f226271a7334898c96cb5  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun
++ printf 'cmake=%s\n' /opt/homebrew/bin/cmake
+cmake=/opt/homebrew/bin/cmake
++ /opt/homebrew/bin/cmake --version
+cmake version 4.0.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
++ printf 'ctest=%s\n' /opt/homebrew/bin/ctest
+ctest=/opt/homebrew/bin/ctest
++ /opt/homebrew/bin/ctest --version
+ctest version 4.0.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
++ printf 'ninja=%s\n' /opt/homebrew/bin/ninja
+ninja=/opt/homebrew/bin/ninja
++ /opt/homebrew/bin/ninja --version
+1.13.1
++ printf 'pyenv=%s\n' /opt/homebrew/bin/pyenv
+pyenv=/opt/homebrew/bin/pyenv
++ /opt/homebrew/bin/pyenv --version
+pyenv 2.6.32
+++ PYENV_VERSION=3.13.12
+++ /opt/homebrew/bin/pyenv prefix
++ python_prefix=/Users/bytedance/.pyenv/versions/3.13.12
++ python=/Users/bytedance/.pyenv/versions/3.13.12/bin/python3
++ require_executable python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3
++ '[' -z /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 ']'
++ '[' '!' -x /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 ']'
++ printf 'python=%s\n' /Users/bytedance/.pyenv/versions/3.13.12/bin/python3
+python=/Users/bytedance/.pyenv/versions/3.13.12/bin/python3
++ /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 --version
+Python 3.13.12
++ printf 'uv=%s\n' /Users/bytedance/.local/bin/uv
+uv=/Users/bytedance/.local/bin/uv
++ /Users/bytedance/.local/bin/uv --version
+uv 0.10.0 (0ba432459 2026-02-05)
++ printf 'clang_format=%s\n' /opt/homebrew/bin/clang-format
+clang_format=/opt/homebrew/bin/clang-format
++ /opt/homebrew/bin/clang-format --version
+Homebrew clang-format version 16.0.6
++ printf 'ruby=%s\n' /usr/bin/ruby
+ruby=/usr/bin/ruby
++ /usr/bin/ruby --version
+ruby 2.6.10p210 (2022-04-12 revision 67958) [universal.arm64e-darwin25]
++ include_dir=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include
++ odt_source=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c
++ example_source=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c
++ main_source=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/main.c
++ test_source=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c
++ printf '%s\n' '== FIL-C =='
+== FIL-C ==
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/filc-odt-test
++ sha256 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/filc-odt-test
++ /sbin/sha256sum /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/filc-odt-test
+bd7e4ffcc8f7c864097e732bfa45c2441e4ecb1f15df45222d9a69d27271da00  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/filc-odt-test
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/filc-odt-test
+odt tests passed: 12 location anchors and 8 failure checks
++ printf '%s\n' '== Zig 0.16.0 release =='
+== Zig 0.16.0 release ==
+++ '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig' version
++ test 0.16.0 = 0.16.0
++ '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig' cc -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test
++ '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig' cc -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/main.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
++ sha256 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
++ /sbin/sha256sum /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
+bb0edda90548e66b64230599371c71af6f851c6b98f28121563cd4fd422d4dda  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test
+36641aa5b77f47114b62cbd699aae3a1dd7f5d2d98e703d34ce1e262d68f4d01  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test
+odt tests passed: 12 location anchors and 8 failure checks
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
+sites: A=(2,2), B=(8,3), C=(4,7)
+domain: [0,10] x [0,8]
+point       region   comparisons
+( 2.0, 2.0) A        6
+( 8.0, 3.0) B        6
+( 4.0, 7.0) C        6
+( 5.0, 2.5) A        6
+( 5.0, 5.0) C        6
+(-1.0, 4.0) outside  1
++ printf '2 2\n5 5\n-1 4\n'
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location --machine
+0 6
+2 6
+-1 1
++ printf '%s\n' '== Zig ASan/UBSan =='
+== Zig ASan/UBSan ==
++ '/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/zig' cc -std=c11 -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -Wall -Wextra -Wpedantic -Werror -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test-sanitized
++ sha256 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test-sanitized
++ /sbin/sha256sum /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test-sanitized
+63042aa670bd6e0f225ff24601b068ec4f8abaa30f748e8b0fb635a80bfe38a9  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test-sanitized
++ ASAN_OPTIONS=detect_leaks=1
++ UBSAN_OPTIONS=print_stacktrace=1
++ /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-odt-test-sanitized
+odt tests passed: 12 location anchors and 8 failure checks
++ printf '%s\n' '== Python 3.13.12 differential and CLI tests =='
+== Python 3.13.12 differential and CLI tests ==
++ cd /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/python
++ UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/python-venv
++ /Users/bytedance/.local/bin/uv sync --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3
+Using CPython 3.13.12 interpreter at: /Users/bytedance/.pyenv/versions/3.13.12/bin/python3
+Creating virtual environment at: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/python-venv
+Audited in 0.00ms
++ POINT_LOCATION_BIN=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/zig-point-location
++ UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/python-venv
++ /Users/bytedance/.local/bin/uv run --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 python -m unittest discover -s tests -v
+test_machine_mode_rejects_malformed_input (test_cli.PointLocationCliTest.test_machine_mode_rejects_malformed_input) ... ok
+test_rejects_unsupported_arguments (test_cli.PointLocationCliTest.test_rejects_unsupported_arguments) ... ok
+test_20054_points_respect_independent_nearest_site_oracle (test_differential.PointLocationDifferentialTest.test_20054_points_respect_independent_nearest_site_oracle) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.174s
+
+OK
++ printf '%s\n' '== CMake/CTest =='
+== CMake/CTest ==
++ /opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake
++ /opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake
+[1/7] Building C object CMakeFiles/odt.dir/src/point_location_example.c.o
+[2/7] Building C object CMakeFiles/odt_test.dir/tests/odt_test.c.o
+[3/7] Building C object CMakeFiles/point_location.dir/src/main.c.o
+[4/7] Building C object CMakeFiles/odt.dir/src/odt.c.o
+[5/7] Linking C static library libodt.a
+[6/7] Linking C executable point_location
+[7/7] Linking C executable odt_test
++ /opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake --output-on-failure
+Test project /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake
+    Start 1: odt_correctness
+1/1 Test #1: odt_correctness ..................   Passed    0.36 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.38 sec
++ sha256 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/odt_test /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/point_location
++ /sbin/sha256sum /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/odt_test /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/point_location
+77524d14483d3c9608af78bed271de50739b053b5b57d05689f21029a70e6d5e  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/odt_test
+2725e1bf1c378a7440aa59fada7ba02cee0381f2b333c7ecdfa844ebcfadcac0  /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/verify/cmake/point_location
++ printf '%s\n' '== formatting =='
+== formatting ==
++ /opt/homebrew/bin/clang-format --dry-run --Werror /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include/odt.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/include/point_location_example.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/main.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c
++ printf '%s\n' '== document DAG =='
+== document DAG ==
++ /usr/bin/ruby - /Users/bytedance/Documents/trae_projects/recallfs learning/studies/20260915-affine-decision-tree-point-location
+document DAG passed: 38 unique doc IDs scanned
+study subgraph passed: 5 documents; dependencies and verifier paths resolve; no cycles
++ printf '%s\n' 'verification passed'
+verification passed

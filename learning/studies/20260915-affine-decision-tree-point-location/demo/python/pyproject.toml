@@ -1,0 +1,8 @@
+[project]
+name = "odt-point-location-tests"
+version = "0.1.0"
+description = "Independent Python oracle for the C oblique decision tree example"
+requires-python = ">=3.13,<3.14"
+
+[tool.uv]
+package = false

@@ -1,0 +1,15 @@
+5aac279e20bdbadd145887290461ba29836822d24eb64969e542beaf58ed0174  learning/studies/20260915-affine-decision-tree-point-location/demo/.clang-format
+6b319e76997a4ed3c3735f48f5fffa7112ad8a73ba6e5fe4166b5011e8bfbd97  learning/studies/20260915-affine-decision-tree-point-location/demo/CMakeLists.txt
+21157e05c3444ec8a867d006b4bc2ae04045bc02ae403817f83b8a2a37c88d8d  learning/studies/20260915-affine-decision-tree-point-location/demo/include/odt.h
+c78980bba2625e80059440f402cc503d2d56a1c4c2c6bc7a9d608a258c809346  learning/studies/20260915-affine-decision-tree-point-location/demo/include/point_location_example.h
+40411dc2c2726b4c7024d38318dd8df45c528b49491efb45939dd4a829847d94  learning/studies/20260915-affine-decision-tree-point-location/demo/python/.python-version
+2b7fd807492206a4ba2702798f6bb700b18a91d8131df2474ef0c99e4e611a1b  learning/studies/20260915-affine-decision-tree-point-location/demo/python/point_location_oracle.py
+0fe186edf7dac2b8e307cc680d198e5057a30d1baa4458350fda5d3cb86ec388  learning/studies/20260915-affine-decision-tree-point-location/demo/python/pyproject.toml
+d8494b321f077a935281b5742f4616859e0f62487179cc6399d53d72b38606dc  learning/studies/20260915-affine-decision-tree-point-location/demo/python/tests/test_cli.py
+b80a4934f8246a29a5fd8893e38495dbde85d4ed0338ff01698adac1f877b9b7  learning/studies/20260915-affine-decision-tree-point-location/demo/python/tests/test_differential.py
+d2ecdb833714c63a1b0d96255543ea01c3149100d3da1808cf2c950cf22b098a  learning/studies/20260915-affine-decision-tree-point-location/demo/python/uv.lock
+561365a628fc181e6322729514f8e46c23558db811980b0b4caed6ec16af855b  learning/studies/20260915-affine-decision-tree-point-location/demo/src/main.c
+bed456ae0f63a02875577d2ba2ef44b07119b5d8fdeca7bc1ca248add3d7f189  learning/studies/20260915-affine-decision-tree-point-location/demo/src/odt.c
+86a1aa86e1244d6d8ff5e957207af21f2bf1f21114492d8678572f4eb2cc25b3  learning/studies/20260915-affine-decision-tree-point-location/demo/src/point_location_example.c
+d3a24bbe93d5c132b3c6b28e4fa361d7d412d532d520460105fa776f7a8a64a2  learning/studies/20260915-affine-decision-tree-point-location/demo/tests/odt_test.c
+f296884347573f34b2bcb8be4015f2ca67fabf21064ba71065d0ade027ef0076  learning/studies/20260915-affine-decision-tree-point-location/demo/verify.sh

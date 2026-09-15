@@ -1,0 +1,2 @@
+document DAG passed: 38 unique doc IDs scanned
+study subgraph passed: 5 documents; dependencies and verifier paths resolve
