@@ -808,6 +808,90 @@ odt_status odt_internal_compare_squared_distance(const odt_point *point, const o
     return ODT_OK;
 }
 
+odt_status odt_internal_runtime_filter_init(const odt_internal_numeric_context *context,
+                                            const odt_internal_line_ref *line,
+                                            odt_internal_runtime_filter *out_filter,
+                                            bool *out_enabled) {
+    odt_filter_line filter;
+
+    if (context == NULL || line == NULL || out_filter == NULL || out_enabled == NULL ||
+        line->kind != ODT_INTERNAL_LINE_BISECTOR) {
+        return ODT_INVALID_ARGUMENT;
+    }
+    memset(out_filter, 0, sizeof(*out_filter));
+    if (!odt_filter_line_build(context, line, &filter)) {
+        *out_enabled = false;
+        return ODT_OK;
+    }
+    out_filter->a_lower = filter.a.lower;
+    out_filter->a_upper = filter.a.upper;
+    out_filter->b_lower = filter.b.lower;
+    out_filter->b_upper = filter.b.upper;
+    out_filter->c_lower = filter.c.lower;
+    out_filter->c_upper = filter.c.upper;
+    *out_enabled = true;
+    return ODT_OK;
+}
+
+odt_status odt_internal_runtime_bisector_compare(const odt_point *point, const odt_site *sites,
+                                                 size_t site_count, int filter_scale_exponent,
+                                                 const odt_internal_runtime_node *node,
+                                                 int *out_comparison, bool *out_used_exact) {
+    int comparison = 0;
+
+    if (point == NULL || sites == NULL || node == NULL || out_comparison == NULL ||
+        out_used_exact == NULL || node->first_ordinal >= node->second_ordinal ||
+        (size_t)node->second_ordinal >= site_count) {
+        return ODT_INVALID_ARGUMENT;
+    }
+    if (!isfinite(point->x) || !isfinite(point->y)) {
+        return ODT_INVALID_DATA;
+    }
+    if (node->filter_enabled != 0u) {
+        odt_internal_numeric_context context;
+        odt_filter_line filter;
+        odt_interval x_term;
+        odt_interval y_term;
+        odt_interval score;
+        double scaled_x;
+        double scaled_y;
+
+        memset(&context, 0, sizeof(context));
+        context.filter_scale_exponent = filter_scale_exponent;
+        context.filter_enabled = true;
+        filter.a.lower = node->filter.a_lower;
+        filter.a.upper = node->filter.a_upper;
+        filter.b.lower = node->filter.b_lower;
+        filter.b.upper = node->filter.b_upper;
+        filter.c.lower = node->filter.c_lower;
+        filter.c.upper = node->filter.c_upper;
+        if (odt_filter_scaled_value(&context, point->x, &scaled_x) &&
+            odt_filter_scaled_value(&context, point->y, &scaled_y) &&
+            odt_interval_multiply(filter.a, odt_interval_point(scaled_x), &x_term) &&
+            odt_interval_multiply(filter.b, odt_interval_point(scaled_y), &y_term) &&
+            odt_interval_add(x_term, y_term, &score) && odt_interval_add(score, filter.c, &score)) {
+            comparison = odt_interval_sign(score);
+            if (comparison != 0) {
+                *out_comparison = comparison;
+                *out_used_exact = false;
+                return ODT_OK;
+            }
+        }
+    }
+    {
+        odt_status status = odt_internal_compare_squared_distance(
+            point, &sites[node->first_ordinal], node->first_ordinal, &sites[node->second_ordinal],
+            node->second_ordinal, &comparison);
+
+        if (status != ODT_OK) {
+            return status;
+        }
+    }
+    *out_comparison = comparison;
+    *out_used_exact = true;
+    return ODT_OK;
+}
+
 odt_status odt_internal_vertex_side(const odt_internal_numeric_context *context,
                                     const odt_internal_vertex *vertex,
                                     const odt_internal_line_ref *line, int *out_sign,

@@ -238,6 +238,7 @@ odt_status odt_internal_generation_allocate(const odt_allocator *allocator, size
     if (generation == NULL) {
         return ODT_OUT_OF_MEMORY;
     }
+    memset(generation, 0, allocation_size);
     generation->allocator = *allocator;
     generation->allocation_size = allocation_size;
     generation->allocation_alignment = allocation_alignment;

@@ -693,6 +693,7 @@ odt_status odt_internal_geometry_build(const odt_domain *domain, const odt_site 
     first_buffer = NULL;
     geometry->build_work = state.work;
     geometry->exact_fallbacks = state.exact_fallbacks;
+    geometry->live_build_bytes = state.memory.live;
     geometry->peak_build_bytes = state.memory.peak;
     *out_geometry = geometry;
     return ODT_OK;
@@ -796,5 +797,33 @@ odt_status odt_internal_geometry_cell_contains_point(const odt_internal_geometry
         }
     }
     *out_contains = true;
+    return ODT_OK;
+}
+
+odt_status odt_internal_geometry_locate(const odt_internal_geometry *geometry,
+                                        const odt_point *point, bool *out_found,
+                                        size_t *out_site_ordinal) {
+    bool found = false;
+    size_t winner = 0u;
+    size_t cell_index;
+
+    if (geometry == NULL || point == NULL || out_found == NULL || out_site_ordinal == NULL) {
+        return ODT_INVALID_ARGUMENT;
+    }
+    for (cell_index = 0u; cell_index < geometry->site_count; ++cell_index) {
+        bool contains;
+        odt_status status =
+            odt_internal_geometry_cell_contains_point(geometry, cell_index, point, &contains);
+
+        if (status != ODT_OK) {
+            return status;
+        }
+        if (contains && (!found || cell_index < winner)) {
+            found = true;
+            winner = cell_index;
+        }
+    }
+    *out_found = found;
+    *out_site_ordinal = winner;
     return ODT_OK;
 }

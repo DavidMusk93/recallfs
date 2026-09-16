@@ -7,14 +7,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct odt_generation {
-    odt_allocator allocator;
-    size_t allocation_size;
-    size_t allocation_alignment;
-};
-
-struct odt_builder;
-
 typedef enum odt_internal_line_kind {
     ODT_INTERNAL_LINE_DOMAIN_MIN_X = 0,
     ODT_INTERNAL_LINE_DOMAIN_MAX_X = 1,
@@ -52,6 +44,50 @@ typedef struct odt_internal_numeric_context {
     bool filter_enabled;
 } odt_internal_numeric_context;
 
+typedef struct odt_internal_runtime_filter {
+    double a_lower;
+    double a_upper;
+    double b_lower;
+    double b_upper;
+    double c_lower;
+    double c_upper;
+} odt_internal_runtime_filter;
+
+typedef struct odt_internal_runtime_node {
+    odt_internal_runtime_filter filter;
+    uint32_t first_ordinal;
+    uint32_t second_ordinal;
+    int32_t first_child;
+    int32_t second_child;
+    uint32_t filter_enabled;
+    uint32_t reserved_0;
+} odt_internal_runtime_node;
+
+typedef struct odt_internal_runtime_leaf {
+    uint32_t site_ordinal;
+    int32_t region_id;
+} odt_internal_runtime_leaf;
+
+struct odt_generation {
+    odt_allocator allocator;
+    size_t allocation_size;
+    size_t allocation_alignment;
+    odt_domain domain;
+    odt_build_stats build_stats;
+    size_t site_count;
+    size_t node_count;
+    size_t leaf_count;
+    size_t sites_offset;
+    size_t nodes_offset;
+    size_t leaves_offset;
+    int32_t root_reference;
+    int filter_scale_exponent;
+    uint32_t filter_enabled;
+    uint32_t reserved_0;
+};
+
+struct odt_builder;
+
 typedef struct odt_internal_geometry {
     odt_allocator allocator;
     odt_domain domain;
@@ -63,6 +99,7 @@ typedef struct odt_internal_geometry {
     uint64_t build_work;
     uint64_t exact_fallbacks;
     uint64_t vertex_count;
+    size_t live_build_bytes;
     size_t peak_build_bytes;
     odt_internal_numeric_context numeric;
 } odt_internal_geometry;
@@ -84,6 +121,14 @@ odt_status odt_internal_numeric_context_init(const odt_domain *domain, const odt
 odt_status odt_internal_compare_squared_distance(const odt_point *point, const odt_site *first,
                                                  size_t first_ordinal, const odt_site *second,
                                                  size_t second_ordinal, int *out_comparison);
+odt_status odt_internal_runtime_filter_init(const odt_internal_numeric_context *context,
+                                            const odt_internal_line_ref *line,
+                                            odt_internal_runtime_filter *out_filter,
+                                            bool *out_enabled);
+odt_status odt_internal_runtime_bisector_compare(const odt_point *point, const odt_site *sites,
+                                                 size_t site_count, int filter_scale_exponent,
+                                                 const odt_internal_runtime_node *node,
+                                                 int *out_comparison, bool *out_used_exact);
 odt_status odt_internal_compare_squared_distance_values(const odt_point *point,
                                                         const odt_site *first,
                                                         const odt_site *second,
@@ -104,5 +149,8 @@ void odt_internal_geometry_destroy(odt_internal_geometry *geometry);
 odt_status odt_internal_geometry_cell_contains_point(const odt_internal_geometry *geometry,
                                                      size_t cell_index, const odt_point *point,
                                                      bool *out_contains);
+odt_status odt_internal_geometry_locate(const odt_internal_geometry *geometry,
+                                        const odt_point *point, bool *out_found,
+                                        size_t *out_site_ordinal);
 
 #endif

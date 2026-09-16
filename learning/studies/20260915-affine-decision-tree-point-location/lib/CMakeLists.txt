@@ -10,8 +10,10 @@ option(ODT_BUILD_TESTS "Build odt contract tests" ON)
 add_library(
     odt STATIC
     src/odt.c
+    src/odt_builder.c
     src/odt_exact.c
     src/odt_geometry.c
+    src/odt_query.c
 )
 add_library(odt::odt ALIAS odt)
 
@@ -78,6 +80,41 @@ if(ODT_BUILD_TESTS)
     target_link_libraries(odt_geometry_test PRIVATE odt)
     odt_enable_warnings(odt_geometry_test)
     add_test(NAME odt_geometry_test COMMAND odt_geometry_test)
+
+    add_executable(
+        odt_builder_test
+        tests/odt_builder_test.c
+        tests/odt_test_support.c
+    )
+    target_include_directories(
+        odt_builder_test
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(odt_builder_test PRIVATE odt)
+    target_compile_definitions(
+        odt_builder_test
+        PRIVATE
+            $<$<NOT:$<CONFIG:Release>>:ODT_TEST_SKIP_ARCHITECTURE_GATE>
+    )
+    odt_enable_warnings(odt_builder_test)
+    add_test(NAME odt_builder_test COMMAND odt_builder_test)
+
+    add_executable(
+        odt_query_test
+        tests/odt_query_test.c
+        tests/odt_test_support.c
+    )
+    target_include_directories(
+        odt_query_test
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(odt_query_test PRIVATE odt)
+    odt_enable_warnings(odt_query_test)
+    add_test(NAME odt_query_test COMMAND odt_query_test)
 endif()
 
 include(GNUInstallDirs)
