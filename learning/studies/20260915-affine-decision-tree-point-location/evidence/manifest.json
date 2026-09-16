@@ -1,0 +1,1028 @@
+{
+  "base_revision": "3cf0b9e11787fb9ae180fc133f2c6e96b050becd",
+  "commands": [
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc --version ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_api_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_api_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_api_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_geometry_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_geometry_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_geometry_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_builder_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_builder_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_builder_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_query_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_query_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_query_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_batch_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_batch_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_batch_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_persistence_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_persistence_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_corruption_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_corruption_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_corruption_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_fault_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_fault_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_fault_test ",
+      "stage": "filc"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/dist-macos-0.16.0/zig cc -std=c11 -O2 -c -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/asan-version-shim.c -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/asan-version-shim.o ",
+      "stage": "environment"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O0\\ -g3 -DCMAKE_EXE_LINKER_FLAGS= -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+      "stage": "native_debug"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug ",
+      "stage": "native_debug"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -N ",
+      "stage": "native_debug"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug --output-on-failure ",
+      "stage": "native_debug"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE=-O3\\ -DNDEBUG -DCMAKE_EXE_LINKER_FLAGS= -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+      "stage": "native_release"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release ",
+      "stage": "native_release"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release -N ",
+      "stage": "native_release"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release --output-on-failure ",
+      "stage": "native_release"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release/odt_builder_test ",
+      "stage": "native_release"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-asan-ubsan-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O1\\ -g\\ -fsanitize=address\\ -fsanitize=undefined\\ -fno-omit-frame-pointer\\ -Wno-macro-redefined\\ -mmacosx-version-min=26.0 -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address\\ -fsanitize=undefined -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers -N ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "env ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 /opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers --output-on-failure ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "nm /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers/odt_fault_test ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "otool -L /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers/odt_fault_test ",
+      "stage": "sanitizers"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+      "stage": "static_analysis"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-format --style=file:/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/.clang-format --dry-run --Werror /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/src/odt_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include/odt.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_internal.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_api_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_batch_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_builder_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_concurrency_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_corruption_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_fault_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_geometry_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_query_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.cpp ",
+      "stage": "format"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/src/odt_example.c /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release/libodt.a -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example ",
+      "stage": "protocol"
+    },
+    {
+      "command": "(cd /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python && env UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/venv /Users/bytedance/.local/bin/uv sync --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 )",
+      "stage": "protocol"
+    },
+    {
+      "command": "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python/generate_dataset.py --output /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/generated-data ",
+      "stage": "protocol"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example --mode machine --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/summary.json --snapshot /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/generation.odt ",
+      "stage": "protocol"
+    },
+    {
+      "command": "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python/point_location_oracle.py --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/summary.json ",
+      "stage": "protocol"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example --mode human --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-summary.json --snapshot /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-generation.odt ",
+      "stage": "protocol"
+    },
+    {
+      "command": "(cd /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python && env UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/venv ODT_EXAMPLE_BIN=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example PYTHON=/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/.local/bin/uv run --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 python -m unittest discover -s tests -v )",
+      "stage": "protocol"
+    },
+    {
+      "command": "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -V -R \\^odt_\\(geometry\\|builder\\|corruption\\|fault\\|concurrency\\)_test\\$ ",
+      "stage": "focused_safety"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-tsan-cc -std=c11 -g -O1 -fsanitize=thread -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe.c -pthread -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe ",
+      "stage": "tsan"
+    },
+    {
+      "command": "env TSAN_OPTIONS=halt_on_error=1 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe ",
+      "stage": "tsan"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-tsan-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O1\\ -g\\ -fsanitize=thread\\ -fno-omit-frame-pointer\\ -mmacosx-version-min=26.0 -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+      "stage": "tsan"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan ",
+      "stage": "tsan"
+    },
+    {
+      "command": "env TSAN_OPTIONS=halt_on_error=1 /opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan --output-on-failure -R \\^odt_concurrency_test\\$ ",
+      "stage": "tsan"
+    },
+    {
+      "command": "nm /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan/odt_concurrency_test ",
+      "stage": "tsan"
+    },
+    {
+      "command": "otool -L /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan/odt_concurrency_test ",
+      "stage": "tsan"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --install /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release --prefix /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/install ",
+      "stage": "package"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_CXX_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cxx -DCMAKE_CXX_FLAGS=-nostdlib++ -DCMAKE_PREFIX_PATH=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/install -DCMAKE_BUILD_TYPE=Release ",
+      "stage": "package"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer ",
+      "stage": "package"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_c ",
+      "stage": "package"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_cpp ",
+      "stage": "package"
+    },
+    {
+      "command": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-asan-ubsan-cc -std=c11 -O1 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -Wno-macro-redefined -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan.c -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan ",
+      "stage": "negative_probes"
+    },
+    {
+      "command": "env ASAN_OPTIONS=halt_on_error=1 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan ",
+      "stage": "negative_probes"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/static.c -checks=clang-analyzer-core.NullDereference -warnings-as-errors=clang-analyzer-core.NullDereference -- -std=c11 ",
+      "stage": "negative_probes"
+    },
+    {
+      "command": "/opt/homebrew/bin/clang-format --dry-run --Werror /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/format.c ",
+      "stage": "negative_probes"
+    },
+    {
+      "command": "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/package -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_CXX_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cxx -DCMAKE_CXX_FLAGS=-nostdlib++ -DCMAKE_DISABLE_FIND_PACKAGE_odt=TRUE ",
+      "stage": "negative_probes"
+    },
+    {
+      "command": "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 \\<embedded\\ promoted\\ manifest\\ verifier\\> ",
+      "stage": "evidence_manifest"
+    }
+  ],
+  "digests": {
+    "binaries": [
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_api_test",
+        "sha256": "a6b10bdf08abb0262d0d703c8f308f7da1822144bf266e234ffddf40c0b11e1b"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_geometry_test",
+        "sha256": "d4d986c750f1e2bda4cdcbda1905b84e72c3ef4516d4da79a8151e30cca66ca6"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_builder_test",
+        "sha256": "42f3c8f9a0486fa792b45c18c89db22bea5309643c657db17961198ebabe4187"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_query_test",
+        "sha256": "88170fdfc23f145b6ddc20ca37200521ce0b36c407e80d54b14ce1c4de691498"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_batch_test",
+        "sha256": "3aff75ee0c21466d338f102d9777cbf823046aea67c22571c32086e9fa47946c"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_persistence_test",
+        "sha256": "1dc2cd7b035a4385002dd32df8a4692038c297c275f15aafd424fe28e66d89ba"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_corruption_test",
+        "sha256": "9b1188f152b89d6350088f2fc32fe184f327be8f91b3f81d0094f3a97c819e8a"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/filc-odt_fault_test",
+        "sha256": "46bc9972780ea17e8096b430ac506f8549edb9f885cbc7ac5a32321e8172e340"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/libodt.a",
+        "sha256": "f5843bee97d98fbb24dec60f50ff2153555eda42a92c8174a730fb13bd791e5e"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_api_test",
+        "sha256": "63b99757865f8ce07fdbc3ae51a2c72ff82326c7b8181fc062447446a8f9ddf7"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_batch_test",
+        "sha256": "a458cfec3be50f928723a286b8e9ff428edd85f31cef5126c9a4c0820ee34b90"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_builder_test",
+        "sha256": "c16e8aeb534a49a36ba8a964f4a6004957fbcf4862516845a68f121c2c9af067"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_concurrency_test",
+        "sha256": "8e6583316d217c38b1429b110daef1a8b2c320ac34067b1a6b81705e1bc0d27c"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_corruption_test",
+        "sha256": "e30608ac3ccd5962b5e840b436a2223e1ffcb96b022dbb566ca56f1ef06943ac"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_fault_test",
+        "sha256": "8ef2e309b357ad902590f20a74af8204e6f2b3109a3988646c6eea266ef82aae"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_geometry_test",
+        "sha256": "901b334b77706c24183dda8a162d2aabc33895ef3f922dccfa1336a969e2f837"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_persistence_test",
+        "sha256": "f2119cca4c0c4cb4d688e03a8af7405bb3f84e89cad14345cb91d170b92e6785"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/debug/odt_query_test",
+        "sha256": "89f0ec730738081187ec8624e649404fbf03ff9503ffa3f549ab274499b67f67"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/libodt.a",
+        "sha256": "59b16597e1817491b1e21ca7a49340a822e49e31c7a442fb4a68884eccfaa9ab"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_api_test",
+        "sha256": "339ceb32e19f8c4f9278e856956a074471ab7c89b9bad1d5fb7805d79ea29053"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_batch_test",
+        "sha256": "8fa02a2a43e21e5ef5bf3327c04e7ad9869fcf1c0f1b1df70153f197c04e7ca6"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_builder_test",
+        "sha256": "a48deebff28492ade85f584539ca3a9a9b82b55c73af01c0d6583277feb4ab18"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_concurrency_test",
+        "sha256": "73fac7361de3459a6510e73b62e5c1e2e762dec24da97cb6052e47a8eb03eb25"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_corruption_test",
+        "sha256": "9d70b5134c4ec6851c6d389426248d2a9396284134dc332e151a3736e2670ea9"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_fault_test",
+        "sha256": "bb7293520f392db799e96cc781ce314e06064366d4f6925ca4b3a6a3c28f62fb"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_geometry_test",
+        "sha256": "4308f21f946ce56dc8affbaf34989e9229d1ed6d600d9164f73d162e2a700dd3"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_persistence_test",
+        "sha256": "d4d0c22c2e1b3745eeb965d6fb4e577c6aacaaa1e125981e289f17b71555deb9"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/release/odt_query_test",
+        "sha256": "5fae716448f23ec840b0944836827b1709bf6d3235515f4f89605d040492a8d6"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/libodt.a",
+        "sha256": "d4ab826f45467cb84c1ef8bd6642ca233b4a229d3914abe76ebf583caa431980"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_api_test",
+        "sha256": "f84f3190d8fabc168abe758342a318e2e360cb19e3b7e839b7cd2b17c85ee792"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_batch_test",
+        "sha256": "7c6de714d161a28781e307d02b42be94c5d7d3054422572553fe4720835600a0"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_builder_test",
+        "sha256": "135f772ad5142719e309940d1a1c4ad88d3a73a7329da64817d78bfec884f254"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_concurrency_test",
+        "sha256": "513dd8298972c068cd172c4b2eb883caa1c82a95f49d2a8f700aae33602e3c9b"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_corruption_test",
+        "sha256": "d9919d373baa76f2ab52fa679f82af5f6ff61153d4e1ba1ac7996457edf07490"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_fault_test",
+        "sha256": "e35aafec20de210d8385385139ac4b271a8cfa02d6284d60605d1d4a0aeeecec"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_geometry_test",
+        "sha256": "e1338f4591ec437dce18d15f10792e602f62687ede5ce927747aceddb2a3b70a"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_persistence_test",
+        "sha256": "5c5962fb57d2ef4a8867daf69411a7062df8f1ed4dc015fbc78ad54cda06bd81"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/sanitizers/odt_query_test",
+        "sha256": "7d0aa933034df099ea43dddb7ef78186adb33b1b5b57c266de92e8824a23228d"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/protocol/odt_example",
+        "sha256": "8b5e7dcec61c6a38d6e6375412ad16319fb5adb808f4e61c577624886c79d46b"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/tsan/odt_concurrency_test",
+        "sha256": "0a2fdfc5b95418e67a5c8ef6ac4e997ca954ba84bb80bebc3b505c59ad100552"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/install/lib/libodt.a",
+        "sha256": "59b16597e1817491b1e21ca7a49340a822e49e31c7a442fb4a68884eccfaa9ab"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_c",
+        "sha256": "6d188c9496d7e022f323ef71db31f94856644f282aa1de151fb32e83b895d7fe"
+      },
+      {
+        "path": ".tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_cpp",
+        "sha256": "78d5fddf01c8e05081c6b32610d76c1f0d99e9105a792ad14c6ca5ca075bbefe"
+      }
+    ],
+    "data": [
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv",
+        "sha256": "02f65827993c43d931650997e41ca1d5ea1bec5b0ba3fee58e48900d989344f0"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv",
+        "sha256": "5a7f73ad433ccc8006d6a7ebd44dda6da4a2d8d4787e41f5daeb8ba1ea8cf28f"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures/format_v1_minimal.odt",
+        "sha256": "8c43d0cdcbb3c7cf50b0b0a00f89e03728a874d59c8516b50b50975e79c333f6"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures/format_v1_representative.odt",
+        "sha256": "bb8198f09e7df304cf23a8716092688562b17a516dbccc83ef18a168ed5eb718"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures/manifest.sha256",
+        "sha256": "d23c7489de76526b8e43b2139860c4fcfe3ab695306e24a070fafda3f7853bca"
+      }
+    ],
+    "evidence_records": [
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-commands.txt",
+        "sha256": "00eb7dda5a422d952fcb7e507ba64cf06d0a5228940aa0633216a7d9da8dfa23"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-filc.txt",
+        "sha256": "b2d76b6ef427267469ef48af6b3d13c923da7db5d328d29c3b4b29f353f7b790"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-limitations.txt",
+        "sha256": "5965061b15c1e7a42fa04ba621def72e34b3fe85371536eb947713fa83288035"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-native.txt",
+        "sha256": "e53091992ba5c9b8a45339c50cc7a086c3aa5019674d67cd71a73a08aaad0f59"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-negative-probes.txt",
+        "sha256": "1df23dc6f7c13d0c7f7125f9dad82838f526879c8fc4426a514dbf23b16059b6"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-package.txt",
+        "sha256": "83788cea08def13b965a7a7b4f404aa9f7c9e516c1548de570163c887a11df0f"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-protocol.txt",
+        "sha256": "626d4a36af6b8362bbdca9b7945e95975282f65496485d961bb8c74bab5a3271"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-safety.txt",
+        "sha256": "79e05aa4c480db1e5e2cb8d5eb1184abaa6ef3181f0069376c29b5521171fda2"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-static-format.txt",
+        "sha256": "d784cfbe5e91b25c6c54d5955c5c5672482e4d11a82dfdfdd72e29d308eb2636"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-tools.txt",
+        "sha256": "37cf42e3ffaad42bcca05d53c9d85236f4db5b0332aa5195c78e57d5dd60cd39"
+      }
+    ],
+    "sources": [
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/CMakeLists.txt",
+        "sha256": "969c3865ab4fba2e7d520e9f2165e81718f5f31603ed1712872a0c3dce488070"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/python/generate_dataset.py",
+        "sha256": "6229f7a3da6b937fe6e934de6db113139e292ff36c33017ebf4ad39597b37f7d"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/python/point_location_oracle.py",
+        "sha256": "cff5313dbe80f104fa1f04bbc869acc9b6a6a70179ce7f77bfb29c09de5bc3a8"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/python/pyproject.toml",
+        "sha256": "c58abbabf6921636293ea81569c62268cd6841753f51125507c0154d4241b2a0"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/python/tests/test_protocol.py",
+        "sha256": "ae4d93d23c2f39ceea132d6385fc6f69a81837fb1bff4391a5e578245b3c439e"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/python/uv.lock",
+        "sha256": "c16f91dd5e62796000a4eea901a6feb871866b5b9c4ae7f2e3aaef831c5cb9ea"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/example/src/odt_example.c",
+        "sha256": "0583769082aea756a5160bbbe59c7b2ca0e775ae0e318b166d9b395dc07fc685"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/.clang-format",
+        "sha256": "5aac279e20bdbadd145887290461ba29836822d24eb64969e542beaf58ed0174"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/CMakeLists.txt",
+        "sha256": "36a6553c474c2bf5e96b7f35e6520142cf17c02da0d1c3c353e5e76dd0788a2a"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/cmake/odtConfig.cmake.in",
+        "sha256": "f0963e6b7ebb5a10075b4b6c0a7e5b42b23c51cd1b89a6fc93258b066037e73c"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/include/odt.h",
+        "sha256": "d139dc62e490656961f064d8a80c0ec36388e024ebcb9668805a9c2d32a841f8"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c",
+        "sha256": "d5b3bc90ba03e9a133120291a25abbb383cda42a5b5776885ba2ce1aac429d7c"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c",
+        "sha256": "10beef6c67a76193517fac0aab60add8651e4645b8a38707e57237487bdd6fcf"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c",
+        "sha256": "b19ed9046ca081816cafbd8c6b8f4f4931b8de87b2a45196bd7d0f7296f57deb"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c",
+        "sha256": "9fd3174199e4cc927e0f04a7fabb07de5668befb8509feee29b5724e8bd6f556"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c",
+        "sha256": "5367539e9754fcaf8dce443ec1e43c741fe23ff3156dbf53404cb4c8487acaa9"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c",
+        "sha256": "abbe7cdc3ec6984bbc4eedca50ba54a74718944f02791711f443fad93ed64fa4"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_internal.h",
+        "sha256": "689b79917c881993af01c1c6e987622648af6f1869fc9f9a2d14769d722e3a5c"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c",
+        "sha256": "69a219ea477d1d86b8c4745697fd34fb6db1d9e3c365fdae20cc80156727b2cf"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c",
+        "sha256": "628223f9b22cd569b852988df28de35b70e1220f8fc27643ca390d94ece4d7e1"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_api_test.c",
+        "sha256": "5c1d9c67e8762f9bf5a2e1a7bce80ab7366dbd911381a50985e2f05ff3159951"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_batch_test.c",
+        "sha256": "64d7ae3aea8581b0de2652dd9217f4afe3fd7f808847cf359e2674b8ca2223fb"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_builder_test.c",
+        "sha256": "321fc31df8bfbfb1b7f72e57311adf37a1b9919480281a2b3e33da6db4fb0cc5"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_concurrency_test.c",
+        "sha256": "05a2e42aaa73a665de0bb4a39430557fc3eaa8fe0b62011119af58c81fc87fd4"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_corruption_test.c",
+        "sha256": "dc9d0d928c0793e9403d06d5c06645da22658805caea06c8c9971689f632bde1"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_fault_test.c",
+        "sha256": "8a5b3f123583f0700c64dffe588a65633f9765a798e8d35a17208dbd9a75aa1b"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_geometry_test.c",
+        "sha256": "3d5660c95fe27c8afd5607c94bb07c53f5c6f28baed73dd1bb3ecfe5fe14c9ef"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test.c",
+        "sha256": "b3794efb5b204a82842992a9089316458e93f5d64aee863be5c85703e4349d4c"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c",
+        "sha256": "24072ffd7dcb095d26238026b62006e8ea060262df975fecc4df3faf67cfbdd0"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.h",
+        "sha256": "b28c06ad1742e1b724f4b09741a22b005b5c10e922575f15f79827da31cef1fa"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_query_test.c",
+        "sha256": "5b568d003806d0dfe6e4756d35842b1df0526d40467c5bfc1433fb46920615f6"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c",
+        "sha256": "61d0234a3e4199f7c672bfd3dc45c8e005851fce30c0bbc438e12ba7e6f8f134"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.h",
+        "sha256": "f908c5af8c7b97920c51877ccd57e5e8093d9d86a20aa3db67278d124907e241"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/CMakeLists.txt",
+        "sha256": "51059d9cb941baaca251d719eae2f65d193ce9fc02c5097c9792c1c39f45f6f0"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.c",
+        "sha256": "c6b6eb5403136047f67ce8b68895e7b76b2e9013ded2f79a5ee3cbac738374e2"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.cpp",
+        "sha256": "a312382af1bb4db99293eaf9485ab49a57f56c670ea2e244b7d8fa5204cc06ba"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/lib/tests/verify_fixture_manifest.cmake",
+        "sha256": "56ef8c64fb7a58ce5f6975f6c22ae8f7c245aa992fb0435c2574ad5957cbc298"
+      },
+      {
+        "path": "learning/studies/20260915-affine-decision-tree-point-location/verify.sh",
+        "sha256": "95820123b7b7ee942e3c9516cc6fd682843661dc154460b1a91fead9a0994a63"
+      }
+    ]
+  },
+  "environment": {
+    "machine": "arm64",
+    "python": "3.13.12",
+    "release": "25.6.0",
+    "system": "Darwin"
+  },
+  "generated_at_utc": "2026-09-16T09:04:46+00:00",
+  "limitations": [
+    "FIL-C validates only executed supported paths; it is not a complete proof or a performance baseline.",
+    "ThreadSanitizer instrumentation and runtime linkage were verified; Zig 0.16.0 compiled the objects, Apple Clang 21 linked the runtime, and the concurrency test passed.",
+    "Sanitizer objects are compiled by Zig 0.16.0; Apple Clang 21 is used only as the sanitizer runtime linker, with a version-symbol adapter that calls Apple's own runtime check.",
+    "LeakSanitizer is unavailable in the Apple AddressSanitizer runtime on this platform; allocator ownership and leak behavior remain covered by FIL-C and explicit allocation counters.",
+    "clang-tidy covers the eight production C translation units with clang-analyzer checks.",
+    "The C++17 consumer uses no C++ standard-library symbols and links with -nostdlib++ because fixed Zig 0.16.0 cannot build its bundled libc++ against the installed macOS SDK.",
+    "Benchmark and target-machine performance evidence belong to U8 and are not part of this run.",
+    "The manifest excludes its own digest to avoid a recursive identity.",
+    "The pre-existing projects/clipvault worktree change is outside this run and excluded."
+  ],
+  "schema": "odt-qualification-manifest/v1",
+  "scope": "learning/studies/20260915-affine-decision-tree-point-location",
+  "source_state": "content-addressed study snapshot at or after base revision",
+  "stages": [
+    {
+      "commands": [
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc --version ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_api_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_api_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_api_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_geometry_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_geometry_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_geometry_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_builder_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_builder_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_builder_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_query_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_query_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_query_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_batch_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_batch_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_batch_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_persistence_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_persistence_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_corruption_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_corruption_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_corruption_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -DODT_TEST_SKIP_ARCHITECTURE_GATE -DODT_TEST_FIXTURE_DIR=\\\"/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/fixtures\\\" -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_fault_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_fault_test ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/filc-odt_fault_test "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-filc.txt",
+      "expected_count": 8,
+      "id": "filc",
+      "limitation": "Executed supported non-pthread paths only; not performance evidence.",
+      "observed_count": 8,
+      "required": true,
+      "status": "passed",
+      "tool": "FIL-C 0.684"
+    },
+    {
+      "commands": [
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/dist-macos-0.16.0/zig cc -std=c11 -O2 -c -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/asan-version-shim.c -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/asan-version-shim.o "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-tools.txt",
+      "expected_count": 16,
+      "id": "environment",
+      "limitation": null,
+      "observed_count": 16,
+      "required": true,
+      "status": "passed",
+      "tool": "pinned tool inventory"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O0\\ -g3 -DCMAKE_EXE_LINKER_FLAGS= -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+        "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug ",
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -N ",
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug --output-on-failure "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-native.txt",
+      "expected_count": 10,
+      "id": "native_debug",
+      "limitation": null,
+      "observed_count": 10,
+      "required": true,
+      "status": "passed",
+      "tool": "Zig 0.16.0 Debug"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE=-O3\\ -DNDEBUG -DCMAKE_EXE_LINKER_FLAGS= -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+        "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release ",
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release -N ",
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release --output-on-failure ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release/odt_builder_test "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-native.txt",
+      "expected_count": 10,
+      "id": "native_release",
+      "limitation": null,
+      "observed_count": 10,
+      "required": true,
+      "status": "passed",
+      "tool": "Zig 0.16.0 Release -O3 -DNDEBUG"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-asan-ubsan-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O1\\ -g\\ -fsanitize=address\\ -fsanitize=undefined\\ -fno-omit-frame-pointer\\ -Wno-macro-redefined\\ -mmacosx-version-min=26.0 -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address\\ -fsanitize=undefined -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+        "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers ",
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers -N ",
+        "env ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 /opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers --output-on-failure ",
+        "nm /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers/odt_fault_test ",
+        "otool -L /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/sanitizers/odt_fault_test "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-native.txt",
+      "expected_count": 10,
+      "id": "sanitizers",
+      "limitation": null,
+      "observed_count": 10,
+      "required": true,
+      "status": "passed",
+      "tool": "Zig 0.16.0 ASan/UBSan"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c -checks=clang-analyzer-\\*\\,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -warnings-as-errors=clang-analyzer-\\* -- -std=c11 -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-static-format.txt",
+      "expected_count": 8,
+      "id": "static_analysis",
+      "limitation": null,
+      "observed_count": 8,
+      "required": true,
+      "status": "passed",
+      "tool": "clang-tidy clang-analyzer"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/clang-format --style=file:/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/.clang-format --dry-run --Werror /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/src/odt_example.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include/odt.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_builder.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_crc32c.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_exact.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_file.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_geometry.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_internal.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_persistence.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/src/odt_query.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_api_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_batch_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_builder_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_concurrency_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_corruption_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_fault_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_geometry_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_persistence_test_support.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_query_test.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/odt_test_support.h /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.c /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer/consumer.cpp "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-static-format.txt",
+      "expected_count": 26,
+      "id": "format",
+      "limitation": null,
+      "observed_count": 26,
+      "required": true,
+      "status": "passed",
+      "tool": "clang-format"
+    },
+    {
+      "commands": [
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -std=c11 -O2 -g -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion -ffp-contract=off -I /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/include /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/src/odt_example.c /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release/libodt.a -lm -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example ",
+        "(cd /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python && env UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/venv /Users/bytedance/.local/bin/uv sync --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 )",
+        "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python/generate_dataset.py --output /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/generated-data ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example --mode machine --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/summary.json --snapshot /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/generation.odt ",
+        "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python/point_location_oracle.py --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/summary.json ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example --mode human --sites /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv --queries /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv --results /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-results.jsonl --summary /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-summary.json --snapshot /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/human-generation.odt ",
+        "(cd /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/python && env UV_PROJECT_ENVIRONMENT=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/venv ODT_EXAMPLE_BIN=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/odt_example PYTHON=/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 /Users/bytedance/.local/bin/uv run --frozen --python /Users/bytedance/.pyenv/versions/3.13.12/bin/python3 python -m unittest discover -s tests -v )"
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-protocol.txt",
+      "expected_count": 10,
+      "id": "protocol",
+      "limitation": null,
+      "observed_count": 10,
+      "required": true,
+      "status": "passed",
+      "tool": "CPython 3.13.12 Fraction oracle and uv"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/debug -V -R \\^odt_\\(geometry\\|builder\\|corruption\\|fault\\|concurrency\\)_test\\$ "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-safety.txt",
+      "expected_count": 5,
+      "id": "focused_safety",
+      "limitation": null,
+      "observed_count": 5,
+      "required": true,
+      "status": "passed",
+      "tool": "Zig Debug focused CTest"
+    },
+    {
+      "commands": [
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-tsan-cc -std=c11 -g -O1 -fsanitize=thread -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe.c -pthread -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe ",
+        "env TSAN_OPTIONS=halt_on_error=1 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan-probe ",
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-tsan-cc -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS_DEBUG=-O1\\ -g\\ -fsanitize=thread\\ -fno-omit-frame-pointer\\ -mmacosx-version-min=26.0 -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DODT_BUILD_TESTS=ON ",
+        "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan ",
+        "env TSAN_OPTIONS=halt_on_error=1 /opt/homebrew/bin/ctest --test-dir /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan --output-on-failure -R \\^odt_concurrency_test\\$ ",
+        "nm /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan/odt_concurrency_test ",
+        "otool -L /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/tsan/odt_concurrency_test "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-limitations.txt",
+      "expected_count": 1,
+      "id": "tsan",
+      "limitation": null,
+      "observed_count": 1,
+      "required": true,
+      "status": "passed",
+      "tool": "Zig 0.16.0 ThreadSanitizer"
+    },
+    {
+      "commands": [
+        "/opt/homebrew/bin/cmake --install /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/release --prefix /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/install ",
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_CXX_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cxx -DCMAKE_CXX_FLAGS=-nostdlib++ -DCMAKE_PREFIX_PATH=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/install -DCMAKE_BUILD_TYPE=Release ",
+        "/opt/homebrew/bin/cmake --build /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_c ",
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/package-consumer/odt_consumer_cpp "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-package.txt",
+      "expected_count": 8,
+      "id": "package",
+      "limitation": null,
+      "observed_count": 8,
+      "required": true,
+      "status": "passed",
+      "tool": "installed odt CMake package with Zig C/C++ consumers"
+    },
+    {
+      "commands": [
+        "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-asan-ubsan-cc -std=c11 -O1 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -Wno-macro-redefined -mmacosx-version-min=26.0 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan.c -o /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan ",
+        "env ASAN_OPTIONS=halt_on_error=1 /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/asan ",
+        "/opt/homebrew/bin/clang-tidy /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/static.c -checks=clang-analyzer-core.NullDereference -warnings-as-errors=clang-analyzer-core.NullDereference -- -std=c11 ",
+        "/opt/homebrew/bin/clang-format --dry-run --Werror /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/format.c ",
+        "/opt/homebrew/bin/cmake -S /Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/lib/tests/package_consumer -B /Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/package -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DCMAKE_C_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cc -DCMAKE_CXX_COMPILER=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/bin/zig-cxx -DCMAKE_CXX_FLAGS=-nostdlib++ -DCMAKE_DISABLE_FIND_PACKAGE_odt=TRUE "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/raw/u7-negative-probes.txt",
+      "expected_count": 4,
+      "id": "negative_probes",
+      "limitation": null,
+      "observed_count": 4,
+      "required": true,
+      "status": "passed",
+      "tool": "controlled gate failures"
+    },
+    {
+      "commands": [
+        "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 \\<embedded\\ promoted\\ manifest\\ verifier\\> "
+      ],
+      "evidence_record": "learning/studies/20260915-affine-decision-tree-point-location/evidence/manifest.json",
+      "expected_count": 4,
+      "id": "evidence_manifest",
+      "limitation": "Manifest self-digest is excluded to avoid recursive identity.",
+      "observed_count": 4,
+      "required": true,
+      "status": "passed",
+      "tool": "CPython hashlib/json validator"
+    }
+  ],
+  "tools": [
+    {
+      "name": "filcc",
+      "path": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc",
+      "sha256": "a49080d7ef3272df39e8ceadcafede78f2732adb882f226271a7334898c96cb5",
+      "version": "clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)"
+    },
+    {
+      "name": "filrun",
+      "path": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun",
+      "sha256": "a49080d7ef3272df39e8ceadcafede78f2732adb882f226271a7334898c96cb5",
+      "version": "repository FIL-C bridge for clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)"
+    },
+    {
+      "name": "filc-archive",
+      "path": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/downloads/filc-0.684-linux-aarch64.tar.xz",
+      "sha256": "564813b819a6e73879bdd993e2176b38ccbd5c5219e5adcbe1589e874c860666",
+      "version": "FIL-C 0.684 Linux AArch64 distribution"
+    },
+    {
+      "name": "zig",
+      "path": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/dist-macos-0.16.0/zig",
+      "sha256": "e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec",
+      "version": "Zig 0.16.0; clang version 21.1.0"
+    },
+    {
+      "name": "zig-archive",
+      "path": "/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/zig-aarch64-macos-0.16.0.tar.xz",
+      "sha256": "b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489",
+      "version": "Zig 0.16.0 macOS AArch64 distribution"
+    },
+    {
+      "name": "cmake",
+      "path": "/opt/homebrew/bin/cmake",
+      "sha256": "e1816918a5b0ae87d520a0c503fe61b97e0b6bcd7d98388334d843dd8123b17a",
+      "version": "cmake version 4.0.3"
+    },
+    {
+      "name": "ctest",
+      "path": "/opt/homebrew/bin/ctest",
+      "sha256": "584278368a9db8ca461caca57e249cf3e213ff08d9509754b720514558a5f847",
+      "version": "ctest version 4.0.3"
+    },
+    {
+      "name": "ninja",
+      "path": "/opt/homebrew/bin/ninja",
+      "sha256": "ce9de7e34681d5112ae3eb0b804546078d7b0ced0bed1a0ac581e11780ad1d95",
+      "version": "1.13.1"
+    },
+    {
+      "name": "pyenv",
+      "path": "/opt/homebrew/bin/pyenv",
+      "sha256": "82c9465c71f93e0c4f5173893ab674c5c959e0fade0b343cc0ad5ad12ce905cc",
+      "version": "pyenv 2.6.32"
+    },
+    {
+      "name": "python",
+      "path": "/Users/bytedance/.pyenv/versions/3.13.12/bin/python3",
+      "sha256": "54e4fa1dcc207ef519781090452d68d64d5d5f3aab8806d2d057df07bb0eb428",
+      "version": "Python 3.13.12"
+    },
+    {
+      "name": "uv",
+      "path": "/Users/bytedance/.local/bin/uv",
+      "sha256": "03d95102c0a52872ba6404c51613b732a366279e7c4d6472a59f66b1005b8295",
+      "version": "uv 0.10.0 (0ba432459 2026-02-05)"
+    },
+    {
+      "name": "clang-format",
+      "path": "/opt/homebrew/bin/clang-format",
+      "sha256": "85a2d318054b574004dd42b4c5b97b0804e2083f343ee7eea94298e74cbf3d3c",
+      "version": "Homebrew clang-format version 16.0.6"
+    },
+    {
+      "name": "clang-tidy",
+      "path": "/opt/homebrew/bin/clang-tidy",
+      "sha256": "32d295b4660b23be3c40c65163c46f94328245ef129bdfbca920586e72f2051f",
+      "version": "Homebrew LLVM version 16.0.6   Optimized build. "
+    },
+    {
+      "name": "sanitizer-linker",
+      "path": "/usr/bin/clang",
+      "sha256": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version": "Apple clang version 21.0.0 (clang-2100.3.34.2)"
+    },
+    {
+      "name": "asan-runtime",
+      "path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/lib/darwin/libclang_rt.asan_osx_dynamic.dylib",
+      "sha256": "a319f00c1792b8ab704f8814655f2073cf16cdcc4b7463c9c07d8034da1de49f",
+      "version": "Apple Clang 21 ASan runtime"
+    },
+    {
+      "name": "jq",
+      "path": "/usr/bin/jq",
+      "sha256": "b16bc93b2f3c69ce3134f20b796bb72aa3410b10166566ac2ca1bee5e4153ed5",
+      "version": "jq-1.7.1-apple"
+    }
+  ],
+  "tracked_test_executables": [
+    "odt_api_test",
+    "odt_batch_test",
+    "odt_builder_test",
+    "odt_concurrency_test",
+    "odt_corruption_test",
+    "odt_fault_test",
+    "odt_geometry_test",
+    "odt_persistence_test",
+    "odt_query_test"
+  ],
+  "unit": "U7"
+}

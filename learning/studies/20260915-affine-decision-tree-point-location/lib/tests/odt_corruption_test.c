@@ -2,10 +2,14 @@
 #include "odt_test_support.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 typedef void (*mutation_fn)(unsigned char *bytes, size_t size);
+
+static size_t truncated_prefix_count;
+static size_t structural_corruption_count;
 
 static void expect_status(const unsigned char *bytes, size_t size, const odt_load_limits *limits,
                           const odt_allocator *allocator, odt_status expected) {
@@ -199,9 +203,10 @@ static void test_all_truncated_prefixes_and_appended_bytes(void) {
     size_t prefix;
 
     odt_test_independent_fixture(ODT_TEST_FIXTURE_REPRESENTATIVE, &valid);
-    for (prefix = 1u; prefix < valid.size; ++prefix) {
+    for (prefix = 0u; prefix < valid.size; ++prefix) {
         expect_status(valid.data, prefix, NULL, NULL, ODT_CORRUPT_DATA);
     }
+    truncated_prefix_count = valid.size;
     appended = malloc(valid.size + 1u);
     ODT_TEST_CHECK(appended != NULL);
     memcpy(appended, valid.data, valid.size);
@@ -253,6 +258,7 @@ static void test_checksum_and_checksum_valid_corruption(void) {
         expect_status(copy, valid.size, NULL, NULL, cases[index].expected);
         free(copy);
     }
+    structural_corruption_count = sizeof(cases) / sizeof(cases[0]);
     odt_test_byte_buffer_destroy(&valid);
 }
 
@@ -304,5 +310,8 @@ int main(void) {
     test_all_truncated_prefixes_and_appended_bytes();
     test_checksum_and_checksum_valid_corruption();
     test_limits_precede_allocation();
+    (void)printf("corruption_gate truncated_prefixes=%zu appended=1 checksum=1 structural=%zu "
+                 "preallocation_limits=6\n",
+                 truncated_prefix_count, structural_corruption_count);
     return EXIT_SUCCESS;
 }

@@ -1,0 +1,5 @@
+Focused safety CTest: 5/5 passed
+6: concurrency_gate readers=8 phases=2 repetitions_per_phase=256 reader_iterations=4096 query_records=49152 checksum=11727743638780315011 live_allocations=0
+8: corruption_gate truncated_prefixes=432 appended=1 checksum=1 structural=22 preallocation_limits=6
+9: fault_gate encode_failpoints=11 source_read_failpoints=12 allocation_failpoints=2 interrupted_operations=6 short_io=2 pre_rename_failures=6 post_rename_unknown=1 file_load_failures=3 successful_retries=11
+100% tests passed, 0 tests failed out of 5

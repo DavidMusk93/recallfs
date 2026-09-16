@@ -1,0 +1,21 @@
+host=Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
+base_revision=3cf0b9e11787fb9ae180fc133f2c6e96b050becd
+filc_archive_sha256=564813b819a6e73879bdd993e2176b38ccbd5c5219e5adcbe1589e874c860666
+zig_archive_sha256=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
+zig_binary_sha256=e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec
+filcc path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filcc version=clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e) sha256=a49080d7ef3272df39e8ceadcafede78f2732adb882f226271a7334898c96cb5
+filrun path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/bin/filrun version=repository FIL-C bridge for clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e) sha256=a49080d7ef3272df39e8ceadcafede78f2732adb882f226271a7334898c96cb5
+filc-archive path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/fil-c/downloads/filc-0.684-linux-aarch64.tar.xz version=FIL-C 0.684 Linux AArch64 distribution sha256=564813b819a6e73879bdd993e2176b38ccbd5c5219e5adcbe1589e874c860666
+zig path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/dist-macos-0.16.0/zig version=Zig 0.16.0; clang version 21.1.0 sha256=e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec
+zig-archive path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/zig/zig-aarch64-macos-0.16.0.tar.xz version=Zig 0.16.0 macOS AArch64 distribution sha256=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
+cmake path=/opt/homebrew/bin/cmake version=cmake version 4.0.3 sha256=e1816918a5b0ae87d520a0c503fe61b97e0b6bcd7d98388334d843dd8123b17a
+ctest path=/opt/homebrew/bin/ctest version=ctest version 4.0.3 sha256=584278368a9db8ca461caca57e249cf3e213ff08d9509754b720514558a5f847
+ninja path=/opt/homebrew/bin/ninja version=1.13.1 sha256=ce9de7e34681d5112ae3eb0b804546078d7b0ced0bed1a0ac581e11780ad1d95
+pyenv path=/opt/homebrew/bin/pyenv version=pyenv 2.6.32 sha256=82c9465c71f93e0c4f5173893ab674c5c959e0fade0b343cc0ad5ad12ce905cc
+python path=/Users/bytedance/.pyenv/versions/3.13.12/bin/python3 version=Python 3.13.12 sha256=54e4fa1dcc207ef519781090452d68d64d5d5f3aab8806d2d057df07bb0eb428
+uv path=/Users/bytedance/.local/bin/uv version=uv 0.10.0 (0ba432459 2026-02-05) sha256=03d95102c0a52872ba6404c51613b732a366279e7c4d6472a59f66b1005b8295
+clang-format path=/opt/homebrew/bin/clang-format version=Homebrew clang-format version 16.0.6 sha256=85a2d318054b574004dd42b4c5b97b0804e2083f343ee7eea94298e74cbf3d3c
+clang-tidy path=/opt/homebrew/bin/clang-tidy version=Homebrew LLVM version 16.0.6   Optimized build.  sha256=32d295b4660b23be3c40c65163c46f94328245ef129bdfbca920586e72f2051f
+sanitizer-linker path=/usr/bin/clang version=Apple clang version 21.0.0 (clang-2100.3.34.2) sha256=b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9
+asan-runtime path=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/lib/darwin/libclang_rt.asan_osx_dynamic.dylib version=Apple Clang 21 ASan runtime sha256=a319f00c1792b8ab704f8814655f2073cf16cdcc4b7463c9c07d8034da1de49f
+jq path=/usr/bin/jq version=jq-1.7.1-apple sha256=b16bc93b2f3c69ce3134f20b796bb72aa3410b10166566ac2ca1bee5e4153ed5

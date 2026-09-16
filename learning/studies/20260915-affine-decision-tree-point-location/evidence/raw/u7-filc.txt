@@ -1,0 +1,13 @@
+FIL-C core tests: 8/8 passed
+clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/fil-c.git 0f06037def80573162db5cfcda000af31006720e)
+PASS odt_api_test
+PASS odt_geometry_test
+PASS odt_builder_test
+PASS odt_query_test
+PASS odt_batch_test
+PASS odt_persistence_test
+corruption_gate truncated_prefixes=432 appended=1 checksum=1 structural=22 preallocation_limits=6
+PASS odt_corruption_test
+fault_gate encode_failpoints=11 source_read_failpoints=12 allocation_failpoints=2 interrupted_operations=6 short_io=2 pre_rename_failures=6 post_rename_unknown=1 file_load_failures=3 successful_retries=11
+PASS odt_fault_test
+Boundary: FIL-C validates only the executed supported core paths and is not performance evidence.

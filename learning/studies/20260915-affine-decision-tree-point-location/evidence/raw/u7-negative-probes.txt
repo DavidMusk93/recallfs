@@ -1,0 +1,7 @@
+Controlled negative probes caught: 4/4
+PASS ASan rejected heap-use-after-free
+PASS clang-tidy rejected null dereference
+PASS clang-format rejected drift
+PASS package configure rejected disabled required package
+==8229==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020000000d0 at pc 0x000100998648 bp 0x00016f465640 sp 0x00016f465638
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/negative/static.c:1:37: error: Dereference of null pointer (loaded from variable 'p') [clang-analyzer-core.NullDereference,-warnings-as-errors]

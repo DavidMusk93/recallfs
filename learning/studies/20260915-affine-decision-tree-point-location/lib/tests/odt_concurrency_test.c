@@ -2,6 +2,7 @@
 
 #include "odt_internal.h"
 
+#include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
 #include <sched.h>
@@ -270,6 +271,10 @@ static void test_concurrent_queries_and_application_quiescence(void) {
     ODT_TEST_CHECK(allocator_state.live_allocations == 1u);
     odt_generation_destroy(shared.replacement_generation);
     ODT_TEST_CHECK(allocator_state.live_allocations == 0u);
+    (void)printf("concurrency_gate readers=%d phases=2 repetitions_per_phase=%d "
+                 "reader_iterations=%d query_records=%d checksum=%" PRIu64 " live_allocations=0\n",
+                 READER_COUNT, PHASE_REPETITIONS, READER_COUNT * 2 * PHASE_REPETITIONS,
+                 READER_COUNT * 2 * PHASE_REPETITIONS * QUERY_COUNT, readers[0].checksum);
 }
 
 int main(void) {

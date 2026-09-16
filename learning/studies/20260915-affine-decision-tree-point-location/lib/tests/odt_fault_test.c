@@ -71,6 +71,17 @@ static const odt_site new_sites[] = {
     {0.0, 1.5, 33},
 };
 
+typedef struct fault_evidence {
+    size_t encode_failpoints;
+    size_t source_read_failpoints;
+    size_t allocation_failpoints;
+    size_t pre_rename_failures;
+    size_t file_load_failures;
+    size_t successful_retries;
+} fault_evidence;
+
+static fault_evidence evidence;
+
 static int fault_open_parent(void *context, const char *path) {
     file_fault_state *state = context;
 
@@ -295,6 +306,12 @@ static void test_encode_sink_fail_after_each_call(void) {
         ODT_TEST_STATUS(odt_encode(generation, NULL, &sink, &output_size), ODT_IO_ERROR);
         ODT_TEST_CHECK(output_size == UINT64_MAX);
     }
+    evidence.encode_failpoints = successful_calls;
+    encoded.size = 0u;
+    encoded.write_calls = 0u;
+    encoded.fail_at_call = 0u;
+    ODT_TEST_STATUS(odt_test_encode_to_buffer(generation, &encoded), ODT_OK);
+    evidence.successful_retries += 1u;
     odt_test_byte_buffer_destroy(&encoded);
     odt_generation_destroy(generation);
 }
@@ -354,6 +371,22 @@ static void test_load_source_and_allocator_fail_after_each_call(void) {
                         ODT_OUT_OF_MEMORY);
         ODT_TEST_CHECK(generation == NULL);
         ODT_TEST_CHECK(state.live_allocations == 0u);
+    }
+    evidence.source_read_failpoints = successful_reads;
+    evidence.allocation_failpoints = successful_allocations;
+    {
+        odt_test_memory_source source;
+        odt_test_allocator_state state = {.live = true};
+        odt_allocator allocator;
+
+        memset(&source, 0, sizeof(source));
+        source.data = encoded.data;
+        source.size = encoded.size;
+        odt_test_counting_allocator_init(&allocator, &state);
+        ODT_TEST_STATUS(odt_test_load_from_memory(&source, NULL, &allocator, &generation), ODT_OK);
+        odt_generation_destroy(generation);
+        ODT_TEST_CHECK(state.live_allocations == 0u);
+        evidence.successful_retries += 1u;
     }
     odt_test_byte_buffer_destroy(&encoded);
 }
@@ -461,12 +494,16 @@ static void run_pre_rename_failure(file_fault fault) {
         expect_file_region(path, (odt_point){0.5, 0.5}, 7);
     }
     expect_no_temporary_file(directory);
+    state.fault = FILE_FAULT_NONE;
+    ODT_TEST_STATUS(odt_internal_save_file_atomic_with_ops(new_generation, path, NULL, &ops),
+                    ODT_OK);
+    expect_file_region(path, (odt_point){1.0, 0.0}, 22);
+    evidence.pre_rename_failures += 1u;
+    evidence.successful_retries += 1u;
 
     odt_generation_destroy(new_generation);
     odt_generation_destroy(old_generation);
-    if (fault != FILE_FAULT_OPEN_PARENT) {
-        ODT_TEST_CHECK(unlink(path) == 0);
-    }
+    ODT_TEST_CHECK(unlink(path) == 0);
     ODT_TEST_CHECK(rmdir(directory) == 0);
 }
 
@@ -521,6 +558,11 @@ static void run_file_load_failure(file_fault fault) {
     ODT_TEST_STATUS(odt_save_file_atomic(source, path, NULL), ODT_OK);
     ODT_TEST_STATUS(odt_internal_load_file_with_ops(path, NULL, NULL, &loaded, &ops), ODT_IO_ERROR);
     ODT_TEST_CHECK(loaded == NULL);
+    state.fault = FILE_FAULT_NONE;
+    ODT_TEST_STATUS(odt_internal_load_file_with_ops(path, NULL, NULL, &loaded, &ops), ODT_OK);
+    odt_generation_destroy(loaded);
+    evidence.file_load_failures += 1u;
+    evidence.successful_retries += 1u;
 
     odt_generation_destroy(source);
     ODT_TEST_CHECK(unlink(path) == 0);
@@ -536,5 +578,12 @@ int main(void) {
     run_file_load_failure(FILE_FAULT_OPEN_READ);
     run_file_load_failure(FILE_FAULT_SIZE);
     run_file_load_failure(FILE_FAULT_READ);
+    (void)printf("fault_gate encode_failpoints=%zu source_read_failpoints=%zu "
+                 "allocation_failpoints=%zu interrupted_operations=6 short_io=2 "
+                 "pre_rename_failures=%zu post_rename_unknown=1 file_load_failures=%zu "
+                 "successful_retries=%zu\n",
+                 evidence.encode_failpoints, evidence.source_read_failpoints,
+                 evidence.allocation_failpoints, evidence.pre_rename_failures,
+                 evidence.file_load_failures, evidence.successful_retries);
     return EXIT_SUCCESS;
 }

@@ -1,0 +1,31 @@
+seed=20260916
+sites=1000 sha256=5a7f73ad433ccc8006d6a7ebd44dda6da4a2d8d4787e41f5daeb8ba1ea8cf28f path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/generated-data/sites.csv
+queries=3102 sha256=02f65827993c43d931650997e41ca1d5ea1bec5b0ba3fee58e48900d989344f0 path=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/generated-data/queries.csv
+query_classes=random:2048,boundary:8,site:1000,exact_bisector:32,outside:8,nonfinite:6
+Ran 10 tests in 78.245s
+OK
+Oblique Decision Tree exact differential oracle
+sites=1000 queries=3102
+expected totals: region=3088 outside=8 error=6
+checked paths: scalar=3102 batch=3102 restored=3102
+mismatches=0
+representative rows:
+  id=0 class=random point=(0x1.46b04fe140000p+3,0x1.ee539ff700000p+2) expected=region:796 scalar=region:796
+  id=2048 class=boundary point=(0x0.0p+0,0x0.0p+0) expected=region:3 scalar=region:3
+  id=2056 class=site point=(0x1.5af1013b0deefp-13,0x1.a9da63214eb2bp-2) expected=region:0 scalar=region:0
+  id=3056 class=exact_bisector point=(0x1.68d635b7bdedap-1,0x1.35376b4f7e9a3p-2) expected=region:9 scalar=region:9
+  id=3088 class=outside point=(-0x0.0000000000001p-1022,0x1.0000000000000p+2) expected=outside:0 scalar=outside:0
+  id=3096 class=nonfinite point=(nan,0x0.0p+0) expected=error:0 scalar=error:0
+artifacts:
+  sites=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/sites.csv
+  queries=/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260915-affine-decision-tree-point-location/example/data/queries.csv
+  results=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/results.jsonl
+  summary=/Users/bytedance/Documents/trae_projects/recallfs/.tmp/affine-decision-tree/u7-verify/protocol/outputs/summary.json
+Human-mode anchors:
+Oblique Decision Tree example
+generated inputs: sites=1000 queries=3102
+tree: nodes=3477 leaves=3478 depth=14 fragments=23702 encoded_bytes=135528 build_ns=23770647000
+result totals: region=3088 outside=8 error=6 comparisons=37184 exact_fallbacks=32
+mismatches: scalar_batch=0 scalar_restored=0 expectation=0 total=0
+representative rows:
+artifacts:

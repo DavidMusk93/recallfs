@@ -1,0 +1,9 @@
+FIL-C validates only executed supported core paths and is not a complete proof or performance baseline.
+ThreadSanitizer instrumentation and runtime linkage were verified; Zig 0.16.0 compiled the objects, Apple Clang 21 linked the runtime, and the concurrency test passed.
+Sanitizer objects use Zig 0.16.0; Apple Clang 21 is only the runtime linker, with a version-symbol adapter that calls the Apple runtime check.
+LeakSanitizer is unavailable in this Apple AddressSanitizer runtime; FIL-C and explicit allocation counters retain mandatory leak coverage.
+clang-tidy covers the eight production C translation units with clang-analyzer checks.
+The C++17 consumer has no standard-library dependency and uses -nostdlib++ because Zig 0.16.0 cannot build bundled libc++ against this macOS SDK.
+Benchmark, PMU, topology, frequency, and target throughput evidence are U8 scope and were not run.
+The evidence manifest excludes its own digest to avoid recursive identity.
+The pre-existing projects/clipvault worktree change was neither read as input nor modified.

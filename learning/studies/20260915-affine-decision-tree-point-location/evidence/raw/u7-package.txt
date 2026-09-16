@@ -1,0 +1,11 @@
+Clean install files: 6/6
+include/odt.h
+lib/cmake/odt/odtConfig.cmake
+lib/cmake/odt/odtConfigVersion.cmake
+lib/cmake/odt/odtTargets-release.cmake
+lib/cmake/odt/odtTargets.cmake
+lib/libodt.a
+Installed consumers: 2/2 passed
+C++ frontend flags: -std=c++17 -nostdlib++
+PASS odt_consumer_c
+PASS odt_consumer_cpp
