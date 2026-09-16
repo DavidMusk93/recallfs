@@ -1,5 +1,5 @@
 host=Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
-base_revision=3cf0b9e11787fb9ae180fc133f2c6e96b050becd
+base_revision=907f6653ed9a20250b9eb095c61b8d208416d6dc
 filc_archive_sha256=564813b819a6e73879bdd993e2176b38ccbd5c5219e5adcbe1589e874c860666
 zig_archive_sha256=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
 zig_binary_sha256=e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec
@@ -19,3 +19,4 @@ clang-tidy path=/opt/homebrew/bin/clang-tidy version=Homebrew LLVM version 16.0.
 sanitizer-linker path=/usr/bin/clang version=Apple clang version 21.0.0 (clang-2100.3.34.2) sha256=b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9
 asan-runtime path=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/lib/darwin/libclang_rt.asan_osx_dynamic.dylib version=Apple Clang 21 ASan runtime sha256=a319f00c1792b8ab704f8814655f2073cf16cdcc4b7463c9c07d8034da1de49f
 jq path=/usr/bin/jq version=jq-1.7.1-apple sha256=b16bc93b2f3c69ce3134f20b796bb72aa3410b10166566ac2ca1bee5e4153ed5
+native-cc path=/usr/bin/cc version=Apple clang version 21.0.0 (clang-2100.3.34.2) Target: arm64-apple-darwin25.6.0 Thread model: posix InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin  sha256=b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9

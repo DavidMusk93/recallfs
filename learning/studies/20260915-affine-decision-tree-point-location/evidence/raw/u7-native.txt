@@ -1,11 +1,13 @@
 Debug CTest: 10/10 passed
 Release CTest: 10/10 passed
-ASan/UBSan CTest: 10/10 passed
+ASan/UBSan checks: 11/11 passed (10 CTest plus benchmark self-check)
 ASan instrumentation: __asan_init present in odt_fault_test
 UBSan instrumentation: __ubsan_handle_type_mismatch_v1 present in odt_fault_test
+benchmark_self_check exact_arithmetic=passed checksum=6c2e2a0370353c57 repeated_checksum=13489c27917f4057
+PASS odt_benchmark_self_check
 ASan runtime: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/lib/darwin/libclang_rt.asan_osx_dynamic.dylib sha256=a319f00c1792b8ab704f8814655f2073cf16cdcc4b7463c9c07d8034da1de49f
 Link adapter: Zig 0.16.0 compiles every object; Apple Clang 21 links sanitizer runtimes.
-architecture_gate sites=1000 nodes=3477 leaves=3478 depth=14 fragments=23702 work=70379456 peak_bytes=1514360 build_ns=23113605000 mean_comparisons=12.005 p99=13 exact_fallback_rate=0.000000
+architecture_gate sites=1000 nodes=3477 leaves=3478 depth=14 fragments=23702 work=70379456 peak_bytes=1514360 build_ns=22164925000 mean_comparisons=12.005 p99=13 exact_fallback_rate=0.000000
 Zig version: 0.16.0
 Zig archive SHA-256: b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
 Zig executable SHA-256: e6cd688d25664983833aae272f501d4bceeae304875b8f1741209d15fd13a4ec

@@ -1,0 +1,20 @@
+host=Darwin GPWHXFR2YC 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:19:08 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6050 arm64
+compiler=Apple clang version 21.0.0 (clang-2100.3.34.2) Target: arm64-apple-darwin25.6.0 Thread model: posix InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+flags=-O3 -march=native -mtune=native -DNDEBUG
+qualification_scope=local-unpinned-non-target
+affinity=unpinned
+numa=unbound
+source_revision=907f6653ed9a20250b9eb095c61b8d208416d6dc
+benchmark_source_sha256=c228a035e4d23265fdaa701296d2df3d954d09f0313cce68c2604f2ce5b9bc05
+library_binary_sha256=280d78c6acaa1d0216e3f219b6ce9507d77d8ee6a3d7083c2f9c503f06a895a0
+benchmark_binary_sha256=e76d33704bc1abd20f462e3679b0a6a133b74fc06822410f99ca56160d464603
+sites_sha256=5a7f73ad433ccc8006d6a7ebd44dda6da4a2d8d4787e41f5daeb8ba1ea8cf28f
+queries_sha256=02f65827993c43d931650997e41ca1d5ea1bec5b0ba3fee58e48900d989344f0
+cpu=Apple M5 Pro
+logical_cpu=18
+physical_cpu=18
+Note: No thermal warning level has been recorded
+Note: No performance warning level has been recorded
+Note: No CPU power status has been recorded
+frequency=No fixed-frequency control is exposed by the local macOS host.
+pmu=perf is unavailable on the local macOS host; no hardware counters were collected.

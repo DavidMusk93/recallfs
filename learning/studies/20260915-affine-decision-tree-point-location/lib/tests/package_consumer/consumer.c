@@ -32,11 +32,21 @@ ODT_EXPECT_FUNCTION(odt_load_file, odt_load_file_signature);
 ODT_EXPECT_FUNCTION(odt_generation_destroy, odt_destroy_signature);
 
 int main(void) {
+    const odt_domain domain = {0.0, 0.0, 12.0, 8.0};
+    const odt_site sites[] = {
+        {0.0, 0.0, 11},
+        {2.0, 0.0, 22},
+        {1.0, 2.0, 33},
+    };
+    const odt_point inside = {1.0, 0.0};
+    const odt_point outside = {13.0, 0.0};
     odt_allocator allocator;
     odt_limits limits;
     odt_build_options build_options;
     odt_encode_options encode_options;
     odt_load_limits load_limits;
+    odt_generation *generation = NULL;
+    odt_query_result result;
     void *memory;
 
     if (ODT_VERSION_MAJOR != 1 || ODT_ABI_VERSION != 1u ||
@@ -53,6 +63,16 @@ int main(void) {
         return 2;
     }
     allocator.deallocate(allocator.context, memory, 17u, 16u);
-    odt_generation_destroy(NULL);
+
+    if (odt_build(&domain, sites, sizeof(sites) / sizeof(sites[0]), NULL, NULL, NULL, NULL,
+                  &generation) != ODT_OK ||
+        odt_query(generation, &inside, &result, NULL) != ODT_OK ||
+        result.kind != ODT_RESULT_REGION || result.region_id != 11 ||
+        odt_query(generation, &outside, &result, NULL) != ODT_OK ||
+        result.kind != ODT_RESULT_OUTSIDE || result.region_id != 0) {
+        odt_generation_destroy(generation);
+        return 3;
+    }
+    odt_generation_destroy(generation);
     return 0;
 }

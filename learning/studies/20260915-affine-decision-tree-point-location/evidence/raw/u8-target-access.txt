@@ -1,0 +1,9 @@
+current region : CN
+err when kgetcred, exit status 1
+timeout_status=completed exit_status=1 command=/Users/bytedance/.local/bin/orthrus-cli demand fdbd:dc02:e:137::47
+Connection closed by UNKNOWN port 65535
+timeout_status=completed exit_status=255 command=/usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=8 fdbd:dc02:e:137::47 -J j 'hostname; uname -a; pwd; git rev-parse --show-toplevel; git rev-parse HEAD'
+demand_status=1
+demand_timeout=false
+ssh_status=255
+ssh_timeout=false

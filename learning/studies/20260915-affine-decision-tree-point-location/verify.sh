@@ -10,7 +10,7 @@ readonly LIB_DIR="$STUDY_DIR/lib"
 readonly EXAMPLE_DIR="$STUDY_DIR/example"
 readonly EVIDENCE_DIR="$STUDY_DIR/evidence"
 readonly RAW_DIR="$EVIDENCE_DIR/raw"
-readonly BUILD_ROOT="$REPO_ROOT/.tmp/affine-decision-tree/u7-verify"
+readonly BUILD_ROOT="$REPO_ROOT/.tmp/affine-decision-tree/u8-verify"
 readonly LOG_DIR="$BUILD_ROOT/logs"
 readonly GENERATED_EVIDENCE="$BUILD_ROOT/evidence"
 readonly STAGES_TSV="$BUILD_ROOT/stages.tsv"
@@ -22,17 +22,23 @@ readonly DATA_FILES="$BUILD_ROOT/data-files.txt"
 readonly BINARY_FILES="$BUILD_ROOT/binary-files.txt"
 readonly TEST_NAMES="$BUILD_ROOT/test-names.txt"
 
-readonly EXPECTED_SOURCE_COUNT=38
+readonly EXPECTED_SOURCE_COUNT=46
 readonly EXPECTED_DATA_COUNT=5
-readonly EXPECTED_FORMAT_COUNT=26
+readonly EXPECTED_FORMAT_COUNT=27
 readonly EXPECTED_CTEST_COUNT=10
 readonly EXPECTED_PYTHON_TEST_COUNT=10
-readonly EXPECTED_FILC_TEST_COUNT=8
-readonly EXPECTED_STATIC_SOURCE_COUNT=8
+readonly EXPECTED_FILC_TEST_COUNT=9
+readonly EXPECTED_SANITIZER_GATE_COUNT=11
+readonly EXPECTED_STATIC_SOURCE_COUNT=9
 readonly EXPECTED_FOCUSED_TEST_COUNT=5
 readonly EXPECTED_INSTALL_FILE_COUNT=6
 readonly EXPECTED_CONSUMER_COUNT=2
-readonly EXPECTED_NEGATIVE_PROBE_COUNT=4
+readonly EXPECTED_NEGATIVE_PROBE_COUNT=7
+readonly EXPECTED_BENCHMARK_CHECKSUM="5c7f9b20aab8aad3"
+readonly BENCHMARK_TARGET="fdbd:dc02:e:137::47"
+readonly BENCHMARK_FLAGS="-O3 -march=native -mtune=native -DNDEBUG"
+readonly TARGET_COMMAND_TIMEOUT_SECONDS=15
+readonly TIMEOUT_PROBE_SECONDS=0.2
 readonly FILC_ARCHIVE_SHA256="564813b819a6e73879bdd993e2176b38ccbd5c5219e5adcbe1589e874c860666"
 readonly ZIG_ARCHIVE_SHA256="b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489"
 
@@ -52,18 +58,21 @@ SANITIZER_LINKER="${SANITIZER_LINKER:-/usr/bin/clang}"
 ASAN_RUNTIME="${ASAN_RUNTIME:-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/lib/darwin/libclang_rt.asan_osx_dynamic.dylib}"
 JQ="${JQ:-$(command -v jq || true)}"
 SHASUM="${SHASUM:-$(command -v shasum || true)}"
+NATIVE_CC="${NATIVE_CC:-$(command -v cc || true)}"
+ORTHRUS_CLI="${ORTHRUS_CLI:-$(command -v orthrus-cli || true)}"
+SSH="${SSH:-$(command -v ssh || true)}"
 
 current_stage=preflight
 
 fail() {
-    printf 'U7 verification failed at stage %s: %s\n' "$current_stage" "$*" >&2
+    printf 'ODT verification failed at stage %s: %s\n' "$current_stage" "$*" >&2
     exit 1
 }
 
 on_error() {
     local status=$?
 
-    printf 'U7 verification failed at stage %s (exit %d); full logs: %s\n' \
+    printf 'ODT verification failed at stage %s (exit %d); full logs: %s\n' \
         "$current_stage" "$status" "$LOG_DIR" >&2
     exit "$status"
 }
@@ -96,7 +105,14 @@ record_command() {
     shift
 
     printf '%s\t' "$stage" >>"$COMMANDS_TSV"
-    printf '%q ' "$@" >>"$COMMANDS_TSV"
+    if (($# != 0)); then
+        printf '%q' "$1" >>"$COMMANDS_TSV"
+        shift
+    fi
+    while (($# != 0)); do
+        printf ' %q' "$1" >>"$COMMANDS_TSV"
+        shift
+    done
     printf '\n' >>"$COMMANDS_TSV"
 }
 
@@ -107,6 +123,72 @@ run_logged() {
 
     record_command "$stage" "$@"
     "$@" >>"$log" 2>&1
+}
+
+run_with_timeout() {
+    local stage=$1
+    local log=$2
+    local timeout_seconds=$3
+    shift 3
+
+    record_command "$stage" portable-timeout "$timeout_seconds" "$@"
+    "$PYTHON" - "$timeout_seconds" "$log" "$@" <<'PY'
+import os
+import shlex
+import signal
+import subprocess
+import sys
+
+timeout_seconds = float(sys.argv[1])
+log_path = sys.argv[2]
+command = sys.argv[3:]
+
+with open(log_path, "a", encoding="utf-8") as log:
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    except OSError as error:
+        print(
+            f"timeout_status=not_started error={error} command={shlex.join(command)}",
+            file=log,
+            flush=True,
+        )
+        raise SystemExit(127)
+
+    try:
+        status = process.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        print(
+            f"timeout_status=timed_out timeout_seconds={timeout_seconds:g} "
+            f"command={shlex.join(command)}",
+            file=log,
+            flush=True,
+        )
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=0.25)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
+        raise SystemExit(124)
+
+    print(
+        f"timeout_status=completed exit_status={status} command={shlex.join(command)}",
+        file=log,
+        flush=True,
+    )
+    raise SystemExit(status if status >= 0 else 128 - status)
+PY
 }
 
 run_in_dir_logged() {
@@ -164,9 +246,18 @@ assert_no_unexpected_untracked() {
     git -C "$REPO_ROOT" ls-files --others --exclude-standard -- "$STUDY_REL" |
         awk -v verify="$STUDY_REL/verify.sh" \
             -v manifest="$STUDY_REL/evidence/manifest.json" \
-            -v raw_prefix="$STUDY_REL/evidence/raw/u7-" '
+            -v benchmark="$STUDY_REL/example/src/benchmark.c" \
+            -v library_readme="$STUDY_REL/lib/README.md" \
+            -v raw_prefix="$STUDY_REL/evidence/raw/u7-" \
+            -v benchmark_disassembly="$STUDY_REL/evidence/raw/u8-benchmark-disassembly.txt" \
+            -v benchmark_environment="$STUDY_REL/evidence/raw/u8-benchmark-environment.txt" \
+            -v benchmark_json="$STUDY_REL/evidence/raw/u8-benchmark.json" \
+            -v benchmark_summary="$STUDY_REL/evidence/raw/u8-benchmark.txt" \
+            -v target_access="$STUDY_REL/evidence/raw/u8-target-access.txt" '
                 $0 == verify ||
                 $0 == manifest ||
+                $0 == benchmark ||
+                $0 == library_readme ||
                 $0 == raw_prefix "commands.txt" ||
                 $0 == raw_prefix "filc.txt" ||
                 $0 == raw_prefix "limitations.txt" ||
@@ -176,7 +267,12 @@ assert_no_unexpected_untracked() {
                 $0 == raw_prefix "protocol.txt" ||
                 $0 == raw_prefix "safety.txt" ||
                 $0 == raw_prefix "static-format.txt" ||
-                $0 == raw_prefix "tools.txt" { next }
+                $0 == raw_prefix "tools.txt" ||
+                $0 == benchmark_disassembly ||
+                $0 == benchmark_environment ||
+                $0 == benchmark_json ||
+                $0 == benchmark_summary ||
+                $0 == target_access { next }
                 { print }
             ' >"$unexpected"
     [[ ! -s "$unexpected" ]] ||
@@ -236,22 +332,25 @@ write_sanitizer_wrappers() {
 
 collect_tracked_inputs() {
     git -C "$REPO_ROOT" ls-files --cached --others --exclude-standard -- \
-        "$STUDY_REL/lib" "$STUDY_REL/example" "$STUDY_REL/verify.sh" |
+        "$STUDY_REL/lib" "$STUDY_REL/example" "$STUDY_REL/README.md" \
+        "$STUDY_REL/evidence/README.md" "$STUDY_REL/evidence/review.md" \
+        "$STUDY_REL/evidence/simplification.md" "$STUDY_REL/exploration.md" \
+        "$STUDY_REL/source.md" "$STUDY_REL/verify.sh" |
         awk '
-            /(\.c|\.h|\.cpp|\.py|CMakeLists\.txt|\.cmake|\.cmake\.in|\.toml|uv\.lock|\.clang-format|verify\.sh)$/ {
+            /(\.c|\.h|\.cpp|\.py|\.md|CMakeLists\.txt|\.cmake|\.cmake\.in|\.toml|uv\.lock|\.clang-format|verify\.sh)$/ {
                 print
             }
         ' |
         LC_ALL=C sort >"$SOURCE_FILES"
     [[ "$(wc -l <"$SOURCE_FILES" | tr -d ' ')" == "$EXPECTED_SOURCE_COUNT" ]] ||
-        fail "tracked source inventory count changed; update the explicit U7 gate"
+        fail "tracked source inventory count changed; update the explicit qualification gate"
 
     git -C "$REPO_ROOT" ls-files --cached --others --exclude-standard -- \
         "$STUDY_REL/lib" "$STUDY_REL/example" |
         awk '/(\.csv|\.odt|\.sha256)$/ { print }' |
         LC_ALL=C sort >"$DATA_FILES"
     [[ "$(wc -l <"$DATA_FILES" | tr -d ' ')" == "$EXPECTED_DATA_COUNT" ]] ||
-        fail "tracked data inventory count changed; update the explicit U7 gate"
+        fail "tracked data inventory count changed; update the explicit qualification gate"
 
     printf '%s\n' \
         odt_api_test \
@@ -354,22 +453,28 @@ prepare_curated_records() {
     local protocol_record="$GENERATED_EVIDENCE/u7-protocol.txt"
     local safety_record="$GENERATED_EVIDENCE/u7-safety.txt"
     local static_record="$GENERATED_EVIDENCE/u7-static-format.txt"
+    local benchmark_record="$GENERATED_EVIDENCE/u8-benchmark.txt"
 
     {
-        printf 'FIL-C core tests: %d/%d passed\n' \
+        printf 'FIL-C correctness checks: %d/%d passed\n' \
             "$EXPECTED_FILC_TEST_COUNT" "$EXPECTED_FILC_TEST_COUNT"
         grep -E 'clang version .*Fil-C|PASS |corruption_gate|fault_gate' "$LOG_DIR/filc.log" || true
         printf '%s\n' \
-            'Boundary: FIL-C validates only the executed supported core paths and is not performance evidence.'
+            'The benchmark self-check exercises benchmark-owned exact arithmetic and checksum logic without timing.' \
+            'Boundary: FIL-C validates only the executed supported paths and is not performance evidence.'
     } >"$GENERATED_EVIDENCE/u7-filc.txt"
 
     {
         printf 'Debug CTest: %d/%d passed\n' "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT"
         printf 'Release CTest: %d/%d passed\n' "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT"
-        printf 'ASan/UBSan CTest: %d/%d passed\n' "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT"
+        printf 'ASan/UBSan checks: %d/%d passed (%d CTest plus benchmark self-check)\n' \
+            "$EXPECTED_SANITIZER_GATE_COUNT" "$EXPECTED_SANITIZER_GATE_COUNT" \
+            "$EXPECTED_CTEST_COUNT"
         printf '%s\n' \
             'ASan instrumentation: __asan_init present in odt_fault_test' \
             'UBSan instrumentation: __ubsan_handle_type_mismatch_v1 present in odt_fault_test'
+        grep -E 'benchmark_self_check|PASS odt_benchmark_self_check' \
+            "$LOG_DIR/sanitizers.log"
         printf 'ASan runtime: %s sha256=%s\n' "$ASAN_RUNTIME" "$(sha256 "$ASAN_RUNTIME")"
         printf '%s\n' \
             'Link adapter: Zig 0.16.0 compiles every object; Apple Clang 21 links sanitizer runtimes.'
@@ -421,11 +526,52 @@ prepare_curated_records() {
             'PASS ASan rejected heap-use-after-free' \
             'PASS clang-tidy rejected null dereference' \
             'PASS clang-format rejected drift' \
-            'PASS package configure rejected disabled required package'
+            'PASS package configure rejected disabled required package' \
+            'PASS benchmark rejected disabled observable sink' \
+            'PASS benchmark rejected injected semantic mismatch' \
+            'PASS portable timeout terminated sleeping stand-in'
         grep -E -m 1 'AddressSanitizer|heap-use-after-free' "$LOG_DIR/negative.log" || true
         grep -E -m 1 'error:.*Dereference|warning:.*Dereference|null pointer' \
             "$LOG_DIR/negative.log" || true
+        grep -E -m 1 'timeout_status=timed_out' "$LOG_DIR/negative.log" || true
     } >"$GENERATED_EVIDENCE/u7-negative-probes.txt"
+
+    {
+        cat "$LOG_DIR/benchmark.log"
+        printf 'classification_checksum=%s\n' \
+            "$("$JQ" -r '.validation.classification_checksum' "$benchmark_json")"
+        printf 'scalar_median_speedup=%s\n' \
+            "$("$JQ" -r '.speedup.scalar.median' "$benchmark_json")"
+        printf 'scalar_ci95_lower=%s\n' \
+            "$("$JQ" -r '.speedup.scalar.confidence_95_lower' "$benchmark_json")"
+        printf 'batch_median_speedup=%s\n' \
+            "$("$JQ" -r '.speedup.batch.median' "$benchmark_json")"
+        printf 'batch_ci95_lower=%s\n' \
+            "$("$JQ" -r '.speedup.batch.confidence_95_lower' "$benchmark_json")"
+        printf 'steady_state_gate_basis=%s\n' \
+            "$("$JQ" -r '.gate.basis' "$benchmark_json")"
+        printf 'source_scalar_break_even_queries=%s\n' \
+            "$("$JQ" -r '.amortization.source_scalar.break_even_queries' "$benchmark_json")"
+        printf 'source_batch_break_even_queries=%s\n' \
+            "$("$JQ" -r '.amortization.source_batch.break_even_queries' "$benchmark_json")"
+        printf 'restored_scalar_break_even_queries=%s\n' \
+            "$("$JQ" -r '.amortization.restored_scalar.break_even_queries' "$benchmark_json")"
+        printf 'canonical_total_cost_speedup_scalar_batch_restored=%s/%s/%s\n' \
+            "$("$JQ" -r '.amortization.source_scalar.canonical_total_cost_speedup' \
+                "$benchmark_json")" \
+            "$("$JQ" -r '.amortization.source_batch.canonical_total_cost_speedup' \
+                "$benchmark_json")" \
+            "$("$JQ" -r '.amortization.restored_scalar.canonical_total_cost_speedup' \
+                "$benchmark_json")"
+        printf 'qualification_scope=%s\n' "$benchmark_evidence_scope"
+    } >"$benchmark_record"
+    cp "$benchmark_json" "$GENERATED_EVIDENCE/u8-benchmark.json"
+    cp "$BUILD_ROOT/benchmark-environment.txt" \
+        "$GENERATED_EVIDENCE/u8-benchmark-environment.txt"
+    cp "$BUILD_ROOT/benchmark-disassembly.txt" \
+        "$GENERATED_EVIDENCE/u8-benchmark-disassembly.txt"
+    tr -d '\r' <"$BUILD_ROOT/target-access.txt" \
+        >"$GENERATED_EVIDENCE/u8-target-access.txt"
 
     cp "$COMMANDS_TSV" "$GENERATED_EVIDENCE/u7-commands.txt"
     cp "$BUILD_ROOT/tools.txt" "$GENERATED_EVIDENCE/u7-tools.txt"
@@ -433,7 +579,7 @@ prepare_curated_records() {
 
     : >"$RAW_MAP_TSV"
     local record
-    for record in "$GENERATED_EVIDENCE"/u7-*.txt; do
+    for record in "$GENERATED_EVIDENCE"/u7-*.txt "$GENERATED_EVIDENCE"/u8-*; do
         printf '%s\t%s\n' "$STUDY_REL/evidence/raw/$(basename "$record")" "$record" \
             >>"$RAW_MAP_TSV"
     done
@@ -457,6 +603,9 @@ generate_manifest() {
         U7_TEST_NAMES="$TEST_NAMES" \
         U7_MANIFEST_TMP="$manifest_tmp" \
         U7_TSAN_LIMITATION="$tsan_limitation" \
+        U8_TARGET_LIMITATION="$target_limitation" \
+        U8_BENCHMARK_BINDING_LIMITATION="$benchmark_binding_limitation" \
+        U8_BENCHMARK_JSON="$benchmark_json" \
         "$PYTHON" - <<'PY'
 import hashlib
 import json
@@ -546,7 +695,7 @@ for relative, temporary in rows(os.environ["U7_RAW_MAP_TSV"]):
 
 manifest = {
     "schema": "odt-qualification-manifest/v1",
-    "unit": "U7",
+    "unit": "U7-U8",
     "base_revision": os.environ["U7_REVISION"],
     "source_state": "content-addressed study snapshot at or after base revision",
     "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -569,14 +718,19 @@ manifest = {
         "binaries": binary_digests,
         "evidence_records": evidence_digests,
     },
+    "benchmark": json.loads(
+        Path(os.environ["U8_BENCHMARK_JSON"]).read_text(encoding="ascii")
+    ),
     "limitations": [
         "FIL-C validates only executed supported paths; it is not a complete proof or a performance baseline.",
         os.environ["U7_TSAN_LIMITATION"],
         "Sanitizer objects are compiled by Zig 0.16.0; Apple Clang 21 is used only as the sanitizer runtime linker, with a version-symbol adapter that calls Apple's own runtime check.",
         "LeakSanitizer is unavailable in the Apple AddressSanitizer runtime on this platform; allocator ownership and leak behavior remain covered by FIL-C and explicit allocation counters.",
-        "clang-tidy covers the eight production C translation units with clang-analyzer checks.",
+        "clang-tidy covers the eight production C translation units and the benchmark with clang-analyzer checks.",
         "The C++17 consumer uses no C++ standard-library symbols and links with -nostdlib++ because fixed Zig 0.16.0 cannot build its bundled libc++ against the installed macOS SDK.",
-        "Benchmark and target-machine performance evidence belong to U8 and are not part of this run.",
+        os.environ["U8_TARGET_LIMITATION"],
+        os.environ["U8_BENCHMARK_BINDING_LIMITATION"],
+        "The recorded benchmark is local native evidence and is not target-qualifying evidence.",
         "The manifest excludes its own digest to avoid a recursive identity.",
         "The pre-existing projects/clipvault worktree change is outside this run and excluded.",
     ],
@@ -728,6 +882,32 @@ for test_name in "${FILC_TESTS[@]}"; do
     append_binary "$output"
     filc_observed=$((filc_observed + 1))
 done
+filc_benchmark_self_check="$BUILD_ROOT/filc-odt-benchmark-self-check"
+run_logged filc "$LOG_DIR/filc.log" \
+    "$FILCC" \
+    -std=c11 \
+    -O1 \
+    -g \
+    -Wall \
+    -Wextra \
+    -Wpedantic \
+    -Werror \
+    -Wconversion \
+    -Wsign-conversion \
+    -ffp-contract=off \
+    -I "$LIB_DIR/include" \
+    -I "$LIB_DIR/src" \
+    "${LIB_SOURCES[@]}" \
+    "$EXAMPLE_DIR/src/benchmark.c" \
+    -lm \
+    -o "$filc_benchmark_self_check"
+run_logged filc "$LOG_DIR/filc.log" \
+    "$FILRUN" "$filc_benchmark_self_check" --self-check
+grep -q 'benchmark_self_check exact_arithmetic=passed' "$LOG_DIR/filc.log" ||
+    fail "FIL-C benchmark self-check did not report success"
+printf 'PASS odt_benchmark_self_check\n' >>"$LOG_DIR/filc.log"
+append_binary "$filc_benchmark_self_check"
+filc_observed=$((filc_observed + 1))
 [[ "$filc_observed" == "$EXPECTED_FILC_TEST_COUNT" ]] ||
     fail "FIL-C test count mismatch"
 record_stage filc passed true "$EXPECTED_FILC_TEST_COUNT" "$filc_observed" \
@@ -746,6 +926,7 @@ require_executable clang-format "$CLANG_FORMAT"
 require_executable clang-tidy "$CLANG_TIDY"
 require_executable sanitizer-linker "$SANITIZER_LINKER"
 require_executable jq "$JQ"
+require_executable native-cc "$NATIVE_CC"
 [[ -f "$ASAN_RUNTIME" ]] || fail "missing AddressSanitizer runtime: $ASAN_RUNTIME"
 expect_sha256 "$ZIG_ARCHIVE" "$ZIG_ARCHIVE_SHA256"
 [[ "$("$ZIG" version)" == 0.16.0 ]] || fail "Zig must be exactly 0.16.0"
@@ -786,6 +967,7 @@ collect_tool clang-tidy "$CLANG_TIDY" "$("$CLANG_TIDY" --version | sed -n '1,2p'
 collect_tool sanitizer-linker "$SANITIZER_LINKER" "$("$SANITIZER_LINKER" --version | sed -n '1p')"
 collect_tool asan-runtime "$ASAN_RUNTIME" "Apple Clang 21 ASan runtime"
 collect_tool jq "$JQ" "$("$JQ" --version)"
+collect_tool native-cc "$NATIVE_CC" "$("$NATIVE_CC" --version 2>&1 | sed -n '1,4p' | tr '\n' ' ')"
 {
     printf 'host=%s\n' "$(uname -a)"
     printf 'base_revision=%s\n' "$(git -C "$REPO_ROOT" rev-parse HEAD)"
@@ -796,7 +978,7 @@ collect_tool jq "$JQ" "$("$JQ" --version)"
         printf '%s path=%s version=%s sha256=%s\n' "$name" "$path" "$version" "$digest"
     done <"$TOOLS_TSV"
 } >"$BUILD_ROOT/tools.txt"
-record_stage environment passed true 16 16 "pinned tool inventory" \
+record_stage environment passed true 17 17 "pinned tool inventory" \
     "$STUDY_REL/evidence/raw/u7-tools.txt" ""
 
 debug_build="$BUILD_ROOT/debug"
@@ -849,7 +1031,45 @@ record_command sanitizers otool -L "$sanitizer_build/odt_fault_test"
 otool -L "$sanitizer_build/odt_fault_test" >"$BUILD_ROOT/sanitizer-libraries.txt"
 grep -q 'libclang_rt.asan_osx_dynamic.dylib' "$BUILD_ROOT/sanitizer-libraries.txt" ||
     fail "sanitizer binary is not linked to the recorded AddressSanitizer runtime"
-record_stage sanitizers passed true "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT" \
+sanitizer_benchmark_object_dir="$BUILD_ROOT/odt-benchmark-self-check-objects"
+sanitizer_benchmark="$BUILD_ROOT/odt-benchmark-self-check-sanitized"
+mkdir -p "$sanitizer_benchmark_object_dir"
+sanitizer_benchmark_objects=()
+for source in "${LIB_SOURCES[@]}" "$EXAMPLE_DIR/src/benchmark.c"; do
+    sanitizer_benchmark_object="$sanitizer_benchmark_object_dir/$(basename "$source" .c).o"
+    run_logged sanitizers "$LOG_DIR/sanitizers.log" \
+        "$BUILD_ROOT/bin/zig-asan-ubsan-cc" \
+        -std=c11 \
+        $sanitize_flags \
+        -Wall \
+        -Wextra \
+        -Wpedantic \
+        -Werror \
+        -Wconversion \
+        -Wsign-conversion \
+        -ffp-contract=off \
+        -I "$LIB_DIR/include" \
+        -I "$LIB_DIR/src" \
+        -c "$source" \
+        -o "$sanitizer_benchmark_object"
+    sanitizer_benchmark_objects+=("$sanitizer_benchmark_object")
+done
+run_logged sanitizers "$LOG_DIR/sanitizers.log" \
+    "$BUILD_ROOT/bin/zig-asan-ubsan-cc" \
+    $sanitize_flags \
+    "${sanitizer_benchmark_objects[@]}" \
+    -lm \
+    -o "$sanitizer_benchmark"
+run_logged sanitizers "$LOG_DIR/sanitizers.log" env \
+    ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 \
+    UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+    "$sanitizer_benchmark" --self-check
+grep -q 'benchmark_self_check exact_arithmetic=passed' "$LOG_DIR/sanitizers.log" ||
+    fail "ASan/UBSan benchmark self-check did not report success"
+printf 'PASS odt_benchmark_self_check\n' >>"$LOG_DIR/sanitizers.log"
+append_binary "$sanitizer_benchmark"
+record_stage sanitizers passed true \
+    "$EXPECTED_SANITIZER_GATE_COUNT" "$EXPECTED_SANITIZER_GATE_COUNT" \
     "Zig 0.16.0 ASan/UBSan" "$STUDY_REL/evidence/raw/u7-native.txt" ""
 
 for profile in "$debug_build" "$release_build" "$sanitizer_build"; do
@@ -859,11 +1079,16 @@ for profile in "$debug_build" "$release_build" "$sanitizer_build"; do
     done <"$TEST_NAMES"
 done
 
+readonly STATIC_SOURCES=(
+    "${LIB_SOURCES[@]}"
+    "$EXAMPLE_DIR/src/benchmark.c"
+)
+
 current_stage=static_analysis
 printf '== static analysis ==\n'
 : >"$LOG_DIR/static-analysis.log"
 static_observed=0
-for source in "${LIB_SOURCES[@]}"; do
+for source in "${STATIC_SOURCES[@]}"; do
     run_logged static_analysis "$LOG_DIR/static-analysis.log" \
         "$CLANG_TIDY" "$source" \
         -checks=clang-analyzer-\*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
@@ -1101,6 +1326,306 @@ record_stage package passed true \
     "installed odt CMake package with Zig C/C++ consumers" \
     "$STUDY_REL/evidence/raw/u7-package.txt" ""
 
+current_stage=target_benchmark
+printf '== named target access ==\n'
+target_access_log="$BUILD_ROOT/target-access.txt"
+: >"$target_access_log"
+target_demand_status=127
+target_ssh_status=127
+target_demand_timeout=not_run
+target_ssh_timeout=not_run
+if [[ -n "$ORTHRUS_CLI" && -x "$ORTHRUS_CLI" ]]; then
+    if run_with_timeout target_benchmark "$target_access_log" \
+        "$TARGET_COMMAND_TIMEOUT_SECONDS" "$ORTHRUS_CLI" demand "$BENCHMARK_TARGET"; then
+        target_demand_status=0
+        target_demand_timeout=false
+    else
+        target_demand_status=$?
+        if [[ "$target_demand_status" == 124 ]]; then
+            target_demand_timeout=true
+        else
+            target_demand_timeout=false
+        fi
+    fi
+else
+    printf 'orthrus-cli unavailable\n' >>"$target_access_log"
+fi
+if [[ -n "$SSH" && -x "$SSH" ]]; then
+    if run_with_timeout target_benchmark "$target_access_log" \
+        "$TARGET_COMMAND_TIMEOUT_SECONDS" \
+        "$SSH" -o BatchMode=yes -o ConnectTimeout=8 "$BENCHMARK_TARGET" -J j \
+        'hostname; uname -a; pwd; git rev-parse --show-toplevel; git rev-parse HEAD'; then
+        target_ssh_status=0
+        target_ssh_timeout=false
+    else
+        target_ssh_status=$?
+        if [[ "$target_ssh_status" == 124 ]]; then
+            target_ssh_timeout=true
+        else
+            target_ssh_timeout=false
+        fi
+    fi
+else
+    printf 'ssh unavailable\n' >>"$target_access_log"
+fi
+printf 'demand_status=%d\ndemand_timeout=%s\nssh_status=%d\nssh_timeout=%s\n' \
+    "$target_demand_status" "$target_demand_timeout" "$target_ssh_status" "$target_ssh_timeout" \
+    >>"$target_access_log"
+target_access_observed=0
+if [[ "$target_demand_status" == 0 ]]; then
+    target_access_observed=$((target_access_observed + 1))
+fi
+if [[ "$target_ssh_status" == 0 ]]; then
+    target_access_observed=$((target_access_observed + 1))
+fi
+if [[ "$target_demand_status" == 0 && "$target_ssh_status" == 0 ]]; then
+    target_limitation="Named target $BENCHMARK_TARGET was reachable, but this local qualification run does not publish uncommitted source to it; no target performance result is claimed."
+    target_access_summary=reachable
+else
+    target_limitation="Named target $BENCHMARK_TARGET was attempted first but unavailable: orthrus-cli demand status $target_demand_status (timeout=$target_demand_timeout); jump-host SSH status $target_ssh_status (timeout=$target_ssh_timeout). Target topology, revision, frequency policy, PMU, and performance remain unobserved."
+    target_access_summary=unavailable
+fi
+target_benchmark_summary="degraded/unavailable"
+record_stage target_benchmark degraded false 2 "$target_access_observed" \
+    "portable subprocess timeout, orthrus-cli, and OpenSSH" \
+    "$STUDY_REL/evidence/raw/u8-target-access.txt" "$target_limitation"
+
+current_stage=benchmark
+printf '== native benchmark ==\n'
+benchmark_lib_build="$BUILD_ROOT/benchmark-lib"
+benchmark_install="$BUILD_ROOT/benchmark-install"
+benchmark_example_build="$BUILD_ROOT/benchmark-example"
+benchmark_output="$BUILD_ROOT/benchmark-output"
+benchmark_json="$benchmark_output/benchmark.json"
+benchmark_binary="$benchmark_example_build/odt_benchmark"
+benchmark_runner=direct
+benchmark_affinity="unpinned"
+benchmark_numa="unbound"
+benchmark_evidence_scope="local-unpinned-non-target"
+mkdir -p "$benchmark_output"
+run_logged benchmark "$LOG_DIR/benchmark-build.log" \
+    "$CMAKE" \
+    -S "$LIB_DIR" \
+    -B "$benchmark_lib_build" \
+    -G Ninja \
+    "-DCMAKE_MAKE_PROGRAM=$NINJA" \
+    "-DCMAKE_C_COMPILER=$NATIVE_CC" \
+    -DCMAKE_BUILD_TYPE=Release \
+    "-DCMAKE_C_FLAGS_RELEASE=$BENCHMARK_FLAGS" \
+    -DODT_BUILD_TESTS=OFF
+run_logged benchmark "$LOG_DIR/benchmark-build.log" \
+    "$CMAKE" --build "$benchmark_lib_build"
+run_logged benchmark "$LOG_DIR/benchmark-build.log" \
+    "$CMAKE" --install "$benchmark_lib_build" --prefix "$benchmark_install"
+run_logged benchmark "$LOG_DIR/benchmark-build.log" \
+    "$CMAKE" \
+    -S "$EXAMPLE_DIR" \
+    -B "$benchmark_example_build" \
+    -G Ninja \
+    "-DCMAKE_MAKE_PROGRAM=$NINJA" \
+    "-DCMAKE_C_COMPILER=$NATIVE_CC" \
+    -DCMAKE_BUILD_TYPE=Release \
+    "-DCMAKE_C_FLAGS_RELEASE=$BENCHMARK_FLAGS" \
+    "-DCMAKE_PREFIX_PATH=$benchmark_install"
+run_logged benchmark "$LOG_DIR/benchmark-build.log" \
+    "$CMAKE" --build "$benchmark_example_build" --target odt_benchmark
+run_logged benchmark "$LOG_DIR/benchmark.log" \
+    "$benchmark_binary" --self-check-dce
+run_logged benchmark "$LOG_DIR/benchmark.log" \
+    "$benchmark_binary" --self-check
+
+if [[ "$(uname -s)" == Linux ]]; then
+    benchmark_cpu="$("$PYTHON" - <<'PY'
+import os
+
+if hasattr(os, "sched_getaffinity"):
+    allowed = sorted(os.sched_getaffinity(0))
+    if allowed:
+        print(allowed[0])
+PY
+)"
+    benchmark_node=
+    if [[ "$benchmark_cpu" =~ ^[0-9]+$ ]]; then
+        for node_path in /sys/devices/system/cpu/cpu"$benchmark_cpu"/node[0-9]*; do
+            if [[ -e "$node_path" ]]; then
+                benchmark_node="${node_path##*node}"
+                break
+            fi
+        done
+    fi
+    if [[ "$benchmark_cpu" =~ ^[0-9]+$ && "$benchmark_node" =~ ^[0-9]+$ ]] &&
+        command -v numactl >/dev/null 2>&1; then
+        record_command benchmark numactl "--physcpubind=$benchmark_cpu" \
+            "--membind=$benchmark_node" /bin/true
+        if numactl "--physcpubind=$benchmark_cpu" "--membind=$benchmark_node" \
+            /bin/true >>"$LOG_DIR/benchmark-build.log" 2>&1; then
+            benchmark_runner=numactl
+            benchmark_affinity="pinned-cpu-$benchmark_cpu"
+            benchmark_numa="pinned-node-$benchmark_node"
+            benchmark_evidence_scope="local-pinned-non-target"
+        fi
+    fi
+    if [[ "$benchmark_runner" == direct && "$benchmark_cpu" =~ ^[0-9]+$ ]] &&
+        command -v taskset >/dev/null 2>&1; then
+        record_command benchmark taskset -c "$benchmark_cpu" /bin/true
+        if taskset -c "$benchmark_cpu" /bin/true >>"$LOG_DIR/benchmark-build.log" 2>&1; then
+            benchmark_runner=taskset
+            benchmark_affinity="pinned-cpu-$benchmark_cpu"
+            benchmark_numa="unbound-no-safe-node-binding"
+            benchmark_evidence_scope="local-cpu-pinned-numa-unbound-non-target"
+        fi
+    fi
+fi
+
+benchmark_arguments=(
+    "$benchmark_binary"
+    --sites "$EXAMPLE_DIR/data/sites.csv"
+    --queries "$EXAMPLE_DIR/data/queries.csv"
+    --snapshot "$benchmark_output/generation.odt"
+    --output "$benchmark_json"
+    --repetitions 9
+    --warmup 2
+    --tree-loops 128
+    --brute-loops 1
+    --require-speedup
+)
+if [[ "$benchmark_runner" == numactl ]]; then
+    run_logged benchmark "$LOG_DIR/benchmark.log" \
+        numactl "--physcpubind=$benchmark_cpu" "--membind=$benchmark_node" \
+        "${benchmark_arguments[@]}"
+elif [[ "$benchmark_runner" == taskset ]]; then
+    run_logged benchmark "$LOG_DIR/benchmark.log" \
+        taskset -c "$benchmark_cpu" "${benchmark_arguments[@]}"
+else
+    run_logged benchmark "$LOG_DIR/benchmark.log" "${benchmark_arguments[@]}"
+fi
+"$JQ" -e \
+    --arg checksum "$EXPECTED_BENCHMARK_CHECKSUM" \
+    '.schema == "odt-benchmark/v1" and
+     .inputs.site_count == 1000 and
+     .inputs.query_count == 3102 and
+     .configuration.repetitions == 9 and
+     .validation.classification_checksum == $checksum and
+     .validation.scalar_exact_fallbacks == .validation.batch_exact_fallbacks and
+     .validation.scalar_exact_fallbacks == .validation.restored_exact_fallbacks and
+     .amortization.canonical_query_count == 3102 and
+     (.amortization.source_scalar.break_even_queries | type) == "number" and
+     (.amortization.source_batch.break_even_queries | type) == "number" and
+     (.amortization.restored_scalar.break_even_queries | type) == "number" and
+     .amortization.source_scalar.canonical_total_cost_speedup > 0.0 and
+     .amortization.source_batch.canonical_total_cost_speedup > 0.0 and
+     .amortization.restored_scalar.canonical_total_cost_speedup > 0.0 and
+     .gate.basis == "steady_state_query_only" and
+     .gate.required == true and .gate.passed == true and
+     .speedup.scalar.median >= 2.0 and .speedup.batch.median >= 2.0 and
+     .speedup.scalar.confidence_95_lower > 1.0 and
+     .speedup.batch.confidence_95_lower > 1.0' \
+    "$benchmark_json" >>"$LOG_DIR/benchmark.log"
+record_command benchmark "$JQ" "<embedded benchmark schema and threshold validation>" \
+    "$benchmark_json"
+
+benchmark_disassembly_dir="$BUILD_ROOT/benchmark-disassembly-slices"
+mkdir -p "$benchmark_disassembly_dir"
+if [[ "$(uname -s)" == Darwin ]]; then
+    record_command benchmark otool -tvV "$benchmark_binary"
+    otool -tvV "$benchmark_binary" >"$BUILD_ROOT/benchmark-disassembly-full.txt"
+    for variant in scalar batch brute; do
+        symbol="odt_benchmark_${variant}_pass"
+        awk -v label="_${symbol}:" '
+            $0 == label {
+                emit = 1
+            }
+            emit && $0 != label && /^_[[:alnum:]_.$]+:$/ {
+                exit
+            }
+            emit {
+                print
+            }
+        ' "$BUILD_ROOT/benchmark-disassembly-full.txt" \
+            >"$benchmark_disassembly_dir/$variant.txt"
+    done
+else
+    require_executable objdump "$(command -v objdump || true)"
+    for variant in scalar batch brute; do
+        symbol="odt_benchmark_${variant}_pass"
+        record_command benchmark objdump -d "--disassemble=$symbol" "$benchmark_binary"
+        objdump -d "--disassemble=$symbol" "$benchmark_binary" \
+            >"$benchmark_disassembly_dir/$variant.txt"
+    done
+fi
+{
+    for variant in scalar batch brute; do
+        printf '===== %s =====\n' "$variant"
+        cat "$benchmark_disassembly_dir/$variant.txt"
+    done
+} >"$BUILD_ROOT/benchmark-disassembly.txt"
+for variant in scalar batch brute; do
+    grep -Eq '^[[:space:]]*[[:xdigit:]]+:?[[:space:]]' \
+        "$benchmark_disassembly_dir/$variant.txt" ||
+        fail "final benchmark binary has an empty $variant measurement body"
+done
+grep -Eq '[[:space:]](bl|callq?)[[:space:]].*(_odt_query|<odt_query>)([>@+[:space:]]|$)' \
+    "$benchmark_disassembly_dir/scalar.txt" ||
+    fail "final scalar benchmark body lacks a call to odt_query"
+grep -Eq '[[:space:]](bl|callq?)[[:space:]].*(_odt_query_batch|<odt_query_batch>)([>@+[:space:]]|$)' \
+    "$benchmark_disassembly_dir/batch.txt" ||
+    fail "final batch benchmark body lacks a call to odt_query_batch"
+
+case "$(uname -s)" in
+Darwin)
+    benchmark_binding_limitation="Local macOS benchmark evidence is explicitly unpinned: no supported CPU affinity or NUMA binding interface was available. Scope is local and non-target-qualifying."
+    benchmark_frequency_record="No fixed-frequency control is exposed by the local macOS host."
+    benchmark_pmu_record="perf is unavailable on the local macOS host; no hardware counters were collected."
+    ;;
+Linux)
+    if [[ "$benchmark_evidence_scope" == local-pinned-non-target ]]; then
+        benchmark_binding_limitation="Local Linux benchmark used the recorded CPU and NUMA binding ($benchmark_affinity, $benchmark_numa). Scope remains local and non-target-qualifying."
+    else
+        benchmark_binding_limitation="Local Linux benchmark could not safely establish full CPU/NUMA binding ($benchmark_affinity, $benchmark_numa). Scope is local and non-target-qualifying."
+    fi
+    benchmark_frequency_record="Frequency policy was observed from the host where available but was not changed."
+    benchmark_pmu_record="No PMU counters were collected; the local result uses repeated monotonic wall time."
+    ;;
+*)
+    benchmark_binding_limitation="Local benchmark could not safely establish CPU/NUMA binding on this operating system. Scope is local and non-target-qualifying."
+    benchmark_frequency_record="Frequency policy was not controlled."
+    benchmark_pmu_record="No PMU counters were collected; the local result uses repeated monotonic wall time."
+    ;;
+esac
+{
+    printf 'host=%s\n' "$(uname -a)"
+    printf 'compiler=%s\n' \
+        "$("$NATIVE_CC" --version 2>&1 | awk 'NR <= 4 { if (NR > 1) printf " "; printf "%s", $0 }')"
+    printf 'flags=%s\n' "$BENCHMARK_FLAGS"
+    printf 'qualification_scope=%s\n' "$benchmark_evidence_scope"
+    printf 'affinity=%s\n' "$benchmark_affinity"
+    printf 'numa=%s\n' "$benchmark_numa"
+    printf 'source_revision=%s\n' "$(git -C "$REPO_ROOT" rev-parse HEAD)"
+    printf 'benchmark_source_sha256=%s\n' "$(sha256 "$EXAMPLE_DIR/src/benchmark.c")"
+    printf 'library_binary_sha256=%s\n' "$(sha256 "$benchmark_install/lib/libodt.a")"
+    printf 'benchmark_binary_sha256=%s\n' "$(sha256 "$benchmark_binary")"
+    printf 'sites_sha256=%s\n' "$(sha256 "$EXAMPLE_DIR/data/sites.csv")"
+    printf 'queries_sha256=%s\n' "$(sha256 "$EXAMPLE_DIR/data/queries.csv")"
+    if command -v sysctl >/dev/null 2>&1; then
+        printf 'cpu=%s\n' "$(sysctl -n machdep.cpu.brand_string 2>/dev/null || true)"
+        printf 'logical_cpu=%s\n' "$(sysctl -n hw.logicalcpu 2>/dev/null || true)"
+        printf 'physical_cpu=%s\n' "$(sysctl -n hw.physicalcpu 2>/dev/null || true)"
+    elif command -v lscpu >/dev/null 2>&1; then
+        lscpu
+    fi
+    if command -v pmset >/dev/null 2>&1; then
+        pmset -g therm 2>/dev/null || true
+    fi
+    printf 'frequency=%s\n' "$benchmark_frequency_record"
+    printf 'pmu=%s\n' "$benchmark_pmu_record"
+} >"$BUILD_ROOT/benchmark-environment.txt"
+append_binary "$benchmark_install/lib/libodt.a"
+append_binary "$benchmark_binary"
+record_stage benchmark passed true 10 10 \
+    "native compiler, monotonic wall time, checked checksums, per-function disassembly" \
+    "$STUDY_REL/evidence/raw/u8-benchmark.json" \
+    "$benchmark_binding_limitation Named target evidence is separately bounded by the target_benchmark stage."
+
 current_stage=negative_probes
 printf '== controlled negative probes ==\n'
 negative_dir="$BUILD_ROOT/negative"
@@ -1147,19 +1672,72 @@ expect_failure negative_probes "$LOG_DIR/negative.log" \
     -DCMAKE_DISABLE_FIND_PACKAGE_odt=TRUE
 grep -q 'CMAKE_DISABLE_FIND_PACKAGE_odt is enabled' "$LOG_DIR/negative.log" ||
     fail "package negative probe failed without rejecting the disabled required package"
+
+benchmark_negative_build="$negative_dir/benchmark-no-sink"
+benchmark_negative="$benchmark_negative_build/odt_benchmark"
+run_logged negative_probes "$LOG_DIR/negative.log" \
+    "$CMAKE" \
+    -S "$EXAMPLE_DIR" \
+    -B "$benchmark_negative_build" \
+    -G Ninja \
+    "-DCMAKE_MAKE_PROGRAM=$NINJA" \
+    "-DCMAKE_C_COMPILER=$NATIVE_CC" \
+    -DCMAKE_BUILD_TYPE=Release \
+    "-DCMAKE_C_FLAGS_RELEASE=$BENCHMARK_FLAGS" \
+    "-DCMAKE_PREFIX_PATH=$benchmark_install" \
+    -DODT_BENCHMARK_DISABLE_OBSERVABLE_SINK=ON
+run_logged negative_probes "$LOG_DIR/negative.log" \
+    "$CMAKE" --build "$benchmark_negative_build" --target odt_benchmark
+expect_failure negative_probes "$LOG_DIR/negative.log" \
+    "$benchmark_negative" --self-check-dce
+grep -q 'observable benchmark checksum sink is disabled' "$LOG_DIR/negative.log" ||
+    fail "benchmark DCE negative probe did not detect the disabled sink"
+
+expect_failure negative_probes "$LOG_DIR/negative.log" \
+    "$benchmark_binary" \
+    --sites "$EXAMPLE_DIR/data/sites.csv" \
+    --queries "$EXAMPLE_DIR/data/queries.csv" \
+    --snapshot "$negative_dir/mismatch.odt" \
+    --output "$negative_dir/mismatch.json" \
+    --repetitions 5 \
+    --warmup 0 \
+    --tree-loops 1 \
+    --brute-loops 1 \
+    --inject-mismatch
+grep -q 'semantic mismatch at query 0' "$LOG_DIR/negative.log" ||
+    fail "benchmark semantic negative probe did not detect the injected mismatch"
+
+timeout_standin="$negative_dir/sleeping-standin"
+printf '%s\n' '#!/bin/sh' 'sleep 2' >"$timeout_standin"
+chmod 0755 "$timeout_standin"
+if run_with_timeout negative_probes "$LOG_DIR/negative.log" \
+    "$TIMEOUT_PROBE_SECONDS" "$timeout_standin"; then
+    fail "portable timeout negative probe unexpectedly completed"
+else
+    timeout_probe_status=$?
+fi
+[[ "$timeout_probe_status" == 124 ]] ||
+    fail "portable timeout negative probe returned $timeout_probe_status instead of 124"
+grep -q "timeout_status=timed_out timeout_seconds=$TIMEOUT_PROBE_SECONDS" \
+    "$LOG_DIR/negative.log" ||
+    fail "portable timeout negative probe did not terminate the sleeping stand-in"
+append_binary "$benchmark_negative"
 record_stage negative_probes passed true "$EXPECTED_NEGATIVE_PROBE_COUNT" \
     "$EXPECTED_NEGATIVE_PROBE_COUNT" "controlled gate failures" \
     "$STUDY_REL/evidence/raw/u7-negative-probes.txt" ""
 
 {
     printf '%s\n' \
-        'FIL-C validates only executed supported core paths and is not a complete proof or performance baseline.' \
+        'FIL-C validates only executed supported correctness paths and is not a complete proof or performance baseline.' \
         "$tsan_limitation" \
         'Sanitizer objects use Zig 0.16.0; Apple Clang 21 is only the runtime linker, with a version-symbol adapter that calls the Apple runtime check.' \
         'LeakSanitizer is unavailable in this Apple AddressSanitizer runtime; FIL-C and explicit allocation counters retain mandatory leak coverage.' \
-        'clang-tidy covers the eight production C translation units with clang-analyzer checks.' \
+        'clang-tidy covers the eight production C translation units and the benchmark with clang-analyzer checks.' \
         'The C++17 consumer has no standard-library dependency and uses -nostdlib++ because Zig 0.16.0 cannot build bundled libc++ against this macOS SDK.' \
-        'Benchmark, PMU, topology, frequency, and target throughput evidence are U8 scope and were not run.' \
+        "$target_limitation" \
+        'The local benchmark uses native -O3 -march=native -mtune=native -DNDEBUG; it is not target-machine evidence.' \
+        "$benchmark_binding_limitation" \
+        "$benchmark_pmu_record" \
         'The evidence manifest excludes its own digest to avoid recursive identity.' \
         'The pre-existing projects/clipvault worktree change was neither read as input nor modified.'
 } >"$BUILD_ROOT/limitations.txt"
@@ -1184,12 +1762,14 @@ verify_promoted_manifest | tee "$LOG_DIR/manifest-verification.log"
 required_stage_count="$(awk -F '\t' '$3 == "true" { count += 1 } END { print count + 0 }' \
     "$STAGES_TSV")"
 total_stage_count="$(wc -l <"$STAGES_TSV" | tr -d ' ')"
-printf 'U7 verification passed: required_stages=%d/%d total_stages=%d ' \
+printf 'Local U8 qualification passed: evidence_scope=%s target_benchmark=%s target_access=%s ' \
+    "$benchmark_evidence_scope" "$target_benchmark_summary" "$target_access_summary"
+printf 'required_stages=%d/%d total_stages=%d ' \
     "$required_stage_count" "$required_stage_count" "$total_stage_count"
 printf 'debug=%d/%d release=%d/%d sanitizers=%d/%d filc=%d/%d python=%d/%d focused=%d/%d\n' \
     "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT" \
     "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT" \
-    "$EXPECTED_CTEST_COUNT" "$EXPECTED_CTEST_COUNT" \
+    "$EXPECTED_SANITIZER_GATE_COUNT" "$EXPECTED_SANITIZER_GATE_COUNT" \
     "$EXPECTED_FILC_TEST_COUNT" "$EXPECTED_FILC_TEST_COUNT" \
     "$EXPECTED_PYTHON_TEST_COUNT" "$EXPECTED_PYTHON_TEST_COUNT" \
     "$EXPECTED_FOCUSED_TEST_COUNT" "$EXPECTED_FOCUSED_TEST_COUNT"

@@ -1,9 +1,12 @@
-FIL-C validates only executed supported core paths and is not a complete proof or performance baseline.
+FIL-C validates only executed supported correctness paths and is not a complete proof or performance baseline.
 ThreadSanitizer instrumentation and runtime linkage were verified; Zig 0.16.0 compiled the objects, Apple Clang 21 linked the runtime, and the concurrency test passed.
 Sanitizer objects use Zig 0.16.0; Apple Clang 21 is only the runtime linker, with a version-symbol adapter that calls the Apple runtime check.
 LeakSanitizer is unavailable in this Apple AddressSanitizer runtime; FIL-C and explicit allocation counters retain mandatory leak coverage.
-clang-tidy covers the eight production C translation units with clang-analyzer checks.
+clang-tidy covers the eight production C translation units and the benchmark with clang-analyzer checks.
 The C++17 consumer has no standard-library dependency and uses -nostdlib++ because Zig 0.16.0 cannot build bundled libc++ against this macOS SDK.
-Benchmark, PMU, topology, frequency, and target throughput evidence are U8 scope and were not run.
+Named target fdbd:dc02:e:137::47 was attempted first but unavailable: orthrus-cli demand status 1 (timeout=false); jump-host SSH status 255 (timeout=false). Target topology, revision, frequency policy, PMU, and performance remain unobserved.
+The local benchmark uses native -O3 -march=native -mtune=native -DNDEBUG; it is not target-machine evidence.
+Local macOS benchmark evidence is explicitly unpinned: no supported CPU affinity or NUMA binding interface was available. Scope is local and non-target-qualifying.
+perf is unavailable on the local macOS host; no hardware counters were collected.
 The evidence manifest excludes its own digest to avoid recursive identity.
 The pre-existing projects/clipvault worktree change was neither read as input nor modified.

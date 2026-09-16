@@ -1,5 +1,5 @@
-clang-tidy translation units: 8/8 passed
-clang-format files: 26/26 passed
+clang-tidy translation units: 9/9 passed
+clang-format files: 27/27 passed
 Homebrew LLVM version 16.0.6
   Optimized build.
 Homebrew clang-format version 16.0.6

@@ -1,0 +1,15 @@
+observable_sink=enabled
+benchmark_self_check exact_arithmetic=passed checksum=6c2e2a0370353c57 repeated_checksum=13489c27917f4057
+benchmark checksum=5c7f9b20aab8aad3 scalar=1.998 Mq/s batch=1.966 Mq/s restored=2.009 Mq/s brute=0.041 Mq/s scalar_speedup=49.160x batch_speedup=48.246x ci95_lower=48.469x/46.892x
+true
+classification_checksum=5c7f9b20aab8aad3
+scalar_median_speedup=49.159877
+scalar_ci95_lower=48.469496
+batch_median_speedup=48.245877
+batch_ci95_lower=46.891875
+steady_state_gate_basis=steady_state_query_only
+source_scalar_break_even_queries=856084
+source_batch_break_even_queries=856371
+restored_scalar_break_even_queries=265
+canonical_total_cost_speedup_scalar_batch_restored=0.003746/0.003746/8.694670
+qualification_scope=local-unpinned-non-target
