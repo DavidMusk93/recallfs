@@ -5,21 +5,19 @@
 
 using build_signature = odt_status(const odt_domain *, const odt_site *, std::size_t,
                                    const odt_build_options *, const odt_limits *,
-                                   const odt_allocator *, odt_build_stats *,
-                                   odt_generation **);
-using query_signature = odt_status(const odt_generation *, const odt_point *,
-                                   odt_query_result *, odt_query_stats *);
-using query_batch_signature =
-    odt_status(const odt_generation *, std::size_t, const void *, std::size_t, void *,
-               std::size_t, odt_batch_stats *);
+                                   const odt_allocator *, odt_build_stats *, odt_generation **);
+using query_signature = odt_status(const odt_generation *, const odt_point *, odt_query_result *,
+                                   odt_query_stats *);
+using query_batch_signature = odt_status(const odt_generation *, std::size_t, const void *,
+                                         std::size_t, void *, std::size_t, odt_batch_stats *);
 using encode_signature = odt_status(const odt_generation *, const odt_encode_options *,
                                     const odt_sink *, std::uint64_t *);
 using load_signature = odt_status(const odt_source *, const odt_load_limits *,
                                   const odt_allocator *, odt_generation **);
-using save_file_signature =
-    odt_status(const odt_generation *, const char *, const odt_encode_options *);
-using load_file_signature = odt_status(const char *, const odt_load_limits *,
-                                       const odt_allocator *, odt_generation **);
+using save_file_signature = odt_status(const odt_generation *, const char *,
+                                       const odt_encode_options *);
+using load_file_signature = odt_status(const char *, const odt_load_limits *, const odt_allocator *,
+                                       odt_generation **);
 using destroy_signature = void(odt_generation *);
 
 static_assert(std::is_same<decltype(&odt_build), build_signature *>::value);

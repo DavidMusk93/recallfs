@@ -127,8 +127,7 @@ static void test_versioned_structure_validation(void) {
     ODT_TEST_STATUS(odt_test_encode_options_validate(&encode_options), ODT_INVALID_ARGUMENT);
     ODT_TEST_STATUS(odt_encode_options_init(&encode_options), ODT_OK);
     encode_options.format_version += 1u;
-    ODT_TEST_STATUS(odt_test_encode_options_validate(&encode_options),
-                    ODT_UNSUPPORTED_FORMAT);
+    ODT_TEST_STATUS(odt_test_encode_options_validate(&encode_options), ODT_UNSUPPORTED_FORMAT);
 
     ODT_TEST_STATUS(odt_load_limits_init(&load_limits), ODT_OK);
     load_limits.struct_size = (uint32_t)(sizeof(load_limits) - 1u);
@@ -161,9 +160,9 @@ static void test_generation_allocator_ownership(void) {
     const size_t allocation_alignment = 64u;
 
     odt_test_counting_allocator_init(&allocator, &state);
-    ODT_TEST_STATUS(odt_test_generation_create(&allocator, allocation_size,
-                                               allocation_alignment, &generation),
-                    ODT_OK);
+    ODT_TEST_STATUS(
+        odt_test_generation_create(&allocator, allocation_size, allocation_alignment, &generation),
+        ODT_OK);
     ODT_TEST_CHECK(generation != NULL);
     ODT_TEST_CHECK(state.allocate_calls == 1u);
     ODT_TEST_CHECK(state.deallocate_calls == 0u);
@@ -198,8 +197,7 @@ static void test_generation_allocation_failures(void) {
     ODT_TEST_CHECK(generation == NULL);
     ODT_TEST_CHECK(state.allocate_calls == 1u);
 
-    ODT_TEST_STATUS(odt_test_generation_create(&allocator, 257u, 64u, NULL),
-                    ODT_INVALID_ARGUMENT);
+    ODT_TEST_STATUS(odt_test_generation_create(&allocator, 257u, 64u, NULL), ODT_INVALID_ARGUMENT);
 }
 
 int main(void) {

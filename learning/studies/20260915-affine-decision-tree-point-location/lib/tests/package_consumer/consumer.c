@@ -4,15 +4,13 @@
 
 typedef odt_status odt_build_signature(const odt_domain *, const odt_site *, size_t,
                                        const odt_build_options *, const odt_limits *,
-                                       const odt_allocator *, odt_build_stats *,
-                                       odt_generation **);
+                                       const odt_allocator *, odt_build_stats *, odt_generation **);
 typedef odt_status odt_query_signature(const odt_generation *, const odt_point *,
                                        odt_query_result *, odt_query_stats *);
-typedef odt_status odt_query_batch_signature(const odt_generation *, size_t, const void *,
-                                             size_t, void *, size_t, odt_batch_stats *);
-typedef odt_status odt_encode_signature(const odt_generation *,
-                                        const odt_encode_options *, const odt_sink *,
-                                        uint64_t *);
+typedef odt_status odt_query_batch_signature(const odt_generation *, size_t, const void *, size_t,
+                                             void *, size_t, odt_batch_stats *);
+typedef odt_status odt_encode_signature(const odt_generation *, const odt_encode_options *,
+                                        const odt_sink *, uint64_t *);
 typedef odt_status odt_load_signature(const odt_source *, const odt_load_limits *,
                                       const odt_allocator *, odt_generation **);
 typedef odt_status odt_save_file_signature(const odt_generation *, const char *,
@@ -21,7 +19,7 @@ typedef odt_status odt_load_file_signature(const char *, const odt_load_limits *
                                            const odt_allocator *, odt_generation **);
 typedef void odt_destroy_signature(odt_generation *);
 
-#define ODT_EXPECT_FUNCTION(name, signature) \
+#define ODT_EXPECT_FUNCTION(name, signature)                                                       \
     _Static_assert(_Generic(&(name), signature *: 1, default: 0), #name " signature changed")
 
 ODT_EXPECT_FUNCTION(odt_build, odt_build_signature);

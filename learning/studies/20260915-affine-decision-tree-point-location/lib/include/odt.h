@@ -51,8 +51,7 @@ typedef enum odt_status {
 const char *odt_status_string(odt_status status);
 
 typedef void *(*odt_allocate_fn)(void *context, size_t size, size_t alignment);
-typedef void (*odt_deallocate_fn)(void *context, void *pointer, size_t size,
-                                  size_t alignment);
+typedef void (*odt_deallocate_fn)(void *context, void *pointer, size_t size, size_t alignment);
 
 /*
  * Allocation requests always have nonzero size and power-of-two alignment.
@@ -160,7 +159,8 @@ typedef enum odt_result_kind {
 /*
  * REGION carries ODT_OK and a caller-supplied region ID. OUTSIDE carries
  * ODT_OK and region_id == 0. ERROR carries a non-ODT_OK point status and
- * region_id == 0. The kind, not the region_id value, selects the interpretation.
+ * region_id == 0. The kind, not the region_id value, selects the
+ * interpretation.
  */
 typedef struct odt_query_result {
     odt_result_kind kind;
@@ -225,17 +225,16 @@ odt_status odt_query(const odt_generation *generation, const odt_point *point,
  * is accepted, every result slot is written exactly once. Per-point numeric
  * failures use ODT_RESULT_ERROR while the batch call returns ODT_OK.
  */
-odt_status odt_query_batch(const odt_generation *generation, size_t count,
-                           const void *points, size_t point_stride, void *out_results,
-                           size_t result_stride, odt_batch_stats *out_stats);
+odt_status odt_query_batch(const odt_generation *generation, size_t count, const void *points,
+                           size_t point_stride, void *out_results, size_t result_stride,
+                           odt_batch_stats *out_stats);
 
 /*
  * Metadata accessors borrow one live generation, retain nothing, and overwrite
  * their required output only on success. They may run concurrently with other
  * metadata accessors and queries against that generation.
  */
-odt_status odt_generation_get_domain(const odt_generation *generation,
-                                     odt_domain *out_domain);
+odt_status odt_generation_get_domain(const odt_generation *generation, odt_domain *out_domain);
 odt_status odt_generation_get_site_count(const odt_generation *generation,
                                          uint64_t *out_site_count);
 odt_status odt_generation_get_node_count(const odt_generation *generation,
@@ -275,8 +274,7 @@ odt_status odt_encode(const odt_generation *generation, const odt_encode_options
  * snapshot throughout odt_load. The callback and buffers are call-borrowed and
  * never retained.
  */
-typedef int (*odt_source_read_at_fn)(void *context, uint64_t offset, void *data_out,
-                                     size_t size);
+typedef int (*odt_source_read_at_fn)(void *context, uint64_t offset, void *data_out, size_t size);
 
 typedef struct odt_source {
     void *context;
@@ -308,8 +306,7 @@ odt_status odt_load(const odt_source *source, const odt_load_limits *limits,
 odt_status odt_save_file_atomic(const odt_generation *generation, const char *path,
                                 const odt_encode_options *options);
 odt_status odt_load_file(const char *path, const odt_load_limits *limits,
-                         const odt_allocator *allocator,
-                         odt_generation **out_generation);
+                         const odt_allocator *allocator, odt_generation **out_generation);
 
 /*
  * Releases the generation with the copied allocator family and exact original

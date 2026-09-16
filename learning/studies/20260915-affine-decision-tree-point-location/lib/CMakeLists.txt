@@ -7,10 +7,18 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(ODT_BUILD_TESTS "Build odt contract tests" ON)
 
-add_library(odt STATIC src/odt.c)
+add_library(
+    odt STATIC
+    src/odt.c
+    src/odt_exact.c
+    src/odt_geometry.c
+)
 add_library(odt::odt ALIAS odt)
 
 target_compile_features(odt PUBLIC c_std_11)
+if(NOT MSVC)
+    target_link_libraries(odt PRIVATE m)
+endif()
 target_include_directories(
     odt
     PUBLIC
@@ -31,6 +39,7 @@ function(odt_enable_warnings target)
                 -Werror
                 -Wconversion
                 -Wsign-conversion
+                -ffp-contract=off
         )
     endif()
 endfunction()
@@ -54,6 +63,21 @@ if(ODT_BUILD_TESTS)
     target_link_libraries(odt_api_test PRIVATE odt)
     odt_enable_warnings(odt_api_test)
     add_test(NAME odt_api_test COMMAND odt_api_test)
+
+    add_executable(
+        odt_geometry_test
+        tests/odt_geometry_test.c
+        tests/odt_test_support.c
+    )
+    target_include_directories(
+        odt_geometry_test
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(odt_geometry_test PRIVATE odt)
+    odt_enable_warnings(odt_geometry_test)
+    add_test(NAME odt_geometry_test COMMAND odt_geometry_test)
 endif()
 
 include(GNUInstallDirs)

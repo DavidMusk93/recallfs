@@ -56,8 +56,7 @@ static void *odt_default_allocate(void *context, size_t size, size_t alignment) 
     return aligned_alloc(alignment, aligned_size);
 }
 
-static void odt_default_deallocate(void *context, void *pointer, size_t size,
-                                   size_t alignment) {
+static void odt_default_deallocate(void *context, void *pointer, size_t size, size_t alignment) {
     (void)context;
     (void)size;
     (void)alignment;
@@ -65,36 +64,35 @@ static void odt_default_deallocate(void *context, void *pointer, size_t size,
 }
 
 static bool odt_versioned_struct_valid(uint32_t actual_size, size_t required_size,
-                                       uint32_t actual_version,
-                                       uint32_t required_version) {
+                                       uint32_t actual_version, uint32_t required_version) {
     return required_size <= UINT32_MAX && actual_size >= (uint32_t)required_size &&
            actual_version == required_version;
 }
 
 const char *odt_status_string(odt_status status) {
     switch (status) {
-        case ODT_OK:
-            return "ok";
-        case ODT_INVALID_ARGUMENT:
-            return "invalid argument";
-        case ODT_INVALID_DATA:
-            return "invalid data";
-        case ODT_LIMIT_EXCEEDED:
-            return "configured limit exceeded";
-        case ODT_UNSUPPORTED_NUMERIC_ENVIRONMENT:
-            return "unsupported numeric environment";
-        case ODT_OUT_OF_MEMORY:
-            return "out of memory";
-        case ODT_IO_ERROR:
-            return "I/O error";
-        case ODT_COMMIT_UNKNOWN:
-            return "commit state unknown";
-        case ODT_CORRUPT_DATA:
-            return "corrupt data";
-        case ODT_UNSUPPORTED_FORMAT:
-            return "unsupported format";
-        case ODT_INTERNAL_ERROR:
-            return "internal invariant failure";
+    case ODT_OK:
+        return "ok";
+    case ODT_INVALID_ARGUMENT:
+        return "invalid argument";
+    case ODT_INVALID_DATA:
+        return "invalid data";
+    case ODT_LIMIT_EXCEEDED:
+        return "configured limit exceeded";
+    case ODT_UNSUPPORTED_NUMERIC_ENVIRONMENT:
+        return "unsupported numeric environment";
+    case ODT_OUT_OF_MEMORY:
+        return "out of memory";
+    case ODT_IO_ERROR:
+        return "I/O error";
+    case ODT_COMMIT_UNKNOWN:
+        return "commit state unknown";
+    case ODT_CORRUPT_DATA:
+        return "corrupt data";
+    case ODT_UNSUPPORTED_FORMAT:
+        return "unsupported format";
+    case ODT_INTERNAL_ERROR:
+        return "internal invariant failure";
     }
     return "unknown status";
 }
@@ -176,12 +174,11 @@ odt_status odt_internal_allocator_validate(const odt_allocator *allocator) {
 
 odt_status odt_internal_limits_validate(const odt_limits *limits) {
     if (limits == NULL ||
-        !odt_versioned_struct_valid(limits->struct_size, sizeof(*limits),
-                                    limits->struct_version, ODT_LIMITS_VERSION) ||
+        !odt_versioned_struct_valid(limits->struct_size, sizeof(*limits), limits->struct_version,
+                                    ODT_LIMITS_VERSION) ||
         limits->reserved_0 != 0u || limits->max_sites == 0u ||
         limits->max_polygon_fragments == 0u || limits->max_internal_nodes == 0u ||
-        limits->max_depth == 0u || limits->max_build_bytes == 0u ||
-        limits->max_build_work == 0u) {
+        limits->max_depth == 0u || limits->max_build_bytes == 0u || limits->max_build_work == 0u) {
         return ODT_INVALID_ARGUMENT;
     }
     return ODT_OK;
@@ -189,8 +186,8 @@ odt_status odt_internal_limits_validate(const odt_limits *limits) {
 
 odt_status odt_internal_build_options_validate(const odt_build_options *options) {
     if (options == NULL ||
-        !odt_versioned_struct_valid(options->struct_size, sizeof(*options),
-                                    options->struct_version, ODT_BUILD_OPTIONS_VERSION)) {
+        !odt_versioned_struct_valid(options->struct_size, sizeof(*options), options->struct_version,
+                                    ODT_BUILD_OPTIONS_VERSION)) {
         return ODT_INVALID_ARGUMENT;
     }
     return ODT_OK;
@@ -198,8 +195,8 @@ odt_status odt_internal_build_options_validate(const odt_build_options *options)
 
 odt_status odt_internal_encode_options_validate(const odt_encode_options *options) {
     if (options == NULL ||
-        !odt_versioned_struct_valid(options->struct_size, sizeof(*options),
-                                    options->struct_version, ODT_ENCODE_OPTIONS_VERSION) ||
+        !odt_versioned_struct_valid(options->struct_size, sizeof(*options), options->struct_version,
+                                    ODT_ENCODE_OPTIONS_VERSION) ||
         options->reserved_0 != 0u) {
         return ODT_INVALID_ARGUMENT;
     }
@@ -211,19 +208,17 @@ odt_status odt_internal_encode_options_validate(const odt_encode_options *option
 
 odt_status odt_internal_load_limits_validate(const odt_load_limits *limits) {
     if (limits == NULL ||
-        !odt_versioned_struct_valid(limits->struct_size, sizeof(*limits),
-                                    limits->struct_version, ODT_LOAD_LIMITS_VERSION) ||
-        limits->reserved_0 != 0u || limits->max_encoded_bytes == 0u ||
-        limits->max_sites == 0u || limits->max_internal_nodes == 0u ||
-        limits->max_leaves == 0u || limits->max_depth == 0u ||
+        !odt_versioned_struct_valid(limits->struct_size, sizeof(*limits), limits->struct_version,
+                                    ODT_LOAD_LIMITS_VERSION) ||
+        limits->reserved_0 != 0u || limits->max_encoded_bytes == 0u || limits->max_sites == 0u ||
+        limits->max_internal_nodes == 0u || limits->max_leaves == 0u || limits->max_depth == 0u ||
         limits->max_allocation_bytes == 0u) {
         return ODT_INVALID_ARGUMENT;
     }
     return ODT_OK;
 }
 
-odt_status odt_internal_generation_allocate(const odt_allocator *allocator,
-                                            size_t allocation_size,
+odt_status odt_internal_generation_allocate(const odt_allocator *allocator, size_t allocation_size,
                                             size_t allocation_alignment,
                                             odt_generation **out_generation) {
     odt_generation *generation;
@@ -239,8 +234,7 @@ odt_status odt_internal_generation_allocate(const odt_allocator *allocator,
         !odt_is_power_of_two(allocation_alignment)) {
         return ODT_INVALID_ARGUMENT;
     }
-    generation = allocator->allocate(allocator->context, allocation_size,
-                                     allocation_alignment);
+    generation = allocator->allocate(allocator->context, allocation_size, allocation_alignment);
     if (generation == NULL) {
         return ODT_OUT_OF_MEMORY;
     }
@@ -262,6 +256,5 @@ void odt_generation_destroy(odt_generation *generation) {
     allocator = generation->allocator;
     allocation_size = generation->allocation_size;
     allocation_alignment = generation->allocation_alignment;
-    allocator.deallocate(allocator.context, generation, allocation_size,
-                         allocation_alignment);
+    allocator.deallocate(allocator.context, generation, allocation_size, allocation_alignment);
 }
