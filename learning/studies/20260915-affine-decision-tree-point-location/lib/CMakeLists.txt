@@ -50,6 +50,7 @@ odt_enable_warnings(odt)
 
 if(ODT_BUILD_TESTS)
     enable_testing()
+    find_package(Threads REQUIRED)
 
     add_executable(
         odt_api_test
@@ -115,6 +116,36 @@ if(ODT_BUILD_TESTS)
     target_link_libraries(odt_query_test PRIVATE odt)
     odt_enable_warnings(odt_query_test)
     add_test(NAME odt_query_test COMMAND odt_query_test)
+
+    add_executable(
+        odt_batch_test
+        tests/odt_batch_test.c
+        tests/odt_test_support.c
+    )
+    target_include_directories(
+        odt_batch_test
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(odt_batch_test PRIVATE odt)
+    odt_enable_warnings(odt_batch_test)
+    add_test(NAME odt_batch_test COMMAND odt_batch_test)
+
+    add_executable(
+        odt_concurrency_test
+        tests/odt_concurrency_test.c
+        tests/odt_test_support.c
+    )
+    target_include_directories(
+        odt_concurrency_test
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(odt_concurrency_test PRIVATE odt Threads::Threads)
+    odt_enable_warnings(odt_concurrency_test)
+    add_test(NAME odt_concurrency_test COMMAND odt_concurrency_test)
 endif()
 
 include(GNUInstallDirs)

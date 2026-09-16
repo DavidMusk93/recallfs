@@ -217,8 +217,8 @@ odt_status odt_query(const odt_generation *generation, const odt_point *point,
  * points and out_results are byte-strided arrays borrowed for this call.
  * Nonzero count requires nonnull arrays, point_stride >= sizeof(odt_point),
  * result_stride >= sizeof(odt_query_result), representable ranges, and
- * non-overlapping input/output ranges. Invalid envelopes fail before any
- * result or out_stats mutation.
+ * non-overlapping input/output ranges. Optional out_stats must not overlap
+ * either array. Invalid envelopes fail before any result or out_stats mutation.
  *
  * Zero count succeeds, permits null arrays and zero strides, and writes zero
  * aggregate statistics when out_stats is nonnull. After a nonempty envelope
