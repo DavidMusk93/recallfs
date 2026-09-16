@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 typedef enum odt_internal_line_kind {
     ODT_INTERNAL_LINE_DOMAIN_MIN_X = 0,
@@ -67,6 +68,21 @@ typedef struct odt_internal_runtime_leaf {
     uint32_t site_ordinal;
     int32_t region_id;
 } odt_internal_runtime_leaf;
+
+typedef struct odt_internal_file_ops {
+    void *context;
+    int (*open_parent)(void *context, const char *path);
+    int (*open_read)(void *context, const char *path);
+    int (*create_exclusive_at)(void *context, int parent_fd, const char *name);
+    int (*get_size)(void *context, int fd, uint64_t *out_size);
+    ssize_t (*read_at)(void *context, int fd, void *data, size_t size, uint64_t offset);
+    ssize_t (*write)(void *context, int fd, const void *data, size_t size);
+    int (*sync_file)(void *context, int fd);
+    int (*rename_at)(void *context, int parent_fd, const char *from, const char *to);
+    int (*sync_directory)(void *context, int fd);
+    int (*unlink_at)(void *context, int parent_fd, const char *name);
+    int (*close)(void *context, int fd);
+} odt_internal_file_ops;
 
 struct odt_generation {
     odt_allocator allocator;
@@ -152,5 +168,21 @@ odt_status odt_internal_geometry_cell_contains_point(const odt_internal_geometry
 odt_status odt_internal_geometry_locate(const odt_internal_geometry *geometry,
                                         const odt_point *point, bool *out_found,
                                         size_t *out_site_ordinal);
+
+uint32_t odt_internal_crc32c(const void *data, size_t size);
+uint32_t odt_internal_crc32c_begin(void);
+uint32_t odt_internal_crc32c_extend(uint32_t state, const void *data, size_t size);
+uint32_t odt_internal_crc32c_end(uint32_t state);
+
+odt_status odt_internal_encoded_size(const odt_generation *generation, uint64_t *out_size);
+
+odt_status odt_internal_save_file_atomic_with_ops(const odt_generation *generation,
+                                                  const char *path,
+                                                  const odt_encode_options *options,
+                                                  const odt_internal_file_ops *ops);
+odt_status odt_internal_load_file_with_ops(const char *path, const odt_load_limits *limits,
+                                           const odt_allocator *allocator,
+                                           odt_generation **out_generation,
+                                           const odt_internal_file_ops *ops);
 
 #endif

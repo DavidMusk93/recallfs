@@ -132,9 +132,8 @@ static void test_reference_build_and_metadata(void) {
     ODT_TEST_CHECK(count == stats.leaf_count);
     ODT_TEST_STATUS(odt_generation_get_maximum_depth(generation, &depth), ODT_OK);
     ODT_TEST_CHECK(depth == stats.maximum_depth);
-    ODT_TEST_STATUS(odt_generation_get_encoded_size(generation, &encoded_size),
-                    ODT_UNSUPPORTED_FORMAT);
-    ODT_TEST_CHECK(encoded_size == UINT64_MAX);
+    ODT_TEST_STATUS(odt_generation_get_encoded_size(generation, &encoded_size), ODT_OK);
+    ODT_TEST_CHECK(encoded_size >= 256u);
     ODT_TEST_STATUS(odt_generation_get_build_stats(generation, &copied_stats), ODT_OK);
     ODT_TEST_CHECK(memcmp(&copied_stats, &stats, sizeof(stats)) == 0);
 

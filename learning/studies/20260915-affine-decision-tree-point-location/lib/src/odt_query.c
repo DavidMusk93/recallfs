@@ -269,10 +269,7 @@ odt_status odt_generation_get_maximum_depth(const odt_generation *generation,
 
 odt_status odt_generation_get_encoded_size(const odt_generation *generation,
                                            uint64_t *out_encoded_size) {
-    if (generation == NULL || out_encoded_size == NULL) {
-        return ODT_INVALID_ARGUMENT;
-    }
-    return ODT_UNSUPPORTED_FORMAT;
+    return odt_internal_encoded_size(generation, out_encoded_size);
 }
 
 odt_status odt_generation_get_build_stats(const odt_generation *generation,

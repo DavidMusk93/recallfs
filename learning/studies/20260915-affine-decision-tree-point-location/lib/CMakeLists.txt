@@ -11,8 +11,11 @@ add_library(
     odt STATIC
     src/odt.c
     src/odt_builder.c
+    src/odt_crc32c.c
     src/odt_exact.c
+    src/odt_file.c
     src/odt_geometry.c
+    src/odt_persistence.c
     src/odt_query.c
 )
 add_library(odt::odt ALIAS odt)
@@ -146,6 +149,37 @@ if(ODT_BUILD_TESTS)
     target_link_libraries(odt_concurrency_test PRIVATE odt Threads::Threads)
     odt_enable_warnings(odt_concurrency_test)
     add_test(NAME odt_concurrency_test COMMAND odt_concurrency_test)
+
+    foreach(test_name IN ITEMS odt_persistence_test odt_corruption_test odt_fault_test)
+        add_executable(
+            ${test_name}
+            tests/${test_name}.c
+            tests/odt_persistence_test_support.c
+            tests/odt_test_support.c
+        )
+        target_include_directories(
+            ${test_name}
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        )
+        target_compile_definitions(
+            ${test_name}
+            PRIVATE
+                ODT_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures"
+        )
+        target_link_libraries(${test_name} PRIVATE odt)
+        odt_enable_warnings(${test_name})
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
+
+    add_test(
+        NAME odt_fixture_manifest
+        COMMAND
+            ${CMAKE_COMMAND}
+            -DFIXTURE_DIRECTORY=${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_fixture_manifest.cmake
+    )
 endif()
 
 include(GNUInstallDirs)
