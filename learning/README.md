@@ -158,6 +158,7 @@ declares an explicit generation contract. Only local build products such as
 
 | Study | Topic |
 | --- | --- |
+| [RingZero, XDP, and Maglev](studies/20260917-ringzero/README.md) | XDP L4 forwarding, kernel-boundary costs, zero-drop semantics, Maglev trade-offs, and production-gap audit |
 | [WHALE Agent harness](studies/20260914-whale-agent-harness/README.md) | Joint model-harness optimization, bottleneck diagnosis, controlled Agent interaction, and reusable evaluation contracts |
 | [Page-oriented B+ tree](studies/20260911-bplus-tree/README.md) | C11 B+ tree, buffer-pool-neutral storage API, durable WAL, recovery, and corruption testing |
 | [Kache build cache](studies/20260910-kache-build-cache/README.md) | Compiler-cache internals, Rust/C++ support boundaries, Blade compatibility, and Jenkins rollout |

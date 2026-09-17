@@ -1,0 +1,89 @@
+learning/studies/20260917-ringzero/README.md: text graph 1 (lines 180-189, width 29)
+      0         1         2
+      01234567890123456789012345678
+  180 mutable backend set
+  181         |
+  182         v
+  183 control-plane Maglev build
+  184         |
+  185         v
+  186 flat immutable-looking table
+  187         |
+  188         v
+  189 one indexed lookup per packet
+learning/studies/20260917-ringzero/README.md: text graph 2 (lines 220-227, width 82)
+      0         1         2         3         4         5         6         7         8
+      0123456789012345678901234567890123456789012345678901234567890123456789012345678901
+  220 +--------+    +------------+    +---------+    +--------------+
+  221 | NIC RX |--->| XDP parser |--->| VIP map |--->| 5-tuple hash |
+  222 +--------+    +------------+    +---------+    +------+-------+
+  223                                                        |
+  224                                                        v
+  225 +-----------------+    +------------------+    +-------------+    +--------------+
+  226 | egress redirect |<---| L2/L3/L4 rewrite |<---| backend map |<---| Maglev table |
+  227 +-----------------+    +------------------+    +-------------+    +--------------+
+learning/studies/20260917-ringzero/README.md: text graph 3 (lines 366-368, width 62)
+      0         1         2         3         4         5         6
+      01234567890123456789012345678901234567890123456789012345678901
+  366 generator -> ingress wire -> NIC RX -> RX descriptors -> XDP
+  367           -> redirect enqueue -> egress TX descriptors -> wire
+  368           -> fabric -> backend NIC -> backend application
+learning/studies/20260917-ringzero/README.md: text graph 4 (lines 381-384, width 59)
+      0         1         2         3         4         5
+      01234567890123456789012345678901234567890123456789012345678
+  381 +-----------+       +----------------+       +------------+
+  382 | generator |------>| native-XDP DUT |------>| receiver   |
+  383 | seq IDs   |       | RingZero       |       | bitmap     |
+  384 +-----------+       +----------------+       +------------+
+learning/studies/20260917-ringzero/README.md: text graph 5 (lines 532-547, width 39)
+      0         1         2         3
+      012345678901234567890123456789012345678
+  532 backend config revision
+  533         |
+  534         v
+  535 canonical stable identities
+  536         |
+  537         v
+  538 build inactive generation
+  539         |
+  540         v
+  541 validate full table + digest
+  542         |
+  543         v
+  544 atomic active-generation switch
+  545         |
+  546         v
+  547 drain old flows / retire old generation
+learning/studies/20260917-ringzero/exploration.md: text graph 1 (lines 40-44, width 84)
+      0         1         2         3         4         5         6         7         8
+      012345678901234567890123456789012345678901234567890123456789012345678901234567890123
+   40 Zig control plane
+   41   attach + pinned maps + health checks + Maglev rebuild
+   42                          |
+   43                          v
+   44 NIC RX -> native XDP -> VIP -> flow hash -> Maglev -> backend -> rewrite -> redirect
+learning/studies/20260917-ringzero/exploration.md: text graph 2 (lines 117-117, width 56)
+      0         1         2         3         4         5
+      01234567890123456789012345678901234567890123456789012345
+  117 expected material order sensitivity, saw 8 changed slots
+learning/sources/20260917-ringzero.md: text graph 1 (lines 37-54, width 26)
+      0         1         2
+      01234567890123456789012345
+   37 bpf/common.h
+   38 bpf/xdp_lb.c
+   39 bpf/xdp_pass.c
+   40 src/c.zig
+   41 src/maglev.zig
+   42 src/main.zig
+   43 bench/floodgen.c
+   44 scripts/setup-netns.sh
+   45 scripts/teardown-netns.sh
+   46 scripts/udp_sink.py
+   47 scripts/verify_datapath.py
+   48 README.md
+   49 Makefile
+   50 build.zig
+   51 build.zig.zon
+   52 media/diagram.mmd
+   53 media/diagram.svg
+   54 .gitignore

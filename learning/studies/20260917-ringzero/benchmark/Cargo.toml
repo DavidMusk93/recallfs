@@ -1,0 +1,17 @@
+[package]
+name = "ringzero-hashing-benchmark"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "hashing"
+path = "src/lib.rs"
+
+[[bin]]
+name = "compare"
+path = "src/main.rs"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"

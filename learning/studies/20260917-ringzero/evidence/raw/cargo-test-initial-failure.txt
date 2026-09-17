@@ -1,0 +1,40 @@
+   Compiling ringzero-hashing-benchmark v0.1.0 (/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260917-ringzero/benchmark)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.77s
+     Running unittests src/lib.rs (learning/studies/20260917-ringzero/benchmark/target/debug/deps/hashing-6f24234972e110b5)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (learning/studies/20260917-ringzero/benchmark/target/debug/deps/compare-66d43eb989c490d8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/properties.rs (learning/studies/20260917-ringzero/benchmark/target/debug/deps/properties-f076ce6d3392f9b0)
+
+running 7 tests
+test canonical_maglev_is_independent_of_input_order ... ok
+test maglev_matches_the_nsdi16_worked_example ... ok
+test maglev_assigns_each_backend_either_floor_or_ceil_slots ... ok
+test raw_backend_iteration_order_changes_the_maglev_table ... FAILED
+test modulo_reassigns_most_keys_when_the_backend_count_changes ... ok
+test maglev_addition_has_bounded_but_not_zero_disruption ... ok
+test maglev_lookup_returns_only_configured_backends ... ok
+
+failures:
+
+---- raw_backend_iteration_order_changes_the_maglev_table stdout ----
+
+thread 'raw_backend_iteration_order_changes_the_maglev_table' (51316366) panicked at tests/properties.rs:35:5:
+expected material order sensitivity, saw 8 changed slots
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    raw_backend_iteration_order_changes_the_maglev_table
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `--test properties`

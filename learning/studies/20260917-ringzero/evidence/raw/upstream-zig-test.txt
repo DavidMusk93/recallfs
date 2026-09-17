@@ -1,0 +1,11 @@
+1/1 maglev.test.maglev distributes and is deterministic...FAIL (TestUnexpectedResult)
+/Users/bytedance/Library/Application Support/Trae CN/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.16.0/lib/std/testing.zig:615:14: 0x104e7a22f in expect (test)
+    if (!ok) return error.TestUnexpectedResult;
+             ^
+/Users/bytedance/Documents/trae_projects/recallfs/.tmp/data/ringzero-upstream/src/maglev.zig:76:9: 0x104e7a4c7 in test.maglev distributes and is deterministic (test)
+        try std.testing.expect(slot >= 0 and slot < 4);
+        ^
+0 passed; 0 skipped; 1 failed.
+error: the following test command failed with exit code 1:
+.zig-cache/o/a598e42cbf952b08ca581e75f1afb109/test --seed=0xef30901
+exit_status=1

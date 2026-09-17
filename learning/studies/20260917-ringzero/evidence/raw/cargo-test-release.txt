@@ -1,0 +1,32 @@
+   Compiling ringzero-hashing-benchmark v0.1.0 (/Users/bytedance/Documents/trae_projects/recallfs/learning/studies/20260917-ringzero/benchmark)
+    Finished `release` profile [optimized] target(s) in 2.27s
+     Running unittests src/lib.rs (.tmp/data/ringzero-hashing-target/release/deps/hashing-a318d7708fa539c3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (.tmp/data/ringzero-hashing-target/release/deps/compare-5e171ba202a8e83a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/properties.rs (.tmp/data/ringzero-hashing-target/release/deps/properties-8815441fceba55e4)
+
+running 7 tests
+test maglev_matches_the_nsdi16_worked_example ... ok
+test canonical_maglev_is_independent_of_input_order ... ok
+test maglev_assigns_each_backend_either_floor_or_ceil_slots ... ok
+test modulo_reassigns_most_keys_when_the_backend_count_changes ... ok
+test raw_backend_iteration_order_changes_the_maglev_table ... ok
+test maglev_addition_has_bounded_but_not_zero_disruption ... ok
+test maglev_lookup_returns_only_configured_backends ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests hashing
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
