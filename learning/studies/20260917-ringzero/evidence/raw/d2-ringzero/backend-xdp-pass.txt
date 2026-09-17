@@ -1,0 +1,32 @@
+
+BTF debug data section '.BTF' rejected: Invalid argument (22)!
+ - Length:       541
+Verifier analysis:
+
+magic: 0xeb9f
+version: 1
+flags: 0x0
+hdr_len: 24
+type_off: 0
+type_len: 268
+str_off: 268
+str_len: 249
+btf_total_size: 541
+[1] PTR (anon) type_id=2
+[2] STRUCT xdp_md size=24 vlen=6
+	data type_id=3 bits_offset=0
+	data_end type_id=3 bits_offset=32
+	data_meta type_id=3 bits_offset=64
+	ingress_ifindex type_id=3 bits_offset=96
+	rx_queue_index type_id=3 bits_offset=128
+	egress_ifindex type_id=3 bits_offset=160
+[3] TYPEDEF __u32 type_id=4
+[4] INT unsigned int size=4 bits_offset=0 nr_bits=32 encoding=(none)
+[5] FUNC_PROTO (anon) return=6 args=(1 ctx)
+[6] INT int size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+[7] FUNC xdp_pass_prog type_id=5
+[8] INT char size=1 bits_offset=0 nr_bits=8 encoding=SIGNED
+[9] ARRAY (anon) type_id=8 index_type_id=10 nr_elems=4
+[10] INT __ARRAY_SIZE_TYPE__ size=4 bits_offset=0 nr_bits=32 encoding=(none)
+[11] VAR LICENSE type_id=9 linkage=1
+[12] DATASEC license size=0 vlen=1 size == 0

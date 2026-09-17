@@ -1,0 +1,4 @@
+libbpf: elf: skipping unrecognized data section(17) .eh_frame
+libbpf: elf: skipping relo section(18) .rel.eh_frame for section(17) .eh_frame
+attached xdp_lb_prog to rzvi3540700 (ifindex 368) in native (driver, XDP_FLAGS_DRV_MODE) mode
+maps pinned under /sys/fs/bpf/ringzero-validation-3540700

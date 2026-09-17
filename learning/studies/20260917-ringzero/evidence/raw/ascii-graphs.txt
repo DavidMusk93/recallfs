@@ -1,71 +1,100 @@
-learning/studies/20260917-ringzero/README.md: text graph 1 (lines 180-189, width 29)
+learning/studies/20260917-ringzero/README.md: text graph 1 (lines 185-194, width 29)
       0         1         2
       01234567890123456789012345678
-  180 mutable backend set
-  181         |
-  182         v
-  183 control-plane Maglev build
-  184         |
-  185         v
-  186 flat immutable-looking table
-  187         |
-  188         v
-  189 one indexed lookup per packet
-learning/studies/20260917-ringzero/README.md: text graph 2 (lines 220-227, width 82)
+  185 mutable backend set
+  186         |
+  187         v
+  188 control-plane Maglev build
+  189         |
+  190         v
+  191 flat immutable-looking table
+  192         |
+  193         v
+  194 one indexed lookup per packet
+learning/studies/20260917-ringzero/README.md: text graph 2 (lines 225-232, width 82)
       0         1         2         3         4         5         6         7         8
       0123456789012345678901234567890123456789012345678901234567890123456789012345678901
-  220 +--------+    +------------+    +---------+    +--------------+
-  221 | NIC RX |--->| XDP parser |--->| VIP map |--->| 5-tuple hash |
-  222 +--------+    +------------+    +---------+    +------+-------+
-  223                                                        |
-  224                                                        v
-  225 +-----------------+    +------------------+    +-------------+    +--------------+
-  226 | egress redirect |<---| L2/L3/L4 rewrite |<---| backend map |<---| Maglev table |
-  227 +-----------------+    +------------------+    +-------------+    +--------------+
-learning/studies/20260917-ringzero/README.md: text graph 3 (lines 366-368, width 62)
+  225 +--------+    +------------+    +---------+    +--------------+
+  226 | NIC RX |--->| XDP parser |--->| VIP map |--->| 5-tuple hash |
+  227 +--------+    +------------+    +---------+    +------+-------+
+  228                                                        |
+  229                                                        v
+  230 +-----------------+    +------------------+    +-------------+    +--------------+
+  231 | egress redirect |<---| L2/L3/L4 rewrite |<---| backend map |<---| Maglev table |
+  232 +-----------------+    +------------------+    +-------------+    +--------------+
+learning/studies/20260917-ringzero/README.md: text graph 3 (lines 371-373, width 62)
       0         1         2         3         4         5         6
       01234567890123456789012345678901234567890123456789012345678901
-  366 generator -> ingress wire -> NIC RX -> RX descriptors -> XDP
-  367           -> redirect enqueue -> egress TX descriptors -> wire
-  368           -> fabric -> backend NIC -> backend application
-learning/studies/20260917-ringzero/README.md: text graph 4 (lines 381-384, width 59)
+  371 generator -> ingress wire -> NIC RX -> RX descriptors -> XDP
+  372           -> redirect enqueue -> egress TX descriptors -> wire
+  373           -> fabric -> backend NIC -> backend application
+learning/studies/20260917-ringzero/README.md: text graph 4 (lines 386-389, width 59)
       0         1         2         3         4         5
       01234567890123456789012345678901234567890123456789012345678
-  381 +-----------+       +----------------+       +------------+
-  382 | generator |------>| native-XDP DUT |------>| receiver   |
-  383 | seq IDs   |       | RingZero       |       | bitmap     |
-  384 +-----------+       +----------------+       +------------+
-learning/studies/20260917-ringzero/README.md: text graph 5 (lines 532-547, width 39)
+  386 +-----------+       +----------------+       +------------+
+  387 | generator |------>| native-XDP DUT |------>| receiver   |
+  388 | seq IDs   |       | RingZero       |       | bitmap     |
+  389 +-----------+       +----------------+       +------------+
+learning/studies/20260917-ringzero/README.md: text graph 5 (lines 566-581, width 39)
       0         1         2         3
       012345678901234567890123456789012345678
-  532 backend config revision
-  533         |
-  534         v
-  535 canonical stable identities
-  536         |
-  537         v
-  538 build inactive generation
-  539         |
-  540         v
-  541 validate full table + digest
-  542         |
-  543         v
-  544 atomic active-generation switch
-  545         |
-  546         v
-  547 drain old flows / retire old generation
-learning/studies/20260917-ringzero/exploration.md: text graph 1 (lines 40-44, width 84)
+  566 backend config revision
+  567         |
+  568         v
+  569 canonical stable identities
+  570         |
+  571         v
+  572 build inactive generation
+  573         |
+  574         v
+  575 validate full table + digest
+  576         |
+  577         v
+  578 atomic active-generation switch
+  579         |
+  580         v
+  581 drain old flows / retire old generation
+learning/studies/20260917-ringzero/exploration.md: text graph 1 (lines 41-45, width 84)
       0         1         2         3         4         5         6         7         8
       012345678901234567890123456789012345678901234567890123456789012345678901234567890123
-   40 Zig control plane
-   41   attach + pinned maps + health checks + Maglev rebuild
-   42                          |
-   43                          v
-   44 NIC RX -> native XDP -> VIP -> flow hash -> Maglev -> backend -> rewrite -> redirect
-learning/studies/20260917-ringzero/exploration.md: text graph 2 (lines 117-117, width 56)
-      0         1         2         3         4         5
-      01234567890123456789012345678901234567890123456789012345
-  117 expected material order sensitivity, saw 8 changed slots
+   41 Zig control plane
+   42   attach + pinned maps + health checks + Maglev rebuild
+   43                          |
+   44                          v
+   45 NIC RX -> native XDP -> VIP -> flow hash -> Maglev -> backend -> rewrite -> redirect
+learning/studies/20260917-ringzero/exploration.md: text graph 2 (lines 196-199, width 70)
+      0         1         2         3         4         5         6
+      0123456789012345678901234567890123456789012345678901234567890123456789
+  196 sender:   expected=10000 sent=10000
+  197 receiver: expected=10000 unique=10000 missing=0 duplicates=0 invalid=0
+  198 XDP:      packets=10000 dropped=0
+  199 cleanup:  pass
+learning/studies/20260917-ringzero/exploration.md: text graph 3 (lines 210-212, width 26)
+      0         1         2
+      01234567890123456789012345
+  210 sender submitted: 2407680
+  211 XDP observed:      1909482
+  212 sink reports:        12266
+learning/studies/20260917-ringzero/benchmark/README.md: text graph 1 (lines 36-45, width 36)
+      0         1         2         3
+      012345678901234567890123456789012345
+   36 benchmark/
+   37   CMakeLists.txt
+   38   include/hashing.h
+   39   src/hashing.c
+   40   src/compare.c
+   41   tests/test_hashing.c
+   42   tools/udp_sequence.c
+   43   scripts/run_on_d2.sh
+   44   scripts/validate_d2.sh
+   45   scripts/validate_ringzero_netns.sh
+learning/studies/20260917-ringzero/benchmark/README.md: text graph 2 (lines 156-159, width 70)
+      0         1         2         3         4         5         6
+      0123456789012345678901234567890123456789012345678901234567890123456789
+  156 sender:   expected=10000 sent=10000
+  157 receiver: expected=10000 unique=10000 missing=0 duplicates=0 invalid=0
+  158 XDP:      packets=10000 dropped=0
+  159 cleanup:  pass
 learning/sources/20260917-ringzero.md: text graph 1 (lines 37-54, width 26)
       0         1         2
       01234567890123456789012345

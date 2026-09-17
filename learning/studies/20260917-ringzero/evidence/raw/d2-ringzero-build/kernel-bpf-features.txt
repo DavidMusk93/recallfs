@@ -1,0 +1,81 @@
+Scanning system configuration...
+bpf() syscall restricted to privileged users
+JIT compiler is enabled
+JIT compiler hardening is disabled
+JIT compiler kallsyms exports are enabled for root
+Global memory limit for JIT compiler for unprivileged users is 528482304 bytes
+CONFIG_BPF is set to y
+CONFIG_BPF_SYSCALL is set to y
+CONFIG_HAVE_EBPF_JIT is set to y
+CONFIG_BPF_JIT is set to y
+CONFIG_BPF_JIT_ALWAYS_ON is not set
+CONFIG_DEBUG_INFO_BTF is set to y
+CONFIG_DEBUG_INFO_BTF_MODULES is set to y
+CONFIG_CGROUPS is set to y
+CONFIG_CGROUP_BPF is set to y
+CONFIG_CGROUP_NET_CLASSID is set to y
+CONFIG_SOCK_CGROUP_DATA is set to y
+CONFIG_BPF_EVENTS is set to y
+CONFIG_KPROBE_EVENTS is set to y
+CONFIG_UPROBE_EVENTS is set to y
+CONFIG_TRACING is set to y
+CONFIG_FTRACE_SYSCALLS is set to y
+CONFIG_FUNCTION_ERROR_INJECTION is set to y
+CONFIG_BPF_KPROBE_OVERRIDE is set to y
+CONFIG_NET is set to y
+CONFIG_XDP_SOCKETS is set to y
+CONFIG_LWTUNNEL_BPF is set to y
+CONFIG_NET_ACT_BPF is set to m
+CONFIG_NET_CLS_BPF is set to m
+CONFIG_NET_CLS_ACT is set to y
+CONFIG_NET_SCH_INGRESS is set to m
+CONFIG_XFRM is set to y
+CONFIG_IP_ROUTE_CLASSID is set to y
+CONFIG_IPV6_SEG6_BPF is set to y
+CONFIG_BPF_LIRC_MODE2 is not set
+CONFIG_BPF_STREAM_PARSER is set to y
+CONFIG_NETFILTER_XT_MATCH_BPF is set to m
+CONFIG_BPFILTER is not set
+CONFIG_BPFILTER_UMH is not set
+CONFIG_TEST_BPF is set to m
+CONFIG_HZ is set to 1000
+
+Scanning system call availability...
+bpf() syscall is available
+
+Scanning eBPF program types...
+eBPF program_type socket_filter is available
+eBPF program_type kprobe is available
+eBPF program_type sched_cls is available
+eBPF program_type sched_act is available
+eBPF program_type tracepoint is available
+eBPF program_type xdp is available
+eBPF program_type perf_event is available
+eBPF program_type cgroup_skb is available
+eBPF program_type cgroup_sock is available
+eBPF program_type lwt_in is available
+eBPF program_type lwt_out is available
+eBPF program_type lwt_xmit is available
+eBPF program_type sock_ops is available
+eBPF program_type sk_skb is available
+eBPF program_type cgroup_device is available
+eBPF program_type sk_msg is available
+eBPF program_type raw_tracepoint is available
+eBPF program_type cgroup_sock_addr is available
+eBPF program_type lwt_seg6local is available
+eBPF program_type lirc_mode2 is NOT available
+eBPF program_type sk_reuseport is available
+eBPF program_type flow_dissector is available
+eBPF program_type cgroup_sysctl is available
+eBPF program_type raw_tracepoint_writable is available
+eBPF program_type cgroup_sockopt is available
+eBPF program_type tracing is NOT available
+eBPF program_type struct_ops is available
+eBPF program_type ext is NOT available
+eBPF program_type lsm is NOT available
+eBPF program_type sk_lookup is available
+
+Scanning eBPF map types...
+eBPF map_type hash is available
+eBPF map_type array is available
+perf_event_paranoid=2

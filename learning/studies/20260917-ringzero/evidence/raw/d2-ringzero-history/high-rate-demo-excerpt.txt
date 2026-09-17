@@ -1,0 +1,18 @@
+# Decisive excerpt preserved from the earlier d2 two-backend demo run.
+# The complete transient setup log was superseded by the final controlled run.
+floodgen: 1 threads x 32 sockets -> 10.99.0.1:9000 for 2s
+floodgen: sent 2407680 packets in 2.00s = 1203734 pps
+stats_after:
+packets=     1909482 bytes=     202405049 dropped=         0 passed=         4  |             0 pps        0.00 Mbps
+backend1_log:
+10.20.0.2:9000 received 4205 packets total
+10.20.0.2:9000 received 7573 packets total
+10.20.0.2:9000 received 7671 packets total
+10.20.0.2:9000 received 7671 packets total
+backend2_log:
+10.30.0.2:9000 received 1684 packets total
+10.30.0.2:9000 received 4233 packets total
+10.30.0.2:9000 received 4595 packets total
+10.30.0.2:9000 received 4595 packets total
+xdp:
+veth-c(326) driver id 6116

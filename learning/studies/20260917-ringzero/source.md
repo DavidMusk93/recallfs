@@ -55,7 +55,9 @@ Access date for every web source: 2026-09-17.
   `9a56125f02fcbce55448482d442d99729573ab06`.
 - CoNEXT'18 and NSDI'16 numbers are author-reported historical results, not
   measurements reproduced by this study.
-- The local Rust benchmark isolates selector behavior; it is not an XDP,
+- The maintained C benchmark isolates selector behavior; it is not an XDP,
   eBPF, NIC, or end-to-end load-balancer benchmark.
-- Packet-rate and zero-loss claims remain unverified until the target Linux,
-  NIC, driver, queue, topology, and offered-load contract are executed.
+- d2 evidence covers verifier acceptance, native XDP on veth and one bounded
+  10,000-packet sequence-ledger run. It does not cover a physical NIC,
+  RSS/multi-queue scaling, sustained high load or a line-rate zero-loss
+  envelope.

@@ -1,0 +1,8 @@
+[1/8] Building C object CMakeFiles/ringzero_hashing.dir/src/hashing.c.o
+[2/8] Linking C static library libringzero_hashing.a
+[3/8] Building C object CMakeFiles/ringzero_hashing_test.dir/tests/test_hashing.c.o
+[4/8] Building C object CMakeFiles/ringzero_udp_sequence.dir/tools/udp_sequence.c.o
+[5/8] Linking C executable ringzero_hashing_test
+[6/8] Linking C executable ringzero_udp_sequence
+[7/8] Building C object CMakeFiles/ringzero_hashing_compare.dir/src/compare.c.o
+[8/8] Linking C executable ringzero_hashing_compare

@@ -1,0 +1,3 @@
+cfd3d941e4f49de4868423f157bc02dd75bcf4705fa7912287ca29bdbcd22680  bpf/xdp_lb.o
+fc23c1c0b52c21dded08e89a6f1ee1b0d94e1dfa76e5c7438fa634f02ecd6694  bpf/xdp_pass.o
+405a99aea4cbdebb11567f15715c1670d8fe6e97c079e3465253eb9ba67b8f7f  zig-out/bin/ringzero

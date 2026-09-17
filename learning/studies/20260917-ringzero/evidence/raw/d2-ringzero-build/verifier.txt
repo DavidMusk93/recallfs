@@ -1,0 +1,8 @@
+libbpf: elf: skipping unrecognized data section(17) .eh_frame
+libbpf: elf: skipping relo section(18) .rel.eh_frame for section(17) .eh_frame
+ d
+xdp f
+6162: xdp  name xdp_lb_prog  tag edc0558aeca176a9  gpl
+	loaded_at 2026-09-17T12:47:12+0800  uid 0
+	xlated 2896B  jited 1694B  memlock 4096B  map_ids 2391,2388,2389,2390
+	btf_id 519

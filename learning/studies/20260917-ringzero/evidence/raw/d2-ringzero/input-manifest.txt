@@ -1,0 +1,7 @@
+upstream_revision=9a56125f02fcbce55448482d442d99729573ab06
+kernel=Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
+405a99aea4cbdebb11567f15715c1670d8fe6e97c079e3465253eb9ba67b8f7f  /root/recallfs/.tmp/ringzero-upstream-validation/zig-out/bin/ringzero
+cfd3d941e4f49de4868423f157bc02dd75bcf4705fa7912287ca29bdbcd22680  /root/recallfs/.tmp/ringzero-upstream-validation/bpf/xdp_lb.o
+fc23c1c0b52c21dded08e89a6f1ee1b0d94e1dfa76e5c7438fa634f02ecd6694  /root/recallfs/.tmp/ringzero-upstream-validation/bpf/xdp_pass.o
+f416aa939c51d910844d3abcc073bf958076af3586a3a792da92e7a3d3517cb3  /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/zig-build/ringzero_udp_sequence
+a95593b7b83aa78183c40f508ce61d77a988a494b5d63edc158fde6d2a1bf4f7  /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/scripts/validate_ringzero_netns.sh

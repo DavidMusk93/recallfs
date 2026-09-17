@@ -1,0 +1,16 @@
+clang version 20.1.8 (Fil-C 0.684 git@github.com:pizlonator/llvm-project-deluge.git 0f06037def80573162db5cfcda000af31006720e)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /root/recallfs/.tmp/fil-c/dist/build/bin
+Build config: +assertions
+PASS: 6 hashing suites
+# keys=10000 lookup_keys=1000 samples=3 backends=8 table_size=1031 vnodes=32 removed_id=4 order_offset=0
+algorithm,max_over_avg,min_over_avg,cv,add_churn,remove_middle_churn,lookup_ns,build_us,memory_bytes,checksum
+modulo,1.052000,0.939200,0.034544,0.889100,0.875400,6.800,1.326,32,2468721106057277111
+ring,1.187200,0.797600,0.149438,0.106900,0.148400,70.769,129.196,4096,9928660226946329822
+rendezvous,1.054400,0.903200,0.042228,0.116300,0.127400,60.964,1.789,32,1779041303510111592
+jump,1.044000,0.940000,0.030029,0.111600,0.487200,18.911,1.374,32,3975689635101588777
+maglev,1.024000,0.962400,0.020715,0.131900,0.145100,6.785,18.472,4124,16521886276294938957
+# sink=17785974765837096857
+PASS: UDP sequence encoding and bitmap accounting
+mode=send expected=1 sent=1

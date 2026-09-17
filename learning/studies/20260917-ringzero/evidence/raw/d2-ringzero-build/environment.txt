@@ -1,0 +1,35 @@
+upstream_revision=9a56125f02fcbce55448482d442d99729573ab06
+upstream_tree=6502deb78dc33576dfbb913f55aa90ab3cb49c02
+Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
+zig_version=0.16.0
+zig_archive_sha256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+libbpf_pkgconfig=4.19
+libbpf_runtime=/usr/lib/x86_64-linux-gnu/libbpf.so.1.0.1
+interfaces:
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+eth0             UP             00:16:3e:60:e4:9b <BROADCAST,MULTICAST,UP,LOWER_UP>
+br-1f604c6cdd61  DOWN           02:42:65:bf:f0:6b <NO-CARRIER,BROADCAST,MULTICAST,UP>
+br-6bbdd7f856a7  DOWN           02:42:9c:46:a3:5c <NO-CARRIER,BROADCAST,MULTICAST,UP>
+br-9dd28fdc7e81  UP             02:42:44:64:8f:35 <BROADCAST,MULTICAST,UP,LOWER_UP>
+br-a3593bd5ba59  UP             02:42:c3:52:de:30 <BROADCAST,MULTICAST,UP,LOWER_UP>
+docker0          UP             02:42:6a:ec:0a:5b <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethab102d5@if273 UP             26:48:12:f3:37:4f <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethcf0974f@if277 UP             7e:02:62:fd:62:f8 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth2dd765e@if21 UP             ca:23:e9:e8:a8:2f <BROADCAST,MULTICAST,UP,LOWER_UP>
+vetha0fb7ae@if291 UP             3a:0d:cd:f8:fe:35 <BROADCAST,MULTICAST,UP,LOWER_UP>
+br-482e6dff1e2d  UP             02:42:4c:c8:fb:9e <BROADCAST,MULTICAST,UP,LOWER_UP>
+tailscale0       UNKNOWN        <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP>
+veth37fe569@if187 UP             b6:f4:b0:e5:9f:c2 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth4c95cfb@if189 UP             26:ce:21:4d:68:f1 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth40e346e@if195 UP             9a:71:4e:02:73:a3 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth1b8127a@if201 UP             42:8f:28:f7:65:15 <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethca92098@if207 UP             46:68:6f:eb:27:61 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth1f8d4d4@if213 UP             96:d0:e3:c7:04:6d <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethb03b397@if221 UP             86:bc:19:03:ea:f8 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth96958f4@if223 UP             66:d8:03:64:0d:93 <BROADCAST,MULTICAST,UP,LOWER_UP>
+veth0ae983a@if225 UP             86:23:30:63:8d:03 <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethfc223ae@if237 UP             de:6e:f8:47:69:8b <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethe403271@if239 UP             a2:31:5d:43:7b:dd <BROADCAST,MULTICAST,UP,LOWER_UP>
+vethf374a41@if243 UP             fe:7f:e8:d4:ef:0e <BROADCAST,MULTICAST,UP,LOWER_UP>
+eth0_driver=virtio_net
+eth0_rx_queues=1

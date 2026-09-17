@@ -1,0 +1,20 @@
+Internal ctest changing into directory: /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build
+Test project /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build
+    Start 1: ringzero_hashing_properties
+1/7 Test #1: ringzero_hashing_properties ......................   Passed    0.02 sec
+    Start 2: ringzero_udp_sequence_self_test
+2/7 Test #2: ringzero_udp_sequence_self_test ..................   Passed    0.00 sec
+    Start 3: ringzero_udp_sequence_rejects_negative_pace
+3/7 Test #3: ringzero_udp_sequence_rejects_negative_pace ......   Passed    0.00 sec
+    Start 4: ringzero_udp_sequence_rejects_negative_timeout
+4/7 Test #4: ringzero_udp_sequence_rejects_negative_timeout ...   Passed    0.00 sec
+    Start 5: ringzero_hashing_compare_smoke
+5/7 Test #5: ringzero_hashing_compare_smoke ...................   Passed    0.01 sec
+    Start 6: ringzero_hashing_compare_rejects_bad_offset
+6/7 Test #6: ringzero_hashing_compare_rejects_bad_offset ......   Passed    0.00 sec
+    Start 7: ringzero_hashing_compare_rejects_size_overflow
+7/7 Test #7: ringzero_hashing_compare_rejects_size_overflow ...   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Total Test time (real) =   0.04 sec

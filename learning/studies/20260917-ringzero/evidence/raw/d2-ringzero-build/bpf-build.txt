@@ -1,0 +1,5 @@
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > bpf/vmlinux.h
+/root/recallfs/.tmp/zig/dist/zig cc -g -O2 -target bpfel-freestanding -D__TARGET_ARCH_x86 -I bpf -I /root/recallfs/.tmp/ringzero-bpf-headers -I /usr/include -I /usr/include/x86_64-linux-gnu -Wall -Wno-unused-value -Wno-pointer-sign -Wno-compare-distinct-pointer-types -c bpf/xdp_lb.c -o bpf/xdp_lb.o
+built bpf/xdp_lb.o
+/root/recallfs/.tmp/zig/dist/zig cc -g -O2 -target bpfel-freestanding -D__TARGET_ARCH_x86 -I bpf -I /root/recallfs/.tmp/ringzero-bpf-headers -I /usr/include -I /usr/include/x86_64-linux-gnu -Wall -Wno-unused-value -Wno-pointer-sign -Wno-compare-distinct-pointer-types -c bpf/xdp_pass.c -o bpf/xdp_pass.o
+built bpf/xdp_pass.o

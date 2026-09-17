@@ -1,0 +1,11 @@
+1/1 maglev.test.maglev distributes and is deterministic...FAIL (TestUnexpectedResult)
+/root/recallfs/.tmp/zig/dist/lib/std/testing.zig:615:14: 0x1234609 in expect (std.zig)
+    if (!ok) return error.TestUnexpectedResult;
+             ^
+/root/recallfs/.tmp/ringzero-upstream-validation/src/maglev.zig:76:9: 0x1234896 in test.maglev distributes and is deterministic (maglev.zig)
+        try std.testing.expect(slot >= 0 and slot < 4);
+        ^
+0 passed; 0 skipped; 1 failed.
+error: the following test command failed with exit code 1:
+.zig-cache/o/37a753f48d15da2949b74a6eceb75caf/test --seed=0x60b8b0ed
+exit_status=1

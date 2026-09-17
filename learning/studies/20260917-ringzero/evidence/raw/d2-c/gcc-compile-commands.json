@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build",
+  "command": "/usr/bin/gcc -I/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/include -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -fno-omit-frame-pointer -flto -fno-fat-lto-objects -Wall -Wextra -Werror -Wconversion -Wshadow -Wstrict-prototypes -fno-omit-frame-pointer -o CMakeFiles/ringzero_hashing.dir/src/hashing.c.o -c /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/src/hashing.c",
+  "file": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/src/hashing.c",
+  "output": "CMakeFiles/ringzero_hashing.dir/src/hashing.c.o"
+},
+{
+  "directory": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build",
+  "command": "/usr/bin/gcc -I/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/include -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -fno-omit-frame-pointer -Wall -Wextra -Werror -Wconversion -Wshadow -Wstrict-prototypes -fno-omit-frame-pointer -o CMakeFiles/ringzero_hashing_test.dir/tests/test_hashing.c.o -c /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/tests/test_hashing.c",
+  "file": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/tests/test_hashing.c",
+  "output": "CMakeFiles/ringzero_hashing_test.dir/tests/test_hashing.c.o"
+},
+{
+  "directory": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build",
+  "command": "/usr/bin/gcc -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -fno-omit-frame-pointer -Wall -Wextra -Werror -Wconversion -Wshadow -Wstrict-prototypes -fno-omit-frame-pointer -o CMakeFiles/ringzero_udp_sequence.dir/tools/udp_sequence.c.o -c /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/tools/udp_sequence.c",
+  "file": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/tools/udp_sequence.c",
+  "output": "CMakeFiles/ringzero_udp_sequence.dir/tools/udp_sequence.c.o"
+},
+{
+  "directory": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/gcc-build",
+  "command": "/usr/bin/gcc -I/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/include -O3 -march=native -mtune=native -DNDEBUG -flto -fno-ipa-icf -fno-omit-frame-pointer -flto -fno-fat-lto-objects -Wall -Wextra -Werror -Wconversion -Wshadow -Wstrict-prototypes -fno-omit-frame-pointer -o CMakeFiles/ringzero_hashing_compare.dir/src/compare.c.o -c /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/src/compare.c",
+  "file": "/root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/source/src/compare.c",
+  "output": "CMakeFiles/ringzero_hashing_compare.dir/src/compare.c.o"
+}
+]

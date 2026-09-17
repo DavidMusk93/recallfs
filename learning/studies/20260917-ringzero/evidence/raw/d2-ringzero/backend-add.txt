@@ -1,0 +1,2 @@
+added backend_id 0: 10.221.0.2 (mac be:9d:47:2d:71:c3) via rzvo3540700 for vip_id 0
+rebuilt maglev table for vip_id=0: 1 healthy backend(s)

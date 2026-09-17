@@ -1,0 +1,9 @@
+Actual changes:
+tx-checksum-ip-generic: off
+tx-generic-segmentation: off
+tx-tcp-segmentation: off [not requested]
+tx-tcp-ecn-segmentation: off [not requested]
+tx-tcp-mangleid-segmentation: off [not requested]
+tx-tcp6-segmentation: off [not requested]
+tx-checksum-sctp: off
+rx-checksum: off

@@ -1,0 +1,9 @@
+# Decisive excerpt preserved from the earlier d2 two-backend rewrite probe.
+# The failed expectation was intentionally not treated as a dataplane failure.
+prog_id=6109
+input:  63 bytes, 10.10.0.2 -> 10.99.0.1:9000/udp
+return: 4 (XDP_REDIRECT)
+output: dst_mac=5e:38:3c:84:a8:94 src_mac=06:9b:b6:ca:24:92 dst_ip=10.30.0.2 ip_csum_valid=True
+output: l4_csum_valid=True
+FAIL: expected rewritten dst 10.20.0.2, got 10.30.0.2
+FAIL

@@ -1,0 +1,4 @@
+hardware_perf_status=0
+software_perf_status=0
+hardware_pmu=unavailable
+software_perf=available

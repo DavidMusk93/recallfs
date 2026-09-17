@@ -1,0 +1,12 @@
+
+ Performance counter stats for 'numactl --physcpubind=16 --membind=0 /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/zig-build/ringzero_hashing_compare --keys 100000 --lookup-keys 100000 --samples 3 --backends 32 --table-size 4099 --vnodes 256 --order-offset 0':
+
+            279.74 msec task-clock                #    0.997 CPUs utilized
+                 1      context-switches          #    3.575 /sec
+                 1      cpu-migrations            #    3.575 /sec
+               623      page-faults               #    2.227 K/sec
+
+       0.280538654 seconds time elapsed
+
+       0.276619000 seconds user
+       0.003994000 seconds sys

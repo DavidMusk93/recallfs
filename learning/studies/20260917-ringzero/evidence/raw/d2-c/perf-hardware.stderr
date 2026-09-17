@@ -1,0 +1,17 @@
+
+ Performance counter stats for 'numactl --physcpubind=16 --membind=0 /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/zig-build/ringzero_hashing_compare --keys 100000 --lookup-keys 100000 --samples 3 --backends 32 --table-size 4099 --vnodes 256 --order-offset 0':
+
+   <not supported>      cycles
+   <not supported>      instructions
+   <not supported>      branches
+   <not supported>      branch-misses
+   <not supported>      cache-misses
+   <not supported>      L1-dcache-loads
+   <not supported>      L1-dcache-load-misses
+   <not supported>      dTLB-loads
+   <not supported>      dTLB-load-misses
+
+       0.321431457 seconds time elapsed
+
+       0.316519000 seconds user
+       0.005008000 seconds sys

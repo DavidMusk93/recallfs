@@ -1,0 +1,8 @@
+compile_status=1
+test_hashing.c:(.text+0x7a2d): undefined reference to `pizlonated_rz_maglev_build_with_parameters'
+test_hashing.c:(.text+0x7e5b): undefined reference to `pizlonated_rz_selector_maglev_table'
+test_hashing.c:(.text+0x801b): undefined reference to `pizlonated_rz_maglev_build_ordered'
+test_hashing.c:(.text+0x8121): undefined reference to `pizlonated_rz_selector_destroy'
+test_hashing.c:(.text+0x81bd): undefined reference to `pizlonated_rz_hash_key'
+test_hashing.c:(.text+0x8287): undefined reference to `pizlonated_rz_selector_select'
+test_hashing.c:(.text+0x837b): undefined reference to `pizlonated_rz_selector_create'

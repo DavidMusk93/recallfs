@@ -1,0 +1,9 @@
+-- The C compiler identification is Clang 21.1.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /root/recallfs/.tmp/zig/dist/zig - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /root/recallfs/.tmp/ringzero-c-validation/run-20260917T062801Z-10444/work/zig-build

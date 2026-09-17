@@ -1,5 +1,5 @@
 ---
-doc_id: recallfs-study-ringzero-v1
+doc_id: recallfs-study-ringzero-v2
 kind: study
 status: active
 authority: design
@@ -8,13 +8,16 @@ applies_to:
 depends_on:
   - recallfs-agent-ready-docs-v1
   - recallfs-source-ringzero-study-v1
-supersedes: []
+supersedes:
+  - recallfs-study-ringzero-v1
 verified_by:
   - RZ-RA-1
   - RZ-RA-2
   - RZ-RA-3
   - RZ-RA-4
   - RZ-RA-5
+  - RZ-RA-6
+  - RZ-RA-7
 ---
 
 # RingZero、XDP 与 Maglev 深度学习
@@ -49,7 +52,7 @@ driver hook。对于 zero-drop 场景，XDP 仍可能显著减少 CPU 和增加�
 
 ### Non-goals
 
-- 不在 macOS 上伪造 XDP、NIC 或 packet-per-second 结果；
+- 不把 d2 的单队列 veth/virtio 结果伪装成物理 NIC 或 line-rate 结果；
 - 不因上游 README 的性能描述宣称已达到 line rate；
 - 不把 selector microbenchmark 外推为完整 packet path 性能；
 - 不修改或复制未授予 license 的 RingZero 源码；
@@ -155,20 +158,22 @@ parsing is not a valid policy.
 
 | Anchor | Input or condition | Exact expected result | Verification |
 | --- | --- | --- | --- |
-| `RZ-RA-1` | NSDI'16 sample: 3 backends, 7 slots | `[1,0,1,0,2,2,0]`; after removing 1: `[0,0,0,0,2,2,2]` | `cargo test` in `benchmark/` |
-| `RZ-RA-2` | 32 backends, 4099 Maglev slots | backend slot counts differ by exactly 1 | `cargo test` |
-| `RZ-RA-3` | four IDs in forward/reverse order | canonical tables equal; raw ordered tables differ in exactly 8 slots | `cargo test` |
-| `RZ-RA-4` | 1M keys, 32 to 33 backends | Modulo add churn >95%; Maglev 2%-8%; Jump middle-remove 45%-55% | `compare` release run |
-| `RZ-RA-5` | upstream `zig test src/maglev.zig` | exit 1 at the invalid `slot < 4` assertion | `evidence/raw/upstream-zig-test.txt` |
-| `RZ-RA-6` | target native-XDP zero-drop run | sender/receiver sequence ledger has zero missing IDs and every drop layer has zero unexplained delta | pending target Linux/NIC run |
+| `RZ-RA-1` | NSDI'16 sample: 3 backends, 7 slots | `[1,0,1,0,2,2,0]`; after removing 1: `[0,0,0,0,2,2,2]` | CTest in `benchmark/` |
+| `RZ-RA-2` | 32 backends, 4099 Maglev slots | backend slot counts differ by exactly 1 | CTest |
+| `RZ-RA-3` | four IDs in forward/reverse order | canonical tables equal; raw ordered tables differ in exactly 8 slots | CTest |
+| `RZ-RA-4` | 1M keys, 32 to 33 backends | Modulo add churn >95%; Maglev 2%-8%; Jump middle-remove 45%-55% | d2 `compare` |
+| `RZ-RA-5` | upstream `zig test src/maglev.zig` | exit 1 at the invalid `slot < 4` assertion | `evidence/raw/d2-ringzero-build/upstream-maglev-test.txt` |
+| `RZ-RA-6` | C safety/native matrix on d2 | FIL-C paths pass; Zig and GCC CTest both 7/7 pass | `benchmark/scripts/run_on_d2.sh` |
+| `RZ-RA-7` | d2 veth/native-XDP, 10k paced UDP | 10k unique, zero missing/duplicate/invalid, XDP packets=10k, cleanup pass | `benchmark/scripts/run_on_d2.sh d2 <ringzero-root>` |
 
 ### Evidence And Unknowns
 
 Observed evidence is indexed in [`evidence/README.md`](evidence/README.md).
-`RZ-RA-1` through `RZ-RA-5` pass as documented. `RZ-RA-6` remains open because
-the local host is macOS and no target NIC was supplied. Unknowns include actual
-native-XDP throughput, sustained zero-loss envelope, p99/p999 latency, queue
-scaling, backend return path, control-plane race behavior and upgrade recovery.
+`RZ-RA-1` through `RZ-RA-7` pass as documented. d2 proves Linux build,
+verifier acceptance, native XDP on veth and zero observed loss for one bounded
+10k-packet workload. Unknowns still include physical-NIC throughput, RSS queue
+scaling, sustained high-load zero-loss envelope, p99/p999 latency, backend
+return path, control-plane race behavior and upgrade recovery.
 
 ## 1. 结论先行
 
@@ -409,6 +414,29 @@ CoNEXT'18 也明确把 QoS/rate transition 与 destination exhaustion 列为 XDP
 “在该包络内观察到 zero drop”。RingZero 当前的 `floodgen` 忽略
 `ENOBUFS`，backend sink 不含 sequence oracle，不能完成这项证明。
 
+### 4.5 d2 实践结果
+
+d2 上的验证先建立了 Linux execution path：
+
+- 固定 Zig 0.16.0 编译 BPF object；
+- kernel verifier 接受 `xdp_lb_prog`，生成 1694-byte JIT image；
+- veth 上明确以 `XDP_FLAGS_DRV_MODE` attach，而不是 generic fallback；
+- C sequence oracle 以单 backend 发送并接收 10,000 个 UDP packet；
+- receiver 报告 10,000 unique、0 missing、0 duplicate、0 invalid；
+- RingZero 报告 10,000 packets、0 dropped，清理探针通过。
+
+这个请求 50 us inter-packet pacing 的受控实验验证了 rewrite、checksum、
+redirect 和接收账本能闭合。sender 没有记录 elapsed time，所以不报告实际
+pps。它没有验证高压包络。上游高压脚本的 sender 报告 2,407,680 packets
+（约 1.204 Mpps），XDP 只计到 1,909,482，两个 polling sink 合计只报告
+12,266。由于 sender 没有 sequence oracle，也没有逐层 drop counter，这个
+结果不能解释为 RingZero 的精确 loss rate；它直接证明该脚本不能支持
+zero-drop 结论。
+
+d2 的 `eth0` 是单队列 `virtio_net`，hardware PMU 也不可用。因此当前证据
+只覆盖 native veth correctness，不覆盖物理 NIC、RSS、多队列、NIC DMA、
+cache/TLB 或 line rate。
+
 ## 5. Maglev Hashing
 
 ### 5.1 算法
@@ -480,17 +508,18 @@ per-packet lookup 的固定成本。
 7. **top-K/replication 不天然。**
    Rendezvous 可直接取 score 前 K；基础 Maglev 只给一个 backend。
 
-### 5.4 本地对比
+### 5.4 d2 C 对比
 
-固定 32 backends、1M stable keys：
+固定 32 backends、1M stable keys；下表使用 Zig 0.16.0/Clang 21.1.0
+ThinLTO 的五次轮换顺序 median-of-medians：
 
-| Algorithm | Max/avg | Add churn | Remove-middle churn | Lookup ns | Main memory |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Modulo | 1.011 | 96.95% | 96.88% | 0.494 | 128 B |
-| Ring, 256 vnodes/backend | 1.096 | 2.87% | 3.28% | 8.408 | 128 KiB |
-| Rendezvous | 1.010 | 3.01% | 3.11% | 43.287 | 128 B |
-| Jump | 1.010 | 3.00% | 49.96% | 19.430 | 128 B |
-| Maglev, 4099 slots | 1.007 | 4.76% | 5.20% | 0.681 | 16,524 B |
+| Algorithm | Max/avg | Add churn | Remove-middle | Lookup ns | Build us | Main memory |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Modulo | 1.011 | 96.95% | 96.88% | 3.298 | 0.514 | 128 B |
+| Ring, 256 vnodes/backend | 1.096 | 2.87% | 3.28% | 98.283 | 1138.465 | 128 KiB |
+| Rendezvous | 1.010 | 3.01% | 3.11% | 117.616 | 0.536 | 128 B |
+| Jump | 1.010 | 3.00% | 49.96% | 37.015 | 0.534 | 128 B |
+| Maglev, 4099 slots | 1.007 | 4.76% | 5.20% | 3.294 | 66.704 | 16,396 B |
 
 这些数字说明选择逻辑：
 
@@ -504,8 +533,13 @@ per-packet lookup 的固定成本。
 - **Maglev**：packet-rate lookup 最有优势，balance 最稳定；付出固定 table、
   rebuild/publish 和较高 churn。
 
-本机 selector 时间不能外推到 BPF。可迁移的结论是复杂度和 layout，不是
-`0.681 ns` 这个平台数字。
+GCC 8.3/LTO 独立构建产生完全相同的 balance、churn 和 checksum；其 Maglev
+lookup/build medians 为 `3.290 ns`/`62.485 us`。Zig/GCC 的 4x lookup
+workload wall time 分别是 1x 的 3.89/3.94 倍，两个 final binary 的反汇编和
+checksum 也保留在 evidence 中。d2 KVM
+不支持 hardware PMU，所以 selector 时间仍不能外推到 BPF packet path。
+`lookup_ns` 还包含共同的 selector dispatch、循环和 checksum oracle；可迁移
+的结论是复杂度、layout 和两套编译器一致的相对关系，不是某个纳秒数。
 
 ## 6. RingZero Code Audit
 
@@ -567,6 +601,24 @@ production parser 应先定义而后实现：
 “verifier 允许加载”只说明 pointer access 受约束，不说明这些 protocol choices
 正确。
 
+### 6.3 Build 与运行兼容性
+
+d2 实践暴露出 source review 看不到的部署约束：
+
+- Zig 0.16.0 需要 `-target bpfel-freestanding`；上游 `-target bpf` 不能直接
+  生成该环境可用的 BPF object；
+- Debian 10 的 libbpf development metadata 是 4.19，而运行库存在
+  `libbpf.so.1.0.1`；构建必须显式固定 v1.0.1 headers 与 library path；
+- 旧 `iproute2` 会对 Zig 生成的零大小 BTF `DATASEC` 发出警告，即使
+  `bpftool` verifier/load 和 native veth attach 成功；
+- 上游 Python probe 的 `bytes.hex(":")` 不兼容 Python 3.7；
+- `zig build test` 返回 0 不代表独立 `zig test src/maglev.zig` 通过，后者
+  实际在错误的 `slot < 4` 断言处失败。
+
+production build 必须把 Zig、libbpf headers/runtime、kernel BTF、iproute2/
+bpftool 和 probe runtime 作为一个版本矩阵管理，不能把“在开发机编译成功”
+等同于目标机可装载。
+
 ## 7. 采用决策
 
 ### 7.1 选择 XDP
@@ -615,7 +667,7 @@ RingZero 的下一步不是增加更多 demo feature，而是先关闭语义缺�
 3. immutable generation build + atomic publish；
 4. active-flow conntrack/drain semantics；
 5. receive-side independent loss oracle；
-6. native-XDP target qualification；
+6. physical-NIC native-XDP、RSS/NUMA 与 offered-load qualification；
 7. fault injection、upgrade/schema migration 和 long soak；
 8. 获得明确开源 license 后再讨论源码复用。
 

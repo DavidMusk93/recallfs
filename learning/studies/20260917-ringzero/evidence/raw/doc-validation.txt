@@ -1,2 +1,11 @@
-relative_links=ok files=6
-doc_dag=ok docs=7
+relative_links=ok files=9
+doc_ids=ok count=49
+doc_dependencies=ok
+doc_supersedes=ok
+doc_dag=ok
+source_digests=ok files=10
+evidence_manifests=ok sets=2 exact_file_sets=true
+packet_input_binding=ok
+benchmark_summary=ok rows=10
+cross_compiler_semantics=equal
+benchmark_docs=ok
