@@ -323,7 +323,8 @@ deletion-map correctness passed: 7 suites
   tombstone。
 - RocksDB `4052fccd` 的最终源码显式检查完整可见性、mutable memtable、
   snapshot/transaction sequence、重复 range 和 external ingest barrier。
-- C demo 在 FIL-C 0.684 与 Apple Clang 21.0.0 下通过七组测试。
+- C demo 在 FIL-C 0.684 与 Zig 0.16.0 `zig cc` 下通过七组测试；
+  两套 CMake/CTest 构建和 Zig ASan/UBSan 也已通过。
 - 独立 point-history oracle 覆盖 snapshot 0..40 和双向扫描。
 
 ### 上游而未本地复现

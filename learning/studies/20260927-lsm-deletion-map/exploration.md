@@ -78,20 +78,39 @@ failed expression and exits. The tests are now valid with `-DNDEBUG`.
 
 ```text
 Host: Darwin arm64, kernel 25.5.0
-Native compiler: Apple clang 21.0.0
 FIL-C compiler: clang 20.1.8, Fil-C 0.684
 FIL-C target: aarch64-unknown-linux-gnu
-CMake: unavailable on host
+pyenv: 2.6.32
+Python: 3.13.13
+uv: 0.11.26
+CMake: 4.4.3
+Ninja: 1.13.2
+Zig: 0.16.0
 ```
 
 The repository-local FIL-C wrapper started its Ubuntu 26.04 ARM64 Lima guest
-and successfully compiled and ran the tests. Because `cmake` was absent, the
-same source graph was compiled directly with FIL-C and Apple Clang.
+and successfully compiled and ran the tests.
 
-Apple Clang also passed `-pedantic`, `-fsanitize=address,undefined`, and
-`clang --analyze`. Leak detection was disabled after the Apple ASan runtime
-reported that `detect_leaks=1` is unsupported; ASan and UBSan then executed the
-complete suite.
+The host initially lacked `pyenv`, CMake, Ninja, and Zig. `pyenv` 2.6.32 was
+cloned from its official tag into `.tmp/tooling/pyenv`; it then built CPython
+3.13.13 under `.tmp/tooling/pyenv-root`. `uv` created isolated CMake and Zig
+environments from that interpreter. The first requested Python version,
+3.13.14, was not in pyenv 2.6.32's definitions, so installation stopped before
+mutation and was retried with the latest listed version, 3.13.13. Likewise,
+the configured package index did not contain CMake 4.1.1; `uv --dry-run`
+resolved CMake 4.4.3 and Ninja 1.13.2, which were then installed with exact
+pins.
+
+The first CMake/FIL-C build exposed a host/target archive mismatch:
+`/usr/bin/ar` wrapped Linux ARM64 FIL-C objects in a form the FIL-C linker
+could not resolve, producing undefined `pizlonated_*` symbols. Changing the
+teaching library from `STATIC` to `OBJECT` removed the unnecessary archive
+step. CMake configure, build, and CTest then passed with FIL-C.
+
+Zig 0.16.0 `zig cc` replaced the earlier system-Clang cross-check. Direct,
+CMake/CTest, and ASan/UBSan Zig runs all passed. The earlier Apple Clang
+`detect_leaks=1` failure remains historical evidence from before the tool
+policy correction, not a final verification path.
 
 ### 7. Observed output
 

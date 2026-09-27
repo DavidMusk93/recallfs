@@ -3,7 +3,7 @@ project(lsm_deletion_map_demo C)
 
 add_compile_options(-Wall -Wextra -Werror)
 
-add_library(deletion_map STATIC src/deletion_map.c)
+add_library(deletion_map OBJECT src/deletion_map.c)
 target_include_directories(
     deletion_map
     PUBLIC

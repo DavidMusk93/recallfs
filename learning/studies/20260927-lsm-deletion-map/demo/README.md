@@ -60,24 +60,51 @@ Build and run the narrated example with the same toolchain:
 
 ## CMake
 
-For an environment with CMake:
+The validated local tool environment uses pyenv 2.6.32 with CPython 3.13.13,
+uv 0.11.26, CMake 4.4.3, and Ninja 1.13.2. Configure the FIL-C build from the
+repository root:
 
 ```bash
-cmake \
+.tmp/tooling/cmake/venv/bin/cmake \
   -S learning/studies/20260927-lsm-deletion-map/demo \
   -B .tmp/deletion-map-cmake \
+  -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$PWD/.tmp/tooling/cmake/venv/bin/ninja" \
   -DCMAKE_SYSTEM_NAME=Linux \
   -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
   -DCMAKE_C_COMPILER="$PWD/.tmp/fil-c/bin/filcc" \
   -DFIL_RUNNER="$PWD/.tmp/fil-c/bin/filrun" \
   -DCMAKE_BUILD_TYPE=Release
 
-cmake --build .tmp/deletion-map-cmake -j
-ctest --test-dir .tmp/deletion-map-cmake --output-on-failure
+.tmp/tooling/cmake/venv/bin/cmake --build .tmp/deletion-map-cmake -j
+.tmp/tooling/cmake/venv/bin/ctest \
+  --test-dir .tmp/deletion-map-cmake \
+  --output-on-failure
 ```
 
-The 2026-09-27 validation host did not have `cmake` installed, so the recorded
-evidence uses the equivalent direct FIL-C and Apple Clang commands.
+The final CMake graph uses an `OBJECT` library. A static archive made CMake
+select the macOS `/usr/bin/ar` for FIL-C's Linux objects, producing an
+incompatible archive. The object-library form avoids a cross-target archiver
+while retaining one compiled implementation for both executables.
+
+The LLVM frontend cross-check uses the pinned Zig installation:
+
+```bash
+ZIG="$PWD/.tmp/tooling/zig/venv/lib/python3.13/site-packages/ziglang/zig"
+
+.tmp/tooling/cmake/venv/bin/cmake \
+  -S learning/studies/20260927-lsm-deletion-map/demo \
+  -B .tmp/deletion-map-zig-cmake \
+  -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$PWD/.tmp/tooling/cmake/venv/bin/ninja" \
+  -DCMAKE_C_COMPILER="$ZIG;cc" \
+  -DCMAKE_BUILD_TYPE=Release
+
+.tmp/tooling/cmake/venv/bin/cmake --build .tmp/deletion-map-zig-cmake -j
+.tmp/tooling/cmake/venv/bin/ctest \
+  --test-dir .tmp/deletion-map-zig-cmake \
+  --output-on-failure
+```
 
 ## What The Counters Mean
 
