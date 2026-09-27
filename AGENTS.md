@@ -67,9 +67,19 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
 
 ## 5. 工具与记忆
 
-- **LLVM 编译器**：需要 LLVM 编译器时，下载固定版本的 Zig，并使用
-  `zig cc` / `zig c++` 作为 LLVM frontend；记录 Zig 版本、下载制品
-  SHA-256 和完整编译参数，不得用未声明的系统 Clang 静默替代。
+- **LLVM frontend 统一使用 Zig**：凡任务需要 LLVM 系 C/C++ frontend、LLVM
+  codegen 或以 Clang 语义执行编译检查，必须下载并固定 Zig 版本，使用
+  `zig cc` / `zig c++`；记录 Zig 版本、下载制品 SHA-256 和完整编译参数。
+  不得直接使用系统 Clang 静默替代。只有目标生产环境明确要求其原生工具链时，
+  才可在已通过规定正确性门禁后补充原生编译结果，并明确区分证据来源。
+- **缺失工具必须补齐**：不得因 `command not found` 跳过构建、测试、检查或验收
+  门禁。Python 分发的构建工具（如 CMake、Ninja、Meson）优先以 pyenv 管理的
+  固定 Python 为基础，用 `uv` 创建仓库本地隔离环境并安装到
+  `.tmp/tooling/<tool>/`；记录 pyenv Python、uv、工具版本和完整安装命令，禁止
+  污染仓库或依赖未声明的全局包。若 `pyenv`、`uv` 本身缺失，先从可校验的官方
+  来源安装固定版本；非 Python 分发工具使用固定版本的官方制品或项目规定的包
+  管理器并校验 digest。只有完成安装尝试且存在不可消除的外部阻塞时，才可报告
+  未执行，必须同时记录失败命令、错误和剩余验证缺口。
 - **C 正确性工具链**：C 代码必须先使用 [FIL-C](https://fil-c.org/) 编译和测试；FIL-C 用于验证被执行路径的功能正确性、内存安全和未定义行为边界，不作为完整证明或性能基线。将 FIL-C 及其宿主适配封装在仓库 `.tmp/fil-c/`，不得提交编译器、VM 镜像或构建产物；若当前平台不能原生运行 FIL-C，使用其官方支持的隔离 Linux 环境，不得静默降级为系统 Clang。
 - **C benchmark 工具链**：性能测试必须在目标机器上切换到原生 C 编译器，并使用适合该机器和生产语义的最佳优化配置；默认至少包含 `-O3 -march=native -mtune=native -DNDEBUG`，工具链稳定支持时再启用 LTO。benchmark 前仍须通过 FIL-C 正确性验证；优化构建必须保留始终启用的结果校验和可观察 sink，并通过反汇编或负向测试确认待测工作未被 DCE、循环交换或合并。测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数，并用 wall time 与硬件计数器交叉验证；PMU 不可用时须记录原因，退化为拓扑 + wall time 证据，不得静默换用 VM、模拟器或安全插桩计数。不得把 FIL-C、VM、模拟器或安全插桩运行时间当作目标 CPU 的性能结论。
 - **工具实现**：有长期复用价值的工具优先使用 Rust 实现，并按领域放入 `tools/$domain/`；工具二进制和临时输出写入 `.tmp/`。
