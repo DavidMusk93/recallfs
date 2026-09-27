@@ -2,11 +2,11 @@
 
 #include "spsc_ring.h"
 
+#include <pthread.h>
 #include <stdalign.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 _Static_assert(SPSC_CACHE_LINE_SIZE >= sizeof(atomic_size_t),
                "cache line must hold an atomic index");
@@ -60,7 +60,8 @@ spsc_status spsc_ring_create(spsc_ring **out, size_t capacity,
   if (capacity > SIZE_MAX / sizeof(*ring->slots)) {
     return SPSC_SIZE_OVERFLOW;
   }
-  if (posix_memalign((void **)&ring, SPSC_CACHE_LINE_SIZE, sizeof(*ring)) != 0) {
+  if (posix_memalign((void **)&ring, SPSC_CACHE_LINE_SIZE, sizeof(*ring)) !=
+      0) {
     return SPSC_ALLOCATION_FAILED;
   }
 
@@ -120,15 +121,12 @@ void spsc_ring_describe_layout(const spsc_ring *ring, spsc_layout *out) {
   out->configured_cache_line = SPSC_CACHE_LINE_SIZE;
   out->ring_alignment = alignof(spsc_ring);
   out->ring_size = sizeof(*ring);
-  out->head_offset =
-      (size_t)((const unsigned char *)&ring->atomic_head -
-               (const unsigned char *)ring);
-  out->tail_offset =
-      (size_t)((const unsigned char *)&ring->atomic_tail -
-               (const unsigned char *)ring);
-  out->atomic_size_t_lock_free =
-      atomic_is_lock_free(&ring->atomic_head) &&
-      atomic_is_lock_free(&ring->atomic_tail);
+  out->head_offset = (size_t)((const unsigned char *)&ring->atomic_head -
+                              (const unsigned char *)ring);
+  out->tail_offset = (size_t)((const unsigned char *)&ring->atomic_tail -
+                              (const unsigned char *)ring);
+  out->atomic_size_t_lock_free = atomic_is_lock_free(&ring->atomic_head) &&
+                                 atomic_is_lock_free(&ring->atomic_tail);
 }
 
 bool spsc_ring_indexes_share_cache_line(const spsc_ring *ring,
@@ -192,8 +190,7 @@ bool spsc_seq_cst_try_push(spsc_ring *ring, uint64_t value) {
       atomic_load_explicit(&ring->atomic_head, memory_order_seq_cst);
   const size_t next = next_index(ring, head);
 
-  if (next ==
-      atomic_load_explicit(&ring->atomic_tail, memory_order_seq_cst)) {
+  if (next == atomic_load_explicit(&ring->atomic_tail, memory_order_seq_cst)) {
     return false;
   }
   ring->slots[head] = value;
@@ -205,8 +202,7 @@ bool spsc_seq_cst_try_pop(spsc_ring *ring, uint64_t *value) {
   const size_t tail =
       atomic_load_explicit(&ring->atomic_tail, memory_order_seq_cst);
 
-  if (tail ==
-      atomic_load_explicit(&ring->atomic_head, memory_order_seq_cst)) {
+  if (tail == atomic_load_explicit(&ring->atomic_head, memory_order_seq_cst)) {
     return false;
   }
   *value = ring->slots[tail];

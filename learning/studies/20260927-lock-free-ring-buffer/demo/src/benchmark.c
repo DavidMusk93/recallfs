@@ -54,12 +54,12 @@ typedef struct {
   size_t capacity;
   size_t samples;
   size_t hardware_cache_line;
+  int variant_filter;
   bool self_check;
 } options;
 
 typedef int (*sample_runner)(size_t count, size_t capacity,
-                             size_t hardware_cache_line,
-                             sample_result *result);
+                             size_t hardware_cache_line, sample_result *result);
 
 static _Atomic uint64_t observable_sink = 0U;
 
@@ -97,6 +97,17 @@ static bool parse_size(const char *text, size_t minimum, size_t *out) {
   }
   *out = (size_t)value;
   return true;
+}
+
+static bool parse_variant(const char *text, int *out) {
+  for (int implementation = BENCH_MUTEX; implementation < BENCH_VARIANT_COUNT;
+       ++implementation) {
+    if (strcmp(text, variant_names[implementation]) == 0) {
+      *out = implementation;
+      return true;
+    }
+  }
+  return false;
 }
 
 static int compare_double(const void *left, const void *right) {
@@ -145,110 +156,110 @@ static void fail_sample(sample_context *sample) {
   atomic_store_explicit(&sample->stop, true, memory_order_release);
 }
 
-#define DEFINE_SAMPLE_RUNNER(name, storage_kind, push_expression,               \
-                             pop_expression)                                    \
-  static void *consume_##name(void *argument) {                                 \
-    sample_context *const sample = argument;                                    \
-    uint64_t checksum = 0U;                                                     \
-    uint64_t retries = 0U;                                                      \
-    sample->consumer_qos_result = request_benchmark_qos();                      \
-    atomic_store_explicit(&sample->ready, true, memory_order_release);           \
-    wait_for_start(sample);                                                     \
-    for (size_t i = 0U; i < sample->count; ++i) {                               \
-      uint64_t value = 0U;                                                      \
-      while (!(pop_expression)) {                                               \
-        retries += 1U;                                                          \
-        if ((retries & UINT64_C(1023)) == 0U && should_stop(sample)) {           \
-          return NULL;                                                          \
-        }                                                                       \
-      }                                                                         \
-      if (value != (uint64_t)i) {                                               \
-        fail_sample(sample);                                                    \
-        return NULL;                                                            \
-      }                                                                         \
-      checksum += value;                                                        \
-    }                                                                           \
-    sample->checksum = checksum;                                                \
-    sample->pop_retries = retries;                                              \
-    atomic_store_explicit(&sample->stop, true, memory_order_release);            \
-    return NULL;                                                                \
-  }                                                                             \
-                                                                                \
-  static int run_##name(size_t count, size_t capacity,                          \
-                        size_t hardware_cache_line, sample_result *result) {     \
-    sample_context sample = {0};                                                \
-    pthread_t consumer;                                                         \
-    struct timespec begin = {0};                                                \
-    struct timespec end = {0};                                                  \
-    struct rusage usage_begin = {0};                                            \
-    struct rusage usage_end = {0};                                              \
-    const uint64_t expected_checksum = checksum_for_count(count);               \
-    uint64_t push_retries = 0U;                                                 \
-    int thread_result = 0;                                                      \
-    if (spsc_ring_create(&sample.ring, capacity, storage_kind) != SPSC_OK) {     \
-      return 1;                                                                 \
-    }                                                                           \
-    sample.count = count;                                                       \
-    atomic_init(&sample.ready, false);                                          \
-    atomic_init(&sample.start, false);                                          \
-    atomic_init(&sample.stop, false);                                           \
-    atomic_init(&sample.failed, false);                                         \
-    spsc_producer_bind(&sample.producer, sample.ring);                          \
-    spsc_consumer_bind(&sample.consumer, sample.ring);                          \
-    thread_result = pthread_create(&consumer, NULL, consume_##name, &sample);    \
-    if (thread_result != 0) {                                                   \
-      spsc_ring_destroy(sample.ring);                                           \
-      return 1;                                                                 \
-    }                                                                           \
-    while (!atomic_load_explicit(&sample.ready, memory_order_acquire)) {         \
-    }                                                                           \
-    if (sample.consumer_qos_result != 0 || request_benchmark_qos() != 0) {       \
-      fail_sample(&sample);                                                     \
-      atomic_store_explicit(&sample.start, true, memory_order_release);          \
-      (void)pthread_join(consumer, NULL);                                       \
-      spsc_ring_destroy(sample.ring);                                           \
-      return 1;                                                                 \
-    }                                                                           \
-    (void)getrusage(RUSAGE_SELF, &usage_begin);                                 \
-    (void)clock_gettime(CLOCK_MONOTONIC_RAW, &begin);                           \
-    atomic_store_explicit(&sample.start, true, memory_order_release);            \
-    for (size_t i = 0U; i < count; ++i) {                                       \
-      const uint64_t value = (uint64_t)i;                                       \
-      while (!(push_expression)) {                                              \
-        push_retries += 1U;                                                     \
-        if ((push_retries & UINT64_C(1023)) == 0U && should_stop(&sample)) {     \
-          break;                                                                \
-        }                                                                       \
-      }                                                                         \
-      if (atomic_load_explicit(&sample.failed, memory_order_relaxed)) {          \
-        break;                                                                  \
-      }                                                                         \
-    }                                                                           \
-    thread_result = pthread_join(consumer, NULL);                               \
-    (void)clock_gettime(CLOCK_MONOTONIC_RAW, &end);                             \
-    (void)getrusage(RUSAGE_SELF, &usage_end);                                   \
-    if (thread_result != 0 ||                                                   \
-        atomic_load_explicit(&sample.failed, memory_order_relaxed) ||            \
-        sample.checksum != expected_checksum) {                                 \
-      spsc_ring_destroy(sample.ring);                                           \
-      return 1;                                                                 \
-    }                                                                           \
-    result->seconds = seconds_between(begin, end);                              \
-    result->transfers_per_second = (double)count / result->seconds;             \
-    result->checksum = sample.checksum;                                         \
-    result->push_retries = push_retries;                                        \
-    result->pop_retries = sample.pop_retries;                                   \
-    result->voluntary_context_switches =                                        \
-        usage_end.ru_nvcsw - usage_begin.ru_nvcsw;                              \
-    result->involuntary_context_switches =                                      \
-        usage_end.ru_nivcsw - usage_begin.ru_nivcsw;                            \
-    result->minor_faults = usage_end.ru_minflt - usage_begin.ru_minflt;          \
-    result->indexes_share_hardware_cache_line =                                 \
-        spsc_ring_indexes_share_cache_line(sample.ring, hardware_cache_line);    \
-    atomic_fetch_add_explicit(&observable_sink, sample.checksum | UINT64_C(1),   \
-                              memory_order_relaxed);                             \
-    spsc_ring_destroy(sample.ring);                                             \
-    return 0;                                                                   \
+#define DEFINE_SAMPLE_RUNNER(name, storage_kind, push_expression,              \
+                             pop_expression)                                   \
+  static void *consume_##name(void *argument) {                                \
+    sample_context *const sample = argument;                                   \
+    uint64_t checksum = 0U;                                                    \
+    uint64_t retries = 0U;                                                     \
+    sample->consumer_qos_result = request_benchmark_qos();                     \
+    atomic_store_explicit(&sample->ready, true, memory_order_release);         \
+    wait_for_start(sample);                                                    \
+    for (size_t i = 0U; i < sample->count; ++i) {                              \
+      uint64_t value = 0U;                                                     \
+      while (!(pop_expression)) {                                              \
+        retries += 1U;                                                         \
+        if ((retries & UINT64_C(1023)) == 0U && should_stop(sample)) {         \
+          return NULL;                                                         \
+        }                                                                      \
+      }                                                                        \
+      if (value != (uint64_t)i) {                                              \
+        fail_sample(sample);                                                   \
+        return NULL;                                                           \
+      }                                                                        \
+      checksum += value;                                                       \
+    }                                                                          \
+    sample->checksum = checksum;                                               \
+    sample->pop_retries = retries;                                             \
+    atomic_store_explicit(&sample->stop, true, memory_order_release);          \
+    return NULL;                                                               \
+  }                                                                            \
+                                                                               \
+  static int run_##name(size_t count, size_t capacity,                         \
+                        size_t hardware_cache_line, sample_result *result) {   \
+    sample_context sample = {0};                                               \
+    pthread_t consumer;                                                        \
+    struct timespec begin = {0};                                               \
+    struct timespec end = {0};                                                 \
+    struct rusage usage_begin = {0};                                           \
+    struct rusage usage_end = {0};                                             \
+    const uint64_t expected_checksum = checksum_for_count(count);              \
+    uint64_t push_retries = 0U;                                                \
+    int thread_result = 0;                                                     \
+    if (spsc_ring_create(&sample.ring, capacity, storage_kind) != SPSC_OK) {   \
+      return 1;                                                                \
+    }                                                                          \
+    sample.count = count;                                                      \
+    atomic_init(&sample.ready, false);                                         \
+    atomic_init(&sample.start, false);                                         \
+    atomic_init(&sample.stop, false);                                          \
+    atomic_init(&sample.failed, false);                                        \
+    spsc_producer_bind(&sample.producer, sample.ring);                         \
+    spsc_consumer_bind(&sample.consumer, sample.ring);                         \
+    thread_result = pthread_create(&consumer, NULL, consume_##name, &sample);  \
+    if (thread_result != 0) {                                                  \
+      spsc_ring_destroy(sample.ring);                                          \
+      return 1;                                                                \
+    }                                                                          \
+    while (!atomic_load_explicit(&sample.ready, memory_order_acquire)) {       \
+    }                                                                          \
+    if (sample.consumer_qos_result != 0 || request_benchmark_qos() != 0) {     \
+      fail_sample(&sample);                                                    \
+      atomic_store_explicit(&sample.start, true, memory_order_release);        \
+      (void)pthread_join(consumer, NULL);                                      \
+      spsc_ring_destroy(sample.ring);                                          \
+      return 1;                                                                \
+    }                                                                          \
+    (void)getrusage(RUSAGE_SELF, &usage_begin);                                \
+    (void)clock_gettime(CLOCK_MONOTONIC_RAW, &begin);                          \
+    atomic_store_explicit(&sample.start, true, memory_order_release);          \
+    for (size_t i = 0U; i < count; ++i) {                                      \
+      const uint64_t value = (uint64_t)i;                                      \
+      while (!(push_expression)) {                                             \
+        push_retries += 1U;                                                    \
+        if ((push_retries & UINT64_C(1023)) == 0U && should_stop(&sample)) {   \
+          break;                                                               \
+        }                                                                      \
+      }                                                                        \
+      if (atomic_load_explicit(&sample.failed, memory_order_relaxed)) {        \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    thread_result = pthread_join(consumer, NULL);                              \
+    (void)clock_gettime(CLOCK_MONOTONIC_RAW, &end);                            \
+    (void)getrusage(RUSAGE_SELF, &usage_end);                                  \
+    if (thread_result != 0 ||                                                  \
+        atomic_load_explicit(&sample.failed, memory_order_relaxed) ||          \
+        sample.checksum != expected_checksum) {                                \
+      spsc_ring_destroy(sample.ring);                                          \
+      return 1;                                                                \
+    }                                                                          \
+    result->seconds = seconds_between(begin, end);                             \
+    result->transfers_per_second = (double)count / result->seconds;            \
+    result->checksum = sample.checksum;                                        \
+    result->push_retries = push_retries;                                       \
+    result->pop_retries = sample.pop_retries;                                  \
+    result->voluntary_context_switches =                                       \
+        usage_end.ru_nvcsw - usage_begin.ru_nvcsw;                             \
+    result->involuntary_context_switches =                                     \
+        usage_end.ru_nivcsw - usage_begin.ru_nivcsw;                           \
+    result->minor_faults = usage_end.ru_minflt - usage_begin.ru_minflt;        \
+    result->indexes_share_hardware_cache_line =                                \
+        spsc_ring_indexes_share_cache_line(sample.ring, hardware_cache_line);  \
+    atomic_fetch_add_explicit(&observable_sink, sample.checksum | UINT64_C(1), \
+                              memory_order_relaxed);                           \
+    spsc_ring_destroy(sample.ring);                                            \
+    return 0;                                                                  \
   }
 
 DEFINE_SAMPLE_RUNNER(mutex, SPSC_RING_MUTEX,
@@ -259,10 +270,9 @@ DEFINE_SAMPLE_RUNNER(seq_cst, SPSC_RING_ATOMIC,
                      spsc_seq_cst_try_push(sample.ring, value),
                      spsc_seq_cst_try_pop(sample->ring, &value))
 
-DEFINE_SAMPLE_RUNNER(
-    acquire_release, SPSC_RING_ATOMIC,
-    spsc_acquire_release_try_push(sample.ring, value),
-    spsc_acquire_release_try_pop(sample->ring, &value))
+DEFINE_SAMPLE_RUNNER(acquire_release, SPSC_RING_ATOMIC,
+                     spsc_acquire_release_try_push(sample.ring, value),
+                     spsc_acquire_release_try_pop(sample->ring, &value))
 
 DEFINE_SAMPLE_RUNNER(cached, SPSC_RING_ATOMIC,
                      spsc_cached_try_push(&sample.producer, value),
@@ -278,7 +288,7 @@ static const sample_runner runners[BENCH_VARIANT_COUNT] = {
 static void usage(const char *program) {
   fprintf(stderr,
           "usage: %s [--count N] [--capacity N] [--samples N] "
-          "[--hardware-cache-line N] [--self-check]\n",
+          "[--hardware-cache-line N] [--variant NAME] [--self-check]\n",
           program);
 }
 
@@ -288,6 +298,7 @@ static bool parse_options(int argc, char **argv, options *out) {
       .capacity = 100000U,
       .samples = 11U,
       .hardware_cache_line = 0U,
+      .variant_filter = -1,
       .self_check = false,
   };
   for (int i = 1; i < argc; ++i) {
@@ -308,9 +319,12 @@ static bool parse_options(int argc, char **argv, options *out) {
       if (!parse_size(argv[++i], 1U, &out->samples)) {
         return false;
       }
-    } else if (i + 1 < argc &&
-               strcmp(argv[i], "--hardware-cache-line") == 0) {
+    } else if (i + 1 < argc && strcmp(argv[i], "--hardware-cache-line") == 0) {
       if (!parse_size(argv[++i], 1U, &out->hardware_cache_line)) {
+        return false;
+      }
+    } else if (i + 1 < argc && strcmp(argv[i], "--variant") == 0) {
+      if (!parse_variant(argv[++i], &out->variant_filter)) {
         return false;
       }
     } else {
@@ -331,8 +345,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
   if (selected.samples > SIZE_MAX / BENCH_VARIANT_COUNT ||
-      selected.samples * BENCH_VARIANT_COUNT >
-          SIZE_MAX / sizeof(*rates)) {
+      selected.samples * BENCH_VARIANT_COUNT > SIZE_MAX / sizeof(*rates)) {
     fputs("sample count is too large\n", stderr);
     return EXIT_FAILURE;
   }
@@ -341,7 +354,8 @@ int main(int argc, char **argv) {
     fputs("cannot allocate sample storage\n", stderr);
     return EXIT_FAILURE;
   }
-  if (spsc_ring_create(&probe, selected.capacity, SPSC_RING_ATOMIC) != SPSC_OK) {
+  if (spsc_ring_create(&probe, selected.capacity, SPSC_RING_ATOMIC) !=
+      SPSC_OK) {
     fputs("cannot create atomic ring\n", stderr);
     free(rates);
     return EXIT_FAILURE;
@@ -370,9 +384,13 @@ int main(int argc, char **argv) {
        "minor_faults,indexes_share_hardware_cache_line,checksum");
 
   for (size_t sample = 0U; sample < selected.samples; ++sample) {
-    for (size_t order = 0U; order < BENCH_VARIANT_COUNT; ++order) {
+    const size_t variants_to_run =
+        selected.variant_filter < 0 ? BENCH_VARIANT_COUNT : 1U;
+    for (size_t order = 0U; order < variants_to_run; ++order) {
       const bench_variant implementation =
-          (bench_variant)((sample + order) % BENCH_VARIANT_COUNT);
+          selected.variant_filter < 0
+              ? (bench_variant)((sample + order) % BENCH_VARIANT_COUNT)
+              : (bench_variant)selected.variant_filter;
       sample_result result = {0};
 
       if (runners[implementation](selected.count, selected.capacity,
@@ -386,8 +404,7 @@ int main(int argc, char **argv) {
           result.transfers_per_second;
       printf("%zu,%zu,%s,%.9f,%.3f,%.3f,%llu,%llu,%ld,%ld,%ld,%d,%llu\n",
              sample, order, variant_names[implementation], result.seconds,
-             result.transfers_per_second,
-             result.transfers_per_second * 2.0,
+             result.transfers_per_second, result.transfers_per_second * 2.0,
              (unsigned long long)result.push_retries,
              (unsigned long long)result.pop_retries,
              result.voluntary_context_switches,
@@ -400,9 +417,12 @@ int main(int argc, char **argv) {
   for (bench_variant implementation = BENCH_MUTEX;
        implementation < BENCH_VARIANT_COUNT;
        implementation = (bench_variant)(implementation + 1)) {
-    const double value =
-        median(&rates[(size_t)implementation * selected.samples],
-               selected.samples);
+    if (selected.variant_filter >= 0 &&
+        implementation != (bench_variant)selected.variant_filter) {
+      continue;
+    }
+    const double value = median(
+        &rates[(size_t)implementation * selected.samples], selected.samples);
     printf("SUMMARY,%s,median_transfers_per_second,%.3f,"
            "median_successful_api_calls_per_second,%.3f\n",
            variant_names[implementation], value, value * 2.0);
@@ -413,7 +433,11 @@ int main(int argc, char **argv) {
   free(rates);
 
   if (selected.self_check) {
-    puts("benchmark self-check: 4/4 variants passed");
+    if (selected.variant_filter < 0) {
+      puts("benchmark self-check: 4/4 variants passed");
+    } else {
+      puts("benchmark self-check: 1/1 variant passed");
+    }
   }
   return EXIT_SUCCESS;
 }

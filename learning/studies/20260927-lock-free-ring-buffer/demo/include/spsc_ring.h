@@ -66,7 +66,8 @@ void spsc_consumer_bind(spsc_consumer *consumer, spsc_ring *ring);
 bool spsc_mutex_try_push(spsc_ring *ring, uint64_t value);
 bool spsc_mutex_try_pop(spsc_ring *ring, uint64_t *value);
 
-/* The atomic operation families require exactly one producer and one consumer. */
+/* The atomic operation families require exactly one producer and one consumer.
+ */
 bool spsc_seq_cst_try_push(spsc_ring *ring, uint64_t value);
 bool spsc_seq_cst_try_pop(spsc_ring *ring, uint64_t *value);
 

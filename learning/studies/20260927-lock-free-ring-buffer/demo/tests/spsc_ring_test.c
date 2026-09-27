@@ -31,7 +31,7 @@ static int failures = 0;
 #define CHECK(condition)                                                       \
   do {                                                                         \
     if (!(condition)) {                                                        \
-      fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition);    \
+      fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #condition);     \
       failures += 1;                                                           \
     }                                                                          \
   } while (0)
@@ -101,10 +101,8 @@ static void *consume_sequence(void *argument) {
 static void test_creation_contract(void) {
   spsc_ring *ring = (spsc_ring *)(uintptr_t)1U;
 
-  CHECK(spsc_ring_create(NULL, 8U, SPSC_RING_MUTEX) ==
-        SPSC_INVALID_ARGUMENT);
-  CHECK(spsc_ring_create(&ring, 1U, SPSC_RING_MUTEX) ==
-        SPSC_INVALID_ARGUMENT);
+  CHECK(spsc_ring_create(NULL, 8U, SPSC_RING_MUTEX) == SPSC_INVALID_ARGUMENT);
+  CHECK(spsc_ring_create(&ring, 1U, SPSC_RING_MUTEX) == SPSC_INVALID_ARGUMENT);
   CHECK(ring == NULL);
   CHECK(spsc_ring_create(&ring, 8U, (spsc_ring_storage)99) ==
         SPSC_INVALID_ARGUMENT);
@@ -130,10 +128,10 @@ static void test_layout_contract(void) {
   CHECK(layout.tail_offset >=
         layout.head_offset + layout.configured_cache_line);
   CHECK(layout.atomic_size_t_lock_free);
-  CHECK(!spsc_ring_indexes_share_cache_line(
-      ring, layout.configured_cache_line));
-  CHECK(!spsc_ring_indexes_share_cache_line(NULL,
-                                             layout.configured_cache_line));
+  CHECK(
+      !spsc_ring_indexes_share_cache_line(ring, layout.configured_cache_line));
+  CHECK(
+      !spsc_ring_indexes_share_cache_line(NULL, layout.configured_cache_line));
   CHECK(!spsc_ring_indexes_share_cache_line(ring, 0U));
   CHECK(spsc_ring_capacity(ring) == 8U);
   CHECK(spsc_ring_usable_capacity(ring) == 7U);
@@ -223,8 +221,7 @@ int main(void) {
   test_creation_contract();
   test_layout_contract();
 
-  for (variant implementation = VARIANT_MUTEX;
-       implementation <= VARIANT_CACHED;
+  for (variant implementation = VARIANT_MUTEX; implementation <= VARIANT_CACHED;
        implementation = (variant)(implementation + 1)) {
     test_sequential_wrap(implementation);
     test_concurrent_fifo(implementation, 2U, 100000U);

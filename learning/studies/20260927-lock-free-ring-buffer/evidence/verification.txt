@@ -17,6 +17,19 @@ Native LLVM frontend:
   O2 result: spsc_ring_test: 14/14 suites passed
   O3 result: spsc_ring_test: 14/14 suites passed
 
+Pinned build tools:
+  pyenv: 2.6.32, commit 5c924f986e2c6e1767e510e6990276dc2820ed84
+  Python: 3.13.13
+  uv: 0.11.26
+  CMake: 4.4.3
+  Ninja: 1.13.2
+  clang-format: 23.1.1
+  clang-format wheel sha256:
+    d64a1788759c4cbc08a0aca21dd2bd38605c0758543aa15b8c0636508f0ebae7
+  clang-format result: all maintained C and header files pass
+  Zig CMake/CTest result: 2/2 passed
+  FIL-C CMake/CTest result: 2/2 passed
+
 Sanitizers:
   ASan/UBSan result: spsc_ring_test: 14/14 suites passed
   ASan symbol: ___asan_init
@@ -29,17 +42,17 @@ Sanitizers:
     linked the macOS sanitizer runtimes.
 
 Final verification log sha256:
-  4a61166cb60166f160fb431deff993c8399ddc397a8179b57aae2e8ce7ded67f
+  4c7ee61c32e36dd18e6313ee1906e7667f20bbe511c065c0081c99c0f29044fe
 
 Verified binary sha256:
   O3 test:
-    18a033d007e458b4042b8e6fc38e590299f04aee5b391b6c93222a2da54f6cfe
+    683fc23356281705aaac7b6891acd32af8a9ddfaac27f38010c7c0a15a5f43a2
   ASan/UBSan test:
-    9931392d099ffe3eaab216b4faf3108ae5887d3f6c8a14fd5634cd5edb0fcaef
+    530e671763cc86e4cd6004acfa60041398e124dd5202eedb8a60be16caa628f4
   TSan test:
-    9dd3280eb35aa297e42a0a0b45394e99e524850a717705efc3bcebaaaa39fe86
+    40b17d16679874ab14f1da8d5051084eca73a1a821a2b1fe5acf28b3145cc3c3
   native benchmark self-check:
-    f0bc0b27472e2c11a808f4dfe916cac57e6df58cc584610557bc29bd18b77056
+    00ff9c7d7ee8569d6da1b28bd949c459e52d6ec990311e6300c45b8c3d7bbd9d
 
 Negative/tooling evidence:
   Zig Mach-O link with -flto=thin failed with:
@@ -48,6 +61,9 @@ Negative/tooling evidence:
   not claim LTO.
   Zig's directly linked TSan runtime exited 139 before test output. The
   repository's established split compile/link path passed.
+  The first FIL-C CMake build used a static library and failed because macOS
+  ranlib archived Linux/FIL-C objects. Converting the core to an OBJECT library
+  made both FIL-C CTest tests pass.
   powermetrics exited 1 with:
     powermetrics must be invoked as the superuser
   No PMU, cycles, IPC, cache-miss, energy, or frequency-residency claim is made.

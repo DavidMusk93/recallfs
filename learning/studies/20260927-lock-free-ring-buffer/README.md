@@ -36,9 +36,9 @@ verified_by:
 2. 用 release/acquire 只建立 payload 发布与槽位回收所需的 happens-before；
 3. 缓存对端索引，把跨核读取从“每次操作”降为“本地观察到可能满/空时”。
 
-本机复现只稳定支持第 3 点：在正确 128-byte 隔离下，cached 相比
-acquire/release 的中位吞吐提高 48.8%。本机没有复现文章的总体排序：
-mutex 仍比 cached 高 37.9%，acquire/release 也没有胜过 seq_cst。结论必须绑定
+本机复现支持第 3 点：在正确 128-byte 隔离下，cached 相比
+acquire/release 的中位吞吐提高 19.3%。本机没有复现文章的总体排序：
+mutex 仍比 cached 高 65.5%，acquire/release 也没有胜过 seq_cst。结论必须绑定
 ISA、runtime、线程放置和队列占用分布，不能搬运 305M ops/s。
 
 ### Scope
@@ -164,17 +164,17 @@ seq_cst 比这两条有向边更强，但“更强”不等于在每个 ISA 上�
 
 | Variant | 本机中位 transfers/s | 相邻阶段变化 | 文章报告 |
 | --- | ---: | ---: | ---: |
-| mutex | 29.913M | baseline | 12M ops/s |
-| seq_cst | 15.061M | -49.65% | 35M ops/s |
-| acquire/release | 14.576M | -3.22% | 108M ops/s |
-| cached | 21.690M | +48.81% | 305M ops/s |
+| mutex | 30.895M | baseline | 12M ops/s |
+| seq_cst | 16.447M | -46.76% | 35M ops/s |
+| acquire/release | 15.651M | -4.84% | 108M ops/s |
+| cached | 18.670M | +19.29% | 305M ops/s |
 
 原文的 `SetItemsProcessed(num_iters)` 把一对 push+pop 记为一个 item，所以本文
-统一写 `transfers/s`；若按成功 API 调用数计，本机 cached 为 43.379M calls/s。
+统一写 `transfers/s`；若按成功 API 调用数计，本机 cached 为 37.340M calls/s。
 
 本机 mutex 获胜不等于 lock-free 设计无效。这个 workload 下 atomic consumer
-经常追上 producer：五轮 acquire/release 合计约 51.4 亿次 empty retry，
-cached 降到约 18.2 亿次；mutex 则可能通过 Darwin 的实现和调度形成更粗粒度的
+经常追上 producer：五轮 acquire/release 合计约 61.0 亿次 empty retry，
+cached 降到约 31.0 亿次；mutex 则可能通过 Darwin 的实现和调度形成更粗粒度的
 运行批次。这些只是解释候选，缺少 CPU pinning 和 PMU，不能升级为根因。
 
 ### 3.2 Cache-Line A/B
@@ -183,14 +183,15 @@ cached 降到约 18.2 亿次；mutex 则可能通过 Darwin 的实现和调度�
 
 | Variant | 128-byte separated | 64-byte shared | 128 vs 64 |
 | --- | ---: | ---: | ---: |
-| mutex | 31.601M | 31.540M | +0.19% |
-| seq_cst | 16.009M | 18.813M | -14.90% |
-| acquire/release | 14.250M | 14.762M | -3.47% |
-| cached | 24.110M | 19.648M | +22.71% |
+| mutex | 30.626M | 30.832M | -0.67% |
+| seq_cst | 16.070M | 18.567M | -13.45% |
+| acquire/release | 15.582M | 16.488M | -5.50% |
+| cached | 19.041M | 18.786M | +1.35% |
 
-正确分线显著帮助 cached，但没有让所有版本都更快。seq_cst 每次本来就要同时读
-两个共享索引；把它们放在一条线可能减少 footprint，同时增加 invalidation。
-没有 `perf c2c` 证据时，不能只凭 wall time 判断哪一项占主导。
+正确分线在这一轮仅让 cached 中位数提高 1.35%，远小于前一轮观察到的 22.7%，
+且没有让其他版本更快。seq_cst 每次本来就要同时读两个共享索引；把它们放在一
+条线可能减少 footprint，同时增加 invalidation。如此高的轮间漂移说明：没有
+固定 CPU 和 PMU 证据时，不能从 wall time 判定 false sharing 的实际成本。
 
 ## 4. 容易踩的坑
 

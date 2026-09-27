@@ -28,6 +28,8 @@ verified_by:
 | Scheduling | Both threads request `QOS_CLASS_USER_INTERACTIVE`; not CPU-pinned |
 | Native frontend | Zig 0.16.0, Clang 21.1.0 |
 | Native flags | `-O3 -march=native -mtune=native -DNDEBUG -g` |
+| CMake/Ninja | 4.4.3 / 1.13.2; Zig and FIL-C CTest both 2/2 pass |
+| clang-format | 23.1.1; all four C/C header sources pass |
 | LTO | Not used; Zig's Mach-O link rejected `-flto=thin` |
 | FIL-C | 0.684, Clang 20.1.8, Linux ARM64 guest |
 | PMU | Unavailable; `powermetrics` requires superuser |
@@ -67,21 +69,21 @@ Raw data: [`article-shape-benchmark.csv`](article-shape-benchmark.csv).
 
 | Variant | Median transfers/s | Successful API calls/s | Delta from previous |
 | --- | ---: | ---: | ---: |
-| mutex | 29.913M | 59.825M | baseline |
-| seq_cst | 15.061M | 30.123M | -49.65% |
-| acquire/release | 14.576M | 29.152M | -3.22% |
-| cached | 21.690M | 43.379M | +48.81% |
+| mutex | 30.895M | 61.790M | baseline |
+| seq_cst | 16.447M | 32.895M | -46.76% |
+| acquire/release | 15.651M | 31.303M | -4.84% |
+| cached | 18.670M | 37.340M | +19.29% |
 
-The local ranking contradicts the article: the mutex baseline is 37.9% faster
+The local ranking contradicts the article: the mutex baseline is 65.5% faster
 than the cached atomic variant. This does not establish that mutexes are
 generally faster. The unpinned heterogeneous scheduler, Darwin mutex behavior,
 busy-poll imbalance, `uint64_t` payload, C ABI calls, and different ISA/runtime
 all differ from the author's pinned Intel/C++ setup.
 
 Retry counts explain why this run is not a clean cache-coherence experiment.
-Across five samples, acquire/release performed about 5.14 billion failed
-consumer polls and cached performed about 1.82 billion. The mutex version had
-about 19.3 million failed consumer polls but roughly 4.02 million involuntary
+Across five samples, acquire/release performed about 6.10 billion failed
+consumer polls and cached performed about 3.10 billion. The mutex version had
+about 23.8 million failed consumer polls but roughly 6.07 million involuntary
 context switches. The benchmark measures the complete busy-wait workload, not
 isolated queue-operation latency.
 
@@ -95,17 +97,17 @@ Nine paired rounds alternated which binary ran first. Each point transfers
 
 | Variant | 128-byte median | 64-byte median | 128 vs 64 |
 | --- | ---: | ---: | ---: |
-| mutex | 31.601M | 31.540M | +0.19% |
-| seq_cst | 16.009M | 18.813M | -14.90% |
-| acquire/release | 14.250M | 14.762M | -3.47% |
-| cached | 24.110M | 19.648M | +22.71% |
+| mutex | 30.626M | 30.832M | -0.67% |
+| seq_cst | 16.070M | 18.567M | -13.45% |
+| acquire/release | 15.582M | 16.488M | -5.50% |
+| cached | 19.041M | 18.786M | +1.35% |
 
 For every 64-byte sample, runtime address inspection proved that `head` and
 `tail` occupied the same 128-byte hardware cache line. Every 128-byte sample
-placed them on different lines. Correct separation materially helped the
-cached variant, but did not improve every access pattern. Without PMU cache
-events, the table is evidence of layout plus wall-time correlation, not a
-measured cache-to-cache transfer count.
+placed them on different lines. This run's cached delta was only +1.35%; a
+previous nine-round run observed +22.7%. The large drift proves that unpinned
+wall time cannot quantify the false-sharing cost. The table is evidence of
+layout and unstable correlation, not a cache-to-cache transfer count.
 
 ## Code Generation
 
@@ -141,12 +143,12 @@ tested mechanism.
 ## Digests
 
 ```text
-bdddaf7fd8ac9661f2c4daa342366b2f7d39ca731fee5fe2d3b4f79cca5ca201  demo/include/spsc_ring.h
-3599b3cfc2bf5b0166962584dfe29114fdf9524864116d358f09b0b1fdb26b33  demo/src/spsc_ring.c
-9f8f51382d1ba20341c663d150f0ec4ecaead223a84b823ece8952d645f3f610  demo/src/benchmark.c
-8d0a436b6e31de57aabbe737e8a902c3c16567df2b9b905f54c6520876986ed8  demo/tests/spsc_ring_test.c
-627e4af4779947961e70fc8516f3a4dd29e328c60dbbd5d92cf00879ff8acdab  article-shape benchmark binary
-dc3f0106b7b48b68cef9652dcdf745c16ace01e1e624dbc311245ab784549be5  article-shape benchmark CSV
+3294a1293deb35890d19d7c83942e845cc028216f835260493adce97aff4d3e7  demo/include/spsc_ring.h
+c619cd1d5c673e4ef215b492ae54b61e4ee70119dac7b168ad627226d075b7cd  demo/src/spsc_ring.c
+605145b9e4e705e08247c109bb0fd9c2f92becd3a01f88e74995e13bd5b90236  demo/src/benchmark.c
+bcea9bdc2de5c1b2c16394561277439ec4c2f1b6198c63f63d83b67eec958023  demo/tests/spsc_ring_test.c
+385230584ce09580d5984d7f75d0abb2450ade1303ae4f2b6bb6eff3630facfc  article-shape benchmark binary
+e747be136fb496f64537f6cf1d88699ff76fd012c50c4fae4b9634ab06510a7d  article-shape benchmark CSV
 ```
 
 The source digests cover the article-shaped run. The `verify.sh` script was

@@ -1,6 +1,6 @@
 Binary:
-  .tmp/spsc-ring-benchmark-128-final
-  sha256: 627e4af4779947961e70fc8516f3a4dd29e328c60dbbd5d92cf00879ff8acdab
+  .tmp/lock-free-ring-buffer/spsc-ring-benchmark-pmu
+  sha256: 385230584ce09580d5984d7f75d0abb2450ade1303ae4f2b6bb6eff3630facfc
 
 Compiler and flags:
   Zig 0.16.0 / Clang 21.1.0
@@ -9,7 +9,7 @@ Compiler and flags:
   -Wstrict-prototypes -DSPSC_CACHE_LINE_SIZE=128 -pthread
 
 Inspection:
-  otool -arch arm64 -tvV .tmp/spsc-ring-benchmark-128-final
+  otool -arch arm64 -tvV .tmp/lock-free-ring-buffer/spsc-ring-benchmark-pmu
 
 Selected AArch64 instructions:
 

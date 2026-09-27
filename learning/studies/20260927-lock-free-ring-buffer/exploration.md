@@ -107,12 +107,12 @@ The first measurements were discarded from the final result.
 
 The final long run used 100 million transfers, 100,000 physical slots,
 128-byte index separation, and five rotated samples. It reproduced one
-optimization: peer-index caching improved the acquire/release median by 48.8%.
+optimization: peer-index caching improved the acquire/release median by 19.3%.
 
 It falsified two portable interpretations of the article:
 
 - acquire/release was 3.2% slower than seq_cst within this noisy unpinned run;
-- cached atomics were 27.5% slower than the mutex baseline.
+- cached atomics were 39.6% slower than the mutex baseline.
 
 Disassembly explains why the first result is plausible on ARM64: both variants
 publish with `stlr`; the main difference is `ldar` versus `ldr` for the
@@ -129,14 +129,14 @@ shared one hardware line in every measured sample.
 
 Nine interleaved A/B rounds showed:
 
-- correct 128-byte separation improved cached median throughput by 22.7%;
-- it did not improve seq_cst or acquire/release medians.
+- correct 128-byte separation improved cached median throughput by only 1.35%;
+- it reduced seq_cst and acquire/release medians in this run;
+- a prior nine-round run had shown a 22.7% cached improvement.
 
 This rejects two simplistic rules: 64 bytes is not portable, and padding alone
-is not guaranteed to win. The access pattern determines whether combining two
-frequently read lines can offset write invalidation costs. PMU access was
-unavailable, so this mechanism remains an interpretation rather than a measured
-cache-to-cache transfer count.
+is not guaranteed to win. It also demonstrates that unpinned wall time was too
+unstable to quantify false sharing. The access pattern determines whether
+combining two frequently read lines can offset write invalidation costs.
 
 ## 8. Fixed-Point Rejection Gate
 

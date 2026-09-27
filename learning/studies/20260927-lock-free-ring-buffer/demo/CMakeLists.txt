@@ -10,7 +10,7 @@ set(FIL_RUNNER "" CACHE FILEPATH "Optional runner for FIL-C executables")
 
 find_package(Threads REQUIRED)
 
-add_library(spsc_ring STATIC src/spsc_ring.c)
+add_library(spsc_ring OBJECT src/spsc_ring.c)
 target_include_directories(spsc_ring PUBLIC include)
 target_compile_definitions(
     spsc_ring
