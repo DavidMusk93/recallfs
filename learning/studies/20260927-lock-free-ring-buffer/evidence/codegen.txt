@@ -1,0 +1,61 @@
+Binary:
+  .tmp/spsc-ring-benchmark-128-final
+  sha256: 627e4af4779947961e70fc8516f3a4dd29e328c60dbbd5d92cf00879ff8acdab
+
+Compiler and flags:
+  Zig 0.16.0 / Clang 21.1.0
+  -std=c11 -O3 -march=native -mtune=native -DNDEBUG -g
+  -Wall -Wextra -Wpedantic -Werror -Wconversion -Wshadow
+  -Wstrict-prototypes -DSPSC_CACHE_LINE_SIZE=128 -pthread
+
+Inspection:
+  otool -arch arm64 -tvV .tmp/spsc-ring-benchmark-128-final
+
+Selected AArch64 instructions:
+
+_spsc_seq_cst_try_push:
+  add   x8, x0, #0x80
+  ldar  x8, [x8]
+  ...
+  add   x10, x0, #0x100
+  ldar  x10, [x10]
+  ...
+  str   x1, [x11, x8, lsl #3]
+  stlr  x9, [x0]
+
+_spsc_acquire_release_try_push:
+  ldr   x8, [x0, #0x80]
+  ...
+  add   x10, x0, #0x100
+  ldapr x10, [x10]
+  ...
+  str   x1, [x11, x8, lsl #3]
+  stlr  x9, [x0]
+
+_spsc_cached_try_push:
+  ldr   x8, [x0]
+  ldr   x9, [x8, #0x80]
+  ...
+  ldr   x11, [x0, #0x8]
+  cmp   x10, x11
+  b.ne  cached_slot_available
+  add   x11, x8, #0x100
+  ldapr x11, [x11]
+  str   x11, [x0, #0x8]
+  ...
+cached_slot_available:
+  str   x1, [x11, x9, lsl #3]
+  stlr  x10, [x8]
+
+Interpretation:
+  seq_cst uses acquire loads for both the producer-owned and peer indices.
+  acquire/release changes the owner load to an ordinary load and retains an
+  acquire peer load plus release publication. The cached path first compares a
+  plain endpoint-local cache and executes the acquire peer load only on the
+  potential-full path. Pop is symmetric.
+
+The final binary retains separate run and consumer symbols for all four
+variants and calls the queue operations from the transfer loops. Every popped
+value is validated, every run emits a checksum, and the checks remain enabled
+under -DNDEBUG. No dead-code-elimination claim is inferred from source shape
+alone.
