@@ -1,0 +1,74 @@
+GenDB study source identity
+Accessed: 2026-09-28
+
+Paper
+URL: https://arxiv.org/pdf/2603.02081
+Version: arXiv 2603.02081v1
+Local path: learning/sources/20260928-gendb-generative-query-processing-v1.pdf
+Bytes: 4877487
+Pages: 8
+PDF version: 1.7
+Encrypted: no
+JavaScript: no
+SHA-256: a9d98e03a92e806f1098fb105bdb88d4289d717fd35cbacfe9547443971df9cb
+
+Author repository
+URL: https://github.com/SolidLao/GenDB
+Paper branch: arxiv-03-02-2026
+Paper commit: b7418071fc51aacd219964e4a68e593234db9237
+Paper tree: 7dd25a156c2f4ac9396b3b2bee2ce484f196c52d
+Current branch: main
+Current commit: 0ccf053ade163137775cd2e9c6e1288ea89d524b
+Current tree: efbdadc2b480f8f8706ef58cc677407855007afe
+Tags observed: none
+
+Paper-branch file SHA-256
+README.md:
+405aa732610581afd5528d130adee279adb8ca73dd6daeaa73206587c82e58c7
+src/gendb/orchestrator.mjs:
+c79b382669ab51406b563b1ec46ef39297536b05459a6c7a3bbe3890466d9639
+src/gendb/tools/compare_results.py:
+f6748eb7805079b518df85f138f6c662662ddd6df9b90470d3d55445c6ad087e
+
+Current-main file SHA-256
+README.md:
+439e8f9d6cc1c5387a483bc6c417254540508a8da149a6fac7e8f2c13c4d5ea7
+src/gendb/orchestrator.mjs:
+3d3d745a0c79f2ffed7e72eb888d275af8ebeb98d25b34188f3df22e93cfe4da
+src/gendb/tools/compare_results.py:
+9e5dabcb09e7e59adb0f5c134f27df85e93f7d9b9cb5051a93f44c0ccec0858e
+src/gendb/tools/sql-parser.py:
+9c2b399d24b7100c4bb3cd353c2223c85307947d0cba1bf5f700dc4b7027c9a7
+src/gendb/tools/template-extractor.mjs:
+cc39119c95aced2c8114cc645ee1e1255865928ce3cac24f38e63d249b94fd58
+
+Local checks
+- pdfinfo learning source: passed
+- pdftotext -layout: 580 lines, 69240 bytes
+- browser abstract metadata and license inspection: passed
+- node --check src/gendb/orchestrator.mjs: passed
+- node --check src/gendb/shared.mjs: passed
+- node --check src/gendb/tools/template-extractor.mjs: passed
+- python3 -m py_compile src/gendb/tools/compare_results.py: passed
+- python3 -m py_compile src/gendb/tools/sql-parser.py: passed
+- python3 -m py_compile benchmarks/benchmark.py: passed
+
+Learning report
+Path: learning/studies/20260928-gendb-generative-query-processing/report.html
+Accepted SHA-256:
+b5c3d64b7dd6147020d013a3a52cbbf409674bdcbae731452ef4be84316c7484
+HTTP URL: http://127.0.0.1:8765/report.html
+Desktop: 1440 x 1000, no page overflow, table probe passed
+Mobile: 390 x 844, no page overflow, table probe passed
+Console errors: none
+Failed requests: none
+
+Commands
+curl -fL --retry 3 --connect-timeout 20 \
+  https://arxiv.org/pdf/2603.02081 \
+  -o .tmp/data/gendb-v1.pdf
+shasum -a 256 .tmp/data/gendb-v1.pdf
+pdfinfo .tmp/data/gendb-v1.pdf
+pdftotext -layout .tmp/data/gendb-v1.pdf .tmp/data/gendb-v1.txt
+git clone --filter=blob:none https://github.com/SolidLao/GenDB.git \
+  .tmp/research/GenDB

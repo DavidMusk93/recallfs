@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>GenDB：把生成式查询执行用于 Tide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+      font-optical-sizing: auto;
+      letter-spacing: 0;
+      --page: #f5f5f7;
+      --surface: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #606067;
+      --line: #d2d2d7;
+      --info: #075ca8;
+      --info-soft: #eaf3fb;
+      --success: #08783e;
+      --success-soft: #e8f7ee;
+      --warning: #8a4b08;
+      --warning-soft: #fff5df;
+      --danger: #a13232;
+      --danger-soft: #fbeaea;
+      --violet: #6842a0;
+      --violet-soft: #f2ecfb;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.58;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin-inline: auto;
+      padding: 44px 0 72px;
+    }
+
+    header {
+      padding-bottom: 34px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 8px 0 12px;
+      font-size: 40px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    p, li { max-width: 72ch; }
+
+    a {
+      color: var(--info);
+      text-underline-offset: 3px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--info);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 72ch;
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 5px 16px;
+      max-width: 760px;
+      margin: 18px 0 0;
+    }
+
+    .meta dt { color: var(--muted); }
+    .meta dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+
+    .callout {
+      max-width: 900px;
+      margin: 22px 0 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .callout.info { background: var(--info-soft); color: #063d70; }
+    .callout.warning { background: var(--warning-soft); color: #663806; }
+    .callout.danger { background: var(--danger-soft); color: #702323; }
+    .callout.success { background: var(--success-soft); color: #064d29; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 27px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    section {
+      min-width: 0;
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-lede {
+      margin-top: -4px;
+      color: var(--muted);
+    }
+
+    .diagram-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .diagram {
+      display: block;
+      width: 1040px;
+      height: 440px;
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    th {
+      background: #ececf0;
+      color: #353539;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    th.measure, td.measure {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ladder {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .step {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .step b {
+      display: inline-block;
+      margin-bottom: 8px;
+      color: var(--violet);
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .identity {
+      max-width: 920px;
+      overflow-x: auto;
+      margin: 18px 0 0;
+      padding: 16px;
+      border: 1px solid #c7c7cc;
+      border-radius: 8px;
+      background: #fff;
+      color: #1d1d1f;
+      font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 2px 7px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status.reported { color: var(--info); background: var(--info-soft); }
+    .status.observed { color: var(--danger); background: var(--danger-soft); }
+    .status.proposed { color: var(--violet); background: var(--violet-soft); }
+
+    footer {
+      padding-top: 26px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 24px, 1120px);
+        padding-top: 28px;
+      }
+
+      h1 { font-size: 32px; }
+      h2 { font-size: 21px; }
+      .lede { font-size: 17px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ladder { grid-template-columns: 1fr; }
+      .meta { grid-template-columns: 1fr; gap: 2px; }
+      .meta dd { margin-bottom: 9px; }
+      .diagram-wrap { padding: 8px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .surface { background: var(--surface); backdrop-filter: none; }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --line: #707075; }
+      .metric, .table-wrap, .callout, .step, .diagram-wrap { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Database systems / research-to-product</p>
+      <h1>GenDB：把生成式查询执行用于 Tide</h1>
+      <p class="lede">论文展示了针对固定 OLAP workload 的巨大特化空间，但其原型不是可直接嵌入生产的数据库内核。正确做法是把 LLM 限定为离线候选生成器，让现有 Catalyst、Velox 和 FringeDB 保持语义与运行时 authority。</p>
+      <dl class="meta">
+        <dt>Date</dt><dd>2026-09-28</dd>
+        <dt>Input shape</dt><dd>concept</dd>
+        <dt>Subject</dt><dd>GenDB generative query processing and its application to Tide/stream_engine</dd>
+      </dl>
+      <aside class="callout warning"><strong>结论：</strong>采用“离线综合 + 独立验证 + 签名 artifact + 在线回退”的机制，不采用“在线 Agent 直接写、编译、执行任意 C++”的产品边界。</aside>
+      <div class="metrics" aria-label="Key metrics">
+        <article class="metric"><strong>2.8x</strong><span>论文报告：TPC-H 对 DuckDB/Umbra</span></article>
+        <article class="metric"><strong>5.0x</strong><span>论文报告：SEC-EDGAR 对 DuckDB</span></article>
+        <article class="metric"><strong>90.9 min</strong><span>TPC-H multi-agent 生成 wall time</span></article>
+        <article class="metric"><strong>5 + 6</strong><span>论文实际展示的查询数量</span></article>
+      </div>
+    </header>
+
+    <section>
+      <h2>核心机制</h2>
+      <p class="section-lede">GenDB 的新意不是 query compilation 本身，而是让 LLM 在真实执行反馈下跨 storage、plan、data structure 和 code generation 联合搜索。</p>
+      <div class="diagram-wrap">
+        <svg class="diagram" viewBox="0 0 1040 440" role="img" aria-labelledby="flow-title flow-desc">
+          <title id="flow-title">从 GenDB 原型到 Tide 可信加速器的架构映射</title>
+          <desc id="flow-desc">上半部分是离线综合平面，下半部分是保留 Catalyst、Velox 和 FringeDB 的在线数据平面。候选只有通过语义、安全和性能门禁后才进入签名 artifact registry。</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#606067"></path>
+            </marker>
+          </defs>
+          <rect x="18" y="18" width="1004" height="184" rx="8" fill="#f2ecfb" stroke="#b9a6d7"></rect>
+          <text x="38" y="49" font-size="17" font-weight="700" fill="#4d2e7a">Offline synthesis plane</text>
+          <rect x="40" y="76" width="150" height="70" rx="6" fill="#ffffff" stroke="#8f78b5"></rect>
+          <text x="115" y="104" text-anchor="middle" font-size="14" font-weight="700">Telemetry</text>
+          <text x="115" y="126" text-anchor="middle" font-size="12" fill="#606067">plan + profile + HW</text>
+          <rect x="246" y="76" width="160" height="70" rx="6" fill="#ffffff" stroke="#8f78b5"></rect>
+          <text x="326" y="104" text-anchor="middle" font-size="14" font-weight="700">Candidate IR</text>
+          <text x="326" y="126" text-anchor="middle" font-size="12" fill="#606067">LLM proposes</text>
+          <rect x="462" y="76" width="160" height="70" rx="6" fill="#ffffff" stroke="#8f78b5"></rect>
+          <text x="542" y="104" text-anchor="middle" font-size="14" font-weight="700">Isolated build</text>
+          <text x="542" y="126" text-anchor="middle" font-size="12" fill="#606067">pinned toolchain</text>
+          <rect x="678" y="76" width="142" height="70" rx="6" fill="#ffffff" stroke="#8f78b5"></rect>
+          <text x="749" y="104" text-anchor="middle" font-size="14" font-weight="700">Gate</text>
+          <text x="749" y="126" text-anchor="middle" font-size="12" fill="#606067">oracle + perf + safety</text>
+          <rect x="876" y="76" width="124" height="70" rx="6" fill="#ffffff" stroke="#8f78b5"></rect>
+          <text x="938" y="104" text-anchor="middle" font-size="14" font-weight="700">Registry</text>
+          <text x="938" y="126" text-anchor="middle" font-size="12" fill="#606067">signed artifact</text>
+          <line x1="190" y1="111" x2="238" y2="111" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="406" y1="111" x2="454" y2="111" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="622" y1="111" x2="670" y2="111" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="820" y1="111" x2="868" y2="111" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <text x="542" y="178" text-anchor="middle" font-size="13" fill="#663806">Untrusted proposals; no production authority</text>
+
+          <rect x="18" y="232" width="1004" height="190" rx="8" fill="#eaf3fb" stroke="#8ab5d8"></rect>
+          <text x="38" y="263" font-size="17" font-weight="700" fill="#063d70">Online data plane</text>
+          <rect x="40" y="294" width="120" height="70" rx="6" fill="#ffffff" stroke="#659ccc"></rect>
+          <text x="100" y="322" text-anchor="middle" font-size="14" font-weight="700">SQL</text>
+          <text x="100" y="344" text-anchor="middle" font-size="12" fill="#606067">template + params</text>
+          <rect x="206" y="294" width="148" height="70" rx="6" fill="#ffffff" stroke="#659ccc"></rect>
+          <text x="280" y="322" text-anchor="middle" font-size="14" font-weight="700">Catalyst / DAG</text>
+          <text x="280" y="344" text-anchor="middle" font-size="12" fill="#606067">semantic authority</text>
+          <rect x="400" y="294" width="138" height="70" rx="6" fill="#ffffff" stroke="#659ccc"></rect>
+          <text x="469" y="322" text-anchor="middle" font-size="14" font-weight="700">Dispatcher</text>
+          <text x="469" y="344" text-anchor="middle" font-size="12" fill="#606067">identity + guards</text>
+          <rect x="584" y="278" width="170" height="70" rx="6" fill="#e8f7ee" stroke="#5ba27a"></rect>
+          <text x="669" y="306" text-anchor="middle" font-size="14" font-weight="700">Verified kernel</text>
+          <text x="669" y="328" text-anchor="middle" font-size="12" fill="#606067">Velox plugin ABI</text>
+          <rect x="584" y="356" width="170" height="46" rx="6" fill="#fff5df" stroke="#bd8a4e"></rect>
+          <text x="669" y="385" text-anchor="middle" font-size="14" font-weight="700">Velox fallback</text>
+          <rect x="810" y="294" width="190" height="70" rx="6" fill="#ffffff" stroke="#659ccc"></rect>
+          <text x="905" y="322" text-anchor="middle" font-size="14" font-weight="700">FringeDB / result</text>
+          <text x="905" y="344" text-anchor="middle" font-size="12" fill="#606067">snapshot-bound input</text>
+          <line x1="160" y1="329" x2="198" y2="329" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="354" y1="329" x2="392" y2="329" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="538" y1="315" x2="576" y2="315" stroke="#08783e" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="538" y1="343" x2="576" y2="376" stroke="#8a4b08" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="754" y1="315" x2="802" y2="329" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="754" y1="379" x2="802" y2="342" stroke="#606067" stroke-width="2" marker-end="url(#arrow)"></line>
+          <line x1="938" y1="146" x2="938" y2="286" stroke="#6842a0" stroke-width="2" marker-end="url(#arrow)"></line>
+        </svg>
+      </div>
+      <p>图中的关键点是 authority 分离：LLM 可以扩大候选空间，但 SQL 语义、artifact 身份、promotion 和 fallback 仍由确定性组件掌握。</p>
+    </section>
+
+    <section>
+      <h2>论文证据与边界</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,identifier,text,text">
+          <colgroup><col style="width:27%"><col style="width:14%"><col style="width:27%"><col style="width:32%"></colgroup>
+          <thead><tr><th>结论</th><th>状态</th><th>证据</th><th>边界</th></tr></thead>
+          <tbody>
+            <tr><td>固定 OLAP workload 可以被专用代码加速</td><td>论文报告</td><td>TPC-H 2.8x，SEC-EDGAR 5.0x</td><td>单机、全内存、hot-run、只读、少量查询</td></tr>
+            <tr><td>runtime feedback 有效</td><td>论文报告</td><td>Q18 一轮从 12147 ms 降至 74 ms</td><td>没有证明跨数据分布和机器稳定泛化</td></tr>
+            <tr><td>结构化多 Agent 有帮助</td><td>论文报告</td><td>SEC-EDGAR ablation 差距明显</td><td>缺少多 seed；TPC-H ablation 标签存在文档不一致</td></tr>
+            <tr><td>原型可直接生产化</td><td>不支持</td><td>无事务、恢复、隔离、更新、tail latency 证据</td><td>必须保留传统引擎作为语义 oracle 和回退</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="callout info">仅按作者 telemetry 粗算，TPC-H 的 90.9 分钟生成时间需要约 14,400 次五查询 workload 重复执行，才能用 594 ms 到 214 ms 的执行差摊平。产品应按节省的 CPU-hours 和模板寿命 admission，而不是按单次 speedup admission。</aside>
+    </section>
+
+    <section>
+      <h2>上游实现的阻断项</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="identifier,text,text">
+          <colgroup><col style="width:18%"><col style="width:43%"><col style="width:39%"></colgroup>
+          <thead><tr><th>ID</th><th>观察</th><th>生产要求</th></tr></thead>
+          <tbody>
+            <tr><td><code>GDB-AUDIT-1</code></td><td>首轮 best 看进程退出成功，不看结果验证成功；错误候选仍可能晋升。</td><td>promotion 只能接受完整 gate 状态为 PASS 的候选。</td></tr>
+            <tr><td><code>GDB-AUDIT-2</code></td><td>当前复用按 query ID 和 hardware；SQL 变化未参与 skip 判断。</td><td>使用内容寻址的 logical plan 和完整依赖 manifest。</td></tr>
+            <tr><td><code>GDB-AUDIT-3</code></td><td>artifact 缺 schema、data epoch、SQL semantics、compiler、ABI、oracle 版本。</td><td>签名 manifest；任一不匹配即 cache miss。</td></tr>
+            <tr><td><code>GDB-AUDIT-4</code></td><td>Agent 绕过权限，生成的 native binary 直接在 host 执行。</td><td>build 与 run 双重 sandbox、无网络、只读输入、资源上限。</td></tr>
+            <tr><td><code>GDB-AUDIT-5</code></td><td>CSV oracle 不比较 header，容差依赖列名启发式；没有真正测试套件。</td><td>显式 result schema 和 SQL 语义矩阵，held-out differential gate。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>为什么从 JSON encoder 开始</h2>
+      <p>Tide 已经有固定 schema 的 LLVM JIT 路径和真实负优化记录。第一版 JIT 把 column-major 变成 row-major，并在每个 cell 保留 host callback，steady-state 只有 legacy 的 0.49x 到 0.77x。后续真正的收益来自恢复 execution shape、减少 data movement 和收紧 layout。</p>
+      <aside class="callout success"><strong>适合的生成目标：</strong>受类型系统约束的 <code>EncoderPlan</code> 策略组合和 lowering 参数。<br><strong>不适合的生成目标：</strong>有任意文件、网络和系统调用能力的完整 C++ 程序。</aside>
+      <div class="ladder" aria-label="Adoption ladder">
+        <article class="step"><b>L0 · Advisor</b><p>只输出 typed proposal，人工实现并复核。</p></article>
+        <article class="step"><b>L1 · Encoder</b><p>搜索 JSON encoder 的合法 execution shape。</p></article>
+        <article class="step"><b>L2 · Leaf kernel</b><p>扩展到纯 filter、project、aggregate 子树。</p></article>
+        <article class="step"><b>L3 · Template</b><p>高频查询模板 shadow、canary、自动回退。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Artifact 必须绑定什么</h2>
+      <p>查询名不是 identity，硬件 fingerprint 也不够。可复用 artifact 的最小 identity 是：</p>
+      <pre class="identity">logical_plan_digest
++ parameter_schema_digest
++ result_schema_digest
++ sql_semantics_digest
++ catalog_schema_epoch
++ storage_layout_digest
++ statistics_digest
++ data_visibility_contract
++ hardware_class
++ compiler_and_flags_digest
++ runtime_abi_version
++ generator_version
++ verifier_suite_version</pre>
+      <p>若 kernel 只依赖 schema 和 cardinality guard，可以绑定允许的统计区间；若使用 query-specific derived data，则必须绑定 snapshot 或 partition epoch。</p>
+    </section>
+
+    <section>
+      <h2>上线门禁</h2>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text,text">
+          <colgroup><col style="width:22%"><col style="width:49%"><col style="width:29%"></colgroup>
+          <thead><tr><th>Gate</th><th>必须验证</th><th>失败动作</th></tr></thead>
+          <tbody>
+            <tr><td>Semantic</td><td>独立引擎 differential、held-out 参数与数据、result schema</td><td>reject</td></tr>
+            <tr><td>Numeric</td><td>DECIMAL、overflow、NaN、NULL、timezone、collation</td><td>reject</td></tr>
+            <tr><td>Safety</td><td>sanitizer、fuzz、malformed storage、syscall 与资源边界</td><td>kill + reject</td></tr>
+            <tr><td>Performance</td><td>目标机、固定 CPU/NUMA、p50/p95/p99、PMU、RSS</td><td>keep baseline</td></tr>
+            <tr><td>Compatibility</td><td>ABI、compiler、schema、storage、hardware identity</td><td>cache miss</td></tr>
+            <tr><td>Operations</td><td>shadow diff、canary、kill switch、rollback、provenance</td><td>fallback</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>最终判断</h2>
+      <p><span class="status proposed">建议</span> 把 GenDB 作为 Tide 的离线优化搜索方法，不作为新的 query engine。先让它在 JSON encoder 的 typed plan 空间内证明稳定收益，再进入无副作用的 Velox leaf/subtree；完整查询模板加速必须等 content-addressed registry、独立 oracle、sandbox、shadow 和 rollback 同时就绪。</p>
+      <aside class="callout danger"><strong>禁止路径：</strong>生产查询到达后，把原始 SQL 和数据交给有完整 host 权限的 Agent，现场生成、编译并执行 native code。</aside>
+    </section>
+
+    <footer>
+      <p>Evidence: arXiv 2603.02081v1; GenDB paper commit <code>b7418071fc51aacd219964e4a68e593234db9237</code>; current commit <code>0ccf053ade163137775cd2e9c6e1288ea89d524b</code>; Tide JSON encoder JIT and FringeDB study notes. Paper performance was not independently reproduced.</p>
+      <p>Composed 2026-09-28 by ce-explain</p>
+    </footer>
+  </main>
+</body>
+</html>
