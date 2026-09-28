@@ -1,0 +1,22 @@
+/usr/include/c++/8/bits/stl_algobase.h:741:13: note: loop vectorized
+/usr/include/c++/8/bits/stl_algobase.h:741:13: note: loop versioned for vectorization because of possible aliasing
+/usr/include/c++/8/bits/stl_algobase.h:684:22: note: loop vectorized
+/usr/include/c++/8/bits/stl_algobase.h:684:22: note: loop versioned for vectorization because of possible aliasing
+/usr/include/c++/8/bits/stl_algobase.h:741:13: note: loop vectorized
+/usr/include/c++/8/bits/stl_algobase.h:741:13: note: loop versioned for vectorization because of possible aliasing
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:71:5: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:71:5: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:45:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q1/iter_3/q1.cpp:51:25: note: basic block vectorized
+/usr/include/c++/8/bits/stl_vector.h:1085:4: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/src/gendb/utils/mmap_utils.h:28:9: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q1/iter_3/q1.cpp:113:49: note: basic block vectorized
+/usr/include/c++/8/bits/stl_vector.h:296:18: note: basic block vectorized
+/usr/include/c++/8/array:94:12: note: basic block vectorized
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q1/iter_3/q1.cpp:218:27: note: basic block vectorized

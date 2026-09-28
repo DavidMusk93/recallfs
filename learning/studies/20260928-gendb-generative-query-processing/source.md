@@ -92,13 +92,20 @@ These sources establish that Tide/stream_engine already has:
 | Paper branch | Statically inspected | Experiment-era orchestration and validator behavior | Runtime success on another machine |
 | Current `main` | Statically inspected | Post-paper template, persistence, memory, and provider changes | Paper claims or backward compatibility |
 | Repository benchmark JSON | Inspected | Recorded samples behind published figures | Independent measurement, noise control, or fair end-to-end accounting |
+| `d2` SF10 reproduction | Executed | Same-input correctness, hot latency, iteration ablation, storage footprint | Other hardware, cold cache, concurrency, updates, or generation reproducibility |
 | Tide/stream_engine notes | Existing local evidence | Product-specific JIT and execution-shape constraints | A completed GenDB integration |
 
 ## Reproduction Boundary
 
-This study does not rerun GenDB end to end. Full reproduction requires the
-excluded 12 GB TPC-H and 3.3 GB SEC-EDGAR generated storage artifacts or a full
-rebuild, a Linux host with the documented CPU and memory class, supported LLM
-credentials, database baselines, and roughly 1.5 to 2.3 hours of generation per
-workload in the recorded runs. The local review performed source, metadata,
-digest, and syntax checks only.
+The study independently rebuilt TPC-H SF10 from pinned dbgen source on `d2`,
+loaded the same `.tbl` files into GenDB and DuckDB, compiled the paper's
+selected generated programs, validated results, and measured 1 warmup plus 10
+hot runs. See
+[`evidence/tpch-sf10-reproduction.md`](evidence/tpch-sf10-reproduction.md) and
+[`benchmark/README.md`](benchmark/README.md).
+
+This execution reproduction does not rerun the LLM generation stage. It also
+does not cover SEC-EDGAR, cold cache, concurrent clients, updates, crash
+recovery, schema evolution, or a second target host. The paper does not pin its
+DuckDB or compiler versions; the reproduction used DuckDB `1.2.1` and GCC
+`8.3.0`.

@@ -56,12 +56,65 @@ Local checks
 Learning report
 Path: learning/studies/20260928-gendb-generative-query-processing/report.html
 Accepted SHA-256:
-b5c3d64b7dd6147020d013a3a52cbbf409674bdcbae731452ef4be84316c7484
+5c61a897969f7d9f8afde83c8b3bd8b64253906a98f59585fa9eacf8fe389574
 HTTP URL: http://127.0.0.1:8765/report.html
 Desktop: 1440 x 1000, no page overflow, table probe passed
 Mobile: 390 x 844, no page overflow, table probe passed
 Console errors: none
 Failed requests: none
+
+Independent TPC-H SF10 reproduction
+Host: d2 / n37-125-152
+GenDB commit: b7418071fc51aacd219964e4a68e593234db9237
+dbgen commit: 32f1c1b92d1664dba542e927d23d86ffa57aa253
+Protocol: 1 warmup + 10 measured hot runs, self-preconditioned AB/BA,
+64 CPUs, NUMA interleave
+Benchmark results SHA-256:
+25fd69cdf172aa7b85a1584f188473c70d118af168cb81c18eb30707df4d8135
+Ablation results SHA-256:
+a01263d31aecac68e8961742c82c2f1f5a2cdcb3f0e01ec79ccb6bc29de0149b
+Completion manifest SHA-256:
+13d020791a47f0c8565d45a474704dcfcaf6685cdf12ac697bd1c257a456f301
+
+Structured provenance SHA-256
+preparation-manifest.json:
+54c6518ac10e24ae67d30938132e7dfb23fa7749b7bc0144ab237cd5fa5648ad
+artifact-sha256.txt:
+077d9a2f87e56517332e846b0c178ac0e9e2c018d56946e9986a39761b5823ce
+source-sha256.txt:
+4cf387a4d6d8316148e04050a49ca336fe6621e43f2b88737001af8a7e630cb0
+reference-sha256.txt:
+2e9ed93a027c4870a6598f5843470f5345c717aa6f1539fdf1b941dba95dbb49
+harness-sha256.txt:
+5b05c08fb6fb8102707a5d838744a494e4d517adc74830c1d2558040bbbbe0ec
+filc-dbgen-smoke.json:
+99d15f61f6b71b2d2ad85a1aac5336ebf7245e4f24d28f444d51b32af230e019
+
+Reproduction harness SHA-256
+benchmark/README.md:
+c425db2d818098f83b070b6fcb4bff7851df27b9989b6228a5a2f1dda8301473
+benchmark/prepare_remote.sh:
+fc5d4e0bc30c8b645681c8d2abed915f57cecd22c449ab1f394502a6c69f63c6
+benchmark/run_remote.sh:
+815493e05bb873e6bd05d2e17df08a11cb1c10e38a7179c088924b4dcfd563ff
+benchmark/tpch_bench.py:
+447bdfeb77be8296ff384efdd09cacf407040718d20f2a2b51e19c030e859b52
+benchmark/q1_numeric_contract.py:
+ca0716afbcdb22c27da6603dd78d50adb15cfc229beb561b3b19b170a9406b2c
+benchmark/test_run_remote.sh:
+847ca37f1c89b7494829ce81a25092e8db4e99861b6b8675de74e455746b8825
+benchmark/test_tpch_bench.py:
+83d114469b016e7feae013fc3daebcd2305a5f38feeaaf39e6a9e0c5c4d41470
+benchmark/verify_dbgen_filc.sh:
+284e9c479e9b945c658c887ca3d9d2071a7f74ec6ac347d180eab171fe17d0cd
+
+Focused evidence SHA-256
+q1-numeric-contract.json:
+a7bf2b8e1c62136b3eebfabf90ee3adc5b3837b68822ef55c48a4ecc3995696a
+q1-source-binary-sha256.txt:
+3d2437ef306645758ff27f3f015e69915e562fa7a71526705af39a40b1272c71
+q3-stability-probe.txt:
+ae16723c68e9518500cae693d6731161c3a2fbdb041ddf5582697ff43e6fc0b3
 
 Commands
 curl -fL --retry 3 --connect-timeout 20 \

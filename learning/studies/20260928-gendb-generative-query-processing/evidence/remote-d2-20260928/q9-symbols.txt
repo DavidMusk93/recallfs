@@ -1,0 +1,100 @@
+0000000000008120 B __bss_start
+                 U close@@GLIBC_2.2.5
+0000000000008140 b completed.7325
+                 w __cxa_finalize@@GLIBC_2.2.5
+0000000000008100 D __data_start
+0000000000008100 W data_start
+0000000000002c70 t deregister_tm_clones
+0000000000002ce0 t __do_global_dtors_aux
+0000000000007d98 t __do_global_dtors_aux_fini_array_entry
+0000000000008108 D __dso_handle
+0000000000008110 V DW.ref.__gcc_personality_v0
+0000000000008118 V DW.ref.__gxx_personality_v0
+0000000000007da0 d _DYNAMIC
+0000000000008120 D _edata
+00000000012840c0 B _end
+                 U exit@@GLIBC_2.2.5
+                 U fclose@@GLIBC_2.2.5
+0000000000004bb4 T _fini
+                 U fopen@@GLIBC_2.2.5
+                 U fprintf@@GLIBC_2.2.5
+0000000000002d20 t frame_dummy
+0000000000007d90 t __frame_dummy_init_array_entry
+0000000000005c3c r __FRAME_END__
+                 U fwrite@@GLIBC_2.2.5
+                 U __fxstat@@GLIBC_2.2.5
+                 U __gcc_personality_v0@@GCC_3.3.1
+0000000000008000 d _GLOBAL_OFFSET_TABLE_
+                 w __gmon_start__
+00000000000053a8 r __GNU_EH_FRAME_HDR
+                 U GOMP_barrier@@GOMP_1.0
+                 U GOMP_parallel@@GOMP_4.0
+                 U __gxx_personality_v0@@CXXABI_1.3
+0000000000001000 t _init
+0000000000007d98 t __init_array_end
+0000000000007d90 t __init_array_start
+0000000000005000 R _IO_stdin_used
+                 w _ITM_deregisterTMCloneTable
+                 w _ITM_registerTMCloneTable
+0000000000004bb0 T __libc_csu_fini
+0000000000004b50 T __libc_csu_init
+                 U __libc_start_main@@GLIBC_2.2.5
+                 U madvise@@GLIBC_2.2.5
+00000000000012e0 T main
+00000000000042f0 t main._omp_fn.0
+0000000000004390 t main._omp_fn.1
+00000000000041b0 t main._omp_fn.2
+0000000000004300 t main._omp_fn.3
+0000000000003ef0 t main._omp_fn.4
+                 U memcmp@@GLIBC_2.2.5
+                 U memcpy@@GLIBC_2.14
+                 U memmem@@GLIBC_2.2.5
+                 U memmove@@GLIBC_2.2.5
+                 U memset@@GLIBC_2.2.5
+                 U mmap@@GLIBC_2.2.5
+00000000000053a8 R __offload_funcs_end
+00000000000053a8 R __offload_func_table
+00000000000053a8 R __offload_vars_end
+00000000000053a8 R __offload_var_table
+                 U omp_get_num_threads@@OMP_1.0
+                 U omp_get_thread_num@@OMP_1.0
+                 U open@@GLIBC_2.2.5
+                 U perror@@GLIBC_2.2.5
+                 U posix_fadvise@@GLIBC_2.2.5
+                 U printf@@GLIBC_2.2.5
+0000000000002ca0 t register_tm_clones
+0000000000002c40 T _start
+                 U stderr@@GLIBC_2.2.5
+                 U strlen@@GLIBC_2.2.5
+0000000000008120 D __TMC_END__
+                 U _Unwind_Resume@@GCC_3.0
+00000000000047f0 t unsigned char const* mmap_ro<unsigned char>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&)
+000000000000124a t unsigned char const* mmap_ro<unsigned char>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&) [clone .cold.2]
+0000000000004910 t int const* mmap_ro<int>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&)
+000000000000127a t int const* mmap_ro<int>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&) [clone .cold.3]
+                 U operator delete(void*)@@GLIBCXX_3.4
+0000000000004a40 t mmap_bytes(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&)
+00000000000012aa t mmap_bytes(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned long&) [clone .cold.4]
+0000000001008180 b suppkey_nk
+00000000012520c0 b thread_agg
+0000000001069c20 b part_bitset
+0000000000008180 b cps_ht
+00000000000045b0 t gendb::PhaseTimer::~PhaseTimer()
+00000000000045b0 t gendb::PhaseTimer::~PhaseTimer()
+0000000000004610 t std::char_traits<char>::length(char const*)
+                 U std::chrono::_V2::system_clock::now()@@GLIBCXX_3.4.19
+0000000000002da0 t void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag) [clone .constprop.2]
+0000000000004480 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long)
+0000000000002d30 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_create(unsigned long&, unsigned long) [clone .isra.86]
+0000000000004620 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [clone .constprop.1]
+                 U operator new(unsigned long)@@GLIBCXX_3.4
+00000000000030f0 t void std::__adjust_heap<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, long, main::Row, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, long, __gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, main::Row, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>) [clone .isra.58]
+0000000000002fa0 t void std::__insertion_sort<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>) [clone .isra.70]
+0000000000003520 t void std::__introsort_loop<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>)
+                 U std::__throw_logic_error(char const*)@@GLIBCXX_3.4
+                 U std::__throw_length_error(char const*)@@GLIBCXX_3.4
+0000000000002e70 t void std::__unguarded_linear_insert<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Val_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Val_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>) [clone .isra.68]
+00000000000046d0 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+000000000000122d t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .cold.1]
+0000000000004660 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)
+0000000000001210 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*) [clone .cold.0]

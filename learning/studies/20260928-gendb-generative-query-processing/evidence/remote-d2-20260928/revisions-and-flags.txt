@@ -1,0 +1,10 @@
+gendb_commit=b7418071fc51aacd219964e4a68e593234db9237
+dbgen_commit=32f1c1b92d1664dba542e927d23d86ffa57aa253
+dbgen_flags=CC=gcc MACHINE=MAC DATABASE=ORACLE WORKLOAD=TPCH
+ingest_flags=-O3 -march=native -mtune=native -DNDEBUG -std=c++17 -pthread
+query_flags=-O3 -march=native -mtune=native -DNDEBUG -flto -std=c++17 -Wall -fopenmp -DGENDB_PROFILE
+query_ldflags=-lstdc++fs
+threads=64
+numa_policy=cpunodebind=0,1 interleave=all
+cpu_affinity=0-63
+python_bin=/root/anaconda3/bin/python3

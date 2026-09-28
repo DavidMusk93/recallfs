@@ -1,0 +1,441 @@
+== Provision pinned sources and data ==
+HEAD is now at b741807 update LICENSE; use the original paramters for experiments in the paper
+HEAD is now at 32f1c1b Compile on Mac OS X
+== FIL-C dbgen correctness gate ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/filc-0.684-linux-x86_64.tar.xz: OK
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc++.so.1.0
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc++abi.so.1.0
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_test/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_test_gcverify/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_gcverify/libpizlo.so
++ cd pizfix
++ mkdir os-include
++ cd os-include
++ ln -s /usr/include/linux .
++ test -d /usr/include/x86_64-linux-gnu/asm
++ ln -s /usr/include/x86_64-linux-gnu/asm .
++ ln -s /usr/include/asm-generic .
++ cd ../..
++ set +x
+
+You are all set. Try compiling something with:
+
+    build/bin/clang -o whatever whatever.c -O2 -g
+
+or:
+
+    build/bin/clang++ -o whatever whatever.cpp -O2 -g
+
+Take a look at pizfix/stdfil-include/stdfil.h for Fil-C-specific APIs. You can
+optionally #include <stdfil.h> if you find those APIs useful.
+
+New releases are at: https://github.com/pizlonator/fil-c/releases
+More information on the website: https://fil-c.org/
+
+Have fun and thank you for trying filc-0.684-linux-x86_64.
+== FIL-C instrumentation negative control ==
+== FIL-C build and execution ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o build.o build.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o driver.o driver.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bm_utils.o bm_utils.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rnd.o rnd.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o print.o print.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o load_stub.o load_stub.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bcd2.o bcd2.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o speed_seed.o speed_seed.c
+bcd2.c:166:17: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+  166 |                 SET_DIGIT(res, udigit + ldigit, bcd_low, bcd_high);
+      |                 ^
+bcd2.c:51:5: note: expanded from macro 'SET_DIGIT'
+   51 |     else \
+      |     ^
+build.c:109:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  109 |                 sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:109:48: note: use array indexing to silence this warning
+  109 |                 sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+build.c:169:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  169 |                 sprintf(szFormat, O_CLRK_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:169:48: note: use array indexing to silence this warning
+  169 |                 sprintf(szFormat, O_CLRK_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+driver.c:325:4: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+  325 |                         else
+      |                         ^
+driver.c:335:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  335 |                                 tdefs[tnum].loader(&o, upd_num);
+      |                                                   ^
+driver.c:340:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  340 |                                 tdefs[tnum].loader(&supp, upd_num);
+      |                                                   ^
+driver.c:345:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  345 |                                 tdefs[tnum].loader(&cust, upd_num);
+      |                                                   ^
+driver.c:352:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  352 |                                 tdefs[tnum].loader(&part, upd_num);
+      |                                                   ^
+driver.c:357:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  357 |                                 tdefs[tnum].loader(&code, 0);
+      |                                                   ^
+driver.c:362:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  362 |                                 tdefs[tnum].loader(&code, 0);
+      |                                                   ^
+build.c:283:47: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  283 |                 sprintf(szFormat, P_MFG_FMT, 1, HUGE_FORMAT + 1);
+      |                                                 ~~~~~~~~~~~~^~~
+build.c:283:47: note: use array indexing to silence this warning
+  283 |                 sprintf(szFormat, P_MFG_FMT, 1, HUGE_FORMAT + 1);
+      |                                                             ^
+      |                                                 &           [  ]
+build.c:284:53: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  284 |                 sprintf(szBrandFormat, P_BRND_FMT, 2, HUGE_FORMAT + 1);
+      |                                                       ~~~~~~~~~~~~^~~
+build.c:284:53: note: use array indexing to silence this warning
+  284 |                 sprintf(szBrandFormat, P_BRND_FMT, 2, HUGE_FORMAT + 1);
+      |                                                                   ^
+      |                                                       &           [  ]
+build.c:322:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  322 |                 sprintf(szFormat, S_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:322:48: note: use array indexing to silence this warning
+  322 |                 sprintf(szFormat, S_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+bm_utils.c:574:25: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  574 |                         tdefs[table].gen_seed(1, rowcount);
+      |                                              ^
+bm_utils.c:576:25: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  576 |                         tdefs[table].gen_seed(0, rowcount);
+      |                                              ^
+bm_utils.c:580:38: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  580 |                         tdefs[tdefs[table].child].gen_seed(0,rowcount);
+      |                                                           ^
+bm_utils.c:583:24: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  583 |                 tdefs[table].gen_seed(0, *extra_rows);
+      |                                      ^
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o text.o text.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o permute.o permute.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rng64.o rng64.c
+1 warning generated.
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o qgen.o qgen.c
+qgen.c:197:38: warning: format string is empty [-Wformat-zero-length]
+  197 |                         fprintf(ofp, SET_DBASE, db_name);
+      |                                      ^~~~~~~~~
+./tpcd.h:76:19: note: expanded from macro 'SET_DBASE'
+   76 | #define SET_DBASE ""
+      |                   ^~
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o varsub.o varsub.c
+5 warnings generated.
+4 warnings generated.
+7 warnings generated.
+1 warning generated.
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o dbgen build.o driver.o bm_utils.o rnd.o print.o load_stub.o bcd2.o speed_seed.o text.o permute.o rng64.o -lm
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o qgen build.o bm_utils.o qgen.o rnd.o varsub.o text.o bcd2.o permute.o speed_seed.o rng64.o -lm
+TPC-H Population Generator (Version 2.14.0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+== Native oracle ==
+make: Entering directory '/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dbgen-smoke/native'
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o build.o build.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o driver.o driver.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bm_utils.o bm_utils.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rnd.o rnd.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o print.o print.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o load_stub.o load_stub.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bcd2.o bcd2.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o speed_seed.o speed_seed.c
+In file included from load_stub.c:32:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from load_stub.c:31:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from load_stub.c:32:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from load_stub.c:31:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from speed_seed.c:53:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from speed_seed.c:51:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from speed_seed.c:53:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from speed_seed.c:51:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from print.c:46:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from print.c:37:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from print.c:46:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from print.c:37:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from build.c:45:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from build.c:35:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from build.c:45:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from build.c:35:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+bm_utils.c: In function ‘mk_ascdate’:
+bm_utils.c:544:16: warning: implicit declaration of function ‘strdup’ [-Wimplicit-function-declaration]
+         m[i] = strdup(t.alpha);
+                ^~~~~~
+bm_utils.c:544:16: warning: incompatible implicit declaration of built-in function ‘strdup’
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o text.o text.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o permute.o permute.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rng64.o rng64.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o qgen.o qgen.c
+In file included from qgen.c:39:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from qgen.c:30:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from qgen.c:39:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from qgen.c:30:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o varsub.o varsub.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o dbgen build.o driver.o bm_utils.o rnd.o print.o load_stub.o bcd2.o speed_seed.o text.o permute.o rng64.o -lm
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o qgen build.o bm_utils.o qgen.o rnd.o varsub.o text.o bcd2.o permute.o speed_seed.o rng64.o -lm
+make: Leaving directory '/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dbgen-smoke/native'
+TPC-H Population Generator (Version 2.14.0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+FIL-C dbgen smoke passed: /data00/benchmarks/gendb-tpch-sf10-20260928/evidence/filc-dbgen-smoke.json
+== Environment ==
+2026-09-28T21:52:27+08:00
+Linux n37-125-152 5.15.198.bsk.1-amd64 #5.15.198.bsk.1 SMP Debian 5.15.198.bsk.1 Sat May 9 08:38:07 UTC x86_64 GNU/Linux
+Architecture:        x86_64
+CPU op-mode(s):      32-bit, 64-bit
+Byte Order:          Little Endian
+Address sizes:       40 bits physical, 57 bits virtual
+CPU(s):              64
+On-line CPU(s) list: 0-63
+Thread(s) per core:  1
+Core(s) per socket:  32
+Socket(s):           2
+NUMA node(s):        2
+Vendor ID:           GenuineIntel
+CPU family:          6
+Model:               143
+Model name:          Intel(R) Xeon(R) Platinum 8457C
+Stepping:            8
+CPU MHz:             2600.000
+BogoMIPS:            5200.00
+Hypervisor vendor:   KVM
+Virtualization type: full
+L1d cache:           48K
+L1i cache:           32K
+L2 cache:            2048K
+L3 cache:            99840K
+NUMA node0 CPU(s):   0-31
+NUMA node1 CPU(s):   32-63
+Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 wbnoinvd arat avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid cldemote movdiri movdir64b fsrm md_clear serialize tsxldtrk arch_lbr amx_bf16 avx512_fp16 amx_tile amx_int8 arch_capabilities
+available: 2 nodes (0-1)
+node 0 cpus: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+node 0 size: 128799 MB
+node 0 free: 3636 MB
+node 1 cpus: 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+node 1 size: 128785 MB
+node 1 free: 4646 MB
+node distances:
+node   0   1
+  0:  10  20
+  1:  20  10
+g++ (Debian 8.3.0-6) 8.3.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+python 3.13.5
+duckdb-python 1.2.1
+duckdb-engine ('v1.2.1', 'deadbeeff')
+== Input manifest ==
+d4ba00a59ddb3bdaabeb1bcf560a182f8874366c9db51cedc3bd5ec9d64d03bd  ./customer.tbl
+9a7b308b6ca31a88880421f5d1a8a540c6b9ff377d698b0401ed688534c7344d  ./lineitem.tbl
+66f96949939fa8fdf1c4ffed1e5f6c2842fe11a14b51fdc6ed1e17460031e8c5  ./nation.tbl
+f226ed1f69337bfd0dd2db00aa1c53d31ffb58dc03aa9386a80c7efcc24802c2  ./orders.tbl
+0c66a4409078d92b2a1c1f66f5349468c32ce4016e4c2d198e1916552b361a60  ./partsupp.tbl
+0eba8e6d7787f4dda40916bc4e01871498f3a5c29b9711c00c13bf2231ba2904  ./part.tbl
+6022658d673924389b54dcb70fa8c3d6da1b0d7afa3c1c017bab62a019df404f  ./region.tbl
+5de31112f00febc38aaa35581a7acf269b55f77b368c6ec3179fc138bf1fc996  ./supplier.tbl
+customer.tbl	1500000	244847642
+lineitem.tbl	59986052	7775727688
+nation.tbl	25	2224
+orders.tbl	15000000	1749195031
+partsupp.tbl	8000000	1204850769
+part.tbl	2000000	243336157
+region.tbl	5	389
+supplier.tbl	100000	14176368
+== Build GenDB storage tools ==
+== Build GenDB storage ==
+Base columns already exist; skipping ingest.
+Base indexes already exist; skipping index build.
+Compact Q1 columns already exist; skipping extension build.
+Q9 order-year nibble already exists; skipping extension build.
+== Build selected GenDB query binaries ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp: In function ‘int main(int, char**)’:
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:168:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                     if (s[i] >= SHIP_LO & s[i] < SHIP_HI &
+                         ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:169:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         d[i] >= DISC_LO & d[i] <= DISC_HI &
+                         ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:169:48: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         d[i] >= DISC_LO & d[i] <= DISC_HI &
+                                           ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:170:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         q[i] < QTY_MAX) {
+                         ~~~~~^~~~~~~~~
+== Build GenDB iteration binaries for benefit decomposition ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp: In function ‘int main(int, char**)’:
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:168:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                     if (s[i] >= SHIP_LO & s[i] < SHIP_HI &
+                         ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:169:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         d[i] >= DISC_LO & d[i] <= DISC_HI &
+                         ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:169:48: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         d[i] >= DISC_LO & d[i] <= DISC_HI &
+                                           ~~~~~^~~~~~~~~~
+/data00/benchmarks/gendb-tpch-sf10-20260928/GenDB/output/tpc-h/2026-02-26T06-27-28/queries/Q6/iter_0/q6.cpp:170:30: warning: suggest parentheses around comparison in operand of ‘&’ [-Wparentheses]
+                         q[i] < QTY_MAX) {
+                         ~~~~~^~~~~~~~~
+== Verify observable query binaries ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q1: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=8d3bb1eea2a6d442b335c0d2af41c6bf4948d6a2, not stripped
+/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q3: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=7b21a3b41e1d36ad597663bd590f758361a2ff8c, not stripped
+/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q6: ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=84d4d9608d46b008fa70a05bfab03b79caeb3a0b, not stripped
+/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q9: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=975da8fdc19fbf6398fb56b06f85d2143b3870bb, not stripped
+/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q18: ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=b430ddd3bd52d87df5aefaa4e74435ecf301f813, not stripped
+== Verify Q1 numeric and code-generation contracts ==
+{
+  "checked_values": {
+    "discount_cent": 11,
+    "extendedprice_cent": 10404860,
+    "quantity_units": 50,
+    "tax_cent": 9
+  },
+  "conversion": "int(binary64_value * scale + 0.5)",
+  "domains": {
+    "discount_cent": {
+      "maximum": 10,
+      "minimum": 0,
+      "scale": 100
+    },
+    "extendedprice_cent": {
+      "maximum": 10494950,
+      "minimum": 90091,
+      "scale": 100
+    },
+    "quantity_units": {
+      "maximum": 50,
+      "minimum": 1,
+      "scale": 1
+    },
+    "tax_cent": {
+      "maximum": 8,
+      "minimum": 0,
+      "scale": 100
+    }
+  },
+  "first_invalid_values": {
+    "discount_cent": [
+      -1,
+      11
+    ],
+    "extendedprice_cent": [
+      90090,
+      10494951
+    ],
+    "quantity_units": [
+      0,
+      51
+    ],
+    "tax_cent": [
+      -1,
+      9
+    ]
+  },
+  "guard_boundary": "The upstream builder does not enforce these domains; a production ingest path must reject or fall back when they do not hold.",
+  "int64_headroom": 2424225379330855807,
+  "int64_max": 9223372036854775807,
+  "max_sum_charge_scaled": 6799146657523920000,
+  "overflow": "widen products and accumulators to signed int64",
+  "portability": "IEEE-754 binary64 and C++ truncation of positive values",
+  "rounding": "nearest for the declared nonnegative decimal domain",
+  "source_semantics": "TPC-H nonnegative decimal text with at most two fractional digits",
+  "status": "pass"
+}
+== Build DuckDB database from the same input ==
+DuckDB database already exists; skipping load.
+== Artifact manifest ==
+Preparation complete: /data00/benchmarks/gendb-tpch-sf10-20260928

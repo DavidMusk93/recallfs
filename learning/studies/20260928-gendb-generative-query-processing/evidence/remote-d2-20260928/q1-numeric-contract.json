@@ -1,0 +1,58 @@
+{
+  "checked_values": {
+    "discount_cent": 11,
+    "extendedprice_cent": 10404860,
+    "quantity_units": 50,
+    "tax_cent": 9
+  },
+  "conversion": "int(binary64_value * scale + 0.5)",
+  "domains": {
+    "discount_cent": {
+      "maximum": 10,
+      "minimum": 0,
+      "scale": 100
+    },
+    "extendedprice_cent": {
+      "maximum": 10494950,
+      "minimum": 90091,
+      "scale": 100
+    },
+    "quantity_units": {
+      "maximum": 50,
+      "minimum": 1,
+      "scale": 1
+    },
+    "tax_cent": {
+      "maximum": 8,
+      "minimum": 0,
+      "scale": 100
+    }
+  },
+  "first_invalid_values": {
+    "discount_cent": [
+      -1,
+      11
+    ],
+    "extendedprice_cent": [
+      90090,
+      10494951
+    ],
+    "quantity_units": [
+      0,
+      51
+    ],
+    "tax_cent": [
+      -1,
+      9
+    ]
+  },
+  "guard_boundary": "The upstream builder does not enforce these domains; a production ingest path must reject or fall back when they do not hold.",
+  "int64_headroom": 2424225379330855807,
+  "int64_max": 9223372036854775807,
+  "max_sum_charge_scaled": 6799146657523920000,
+  "overflow": "widen products and accumulators to signed int64",
+  "portability": "IEEE-754 binary64 and C++ truncation of positive values",
+  "rounding": "nearest for the declared nonnegative decimal domain",
+  "source_semantics": "TPC-H nonnegative decimal text with at most two fractional digits",
+  "status": "pass"
+}

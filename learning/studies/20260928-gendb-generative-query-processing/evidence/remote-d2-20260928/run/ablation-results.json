@@ -1,0 +1,4420 @@
+{
+  "created_at": "2026-09-28T13:58:47.209236+00:00",
+  "methodology": {
+    "comparison": "GenDB iteration 0 vs author-selected best iteration",
+    "correctness_oracle": "DuckDB output under the same canonical comparator",
+    "measured_runs": 10,
+    "threads": 64,
+    "warmups": 1,
+    "workload": "TPC-H SF10 selected Q1/Q3/Q6/Q9/Q18"
+  },
+  "queries": {
+    "Q1": {
+      "best_iteration": "iter_3",
+      "iter0_to_best_speedup": 1.7700733808359035,
+      "variants": {
+        "iter_0": {
+          "binary": {
+            "bytes": 43512,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q1/iter_0",
+            "sha256": "54f9e119c62eb0abfbe8947b4849b24f9e5636c861681d8cdae30bc9ed7d7a77"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 7,
+            "exact_samples": 4,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "9388d0874c791a9803ee3da73a4e5a1fba3cb3f4f7e7d3596595155a4129e650"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "1100937000170.591853",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "fail",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 99.15,
+            "median_ms": 83.22,
+            "min_ms": 66.81,
+            "p95_ms": 99.15,
+            "samples_ms": [
+              66.81,
+              96.45,
+              78.92,
+              99.15,
+              83.78,
+              93.16,
+              76.16,
+              93.26,
+              72.69,
+              82.66
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 0.01,
+              "data_loading": 64.72,
+              "dim_filter": 0.21,
+              "main_scan": 64.28,
+              "output": 0.19,
+              "total": 66.81
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 94.61,
+              "dim_filter": 0.2,
+              "main_scan": 94.18,
+              "output": 0.16,
+              "total": 96.45
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 77.13,
+              "dim_filter": 0.2,
+              "main_scan": 76.69,
+              "output": 0.17,
+              "total": 78.92
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 96.9,
+              "dim_filter": 0.21,
+              "main_scan": 96.38,
+              "output": 0.14,
+              "total": 99.15
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 81.98,
+              "dim_filter": 0.2,
+              "main_scan": 81.52,
+              "output": 0.17,
+              "total": 83.78
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 91.17,
+              "dim_filter": 0.2,
+              "main_scan": 90.74,
+              "output": 0.16,
+              "total": 93.16
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 74.04,
+              "dim_filter": 0.2,
+              "main_scan": 73.55,
+              "output": 0.17,
+              "total": 76.16
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 91.37,
+              "dim_filter": 0.2,
+              "main_scan": 90.93,
+              "output": 0.14,
+              "total": 93.26
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 70.76,
+              "dim_filter": 0.31,
+              "main_scan": 70.15,
+              "output": 0.18,
+              "total": 72.69
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 80.94,
+              "dim_filter": 0.21,
+              "main_scan": 80.51,
+              "output": 0.18,
+              "total": 82.66
+            }
+          ],
+          "process_wall": {
+            "max_ms": 110.47178134322166,
+            "median_ms": 91.48526517674327,
+            "min_ms": 71.37735653668642,
+            "p95_ms": 110.47178134322166,
+            "samples_ms": [
+              71.37735653668642,
+              100.25830566883087,
+              86.61020826548338,
+              110.47178134322166,
+              89.40967917442322,
+              99.38188642263412,
+              88.56701292097569,
+              99.27009977400303,
+              76.47636625915766,
+              93.56085117906332
+            ]
+          }
+        },
+        "iter_1": {
+          "binary": {
+            "bytes": 39216,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q1/iter_1",
+            "sha256": "204f99bdd4217c06d35f48b7d7d7eb9d63781bf6ace5553ed557601a0a993021"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 11,
+            "exact_samples": 0,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "74e98cb3feda1584018de55c1db4cfadd0e8765482105b10feab6a18f14c6765"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116818",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "1100937000170.591856",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "fail",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 115.78,
+            "median_ms": 85.52000000000001,
+            "min_ms": 78.05,
+            "p95_ms": 115.78,
+            "samples_ms": [
+              79.17,
+              115.78,
+              86.18,
+              89.51,
+              89.62,
+              82.64,
+              78.05,
+              84.86,
+              89.03,
+              80.07
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 0.0,
+              "data_loading": 77.39,
+              "dim_filter": 0.2,
+              "main_scan": 76.93,
+              "output": 0.15,
+              "total": 79.17
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 114.01,
+              "dim_filter": 0.2,
+              "main_scan": 113.52,
+              "output": 0.16,
+              "total": 115.78
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 84.32,
+              "dim_filter": 0.23,
+              "main_scan": 83.79,
+              "output": 0.15,
+              "total": 86.18
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 87.48,
+              "dim_filter": 0.22,
+              "main_scan": 86.98,
+              "output": 0.14,
+              "total": 89.51
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 87.9,
+              "dim_filter": 0.2,
+              "main_scan": 87.41,
+              "output": 0.15,
+              "total": 89.62
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 80.8,
+              "dim_filter": 0.2,
+              "main_scan": 80.29,
+              "output": 0.15,
+              "total": 82.64
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 76.18,
+              "dim_filter": 0.21,
+              "main_scan": 75.66,
+              "output": 0.16,
+              "total": 78.05
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 83.16,
+              "dim_filter": 0.24,
+              "main_scan": 82.62,
+              "output": 0.15,
+              "total": 84.86
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 87.28,
+              "dim_filter": 0.21,
+              "main_scan": 86.79,
+              "output": 0.13,
+              "total": 89.03
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 78.27,
+              "dim_filter": 0.2,
+              "main_scan": 77.76,
+              "output": 0.17,
+              "total": 80.07
+            }
+          ],
+          "process_wall": {
+            "max_ms": 124.47188887745142,
+            "median_ms": 93.00309373065829,
+            "min_ms": 83.49746558815241,
+            "p95_ms": 124.47188887745142,
+            "samples_ms": [
+              83.49746558815241,
+              124.47188887745142,
+              93.51087920367718,
+              92.49530825763941,
+              94.39816419035196,
+              86.53290756046772,
+              86.4099906757474,
+              102.50466037541628,
+              95.4772187396884,
+              86.69759798794985
+            ]
+          }
+        },
+        "iter_2": {
+          "binary": {
+            "bytes": 39232,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q1/iter_2",
+            "sha256": "2a185c185edd96a902fbdc18084e5f5e40693947ed0d33641da6cb8e21dba861"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 11,
+            "exact_samples": 0,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "024609ad999102a634716adc28df46e50afc47916eb7769f23d5143f56c6e155"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116211",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.592041",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "37b9dd6d236f1eee27751383f330e5302b426771297fcb6f5f77e88e96526153"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115845",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.592773",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "f51a9500621f4b286e5711fc8de67b4b0b281abad72e1687e6cba315b374f858"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115845",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.591309",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "1bc9e7ef73afff68042e941a3355c716ce38b6a3d7249fa7610a632c536553e0"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115723",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.592041",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "45a7f2613adcd18870aaaf4c7ecac3bb0e726c6aebf94d96c97be97046c2a0dc"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115845",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.588867",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "d836e519b01c842d00bda5304b018934842bd61bab023f3860fcb74367c0efbc"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115967",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.592041",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "d11d799f9c28feeff809cd9fe98313a33908794e85d5af3fc37f3ab548e8b9b1"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115723",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.593018",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "de96ba9bdc69b223a2582cc8661357754e85cabb1290372696c0ff6501176bdb"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115723",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.591797",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c5a3575fcd19a0a36d82a25321ed5cb66e6452050c5d6b6b486eaa10dbd25eb0"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115723",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.593750",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "2bf60d1bfaf87d0aa969ab5101e1ed4ac904f6d77a847b55c64cee34a80efa68"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.116089",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.590820",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "09bb25c825ab5b7fd33043aec9c1b9e9ca83de85aaa6e31302fd2ae7522c4230"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "559276670892.115845",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "559276670892.116819",
+                      "row": 1
+                    },
+                    {
+                      "actual": "14590490998.366716",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "14590490998.366737",
+                      "row": 2
+                    },
+                    {
+                      "actual": "1100937000170.591553",
+                      "column": "sum_charge",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "1100937000170.591854",
+                      "row": 3
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "fail",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 98.55,
+            "median_ms": 76.35499999999999,
+            "min_ms": 72.11,
+            "p95_ms": 98.55,
+            "samples_ms": [
+              98.55,
+              72.11,
+              76.0,
+              75.67,
+              76.71,
+              89.73,
+              72.35,
+              81.27,
+              83.35,
+              74.65
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 0.0,
+              "data_loading": 96.46,
+              "dim_filter": 0.2,
+              "main_scan": 68.53,
+              "output": 0.13,
+              "total": 98.55
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 70.03,
+              "dim_filter": 0.21,
+              "main_scan": 41.8,
+              "output": 0.14,
+              "total": 72.11
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 74.22,
+              "dim_filter": 0.2,
+              "main_scan": 45.72,
+              "output": 0.14,
+              "total": 76.0
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 73.55,
+              "dim_filter": 0.2,
+              "main_scan": 45.51,
+              "output": 0.12,
+              "total": 75.67
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 74.79,
+              "dim_filter": 0.2,
+              "main_scan": 46.29,
+              "output": 0.14,
+              "total": 76.71
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 87.89,
+              "dim_filter": 0.24,
+              "main_scan": 60.25,
+              "output": 0.14,
+              "total": 89.73
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 69.79,
+              "dim_filter": 0.25,
+              "main_scan": 40.15,
+              "output": 0.32,
+              "total": 72.35
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 79.54,
+              "dim_filter": 0.27,
+              "main_scan": 51.97,
+              "output": 0.12,
+              "total": 81.27
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 81.59,
+              "dim_filter": 0.2,
+              "main_scan": 54.09,
+              "output": 0.49,
+              "total": 83.35
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 72.81,
+              "dim_filter": 0.2,
+              "main_scan": 42.8,
+              "output": 0.5,
+              "total": 74.65
+            }
+          ],
+          "process_wall": {
+            "max_ms": 103.5687942057848,
+            "median_ms": 85.46977257356048,
+            "min_ms": 75.57444088160992,
+            "p95_ms": 103.5687942057848,
+            "samples_ms": [
+              103.5687942057848,
+              83.45895912498236,
+              80.44517040252686,
+              80.81469219177961,
+              80.13045322149992,
+              96.47735953330994,
+              75.57444088160992,
+              100.43960995972157,
+              87.4805860221386,
+              88.49404007196426
+            ]
+          }
+        },
+        "iter_3": {
+          "binary": {
+            "bytes": 39312,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q1/iter_3",
+            "sha256": "2fb9fe3d987f55f074ab01b964532f0d24a595d3d82c1dcdda6e5a82df87af3e"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                    "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 4,
+                    "gendb": 4
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 58.11,
+            "median_ms": 47.015,
+            "min_ms": 29.53,
+            "p95_ms": 58.11,
+            "samples_ms": [
+              55.3,
+              34.55,
+              43.25,
+              50.04,
+              41.53,
+              58.11,
+              29.53,
+              46.15,
+              49.81,
+              47.88
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 0.0,
+              "data_loading": 53.36,
+              "dim_filter": 0.22,
+              "main_scan": 44.93,
+              "output": 0.55,
+              "total": 55.3
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 32.55,
+              "dim_filter": 0.2,
+              "main_scan": 24.21,
+              "output": 0.36,
+              "total": 34.55
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 41.54,
+              "dim_filter": 0.21,
+              "main_scan": 33.35,
+              "output": 0.5,
+              "total": 43.25
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 48.18,
+              "dim_filter": 0.2,
+              "main_scan": 40.01,
+              "output": 0.45,
+              "total": 50.04
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 39.75,
+              "dim_filter": 0.21,
+              "main_scan": 31.12,
+              "output": 0.19,
+              "total": 41.53
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 55.94,
+              "dim_filter": 0.34,
+              "main_scan": 47.58,
+              "output": 0.45,
+              "total": 58.11
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 27.85,
+              "dim_filter": 0.2,
+              "main_scan": 19.56,
+              "output": 0.13,
+              "total": 29.53
+            },
+            {
+              "build_joins": 0.01,
+              "data_loading": 44.19,
+              "dim_filter": 0.2,
+              "main_scan": 36.05,
+              "output": 0.41,
+              "total": 46.15
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 47.94,
+              "dim_filter": 0.2,
+              "main_scan": 39.72,
+              "output": 0.16,
+              "total": 49.81
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 45.95,
+              "dim_filter": 0.2,
+              "main_scan": 37.65,
+              "output": 0.17,
+              "total": 47.88
+            }
+          ],
+          "process_wall": {
+            "max_ms": 68.54602321982384,
+            "median_ms": 55.94785464927554,
+            "min_ms": 33.41400343924761,
+            "p95_ms": 68.54602321982384,
+            "samples_ms": [
+              59.52144507318735,
+              44.45836320519447,
+              47.505125403404236,
+              56.266890838742256,
+              59.808663092553616,
+              68.54602321982384,
+              33.41400343924761,
+              52.380179055035114,
+              61.38386111706495,
+              55.628818459808826
+            ]
+          }
+        }
+      }
+    },
+    "Q18": {
+      "best_iteration": "iter_1",
+      "iter0_to_best_speedup": 124.80931502910948,
+      "variants": {
+        "iter_0": {
+          "binary": {
+            "bytes": 210272,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q18/iter_0",
+            "sha256": "b307fe89a9ebc7ecf4c3ef143e27651ef8643e74fd1db818e749402b8dce4600"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 9293.37,
+            "median_ms": 8682.36,
+            "min_ms": 8308.27,
+            "p95_ms": 9293.37,
+            "samples_ms": [
+              8729.89,
+              8539.67,
+              8308.27,
+              8513.99,
+              8569.79,
+              8988.91,
+              8707.76,
+              9052.39,
+              9293.37,
+              8656.96
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 35.8,
+              "data_loading": 0.07,
+              "dim_filter": 8374.06,
+              "main_scan": 0.08,
+              "output": 0.58,
+              "total": 8729.89
+            },
+            {
+              "build_joins": 43.64,
+              "data_loading": 0.05,
+              "dim_filter": 8134.02,
+              "main_scan": 0.09,
+              "output": 0.57,
+              "total": 8539.67
+            },
+            {
+              "build_joins": 36.4,
+              "data_loading": 0.05,
+              "dim_filter": 7946.75,
+              "main_scan": 0.08,
+              "output": 0.52,
+              "total": 8308.27
+            },
+            {
+              "build_joins": 35.93,
+              "data_loading": 0.08,
+              "dim_filter": 8152.97,
+              "main_scan": 0.09,
+              "output": 0.63,
+              "total": 8513.99
+            },
+            {
+              "build_joins": 36.74,
+              "data_loading": 0.06,
+              "dim_filter": 8210.82,
+              "main_scan": 0.07,
+              "output": 0.58,
+              "total": 8569.79
+            },
+            {
+              "build_joins": 52.8,
+              "data_loading": 0.06,
+              "dim_filter": 8591.62,
+              "main_scan": 0.07,
+              "output": 0.55,
+              "total": 8988.91
+            },
+            {
+              "build_joins": 36.56,
+              "data_loading": 0.05,
+              "dim_filter": 8331.97,
+              "main_scan": 0.08,
+              "output": 0.56,
+              "total": 8707.76
+            },
+            {
+              "build_joins": 34.36,
+              "data_loading": 0.06,
+              "dim_filter": 8689.71,
+              "main_scan": 0.11,
+              "output": 0.7,
+              "total": 9052.39
+            },
+            {
+              "build_joins": 37.1,
+              "data_loading": 0.06,
+              "dim_filter": 8941.62,
+              "main_scan": 0.07,
+              "output": 0.52,
+              "total": 9293.37
+            },
+            {
+              "build_joins": 56.48,
+              "data_loading": 0.06,
+              "dim_filter": 8280.75,
+              "main_scan": 0.07,
+              "output": 0.55,
+              "total": 8656.96
+            }
+          ],
+          "process_wall": {
+            "max_ms": 9406.551748514175,
+            "median_ms": 8803.078130353242,
+            "min_ms": 8423.354125581682,
+            "p95_ms": 9406.551748514175,
+            "samples_ms": [
+              8834.542753174901,
+              8662.316536530852,
+              8423.354125581682,
+              8628.74604202807,
+              8679.917537607253,
+              9104.192737489939,
+              8847.06567414105,
+              9176.839731633663,
+              9406.551748514175,
+              8771.613507531583
+            ]
+          }
+        },
+        "iter_1": {
+          "binary": {
+            "bytes": 207512,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q18/iter_1",
+            "sha256": "bb898da80d9a599e1d20fdf73d82ded27d974ee675e73fd578a81dd9b8cc18cb"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                    "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 100,
+                    "gendb": 100
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 85.71,
+            "median_ms": 69.565,
+            "min_ms": 58.95,
+            "p95_ms": 85.71,
+            "samples_ms": [
+              69.51,
+              76.85,
+              69.62,
+              85.71,
+              61.73,
+              74.63,
+              72.78,
+              58.95,
+              62.49,
+              68.3
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 21.65,
+              "data_loading": 0.05,
+              "dim_filter": 30.72,
+              "main_scan": 0.07,
+              "output": 0.81,
+              "total": 69.51
+            },
+            {
+              "build_joins": 21.71,
+              "data_loading": 0.05,
+              "dim_filter": 37.95,
+              "main_scan": 0.07,
+              "output": 0.72,
+              "total": 76.85
+            },
+            {
+              "build_joins": 24.98,
+              "data_loading": 0.05,
+              "dim_filter": 26.14,
+              "main_scan": 0.09,
+              "output": 0.89,
+              "total": 69.62
+            },
+            {
+              "build_joins": 32.63,
+              "data_loading": 0.05,
+              "dim_filter": 36.78,
+              "main_scan": 0.07,
+              "output": 0.43,
+              "total": 85.71
+            },
+            {
+              "build_joins": 11.27,
+              "data_loading": 0.05,
+              "dim_filter": 33.39,
+              "main_scan": 0.06,
+              "output": 0.74,
+              "total": 61.73
+            },
+            {
+              "build_joins": 24.63,
+              "data_loading": 0.05,
+              "dim_filter": 33.62,
+              "main_scan": 0.06,
+              "output": 0.47,
+              "total": 74.63
+            },
+            {
+              "build_joins": 23.29,
+              "data_loading": 0.05,
+              "dim_filter": 33.29,
+              "main_scan": 0.07,
+              "output": 0.5,
+              "total": 72.78
+            },
+            {
+              "build_joins": 11.01,
+              "data_loading": 0.07,
+              "dim_filter": 31.11,
+              "main_scan": 0.07,
+              "output": 0.5,
+              "total": 58.95
+            },
+            {
+              "build_joins": 22.92,
+              "data_loading": 0.05,
+              "dim_filter": 22.04,
+              "main_scan": 0.08,
+              "output": 1.05,
+              "total": 62.49
+            },
+            {
+              "build_joins": 25.26,
+              "data_loading": 0.05,
+              "dim_filter": 24.77,
+              "main_scan": 0.08,
+              "output": 1.03,
+              "total": 68.3
+            }
+          ],
+          "process_wall": {
+            "max_ms": 99.52261950820684,
+            "median_ms": 80.11607127264142,
+            "min_ms": 62.70930264145136,
+            "p95_ms": 99.52261950820684,
+            "samples_ms": [
+              80.25916665792465,
+              79.97297588735819,
+              82.00802188366652,
+              93.4161115437746,
+              70.4175541177392,
+              99.52261950820684,
+              83.54118838906288,
+              62.70930264145136,
+              79.10136878490448,
+              72.37073965370655
+            ]
+          }
+        }
+      }
+    },
+    "Q3": {
+      "best_iteration": "iter_1",
+      "iter0_to_best_speedup": 1.2712327681825384,
+      "variants": {
+        "iter_0": {
+          "binary": {
+            "bytes": 29552,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q3/iter_0",
+            "sha256": "2ec483f96b78578b96509634e30ac14b2cf5ab1105e656e061d1b87cb3dd8720"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 221.76,
+            "median_ms": 160.45499999999998,
+            "min_ms": 151.92,
+            "p95_ms": 221.76,
+            "samples_ms": [
+              160.47,
+              160.44,
+              158.35,
+              166.81,
+              221.76,
+              151.92,
+              159.17,
+              153.65,
+              172.1,
+              173.45
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 0.0,
+              "data_loading": 60.92,
+              "dim_filter": 0.0,
+              "main_scan": 63.88,
+              "output": 5.01,
+              "total": 160.47
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 56.81,
+              "dim_filter": 0.0,
+              "main_scan": 67.17,
+              "output": 4.98,
+              "total": 160.44
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 60.49,
+              "dim_filter": 0.0,
+              "main_scan": 61.87,
+              "output": 4.98,
+              "total": 158.35
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 58.51,
+              "dim_filter": 0.0,
+              "main_scan": 71.0,
+              "output": 5.56,
+              "total": 166.81
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 56.98,
+              "dim_filter": 0.0,
+              "main_scan": 129.8,
+              "output": 4.46,
+              "total": 221.76
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 56.58,
+              "dim_filter": 0.0,
+              "main_scan": 59.46,
+              "output": 5.24,
+              "total": 151.92
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 57.11,
+              "dim_filter": 0.0,
+              "main_scan": 66.76,
+              "output": 4.86,
+              "total": 159.17
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 57.11,
+              "dim_filter": 0.0,
+              "main_scan": 60.0,
+              "output": 5.84,
+              "total": 153.65
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 56.53,
+              "dim_filter": 0.0,
+              "main_scan": 80.19,
+              "output": 4.78,
+              "total": 172.1
+            },
+            {
+              "build_joins": 0.0,
+              "data_loading": 57.34,
+              "dim_filter": 0.0,
+              "main_scan": 82.87,
+              "output": 2.57,
+              "total": 173.45
+            }
+          ],
+          "process_wall": {
+            "max_ms": 225.5116868764162,
+            "median_ms": 172.93423088267446,
+            "min_ms": 155.51832877099514,
+            "p95_ms": 225.5116868764162,
+            "samples_ms": [
+              173.45319967716932,
+              172.4152620881796,
+              170.53269129246473,
+              170.56852858513594,
+              225.5116868764162,
+              155.51832877099514,
+              175.96507538110018,
+              157.11863338947296,
+              175.8158588781953,
+              177.15599946677685
+            ]
+          }
+        },
+        "iter_1": {
+          "binary": {
+            "bytes": 37936,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q3/iter_1",
+            "sha256": "dc9dbb855a32957d439be7f83efdb28d7ef43d28a75a0fbcc6ed43edf738831f"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 1,
+            "exact_samples": 10,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_mismatch_samples": [],
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "35515e43e39a7b678931030863026226b94a8c530ccf111e02b8449f6033e621"
+                  },
+                  "comparison": "bounded_numeric",
+                  "mismatch_samples": [
+                    {
+                      "actual": "439855.32",
+                      "column": "revenue",
+                      "comparison": "duckdb_vs_gendb",
+                      "expected": "439855.33",
+                      "row": 2
+                    }
+                  ],
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                    "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 10,
+                    "gendb": 10
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "fail",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 160.17,
+            "median_ms": 126.22,
+            "min_ms": 116.95,
+            "p95_ms": 160.17,
+            "samples_ms": [
+              119.46,
+              133.31,
+              160.17,
+              124.36,
+              156.43,
+              123.42,
+              116.95,
+              136.17,
+              128.08,
+              123.77
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 41.77,
+              "data_loading": 0.09,
+              "dim_filter": 24.96,
+              "main_scan": 28.45,
+              "output": 19.87,
+              "total": 119.46
+            },
+            {
+              "build_joins": 48.91,
+              "data_loading": 0.07,
+              "dim_filter": 18.71,
+              "main_scan": 29.8,
+              "output": 31.55,
+              "total": 133.31
+            },
+            {
+              "build_joins": 58.86,
+              "data_loading": 0.07,
+              "dim_filter": 26.86,
+              "main_scan": 34.14,
+              "output": 36.08,
+              "total": 160.17
+            },
+            {
+              "build_joins": 47.09,
+              "data_loading": 0.06,
+              "dim_filter": 22.53,
+              "main_scan": 39.93,
+              "output": 10.55,
+              "total": 124.36
+            },
+            {
+              "build_joins": 55.84,
+              "data_loading": 0.07,
+              "dim_filter": 23.81,
+              "main_scan": 38.86,
+              "output": 33.71,
+              "total": 156.43
+            },
+            {
+              "build_joins": 44.42,
+              "data_loading": 0.07,
+              "dim_filter": 39.64,
+              "main_scan": 22.35,
+              "output": 10.69,
+              "total": 123.42
+            },
+            {
+              "build_joins": 59.91,
+              "data_loading": 0.07,
+              "dim_filter": 17.38,
+              "main_scan": 27.02,
+              "output": 8.4,
+              "total": 116.95
+            },
+            {
+              "build_joins": 43.07,
+              "data_loading": 0.07,
+              "dim_filter": 19.81,
+              "main_scan": 32.63,
+              "output": 36.42,
+              "total": 136.17
+            },
+            {
+              "build_joins": 39.14,
+              "data_loading": 0.08,
+              "dim_filter": 15.38,
+              "main_scan": 35.41,
+              "output": 34.01,
+              "total": 128.08
+            },
+            {
+              "build_joins": 46.27,
+              "data_loading": 0.07,
+              "dim_filter": 25.71,
+              "main_scan": 27.43,
+              "output": 19.32,
+              "total": 123.77
+            }
+          ],
+          "process_wall": {
+            "max_ms": 183.56994539499283,
+            "median_ms": 137.73058215156198,
+            "min_ms": 121.14926055073738,
+            "p95_ms": 183.56994539499283,
+            "samples_ms": [
+              128.57961561530828,
+              137.54285499453545,
+              183.56994539499283,
+              130.4109040647745,
+              160.61862464994192,
+              137.9183093085885,
+              121.14926055073738,
+              140.53804893046618,
+              147.65725657343864,
+              131.59138523042202
+            ]
+          }
+        }
+      }
+    },
+    "Q6": {
+      "best_iteration": "iter_0",
+      "iter0_to_best_speedup": 1.0,
+      "variants": {
+        "iter_0": {
+          "binary": {
+            "bytes": 185896,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q6/iter_0",
+            "sha256": "3b7ff96a0f809e78ff48110f7f2a3961fec7b0fd481b66d6c93c63e2f9f67e0c"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                    "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 1,
+                    "gendb": 1
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 29.94,
+            "median_ms": 26.495,
+            "min_ms": 19.42,
+            "p95_ms": 29.94,
+            "samples_ms": [
+              28.2,
+              26.87,
+              20.42,
+              24.41,
+              19.42,
+              28.19,
+              26.12,
+              29.94,
+              22.29,
+              28.79
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "data_loading": 0.22,
+              "main_scan": 23.52,
+              "output": 0.43,
+              "total": 28.2
+            },
+            {
+              "data_loading": 0.25,
+              "main_scan": 21.14,
+              "output": 0.54,
+              "total": 26.87
+            },
+            {
+              "data_loading": 0.25,
+              "main_scan": 13.97,
+              "output": 0.44,
+              "total": 20.42
+            },
+            {
+              "data_loading": 0.22,
+              "main_scan": 18.81,
+              "output": 0.48,
+              "total": 24.41
+            },
+            {
+              "data_loading": 0.23,
+              "main_scan": 13.59,
+              "output": 0.46,
+              "total": 19.42
+            },
+            {
+              "data_loading": 0.23,
+              "main_scan": 23.58,
+              "output": 0.5,
+              "total": 28.19
+            },
+            {
+              "data_loading": 0.22,
+              "main_scan": 21.72,
+              "output": 0.16,
+              "total": 26.12
+            },
+            {
+              "data_loading": 0.24,
+              "main_scan": 25.4,
+              "output": 0.18,
+              "total": 29.94
+            },
+            {
+              "data_loading": 0.24,
+              "main_scan": 17.25,
+              "output": 0.52,
+              "total": 22.29
+            },
+            {
+              "data_loading": 0.25,
+              "main_scan": 22.58,
+              "output": 0.82,
+              "total": 28.79
+            }
+          ],
+          "process_wall": {
+            "max_ms": 39.7150469943881,
+            "median_ms": 32.510177697986364,
+            "min_ms": 24.595984257757664,
+            "p95_ms": 39.7150469943881,
+            "samples_ms": [
+              39.7150469943881,
+              32.589200884103775,
+              28.56283076107502,
+              31.652131117880344,
+              24.595984257757664,
+              39.702133275568485,
+              38.750214502215385,
+              39.67729676514864,
+              26.50811430066824,
+              32.431154511868954
+            ]
+          }
+        }
+      }
+    },
+    "Q9": {
+      "best_iteration": "iter_2",
+      "iter0_to_best_speedup": 1.5461400548407511,
+      "variants": {
+        "iter_0": {
+          "binary": {
+            "bytes": 33856,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q9/iter_0",
+            "sha256": "61b423ba119d2c19f3ebca9147bc186e41baeb24cdc6064ad6904b00f41ca327"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 153.5,
+            "median_ms": 146.60500000000002,
+            "min_ms": 131.61,
+            "p95_ms": 153.5,
+            "samples_ms": [
+              131.61,
+              153.5,
+              135.21,
+              142.28,
+              139.02,
+              150.97,
+              153.45,
+              134.56,
+              150.96,
+              150.93
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 76.52,
+              "data_loading": 0.09,
+              "dim_filter": 9.97,
+              "main_scan": 44.55,
+              "output": 0.24,
+              "total": 131.61
+            },
+            {
+              "build_joins": 74.78,
+              "data_loading": 0.1,
+              "dim_filter": 35.08,
+              "main_scan": 43.04,
+              "output": 0.25,
+              "total": 153.5
+            },
+            {
+              "build_joins": 75.93,
+              "data_loading": 0.1,
+              "dim_filter": 4.66,
+              "main_scan": 53.98,
+              "output": 0.26,
+              "total": 135.21
+            },
+            {
+              "build_joins": 82.8,
+              "data_loading": 0.09,
+              "dim_filter": 20.01,
+              "main_scan": 38.89,
+              "output": 0.24,
+              "total": 142.28
+            },
+            {
+              "build_joins": 76.66,
+              "data_loading": 0.09,
+              "dim_filter": 4.52,
+              "main_scan": 56.93,
+              "output": 0.59,
+              "total": 139.02
+            },
+            {
+              "build_joins": 75.69,
+              "data_loading": 0.09,
+              "dim_filter": 30.49,
+              "main_scan": 43.86,
+              "output": 0.58,
+              "total": 150.97
+            },
+            {
+              "build_joins": 80.28,
+              "data_loading": 0.09,
+              "dim_filter": 16.22,
+              "main_scan": 56.0,
+              "output": 0.6,
+              "total": 153.45
+            },
+            {
+              "build_joins": 88.18,
+              "data_loading": 0.09,
+              "dim_filter": 4.59,
+              "main_scan": 40.87,
+              "output": 0.27,
+              "total": 134.56
+            },
+            {
+              "build_joins": 82.81,
+              "data_loading": 0.09,
+              "dim_filter": 15.03,
+              "main_scan": 52.14,
+              "output": 0.61,
+              "total": 150.96
+            },
+            {
+              "build_joins": 85.29,
+              "data_loading": 0.09,
+              "dim_filter": 4.57,
+              "main_scan": 60.08,
+              "output": 0.64,
+              "total": 150.93
+            }
+          ],
+          "process_wall": {
+            "max_ms": 254.6405177563429,
+            "median_ms": 186.6404409520328,
+            "min_ms": 166.16374347358942,
+            "p95_ms": 254.6405177563429,
+            "samples_ms": [
+              166.16374347358942,
+              254.6405177563429,
+              181.2073579058051,
+              176.18021927773952,
+              173.45048394054174,
+              195.9947245195508,
+              199.00566432625055,
+              169.6234019473195,
+              194.8239542543888,
+              192.0735239982605
+            ]
+          }
+        },
+        "iter_1": {
+          "binary": {
+            "bytes": 33856,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q9/iter_1",
+            "sha256": "61b423ba119d2c19f3ebca9147bc186e41baeb24cdc6064ad6904b00f41ca327"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 161.7,
+            "median_ms": 148.62,
+            "min_ms": 128.17,
+            "p95_ms": 161.7,
+            "samples_ms": [
+              156.53,
+              146.22,
+              160.3,
+              156.87,
+              136.91,
+              128.17,
+              135.85,
+              151.02,
+              161.7,
+              137.1
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 80.78,
+              "data_loading": 0.1,
+              "dim_filter": 20.24,
+              "main_scan": 54.53,
+              "output": 0.63,
+              "total": 156.53
+            },
+            {
+              "build_joins": 77.12,
+              "data_loading": 0.09,
+              "dim_filter": 17.17,
+              "main_scan": 50.95,
+              "output": 0.65,
+              "total": 146.22
+            },
+            {
+              "build_joins": 78.61,
+              "data_loading": 0.1,
+              "dim_filter": 31.17,
+              "main_scan": 49.86,
+              "output": 0.27,
+              "total": 160.3
+            },
+            {
+              "build_joins": 80.71,
+              "data_loading": 0.09,
+              "dim_filter": 35.13,
+              "main_scan": 40.38,
+              "output": 0.28,
+              "total": 156.87
+            },
+            {
+              "build_joins": 75.23,
+              "data_loading": 0.1,
+              "dim_filter": 12.04,
+              "main_scan": 49.01,
+              "output": 0.28,
+              "total": 136.91
+            },
+            {
+              "build_joins": 77.02,
+              "data_loading": 0.1,
+              "dim_filter": 4.6,
+              "main_scan": 45.87,
+              "output": 0.33,
+              "total": 128.17
+            },
+            {
+              "build_joins": 85.94,
+              "data_loading": 0.09,
+              "dim_filter": 4.43,
+              "main_scan": 44.86,
+              "output": 0.29,
+              "total": 135.85
+            },
+            {
+              "build_joins": 83.77,
+              "data_loading": 0.09,
+              "dim_filter": 12.9,
+              "main_scan": 53.76,
+              "output": 0.25,
+              "total": 151.02
+            },
+            {
+              "build_joins": 76.56,
+              "data_loading": 0.1,
+              "dim_filter": 30.47,
+              "main_scan": 54.07,
+              "output": 0.24,
+              "total": 161.7
+            },
+            {
+              "build_joins": 79.29,
+              "data_loading": 0.09,
+              "dim_filter": 4.34,
+              "main_scan": 52.88,
+              "output": 0.24,
+              "total": 137.1
+            }
+          ],
+          "process_wall": {
+            "max_ms": 213.61606661230326,
+            "median_ms": 187.43362557142973,
+            "min_ms": 164.7478649392724,
+            "p95_ms": 213.61606661230326,
+            "samples_ms": [
+              203.2792055979371,
+              189.96368907392025,
+              213.61606661230326,
+              193.89231782406569,
+              177.3450942710042,
+              164.7478649392724,
+              179.45250775665045,
+              184.9035620689392,
+              205.86294680833817,
+              171.60721216350794
+            ]
+          }
+        },
+        "iter_2": {
+          "binary": {
+            "bytes": 37824,
+            "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/iterations/Q9/iter_2",
+            "sha256": "444b1fd0b491875b7247abb778ea12b5e5e9f6fb64e699cd6acab14935c3ea9e"
+          },
+          "correctness": {
+            "bounded_numeric_only_samples": 0,
+            "exact_samples": 11,
+            "failed_samples": 0,
+            "samples": [
+              {
+                "phase": "post_warmup",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                }
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 0
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 1
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 2
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 3
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 4
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 5
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 6
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 7
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 8
+              },
+              {
+                "phase": "measured",
+                "result": {
+                  "bounded_numeric_equivalent": true,
+                  "canonical_sha256": {
+                    "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                    "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+                  },
+                  "comparison": "exact_hash",
+                  "rows": {
+                    "duckdb": 175,
+                    "gendb": 175
+                  },
+                  "status": "pass"
+                },
+                "sample": 9
+              }
+            ],
+            "status": "pass",
+            "strict_status": "pass",
+            "tolerant_status": "pass",
+            "total_samples": 11
+          },
+          "internal_total": {
+            "max_ms": 151.18,
+            "median_ms": 94.82,
+            "min_ms": 76.04,
+            "p95_ms": 151.18,
+            "samples_ms": [
+              109.79,
+              94.41,
+              91.69,
+              151.18,
+              95.23,
+              76.04,
+              117.61,
+              93.56,
+              123.67,
+              88.6
+            ]
+          },
+          "phase_samples_ms": [
+            {
+              "build_joins": 9.01,
+              "data_loading": 0.09,
+              "dim_filter": 1.77,
+              "main_scan": 52.91,
+              "output": 0.56,
+              "total": 109.79
+            },
+            {
+              "build_joins": 7.41,
+              "data_loading": 0.09,
+              "dim_filter": 1.79,
+              "main_scan": 48.98,
+              "output": 0.36,
+              "total": 94.41
+            },
+            {
+              "build_joins": 13.34,
+              "data_loading": 0.09,
+              "dim_filter": 11.52,
+              "main_scan": 33.28,
+              "output": 0.59,
+              "total": 91.69
+            },
+            {
+              "build_joins": 23.72,
+              "data_loading": 0.12,
+              "dim_filter": 24.98,
+              "main_scan": 47.87,
+              "output": 0.59,
+              "total": 151.18
+            },
+            {
+              "build_joins": 14.79,
+              "data_loading": 0.09,
+              "dim_filter": 1.8,
+              "main_scan": 49.96,
+              "output": 0.56,
+              "total": 95.23
+            },
+            {
+              "build_joins": 7.59,
+              "data_loading": 0.08,
+              "dim_filter": 1.74,
+              "main_scan": 47.26,
+              "output": 0.66,
+              "total": 76.04
+            },
+            {
+              "build_joins": 21.76,
+              "data_loading": 0.11,
+              "dim_filter": 21.94,
+              "main_scan": 32.8,
+              "output": 0.27,
+              "total": 117.61
+            },
+            {
+              "build_joins": 7.78,
+              "data_loading": 0.09,
+              "dim_filter": 1.79,
+              "main_scan": 41.18,
+              "output": 0.53,
+              "total": 93.56
+            },
+            {
+              "build_joins": 18.88,
+              "data_loading": 0.09,
+              "dim_filter": 1.81,
+              "main_scan": 57.82,
+              "output": 0.58,
+              "total": 123.67
+            },
+            {
+              "build_joins": 16.82,
+              "data_loading": 0.08,
+              "dim_filter": 1.82,
+              "main_scan": 35.26,
+              "output": 0.59,
+              "total": 88.6
+            }
+          ],
+          "process_wall": {
+            "max_ms": 175.3956601023674,
+            "median_ms": 116.47831229493022,
+            "min_ms": 100.50224792212248,
+            "p95_ms": 175.3956601023674,
+            "samples_ms": [
+              133.00789520144463,
+              111.79713066667318,
+              109.48311723768711,
+              175.3956601023674,
+              120.77951245009899,
+              100.50224792212248,
+              137.17017695307732,
+              112.17711213976145,
+              152.10383012890816,
+              107.18567576259375
+            ]
+          }
+        }
+      }
+    }
+  },
+  "schema_version": 2,
+  "status": "bounded_numeric_failures_recorded"
+}

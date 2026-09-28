@@ -1,0 +1,2717 @@
+{
+  "aggregate": {
+    "duckdb_sum_of_medians_ms": 559.2743954621255,
+    "gendb_internal_sum_of_medians_ms": 420.46500000000003,
+    "gendb_process_wall_sum_of_medians_ms": 492.08085099235177,
+    "normalized_end_to_end_speedup": 1.330133056169064,
+    "process_wall_speedup": 1.1365498054522307
+  },
+  "created_at": "2026-09-28T13:56:46.609283+00:00",
+  "environment": {
+    "affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "compiler": "g++ (Debian 8.3.0-6) 8.3.0",
+    "duckdb_python": "1.2.1",
+    "hostname": "n37-125-152",
+    "lscpu": "Architecture:        x86_64\nCPU op-mode(s):      32-bit, 64-bit\nByte Order:          Little Endian\nAddress sizes:       40 bits physical, 57 bits virtual\nCPU(s):              64\nOn-line CPU(s) list: 0-63\nThread(s) per core:  1\nCore(s) per socket:  32\nSocket(s):           2\nNUMA node(s):        2\nVendor ID:           GenuineIntel\nCPU family:          6\nModel:               143\nModel name:          Intel(R) Xeon(R) Platinum 8457C\nStepping:            8\nCPU MHz:             2600.000\nBogoMIPS:            5200.00\nHypervisor vendor:   KVM\nVirtualization type: full\nL1d cache:           48K\nL1i cache:           32K\nL2 cache:            2048K\nL3 cache:            99840K\nNUMA node0 CPU(s):   0-31\nNUMA node1 CPU(s):   32-63\nFlags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch cpuid_fault invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves avx_vnni avx512_bf16 wbnoinvd arat avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid cldemote movdiri movdir64b fsrm md_clear serialize tsxldtrk arch_lbr amx_bf16 avx512_fp16 amx_tile amx_int8 arch_capabilities",
+    "omp_num_threads": "64",
+    "omp_places": "cores",
+    "omp_proc_bind": "spread",
+    "platform": "Linux-5.15.198.bsk.1-amd64-x86_64-with-glibc2.28",
+    "python": "3.13.5"
+  },
+  "inputs": {
+    "binaries": {
+      "Q1": {
+        "bytes": 39312,
+        "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q1",
+        "sha256": "2fb9fe3d987f55f074ab01b964532f0d24a595d3d82c1dcdda6e5a82df87af3e"
+      },
+      "Q18": {
+        "bytes": 207512,
+        "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q18",
+        "sha256": "bb898da80d9a599e1d20fdf73d82ded27d974ee675e73fd578a81dd9b8cc18cb"
+      },
+      "Q3": {
+        "bytes": 37936,
+        "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q3",
+        "sha256": "dc9dbb855a32957d439be7f83efdb28d7ef43d28a75a0fbcc6ed43edf738831f"
+      },
+      "Q6": {
+        "bytes": 185896,
+        "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q6",
+        "sha256": "3b7ff96a0f809e78ff48110f7f2a3961fec7b0fd481b66d6c93c63e2f9f67e0c"
+      },
+      "Q9": {
+        "bytes": 37824,
+        "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/bin/q9",
+        "sha256": "444b1fd0b491875b7247abb778ea12b5e5e9f6fb64e699cd6acab14935c3ea9e"
+      }
+    },
+    "compile_flags": "-O3 -march=native -mtune=native -DNDEBUG -flto -std=c++17 -Wall -fopenmp -DGENDB_PROFILE -lstdc++fs",
+    "database": {
+      "bytes": 5735460864,
+      "path": "/data00/benchmarks/gendb-tpch-sf10-20260928/duckdb/tpch-sf10.duckdb",
+      "sha256": "8646c3eb3f2351be6b08d0c9eecc8cd2062a348d7a67decd179e1e3bc22c16cf"
+    },
+    "dbgen_commit": "32f1c1b92d1664dba542e927d23d86ffa57aa253",
+    "gendb_commit": "b7418071fc51aacd219964e4a68e593234db9237",
+    "gendb_dir": "/data00/benchmarks/gendb-tpch-sf10-20260928/gendb/sf10"
+  },
+  "methodology": {
+    "correctness": "strict canonical hash after normalizing numeric values to each generated program's emitted precision; record-only mode may retain timings for bounded one-cent numeric failures without admitting them",
+    "measured_runs": 10,
+    "primary_comparison": "DuckDB execute+fetch+CSV write vs GenDB internal total including CSV output",
+    "query_order": "per query; systems use counterbalanced AB/BA blocks; each timed execution immediately follows an untimed run of the same system",
+    "secondary_comparison": "DuckDB execute+fetch+CSV write vs GenDB process wall",
+    "threads": 64,
+    "warmups": 1,
+    "workload": "TPC-H SF10 selected Q1/Q3/Q6/Q9/Q18"
+  },
+  "queries": {
+    "Q1": {
+      "correctness": {
+        "bounded_numeric_only_samples": 0,
+        "exact_samples": 11,
+        "failed_samples": 0,
+        "samples": [
+          {
+            "phase": "post_warmup",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            }
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 0
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 1
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 2
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 3
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 4
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 5
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 6
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 7
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 8
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "duckdb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73",
+                "gendb": "c9e09c043643cfa44fe19a23fb9dce1cc978b78b52ae62ada0771d9ee8508a73"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 4,
+                "duckdb": 4,
+                "gendb": 4
+              },
+              "status": "pass"
+            },
+            "sample": 9
+          }
+        ],
+        "status": "pass",
+        "strict_status": "pass",
+        "tolerant_status": "pass",
+        "total_samples": 11
+      },
+      "duckdb": {
+        "end_to_end": {
+          "max_ms": 41.86663031578064,
+          "median_ms": 39.76245271041989,
+          "min_ms": 38.12612313777208,
+          "p95_ms": 41.86663031578064,
+          "samples_ms": [
+            39.93099555373192,
+            38.12612313777208,
+            39.59390986710787,
+            39.216527715325356,
+            38.61724026501179,
+            39.51548412442207,
+            40.4853904619813,
+            41.86663031578064,
+            41.469006799161434,
+            41.65424779057503
+          ]
+        },
+        "end_to_end_by_position": {
+          "1": {
+            "max_ms": 41.469006799161434,
+            "median_ms": 39.93099555373192,
+            "min_ms": 38.61724026501179,
+            "p95_ms": 41.469006799161434,
+            "samples_ms": [
+              39.93099555373192,
+              39.59390986710787,
+              38.61724026501179,
+              40.4853904619813,
+              41.469006799161434
+            ]
+          },
+          "2": {
+            "max_ms": 41.86663031578064,
+            "median_ms": 39.51548412442207,
+            "min_ms": 38.12612313777208,
+            "p95_ms": 41.86663031578064,
+            "samples_ms": [
+              38.12612313777208,
+              39.216527715325356,
+              39.51548412442207,
+              41.86663031578064,
+              41.65424779057503
+            ]
+          }
+        },
+        "output": {
+          "max_ms": 0.3908555954694748,
+          "median_ms": 0.3706682473421097,
+          "min_ms": 0.331229530274868,
+          "p95_ms": 0.3908555954694748,
+          "samples_ms": [
+            0.331229530274868,
+            0.34463126212358475,
+            0.37068966776132584,
+            0.3710770979523659,
+            0.3908555954694748,
+            0.3706468269228935,
+            0.3782808780670166,
+            0.3539370372891426,
+            0.3608912229537964,
+            0.3781486302614212
+          ]
+        },
+        "query_fetch": {
+          "max_ms": 41.483198292553425,
+          "median_ms": 39.3862035125494,
+          "min_ms": 37.74513769894838,
+          "p95_ms": 41.483198292553425,
+          "samples_ms": [
+            39.57501985132694,
+            37.74513769894838,
+            39.19738717377186,
+            38.82137127220631,
+            38.20307645946741,
+            39.118035696446896,
+            40.083457715809345,
+            41.483198292553425,
+            41.08003620058298,
+            41.24474711716175
+          ]
+        }
+      },
+      "execution_orders": [
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb"
+      ],
+      "gendb": {
+        "internal_output": {
+          "max_ms": 0.47,
+          "median_ms": 0.185,
+          "min_ms": 0.14,
+          "p95_ms": 0.47,
+          "samples_ms": [
+            0.42,
+            0.47,
+            0.16,
+            0.14,
+            0.46,
+            0.14,
+            0.47,
+            0.19,
+            0.15,
+            0.18
+          ]
+        },
+        "internal_total": {
+          "max_ms": 53.75,
+          "median_ms": 47.81,
+          "min_ms": 33.16,
+          "p95_ms": 53.75,
+          "samples_ms": [
+            47.81,
+            41.81,
+            47.81,
+            33.16,
+            53.75,
+            44.3,
+            52.68,
+            50.87,
+            48.04,
+            43.2
+          ]
+        },
+        "internal_total_by_position": {
+          "1": {
+            "max_ms": 50.87,
+            "median_ms": 43.2,
+            "min_ms": 33.16,
+            "p95_ms": 50.87,
+            "samples_ms": [
+              41.81,
+              33.16,
+              44.3,
+              50.87,
+              43.2
+            ]
+          },
+          "2": {
+            "max_ms": 53.75,
+            "median_ms": 48.04,
+            "min_ms": 47.81,
+            "p95_ms": 53.75,
+            "samples_ms": [
+              47.81,
+              47.81,
+              53.75,
+              52.68,
+              48.04
+            ]
+          }
+        },
+        "phase_samples_ms": [
+          {
+            "build_joins": 0.0,
+            "data_loading": 46.13,
+            "dim_filter": 0.22,
+            "main_scan": 38.6,
+            "output": 0.42,
+            "total": 47.81
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 40.01,
+            "dim_filter": 0.24,
+            "main_scan": 32.58,
+            "output": 0.47,
+            "total": 41.81
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 46.1,
+            "dim_filter": 0.21,
+            "main_scan": 39.17,
+            "output": 0.16,
+            "total": 47.81
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 31.37,
+            "dim_filter": 0.21,
+            "main_scan": 24.33,
+            "output": 0.14,
+            "total": 33.16
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 51.98,
+            "dim_filter": 0.21,
+            "main_scan": 44.55,
+            "output": 0.46,
+            "total": 53.75
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 42.49,
+            "dim_filter": 0.21,
+            "main_scan": 35.25,
+            "output": 0.14,
+            "total": 44.3
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 50.89,
+            "dim_filter": 0.23,
+            "main_scan": 42.58,
+            "output": 0.47,
+            "total": 52.68
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 49.06,
+            "dim_filter": 0.2,
+            "main_scan": 40.82,
+            "output": 0.19,
+            "total": 50.87
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 46.23,
+            "dim_filter": 0.21,
+            "main_scan": 39.02,
+            "output": 0.15,
+            "total": 48.04
+          },
+          {
+            "build_joins": 0.0,
+            "data_loading": 41.37,
+            "dim_filter": 0.21,
+            "main_scan": 34.03,
+            "output": 0.18,
+            "total": 43.2
+          }
+        ],
+        "process_wall": {
+          "max_ms": 63.92027996480465,
+          "median_ms": 56.58654309809208,
+          "min_ms": 42.85788722336292,
+          "p95_ms": 63.92027996480465,
+          "samples_ms": [
+            61.93644180893898,
+            49.89541135728359,
+            56.783780455589294,
+            42.85788722336292,
+            63.92027996480465,
+            51.08235590159893,
+            61.888111755251884,
+            56.389305740594864,
+            57.878862135112286,
+            49.561405554413795
+          ]
+        }
+      },
+      "normalized_end_to_end_speedup": 0.8316764842171072,
+      "process_wall_speedup": 0.7026838985638718
+    },
+    "Q18": {
+      "correctness": {
+        "bounded_numeric_only_samples": 0,
+        "exact_samples": 11,
+        "failed_samples": 0,
+        "samples": [
+          {
+            "phase": "post_warmup",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            }
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 0
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 1
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 2
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 3
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 4
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 5
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 6
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 7
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 8
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "duckdb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4",
+                "gendb": "e79101b2d53857e6bbccd0fcba23eb18672d3d1d3383affba9f9c464933eb5c4"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 100,
+                "duckdb": 100,
+                "gendb": 100
+              },
+              "status": "pass"
+            },
+            "sample": 9
+          }
+        ],
+        "status": "pass",
+        "strict_status": "pass",
+        "tolerant_status": "pass",
+        "total_samples": 11
+      },
+      "duckdb": {
+        "end_to_end": {
+          "max_ms": 156.87840525060892,
+          "median_ms": 146.64154360070825,
+          "min_ms": 133.1834690645337,
+          "p95_ms": 156.87840525060892,
+          "samples_ms": [
+            151.69635694473982,
+            133.1834690645337,
+            148.6353874206543,
+            142.0443281531334,
+            147.03130815178156,
+            146.25177904963493,
+            144.29459627717733,
+            146.2008748203516,
+            156.87840525060892,
+            149.82872549444437
+          ]
+        },
+        "end_to_end_by_position": {
+          "1": {
+            "max_ms": 156.87840525060892,
+            "median_ms": 148.6353874206543,
+            "min_ms": 144.29459627717733,
+            "p95_ms": 156.87840525060892,
+            "samples_ms": [
+              151.69635694473982,
+              148.6353874206543,
+              147.03130815178156,
+              144.29459627717733,
+              156.87840525060892
+            ]
+          },
+          "2": {
+            "max_ms": 149.82872549444437,
+            "median_ms": 146.2008748203516,
+            "min_ms": 133.1834690645337,
+            "p95_ms": 149.82872549444437,
+            "samples_ms": [
+              133.1834690645337,
+              142.0443281531334,
+              146.25177904963493,
+              146.2008748203516,
+              149.82872549444437
+            ]
+          }
+        },
+        "output": {
+          "max_ms": 0.7758466526865959,
+          "median_ms": 0.6181937642395496,
+          "min_ms": 0.5985153838992119,
+          "p95_ms": 0.7758466526865959,
+          "samples_ms": [
+            0.7758466526865959,
+            0.6039077416062355,
+            0.6600134074687958,
+            0.6246380507946014,
+            0.6705401465296745,
+            0.6148144602775574,
+            0.5994457751512527,
+            0.6211074069142342,
+            0.5985153838992119,
+            0.6152801215648651
+          ]
+        },
+        "query_fetch": {
+          "max_ms": 156.25644847750664,
+          "median_ms": 145.9749098867178,
+          "min_ms": 132.5557865202427,
+          "p95_ms": 156.25644847750664,
+          "samples_ms": [
+            150.89601650834084,
+            132.5557865202427,
+            147.94886205345392,
+            141.39386918395758,
+            146.33688610047102,
+            145.61293367296457,
+            143.672002479434,
+            145.55509854108095,
+            156.25644847750664,
+            149.19050224125385
+          ]
+        }
+      },
+      "execution_orders": [
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb"
+      ],
+      "gendb": {
+        "internal_output": {
+          "max_ms": 0.95,
+          "median_ms": 0.69,
+          "min_ms": 0.55,
+          "p95_ms": 0.95,
+          "samples_ms": [
+            0.95,
+            0.55,
+            0.8,
+            0.58,
+            0.91,
+            0.89,
+            0.93,
+            0.58,
+            0.57,
+            0.57
+          ]
+        },
+        "internal_total": {
+          "max_ms": 82.84,
+          "median_ms": 70.48500000000001,
+          "min_ms": 56.63,
+          "p95_ms": 82.84,
+          "samples_ms": [
+            64.94,
+            82.84,
+            71.79,
+            81.43,
+            61.33,
+            63.9,
+            56.63,
+            80.49,
+            69.18,
+            79.25
+          ]
+        },
+        "internal_total_by_position": {
+          "1": {
+            "max_ms": 82.84,
+            "median_ms": 80.49,
+            "min_ms": 63.9,
+            "p95_ms": 82.84,
+            "samples_ms": [
+              82.84,
+              81.43,
+              63.9,
+              80.49,
+              79.25
+            ]
+          },
+          "2": {
+            "max_ms": 71.79,
+            "median_ms": 64.94,
+            "min_ms": 56.63,
+            "p95_ms": 71.79,
+            "samples_ms": [
+              64.94,
+              71.79,
+              61.33,
+              56.63,
+              69.18
+            ]
+          }
+        },
+        "phase_samples_ms": [
+          {
+            "build_joins": 11.76,
+            "data_loading": 0.06,
+            "dim_filter": 35.31,
+            "main_scan": 0.07,
+            "output": 0.95,
+            "total": 64.94
+          },
+          {
+            "build_joins": 23.33,
+            "data_loading": 0.05,
+            "dim_filter": 40.9,
+            "main_scan": 0.07,
+            "output": 0.55,
+            "total": 82.84
+          },
+          {
+            "build_joins": 15.77,
+            "data_loading": 0.05,
+            "dim_filter": 39.08,
+            "main_scan": 0.06,
+            "output": 0.8,
+            "total": 71.79
+          },
+          {
+            "build_joins": 24.19,
+            "data_loading": 0.05,
+            "dim_filter": 39.06,
+            "main_scan": 0.07,
+            "output": 0.58,
+            "total": 81.43
+          },
+          {
+            "build_joins": 13.73,
+            "data_loading": 0.05,
+            "dim_filter": 29.14,
+            "main_scan": 0.08,
+            "output": 0.91,
+            "total": 61.33
+          },
+          {
+            "build_joins": 13.91,
+            "data_loading": 0.05,
+            "dim_filter": 32.84,
+            "main_scan": 0.06,
+            "output": 0.89,
+            "total": 63.9
+          },
+          {
+            "build_joins": 15.29,
+            "data_loading": 0.05,
+            "dim_filter": 22.96,
+            "main_scan": 0.08,
+            "output": 0.93,
+            "total": 56.63
+          },
+          {
+            "build_joins": 22.42,
+            "data_loading": 0.05,
+            "dim_filter": 39.13,
+            "main_scan": 0.08,
+            "output": 0.58,
+            "total": 80.49
+          },
+          {
+            "build_joins": 13.8,
+            "data_loading": 0.06,
+            "dim_filter": 37.12,
+            "main_scan": 0.08,
+            "output": 0.57,
+            "total": 69.18
+          },
+          {
+            "build_joins": 23.94,
+            "data_loading": 0.06,
+            "dim_filter": 36.88,
+            "main_scan": 0.09,
+            "output": 0.57,
+            "total": 79.25
+          }
+        ],
+        "process_wall": {
+          "max_ms": 94.23780534416437,
+          "median_ms": 79.87055741250515,
+          "min_ms": 60.33704336732626,
+          "p95_ms": 94.23780534416437,
+          "samples_ms": [
+            74.87226463854313,
+            94.23780534416437,
+            84.86885018646717,
+            89.6397065371275,
+            64.6488843485713,
+            67.87885539233685,
+            60.33704336732626,
+            84.93586163967848,
+            73.12508020550013,
+            85.90115699917078
+          ]
+        }
+      },
+      "normalized_end_to_end_speedup": 2.0804645470767995,
+      "process_wall_speedup": 1.8359899861891902
+    },
+    "Q3": {
+      "correctness": {
+        "bounded_numeric_only_samples": 3,
+        "exact_samples": 8,
+        "failed_samples": 0,
+        "samples": [
+          {
+            "phase": "post_warmup",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            }
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_mismatch_samples": [],
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "bounded_reference_mismatch_samples": [],
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "35515e43e39a7b678931030863026226b94a8c530ccf111e02b8449f6033e621"
+              },
+              "comparison": "bounded_numeric",
+              "error": "author reference hash mismatch",
+              "mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "duckdb_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "reference_comparison": "bounded_numeric",
+              "reference_mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "author_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "fail"
+            },
+            "sample": 0
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 1
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 2
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 3
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 4
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_mismatch_samples": [],
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "bounded_reference_mismatch_samples": [],
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "35515e43e39a7b678931030863026226b94a8c530ccf111e02b8449f6033e621"
+              },
+              "comparison": "bounded_numeric",
+              "error": "author reference hash mismatch",
+              "mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "duckdb_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "reference_comparison": "bounded_numeric",
+              "reference_mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "author_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "fail"
+            },
+            "sample": 5
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_mismatch_samples": [],
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "bounded_reference_mismatch_samples": [],
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "35515e43e39a7b678931030863026226b94a8c530ccf111e02b8449f6033e621"
+              },
+              "comparison": "bounded_numeric",
+              "error": "author reference hash mismatch",
+              "mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "duckdb_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "reference_comparison": "bounded_numeric",
+              "reference_mismatch_samples": [
+                {
+                  "actual": "439855.32",
+                  "column": "revenue",
+                  "comparison": "author_vs_gendb",
+                  "expected": "439855.33",
+                  "row": 2
+                }
+              ],
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "fail"
+            },
+            "sample": 6
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 7
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 8
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "duckdb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c",
+                "gendb": "43b200933a7d92bfe2b041da280161230338e5e27028790d554f9cbc16d9366c"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 10,
+                "duckdb": 10,
+                "gendb": 10
+              },
+              "status": "pass"
+            },
+            "sample": 9
+          }
+        ],
+        "status": "fail",
+        "strict_status": "fail",
+        "tolerant_status": "pass",
+        "total_samples": 11
+      },
+      "duckdb": {
+        "end_to_end": {
+          "max_ms": 73.70201125741005,
+          "median_ms": 65.13422634452581,
+          "min_ms": 63.59864119440317,
+          "p95_ms": 73.70201125741005,
+          "samples_ms": [
+            65.58056455105543,
+            63.59864119440317,
+            63.80023900419474,
+            69.77902818471193,
+            64.3113274127245,
+            64.08366560935974,
+            65.34118112176657,
+            73.70201125741005,
+            64.92727156728506,
+            65.82201458513737
+          ]
+        },
+        "end_to_end_by_position": {
+          "1": {
+            "max_ms": 65.58056455105543,
+            "median_ms": 64.92727156728506,
+            "min_ms": 63.80023900419474,
+            "p95_ms": 65.58056455105543,
+            "samples_ms": [
+              65.58056455105543,
+              63.80023900419474,
+              64.3113274127245,
+              65.34118112176657,
+              64.92727156728506
+            ]
+          },
+          "2": {
+            "max_ms": 73.70201125741005,
+            "median_ms": 65.82201458513737,
+            "min_ms": 63.59864119440317,
+            "p95_ms": 73.70201125741005,
+            "samples_ms": [
+              63.59864119440317,
+              69.77902818471193,
+              64.08366560935974,
+              73.70201125741005,
+              65.82201458513737
+            ]
+          }
+        },
+        "output": {
+          "max_ms": 0.41071604937314987,
+          "median_ms": 0.3789667971432209,
+          "min_ms": 0.3300970420241356,
+          "p95_ms": 0.41071604937314987,
+          "samples_ms": [
+            0.36274176090955734,
+            0.37625618278980255,
+            0.3300970420241356,
+            0.41071604937314987,
+            0.384526327252388,
+            0.38167741149663925,
+            0.37354324012994766,
+            0.38660503923892975,
+            0.40933210402727127,
+            0.34339260309934616
+          ]
+        },
+        "query_fetch": {
+          "max_ms": 73.28855339437723,
+          "median_ms": 64.71113860607147,
+          "min_ms": 63.19634057581425,
+          "p95_ms": 73.28855339437723,
+          "samples_ms": [
+            65.19460398703814,
+            63.19634057581425,
+            63.44529613852501,
+            69.33778524398804,
+            63.89747839421034,
+            63.66270687431097,
+            64.9399645626545,
+            73.28855339437723,
+            64.48231264948845,
+            65.4544997960329
+          ]
+        }
+      },
+      "execution_orders": [
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb"
+      ],
+      "gendb": {
+        "internal_output": {
+          "max_ms": 36.38,
+          "median_ms": 22.42,
+          "min_ms": 7.64,
+          "p95_ms": 36.38,
+          "samples_ms": [
+            8.57,
+            14.33,
+            20.35,
+            31.54,
+            36.38,
+            35.15,
+            7.64,
+            20.63,
+            24.21,
+            34.26
+          ]
+        },
+        "internal_total": {
+          "max_ms": 146.03,
+          "median_ms": 123.74,
+          "min_ms": 88.92,
+          "p95_ms": 146.03,
+          "samples_ms": [
+            88.92,
+            124.24,
+            101.93,
+            144.7,
+            118.97,
+            132.19,
+            99.11,
+            135.95,
+            123.24,
+            146.03
+          ]
+        },
+        "internal_total_by_position": {
+          "1": {
+            "max_ms": 146.03,
+            "median_ms": 135.95,
+            "min_ms": 124.24,
+            "p95_ms": 146.03,
+            "samples_ms": [
+              124.24,
+              144.7,
+              132.19,
+              135.95,
+              146.03
+            ]
+          },
+          "2": {
+            "max_ms": 123.24,
+            "median_ms": 101.93,
+            "min_ms": 88.92,
+            "p95_ms": 123.24,
+            "samples_ms": [
+              88.92,
+              101.93,
+              118.97,
+              99.11,
+              123.24
+            ]
+          }
+        },
+        "phase_samples_ms": [
+          {
+            "build_joins": 40.78,
+            "data_loading": 0.07,
+            "dim_filter": 11.8,
+            "main_scan": 23.64,
+            "output": 8.57,
+            "total": 88.92
+          },
+          {
+            "build_joins": 55.42,
+            "data_loading": 0.07,
+            "dim_filter": 24.1,
+            "main_scan": 26.03,
+            "output": 14.33,
+            "total": 124.24
+          },
+          {
+            "build_joins": 39.0,
+            "data_loading": 0.07,
+            "dim_filter": 11.96,
+            "main_scan": 25.7,
+            "output": 20.35,
+            "total": 101.93
+          },
+          {
+            "build_joins": 44.38,
+            "data_loading": 0.07,
+            "dim_filter": 22.99,
+            "main_scan": 41.29,
+            "output": 31.54,
+            "total": 144.7
+          },
+          {
+            "build_joins": 33.73,
+            "data_loading": 0.06,
+            "dim_filter": 14.76,
+            "main_scan": 29.84,
+            "output": 36.38,
+            "total": 118.97
+          },
+          {
+            "build_joins": 46.72,
+            "data_loading": 0.07,
+            "dim_filter": 19.04,
+            "main_scan": 26.84,
+            "output": 35.15,
+            "total": 132.19
+          },
+          {
+            "build_joins": 40.48,
+            "data_loading": 0.06,
+            "dim_filter": 26.12,
+            "main_scan": 20.69,
+            "output": 7.64,
+            "total": 99.11
+          },
+          {
+            "build_joins": 60.45,
+            "data_loading": 0.07,
+            "dim_filter": 24.95,
+            "main_scan": 25.72,
+            "output": 20.63,
+            "total": 135.95
+          },
+          {
+            "build_joins": 39.86,
+            "data_loading": 0.07,
+            "dim_filter": 22.02,
+            "main_scan": 32.91,
+            "output": 24.21,
+            "total": 123.24
+          },
+          {
+            "build_joins": 53.98,
+            "data_loading": 0.06,
+            "dim_filter": 21.79,
+            "main_scan": 31.66,
+            "output": 34.26,
+            "total": 146.03
+          }
+        ],
+        "process_wall": {
+          "max_ms": 160.56206356734037,
+          "median_ms": 135.04127599298954,
+          "min_ms": 98.87454379349947,
+          "p95_ms": 160.56206356734037,
+          "samples_ms": [
+            98.87454379349947,
+            128.9053689688444,
+            106.85836523771286,
+            160.56206356734037,
+            131.54621049761772,
+            146.15313801914454,
+            102.79423277825117,
+            155.59395588934422,
+            138.53634148836136,
+            157.79395774006844
+          ]
+        }
+      },
+      "normalized_end_to_end_speedup": 0.5263797183168403,
+      "process_wall_speedup": 0.4823282797469061
+    },
+    "Q6": {
+      "correctness": {
+        "bounded_numeric_only_samples": 0,
+        "exact_samples": 11,
+        "failed_samples": 0,
+        "samples": [
+          {
+            "phase": "post_warmup",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            }
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 0
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 1
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 2
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 3
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 4
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 5
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 6
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 7
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 8
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "duckdb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac",
+                "gendb": "18ef65b3987873933d98301d55aaf9b9a97971b8d89c48d9e9dd45e0039321ac"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 1,
+                "duckdb": 1,
+                "gendb": 1
+              },
+              "status": "pass"
+            },
+            "sample": 9
+          }
+        ],
+        "status": "pass",
+        "strict_status": "pass",
+        "tolerant_status": "pass",
+        "total_samples": 11
+      },
+      "duckdb": {
+        "end_to_end": {
+          "max_ms": 21.577819250524044,
+          "median_ms": 17.652746755629778,
+          "min_ms": 16.27588178962469,
+          "p95_ms": 21.577819250524044,
+          "samples_ms": [
+            21.577819250524044,
+            16.91023539751768,
+            19.617524929344654,
+            20.462680608034134,
+            17.201142385601997,
+            16.27588178962469,
+            17.767805606126785,
+            17.625857144594193,
+            16.4278419688344,
+            17.679636366665363
+          ]
+        },
+        "end_to_end_by_position": {
+          "1": {
+            "max_ms": 21.577819250524044,
+            "median_ms": 17.767805606126785,
+            "min_ms": 16.4278419688344,
+            "p95_ms": 21.577819250524044,
+            "samples_ms": [
+              21.577819250524044,
+              19.617524929344654,
+              17.201142385601997,
+              17.767805606126785,
+              16.4278419688344
+            ]
+          },
+          "2": {
+            "max_ms": 20.462680608034134,
+            "median_ms": 17.625857144594193,
+            "min_ms": 16.27588178962469,
+            "p95_ms": 20.462680608034134,
+            "samples_ms": [
+              16.91023539751768,
+              20.462680608034134,
+              16.27588178962469,
+              17.625857144594193,
+              17.679636366665363
+            ]
+          }
+        },
+        "output": {
+          "max_ms": 0.33746566623449326,
+          "median_ms": 0.30569499358534813,
+          "min_ms": 0.2735033631324768,
+          "p95_ms": 0.33746566623449326,
+          "samples_ms": [
+            0.3342749550938606,
+            0.2913782373070717,
+            0.2735033631324768,
+            0.33746566623449326,
+            0.3178948536515236,
+            0.2768971025943756,
+            0.3293398767709732,
+            0.2990216016769409,
+            0.31236838549375534,
+            0.2939784899353981
+          ]
+        },
+        "query_fetch": {
+          "max_ms": 21.21781837195158,
+          "median_ms": 17.336405813694,
+          "min_ms": 15.978588722646236,
+          "p95_ms": 21.21781837195158,
+          "samples_ms": [
+            21.21781837195158,
+            16.599144786596298,
+            19.32402141392231,
+            20.099294371902943,
+            16.858660615980625,
+            15.978588722646236,
+            17.413784749805927,
+            17.307965084910393,
+            16.094664111733437,
+            17.364846542477608
+          ]
+        }
+      },
+      "execution_orders": [
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb"
+      ],
+      "gendb": {
+        "internal_output": {
+          "max_ms": 0.44,
+          "median_ms": 0.16,
+          "min_ms": 0.13,
+          "p95_ms": 0.44,
+          "samples_ms": [
+            0.44,
+            0.15,
+            0.18,
+            0.16,
+            0.44,
+            0.13,
+            0.16,
+            0.15,
+            0.21,
+            0.13
+          ]
+        },
+        "internal_total": {
+          "max_ms": 36.12,
+          "median_ms": 31.08,
+          "min_ms": 24.41,
+          "p95_ms": 36.12,
+          "samples_ms": [
+            32.62,
+            25.7,
+            30.29,
+            34.33,
+            31.52,
+            24.41,
+            32.37,
+            36.12,
+            30.64,
+            29.08
+          ]
+        },
+        "internal_total_by_position": {
+          "1": {
+            "max_ms": 36.12,
+            "median_ms": 29.08,
+            "min_ms": 24.41,
+            "p95_ms": 36.12,
+            "samples_ms": [
+              25.7,
+              34.33,
+              24.41,
+              36.12,
+              29.08
+            ]
+          },
+          "2": {
+            "max_ms": 32.62,
+            "median_ms": 31.52,
+            "min_ms": 30.29,
+            "p95_ms": 32.62,
+            "samples_ms": [
+              32.62,
+              30.29,
+              31.52,
+              32.37,
+              30.64
+            ]
+          }
+        },
+        "phase_samples_ms": [
+          {
+            "data_loading": 0.23,
+            "main_scan": 27.81,
+            "output": 0.44,
+            "total": 32.62
+          },
+          {
+            "data_loading": 0.23,
+            "main_scan": 20.86,
+            "output": 0.15,
+            "total": 25.7
+          },
+          {
+            "data_loading": 0.21,
+            "main_scan": 25.58,
+            "output": 0.18,
+            "total": 30.29
+          },
+          {
+            "data_loading": 0.25,
+            "main_scan": 29.62,
+            "output": 0.16,
+            "total": 34.33
+          },
+          {
+            "data_loading": 0.25,
+            "main_scan": 25.8,
+            "output": 0.44,
+            "total": 31.52
+          },
+          {
+            "data_loading": 0.23,
+            "main_scan": 19.97,
+            "output": 0.13,
+            "total": 24.41
+          },
+          {
+            "data_loading": 0.24,
+            "main_scan": 27.86,
+            "output": 0.16,
+            "total": 32.37
+          },
+          {
+            "data_loading": 0.25,
+            "main_scan": 31.3,
+            "output": 0.15,
+            "total": 36.12
+          },
+          {
+            "data_loading": 0.24,
+            "main_scan": 24.73,
+            "output": 0.21,
+            "total": 30.64
+          },
+          {
+            "data_loading": 0.24,
+            "main_scan": 24.77,
+            "output": 0.13,
+            "total": 29.08
+          }
+        ],
+        "process_wall": {
+          "max_ms": 49.899086356163025,
+          "median_ms": 41.93346342071891,
+          "min_ms": 29.016581363976,
+          "p95_ms": 49.899086356163025,
+          "samples_ms": [
+            42.786127887666225,
+            29.016581363976,
+            40.67546594887972,
+            42.02008806169033,
+            41.846838779747486,
+            35.91718338429928,
+            45.91090977191925,
+            47.200496308505535,
+            49.899086356163025,
+            40.874507278203964
+          ]
+        }
+      },
+      "normalized_end_to_end_speedup": 0.567977694840083,
+      "process_wall_speedup": 0.42097039728198865
+    },
+    "Q9": {
+      "correctness": {
+        "bounded_numeric_only_samples": 0,
+        "exact_samples": 11,
+        "failed_samples": 0,
+        "samples": [
+          {
+            "phase": "post_warmup",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            }
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 0
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 1
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 2
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 3
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 4
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 5
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 6
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 7
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 8
+          },
+          {
+            "phase": "measured",
+            "result": {
+              "bounded_numeric_equivalent": true,
+              "bounded_numeric_equivalent_to_author": true,
+              "canonical_sha256": {
+                "author_reference": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "duckdb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7",
+                "gendb": "52153e18b107cd573581bc82330fa10121ede99f0ca5fd3c3a745c053e0f8de7"
+              },
+              "comparison": "exact_hash",
+              "reference_comparison": "exact_hash",
+              "rows": {
+                "author_reference": 175,
+                "duckdb": 175,
+                "gendb": 175
+              },
+              "status": "pass"
+            },
+            "sample": 9
+          }
+        ],
+        "status": "pass",
+        "strict_status": "pass",
+        "tolerant_status": "pass",
+        "total_samples": 11
+      },
+      "duckdb": {
+        "end_to_end": {
+          "max_ms": 310.1502312347293,
+          "median_ms": 290.0834260508418,
+          "min_ms": 277.6294248178601,
+          "p95_ms": 310.1502312347293,
+          "samples_ms": [
+            288.1784113124013,
+            291.7654113844037,
+            277.6294248178601,
+            291.74807108938694,
+            287.2616508975625,
+            280.51629289984703,
+            288.4187810122967,
+            301.54571309685707,
+            296.74836434423923,
+            310.1502312347293
+          ]
+        },
+        "end_to_end_by_position": {
+          "1": {
+            "max_ms": 296.74836434423923,
+            "median_ms": 288.1784113124013,
+            "min_ms": 277.6294248178601,
+            "p95_ms": 296.74836434423923,
+            "samples_ms": [
+              288.1784113124013,
+              277.6294248178601,
+              287.2616508975625,
+              288.4187810122967,
+              296.74836434423923
+            ]
+          },
+          "2": {
+            "max_ms": 310.1502312347293,
+            "median_ms": 291.7654113844037,
+            "min_ms": 280.51629289984703,
+            "p95_ms": 310.1502312347293,
+            "samples_ms": [
+              291.7654113844037,
+              291.74807108938694,
+              280.51629289984703,
+              301.54571309685707,
+              310.1502312347293
+            ]
+          }
+        },
+        "output": {
+          "max_ms": 0.6626248359680176,
+          "median_ms": 0.5576834082603455,
+          "min_ms": 0.5338434129953384,
+          "p95_ms": 0.6626248359680176,
+          "samples_ms": [
+            0.6259270012378693,
+            0.5338434129953384,
+            0.5533108487725258,
+            0.5491040647029877,
+            0.5553103983402252,
+            0.5683004856109619,
+            0.5469406023621559,
+            0.6626248359680176,
+            0.6058355793356895,
+            0.5600564181804657
+          ]
+        },
+        "query_fetch": {
+          "max_ms": 309.5651678740978,
+          "median_ms": 289.5104084163904,
+          "min_ms": 277.0502744242549,
+          "p95_ms": 309.5651678740978,
+          "samples_ms": [
+            287.52346336841583,
+            291.20605904608965,
+            277.0502744242549,
+            291.1747107282281,
+            286.68361250311136,
+            279.9214292317629,
+            287.84610610455275,
+            300.85191410034895,
+            296.11536487936974,
+            309.5651678740978
+          ]
+        }
+      },
+      "execution_orders": [
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb",
+        "duckdb_then_gendb",
+        "gendb_then_duckdb"
+      ],
+      "gendb": {
+        "internal_output": {
+          "max_ms": 0.58,
+          "median_ms": 0.255,
+          "min_ms": 0.21,
+          "p95_ms": 0.58,
+          "samples_ms": [
+            0.56,
+            0.21,
+            0.55,
+            0.23,
+            0.24,
+            0.23,
+            0.27,
+            0.58,
+            0.23,
+            0.58
+          ]
+        },
+        "internal_total": {
+          "max_ms": 162.58,
+          "median_ms": 147.35000000000002,
+          "min_ms": 102.21,
+          "p95_ms": 162.58,
+          "samples_ms": [
+            155.62,
+            147.05,
+            136.2,
+            153.17,
+            143.73,
+            160.98,
+            102.21,
+            162.58,
+            114.12,
+            147.65
+          ]
+        },
+        "internal_total_by_position": {
+          "1": {
+            "max_ms": 162.58,
+            "median_ms": 153.17,
+            "min_ms": 147.05,
+            "p95_ms": 162.58,
+            "samples_ms": [
+              147.05,
+              153.17,
+              160.98,
+              162.58,
+              147.65
+            ]
+          },
+          "2": {
+            "max_ms": 155.62,
+            "median_ms": 136.2,
+            "min_ms": 102.21,
+            "p95_ms": 155.62,
+            "samples_ms": [
+              155.62,
+              136.2,
+              143.73,
+              102.21,
+              114.12
+            ]
+          }
+        },
+        "phase_samples_ms": [
+          {
+            "build_joins": 26.82,
+            "data_loading": 0.11,
+            "dim_filter": 34.01,
+            "main_scan": 42.74,
+            "output": 0.56,
+            "total": 155.62
+          },
+          {
+            "build_joins": 24.54,
+            "data_loading": 0.13,
+            "dim_filter": 25.22,
+            "main_scan": 52.25,
+            "output": 0.21,
+            "total": 147.05
+          },
+          {
+            "build_joins": 20.81,
+            "data_loading": 0.12,
+            "dim_filter": 27.98,
+            "main_scan": 32.91,
+            "output": 0.55,
+            "total": 136.2
+          },
+          {
+            "build_joins": 33.44,
+            "data_loading": 0.12,
+            "dim_filter": 17.78,
+            "main_scan": 40.82,
+            "output": 0.23,
+            "total": 153.17
+          },
+          {
+            "build_joins": 35.05,
+            "data_loading": 0.12,
+            "dim_filter": 27.08,
+            "main_scan": 32.0,
+            "output": 0.24,
+            "total": 143.73
+          },
+          {
+            "build_joins": 28.82,
+            "data_loading": 0.12,
+            "dim_filter": 24.95,
+            "main_scan": 44.4,
+            "output": 0.23,
+            "total": 160.98
+          },
+          {
+            "build_joins": 25.52,
+            "data_loading": 0.09,
+            "dim_filter": 13.43,
+            "main_scan": 38.19,
+            "output": 0.27,
+            "total": 102.21
+          },
+          {
+            "build_joins": 23.81,
+            "data_loading": 0.11,
+            "dim_filter": 22.92,
+            "main_scan": 54.95,
+            "output": 0.58,
+            "total": 162.58
+          },
+          {
+            "build_joins": 14.42,
+            "data_loading": 0.1,
+            "dim_filter": 17.89,
+            "main_scan": 40.05,
+            "output": 0.23,
+            "total": 114.12
+          },
+          {
+            "build_joins": 25.39,
+            "data_loading": 0.11,
+            "dim_filter": 15.38,
+            "main_scan": 52.27,
+            "output": 0.58,
+            "total": 147.65
+          }
+        ],
+        "process_wall": {
+          "max_ms": 211.40771731734276,
+          "median_ms": 178.6490110680461,
+          "min_ms": 127.53016594797373,
+          "p95_ms": 211.40771731734276,
+          "samples_ms": [
+            195.77704463154078,
+            174.44549314677715,
+            163.63711096346378,
+            182.85252898931503,
+            163.6812323704362,
+            185.12201122939587,
+            127.53016594797373,
+            189.75129537284374,
+            134.18444152921438,
+            211.40771731734276
+          ]
+        }
+      },
+      "normalized_end_to_end_speedup": 1.9686693318686241,
+      "process_wall_speedup": 1.6237617231497081
+    }
+  },
+  "schema_version": 3,
+  "status": "correctness_failures_recorded"
+}

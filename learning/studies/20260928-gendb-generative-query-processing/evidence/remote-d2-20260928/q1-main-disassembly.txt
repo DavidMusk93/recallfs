@@ -1,0 +1,1365 @@
+0000000000002580 <main>:
+    2580:	lea    r10,[rsp+0x8]
+    2585:	and    rsp,0xffffffffffffffc0
+    2589:	lea    rax,[rip+0x3b19]        # 60a9 <_IO_stdin_used+0xa9>
+    2590:	push   QWORD PTR [r10-0x8]
+    2594:	push   rbp
+    2595:	mov    rbp,rsp
+    2598:	push   r15
+    259a:	push   r14
+    259c:	push   r13
+    259e:	push   r12
+    25a0:	mov    r12d,edi
+    25a3:	push   r10
+    25a5:	push   rbx
+    25a6:	mov    rbx,rsi
+    25a9:	sub    rsp,0x580
+    25b0:	mov    QWORD PTR [rbp-0x430],rax
+    25b7:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    25bc:	mov    QWORD PTR [rbp-0x420],0x0
+    25c7:	mov    QWORD PTR [rbp-0x428],rax
+    25ce:	cmp    r12d,0x2
+    25d2:	jle    3745 <main+0x11c5>
+    25d8:	lea    rax,[rbp-0x2d0]
+    25df:	mov    rsi,QWORD PTR [rbx+0x8]
+    25e3:	mov    rdi,rax
+    25e6:	mov    QWORD PTR [rbp-0x538],rax
+    25ed:	call   4f90 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [clone .constprop.3]>
+    25f2:	lea    rax,[rbp-0x2f0]
+    25f9:	mov    rsi,QWORD PTR [rbx+0x10]
+    25fd:	mov    rdi,rax
+    2600:	mov    rbx,rax
+    2603:	mov    QWORD PTR [rbp-0x548],rax
+    260a:	call   4f90 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [clone .constprop.3]>
+    260f:	lea    r15,[rbp-0x1b0]
+    2616:	mov    rdx,rbx
+    2619:	lea    rsi,[rip+0x3a8f]        # 60af <_IO_stdin_used+0xaf>
+    2620:	mov    rdi,r15
+    2623:	call   4fd0 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)>
+    2628:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    262f:	call   2140 <system@plt>
+    2634:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    263b:	lea    rax,[r15+0x10]
+    263f:	cmp    rdi,rax
+    2642:	je     2649 <main+0xc9>
+    2644:	call   2150 <operator delete(void*)@plt>
+    2649:	mov    r14,QWORD PTR [rbp-0x538]
+    2650:	lea    rbx,[rbp-0x310]
+    2657:	lea    rdx,[rip+0x3a5b]        # 60b9 <_IO_stdin_used+0xb9>
+    265e:	mov    rdi,rbx
+    2661:	mov    QWORD PTR [rbp-0x528],rbx
+    2668:	mov    rsi,r14
+    266b:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    2670:	lea    rax,[rbp-0x330]
+    2677:	lea    rdx,[rip+0x3a46]        # 60c4 <_IO_stdin_used+0xc4>
+    267e:	mov    rsi,r14
+    2681:	mov    rdi,rax
+    2684:	mov    QWORD PTR [rbp-0x520],rax
+    268b:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    2690:	lea    rax,[rip+0x3a3f]        # 60d6 <_IO_stdin_used+0xd6>
+    2697:	mov    QWORD PTR [rbp-0x3b0],rax
+    269e:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    26a3:	lea    rdx,[rip+0x3a39]        # 60e3 <_IO_stdin_used+0xe3>
+    26aa:	mov    rsi,rbx
+    26ad:	mov    rdi,r15
+    26b0:	mov    QWORD PTR [rbp-0x3a8],rax
+    26b7:	mov    QWORD PTR [rbp-0x3a0],0x0
+    26c2:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    26c7:	lea    rax,[rbp-0x3d0]
+    26ce:	mov    rsi,r15
+    26d1:	mov    rdi,rax
+    26d4:	mov    QWORD PTR [rbp-0x588],rax
+    26db:	call   54d0 <load_dict(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)>
+    26e0:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    26e7:	lea    rax,[r15+0x10]
+    26eb:	cmp    rdi,rax
+    26ee:	je     26f5 <main+0x175>
+    26f0:	call   2150 <operator delete(void*)@plt>
+    26f5:	mov    rsi,QWORD PTR [rbp-0x528]
+    26fc:	lea    rdx,[rip+0x39f2]        # 60f5 <_IO_stdin_used+0xf5>
+    2703:	mov    rdi,r15
+    2706:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    270b:	lea    rax,[rbp-0x3f0]
+    2712:	mov    rsi,r15
+    2715:	mov    rdi,rax
+    2718:	mov    QWORD PTR [rbp-0x580],rax
+    271f:	call   54d0 <load_dict(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)>
+    2724:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    272b:	lea    rax,[r15+0x10]
+    272f:	cmp    rdi,rax
+    2732:	je     2739 <main+0x1b9>
+    2734:	call   2150 <operator delete(void*)@plt>
+    2739:	mov    rsi,QWORD PTR [rbp-0x528]
+    2740:	lea    rdx,[rip+0x39c0]        # 6107 <_IO_stdin_used+0x107>
+    2747:	mov    rdi,r15
+    274a:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    274f:	lea    rax,[rbp-0x1f0]
+    2756:	mov    rsi,r15
+    2759:	vpxor  xmm0,xmm0,xmm0
+    275d:	mov    QWORD PTR [rbp-0x1f0],0x0
+    2768:	mov    rdi,rax
+    276b:	mov    QWORD PTR [rbp-0x540],rax
+    2772:	vmovups XMMWORD PTR [rbp-0x1e8],xmm0
+    277a:	mov    DWORD PTR [rbp-0x1d8],0xffffffff
+    2784:	call   52e0 <gendb::MmapColumn<int>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.0]>
+    2789:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    2790:	lea    rax,[r15+0x10]
+    2794:	cmp    rdi,rax
+    2797:	je     279e <main+0x21e>
+    2799:	call   2150 <operator delete(void*)@plt>
+    279e:	mov    rsi,QWORD PTR [rbp-0x528]
+    27a5:	lea    rdx,[rip+0x396a]        # 6116 <_IO_stdin_used+0x116>
+    27ac:	mov    rdi,r15
+    27af:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    27b4:	lea    rax,[rbp-0x210]
+    27bb:	mov    rsi,r15
+    27be:	vpxor  xmm0,xmm0,xmm0
+    27c2:	mov    QWORD PTR [rbp-0x210],0x0
+    27cd:	mov    rdi,rax
+    27d0:	mov    QWORD PTR [rbp-0x578],rax
+    27d7:	vmovups XMMWORD PTR [rbp-0x208],xmm0
+    27df:	mov    DWORD PTR [rbp-0x1f8],0xffffffff
+    27e9:	call   50f0 <gendb::MmapColumn<signed char>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.1]>
+    27ee:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    27f5:	lea    rax,[r15+0x10]
+    27f9:	cmp    rdi,rax
+    27fc:	je     2803 <main+0x283>
+    27fe:	call   2150 <operator delete(void*)@plt>
+    2803:	mov    rsi,QWORD PTR [rbp-0x528]
+    280a:	lea    rdx,[rip+0x3916]        # 6127 <_IO_stdin_used+0x127>
+    2811:	mov    rdi,r15
+    2814:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    2819:	lea    rax,[rbp-0x230]
+    2820:	mov    rsi,r15
+    2823:	vpxor  xmm0,xmm0,xmm0
+    2827:	mov    QWORD PTR [rbp-0x230],0x0
+    2832:	mov    rdi,rax
+    2835:	mov    QWORD PTR [rbp-0x570],rax
+    283c:	vmovups XMMWORD PTR [rbp-0x228],xmm0
+    2844:	mov    DWORD PTR [rbp-0x218],0xffffffff
+    284e:	call   50f0 <gendb::MmapColumn<signed char>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.1]>
+    2853:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    285a:	lea    rax,[r15+0x10]
+    285e:	cmp    rdi,rax
+    2861:	je     2868 <main+0x2e8>
+    2863:	call   2150 <operator delete(void*)@plt>
+    2868:	mov    rsi,QWORD PTR [rbp-0x520]
+    286f:	lea    rdx,[rip+0x398a]        # 6200 <_IO_stdin_used+0x200>
+    2876:	mov    rdi,r15
+    2879:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    287e:	lea    rax,[rbp-0x250]
+    2885:	mov    rsi,r15
+    2888:	vpxor  xmm0,xmm0,xmm0
+    288c:	mov    QWORD PTR [rbp-0x250],0x0
+    2897:	mov    rdi,rax
+    289a:	mov    QWORD PTR [rbp-0x568],rax
+    28a1:	vmovups XMMWORD PTR [rbp-0x248],xmm0
+    28a9:	mov    DWORD PTR [rbp-0x238],0xffffffff
+    28b3:	call   50f0 <gendb::MmapColumn<signed char>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.1]>
+    28b8:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    28bf:	lea    rax,[r15+0x10]
+    28c3:	cmp    rdi,rax
+    28c6:	je     28cd <main+0x34d>
+    28c8:	call   2150 <operator delete(void*)@plt>
+    28cd:	mov    rsi,QWORD PTR [rbp-0x520]
+    28d4:	lea    rdx,[rip+0x394d]        # 6228 <_IO_stdin_used+0x228>
+    28db:	mov    rdi,r15
+    28de:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    28e3:	lea    rax,[rbp-0x270]
+    28ea:	mov    rsi,r15
+    28ed:	vpxor  xmm0,xmm0,xmm0
+    28f1:	mov    QWORD PTR [rbp-0x270],0x0
+    28fc:	mov    rdi,rax
+    28ff:	mov    QWORD PTR [rbp-0x560],rax
+    2906:	vmovups XMMWORD PTR [rbp-0x268],xmm0
+    290e:	mov    DWORD PTR [rbp-0x258],0xffffffff
+    2918:	call   52e0 <gendb::MmapColumn<int>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.0]>
+    291d:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    2924:	lea    rax,[r15+0x10]
+    2928:	cmp    rdi,rax
+    292b:	je     2932 <main+0x3b2>
+    292d:	call   2150 <operator delete(void*)@plt>
+    2932:	mov    rsi,QWORD PTR [rbp-0x520]
+    2939:	lea    rdx,[rip+0x3918]        # 6258 <_IO_stdin_used+0x258>
+    2940:	mov    rdi,r15
+    2943:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    2948:	lea    rax,[rbp-0x290]
+    294f:	mov    rsi,r15
+    2952:	vpxor  xmm0,xmm0,xmm0
+    2956:	mov    QWORD PTR [rbp-0x290],0x0
+    2961:	mov    rdi,rax
+    2964:	mov    QWORD PTR [rbp-0x558],rax
+    296b:	vmovups XMMWORD PTR [rbp-0x288],xmm0
+    2973:	mov    DWORD PTR [rbp-0x278],0xffffffff
+    297d:	call   50f0 <gendb::MmapColumn<signed char>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.1]>
+    2982:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    2989:	lea    rax,[r15+0x10]
+    298d:	cmp    rdi,rax
+    2990:	je     2997 <main+0x417>
+    2992:	call   2150 <operator delete(void*)@plt>
+    2997:	mov    rsi,QWORD PTR [rbp-0x520]
+    299e:	lea    rdx,[rip+0x3793]        # 6138 <_IO_stdin_used+0x138>
+    29a5:	mov    rdi,r15
+    29a8:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    29ad:	lea    rax,[rbp-0x2b0]
+    29b4:	mov    rsi,r15
+    29b7:	vpxor  xmm0,xmm0,xmm0
+    29bb:	mov    QWORD PTR [rbp-0x2b0],0x0
+    29c6:	mov    rdi,rax
+    29c9:	mov    QWORD PTR [rbp-0x550],rax
+    29d0:	vmovups XMMWORD PTR [rbp-0x2a8],xmm0
+    29d8:	mov    DWORD PTR [rbp-0x298],0xffffffff
+    29e2:	call   50f0 <gendb::MmapColumn<signed char>::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .constprop.1]>
+    29e7:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    29ee:	lea    rax,[r15+0x10]
+    29f2:	cmp    rdi,rax
+    29f5:	je     29fc <main+0x47c>
+    29f7:	call   2150 <operator delete(void*)@plt>
+    29fc:	mov    rax,QWORD PTR [rbp-0x1e8]
+    2a03:	vpxor  xmm0,xmm0,xmm0
+    2a07:	mov    QWORD PTR [rbp-0x400],0x0
+    2a12:	vmovaps XMMWORD PTR [rbp-0x410],xmm0
+    2a1a:	mov    QWORD PTR [rbp-0x438],rax
+    2a21:	lea    rax,[rip+0x372d]        # 6155 <_IO_stdin_used+0x155>
+    2a28:	mov    QWORD PTR [rbp-0x1d0],rax
+    2a2f:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    2a34:	mov    rsi,QWORD PTR [rbp-0x538]
+    2a3b:	lea    rdx,[rip+0x383e]        # 6280 <_IO_stdin_used+0x280>
+    2a42:	mov    rdi,r15
+    2a45:	mov    QWORD PTR [rbp-0x1c8],rax
+    2a4c:	mov    QWORD PTR [rbp-0x1c0],0x0
+    2a57:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    2a5c:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    2a63:	xor    esi,esi
+    2a65:	xor    eax,eax
+    2a67:	call   2110 <open@plt>
+    2a6c:	mov    r12d,eax
+    2a6f:	test   eax,eax
+    2a71:	js     2b50 <main+0x5d0>
+    2a77:	lea    rax,[rbp-0x350]
+    2a7e:	mov    edx,0x8
+    2a83:	mov    edi,r12d
+    2a86:	mov    QWORD PTR [rbp-0x350],0x0
+    2a91:	mov    rsi,rax
+    2a94:	mov    QWORD PTR [rbp-0x590],rax
+    2a9b:	call   2200 <read@plt>
+    2aa0:	mov    r13,QWORD PTR [rbp-0x350]
+    2aa7:	lea    rax,[rbp-0x410]
+    2aae:	lea    r14,[rbp-0x370]
+    2ab5:	mov    BYTE PTR [rbp-0x370],0x2
+    2abc:	mov    rdx,r14
+    2abf:	mov    rdi,rax
+    2ac2:	mov    QWORD PTR [rbp-0x450],rax
+    2ac9:	mov    rsi,r13
+    2acc:	call   4640 <std::vector<BlockType, std::allocator<BlockType> >::_M_fill_assign(unsigned long, BlockType const&)>
+    2ad1:	test   r13,r13
+    2ad4:	je     2b46 <main+0x5c6>
+    2ad6:	lea    rax,[rbp-0x390]
+    2add:	xor    ebx,ebx
+    2adf:	mov    QWORD PTR [rbp-0x448],rax
+    2ae6:	nop    WORD PTR cs:[rax+rax*1+0x0]
+    2af0:	mov    rsi,QWORD PTR [rbp-0x448]
+    2af7:	mov    edx,0x4
+    2afc:	mov    edi,r12d
+    2aff:	call   2200 <read@plt>
+    2b04:	mov    edx,0x4
+    2b09:	mov    rsi,r14
+    2b0c:	mov    edi,r12d
+    2b0f:	call   2200 <read@plt>
+    2b14:	cmp    DWORD PTR [rbp-0x390],0x28e7
+    2b1e:	jg     2b46 <main+0x5c6>
+    2b20:	mov    rax,QWORD PTR [rbp-0x410]
+    2b27:	add    rax,rbx
+    2b2a:	cmp    DWORD PTR [rbp-0x370],0x28e7
+    2b34:	jg     3730 <main+0x11b0>
+    2b3a:	add    rbx,0x1
+    2b3e:	mov    BYTE PTR [rax],0x0
+    2b41:	cmp    r13,rbx
+    2b44:	jne    2af0 <main+0x570>
+    2b46:	mov    edi,r12d
+    2b49:	call   22f0 <close@plt>
+    2b4e:	jmp    2b98 <main+0x618>
+    2b50:	mov    rax,QWORD PTR [rbp-0x438]
+    2b57:	mov    ecx,0x186a0
+    2b5c:	xor    edx,edx
+    2b5e:	mov    BYTE PTR [rbp-0x350],0x1
+    2b65:	add    rax,0x1869f
+    2b6b:	div    rcx
+    2b6e:	lea    rdx,[rbp-0x350]
+    2b75:	mov    QWORD PTR [rbp-0x590],rdx
+    2b7c:	mov    r13,rax
+    2b7f:	lea    rax,[rbp-0x410]
+    2b86:	mov    rsi,r13
+    2b89:	mov    rdi,rax
+    2b8c:	mov    QWORD PTR [rbp-0x450],rax
+    2b93:	call   4640 <std::vector<BlockType, std::allocator<BlockType> >::_M_fill_assign(unsigned long, BlockType const&)>
+    2b98:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    2b9f:	lea    rax,[r15+0x10]
+    2ba3:	cmp    rdi,rax
+    2ba6:	je     2bad <main+0x62d>
+    2ba8:	call   2150 <operator delete(void*)@plt>
+    2bad:	lea    rax,[rbp-0x1d0]
+    2bb4:	mov    rdi,rax
+    2bb7:	mov    QWORD PTR [rbp-0x530],rax
+    2bbe:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    2bc3:	lea    rax,[rip+0x3596]        # 6160 <_IO_stdin_used+0x160>
+    2bca:	mov    QWORD PTR [rbp-0x390],rax
+    2bd1:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    2bd6:	mov    QWORD PTR [rbp-0x380],0x0
+    2be1:	mov    QWORD PTR [rbp-0x388],rax
+    2be8:	call   2280 <omp_get_max_threads@plt>
+    2bed:	vpxor  xmm0,xmm0,xmm0
+    2bf1:	mov    QWORD PTR [rbp-0x360],0x0
+    2bfc:	movsxd rbx,eax
+    2bff:	mov    DWORD PTR [rbp-0x510],eax
+    2c05:	vmovaps XMMWORD PTR [rbp-0x370],xmm0
+    2c0d:	test   rbx,rbx
+    2c10:	je     3767 <main+0x11e7>
+    2c16:	movabs rax,0xaaaaaaaaaaaaaa
+    2c20:	cmp    rbx,rax
+    2c23:	ja     3c6e <main+0x16ee>
+    2c29:	imul   rbx,rbx,0x180
+    2c30:	mov    esi,0x40
+    2c35:	mov    rdi,rbx
+    2c38:	call   2190 <operator new(unsigned long, std::align_val_t)@plt>
+    2c3d:	vpbroadcastq xmm0,rax
+    2c43:	lea    r12,[rax+rbx*1]
+    2c47:	mov    rdx,rbx
+    2c4a:	xor    esi,esi
+    2c4c:	mov    rdi,rax
+    2c4f:	mov    QWORD PTR [rbp-0x360],r12
+    2c56:	vmovaps XMMWORD PTR [rbp-0x370],xmm0
+    2c5e:	call   20d0 <memset@plt>
+    2c63:	vmovq  xmm5,QWORD PTR [rbp-0x540]
+    2c6b:	lea    rax,[rbp-0x438]
+    2c72:	xor    ecx,ecx
+    2c74:	mov    rsi,r15
+    2c77:	vpinsrq xmm0,xmm5,QWORD PTR [rbp-0x578],0x1
+    2c81:	mov    ebx,DWORD PTR [rbp-0x510]
+    2c87:	lea    rdi,[rip+0x1f42]        # 4bd0 <main._omp_fn.0>
+    2c8e:	mov    QWORD PTR [rbp-0x368],r12
+    2c95:	vmovq  xmm6,QWORD PTR [rbp-0x570]
+    2c9d:	mov    QWORD PTR [rbp-0x168],r13
+    2ca4:	vpinsrq xmm1,xmm6,QWORD PTR [rbp-0x568],0x1
+    2cae:	mov    edx,ebx
+    2cb0:	vmovq  xmm7,QWORD PTR [rbp-0x550]
+    2cb8:	vmovq  xmm5,QWORD PTR [rbp-0x560]
+    2cc0:	vinserti128 ymm0,ymm0,xmm1,0x1
+    2cc6:	vpinsrq xmm1,xmm7,rax,0x1
+    2ccc:	mov    rax,QWORD PTR [rbp-0x450]
+    2cd3:	vmovdqa64 YMMWORD PTR [rbp-0x1b0],ymm0
+    2cdd:	vpinsrq xmm0,xmm5,QWORD PTR [rbp-0x558],0x1
+    2ce7:	mov    QWORD PTR [rbp-0x170],rax
+    2cee:	lea    rax,[rbp-0x370]
+    2cf5:	vinserti128 ymm0,ymm0,xmm1,0x1
+    2cfb:	mov    QWORD PTR [rbp-0x160],rax
+    2d02:	vmovdqa64 YMMWORD PTR [rbp-0x190],ymm0
+    2d0c:	vzeroupper
+    2d0f:	call   2220 <GOMP_parallel@plt>
+    2d14:	xor    eax,eax
+    2d16:	mov    ecx,0x30
+    2d1b:	mov    rdi,r15
+    2d1e:	rep stos QWORD PTR es:[rdi],rax
+    2d21:	lea    rax,[rip+0x3442]        # 616a <_IO_stdin_used+0x16a>
+    2d28:	mov    QWORD PTR [rbp-0x1d0],rax
+    2d2f:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    2d34:	mov    QWORD PTR [rbp-0x1c0],0x0
+    2d3f:	mov    QWORD PTR [rbp-0x1c8],rax
+    2d46:	test   ebx,ebx
+    2d48:	jle    327b <main+0xcfb>
+    2d4e:	mov    rax,QWORD PTR [rbp-0x198]
+    2d55:	mov    QWORD PTR [rbp-0x450],rax
+    2d5c:	mov    rax,QWORD PTR [rbp-0x190]
+    2d63:	mov    QWORD PTR [rbp-0x468],rax
+    2d6a:	mov    rax,QWORD PTR [rbp-0x1a0]
+    2d71:	mov    QWORD PTR [rbp-0x448],rax
+    2d78:	mov    rax,QWORD PTR [rbp-0x1b0]
+    2d7f:	mov    QWORD PTR [rbp-0x458],rax
+    2d86:	mov    rax,QWORD PTR [rbp-0x1a8]
+    2d8d:	mov    QWORD PTR [rbp-0x460],rax
+    2d94:	mov    rax,QWORD PTR [rbp-0x188]
+    2d9b:	mov    QWORD PTR [rbp-0x470],rax
+    2da2:	mov    rax,QWORD PTR [rbp-0x170]
+    2da9:	mov    QWORD PTR [rbp-0x478],rax
+    2db0:	mov    rax,QWORD PTR [rbp-0x168]
+    2db7:	mov    QWORD PTR [rbp-0x480],rax
+    2dbe:	mov    rax,QWORD PTR [rbp-0x160]
+    2dc5:	mov    QWORD PTR [rbp-0x488],rax
+    2dcc:	mov    rax,QWORD PTR [rbp-0x158]
+    2dd3:	mov    QWORD PTR [rbp-0x490],rax
+    2dda:	mov    rax,QWORD PTR [rbp-0x150]
+    2de1:	mov    QWORD PTR [rbp-0x498],rax
+    2de8:	mov    rax,QWORD PTR [rbp-0x148]
+    2def:	mov    QWORD PTR [rbp-0x4a0],rax
+    2df6:	mov    rax,QWORD PTR [rbp-0x130]
+    2dfd:	mov    QWORD PTR [rbp-0x4a8],rax
+    2e04:	mov    rax,QWORD PTR [rbp-0x128]
+    2e0b:	mov    QWORD PTR [rbp-0x4b0],rax
+    2e12:	mov    rax,QWORD PTR [rbp-0x120]
+    2e19:	mov    QWORD PTR [rbp-0x4b8],rax
+    2e20:	mov    rax,QWORD PTR [rbp-0x118]
+    2e27:	mov    QWORD PTR [rbp-0x4c0],rax
+    2e2e:	mov    rax,QWORD PTR [rbp-0x110]
+    2e35:	mov    edx,DWORD PTR [rbp-0x510]
+    2e3b:	mov    rsi,QWORD PTR [rbp-0x50]
+    2e3f:	mov    QWORD PTR [rbp-0x4c8],rax
+    2e46:	mov    rax,QWORD PTR [rbp-0x108]
+    2e4d:	sub    edx,0x1
+    2e50:	mov    r14,QWORD PTR [rbp-0xa8]
+    2e57:	mov    r13,QWORD PTR [rbp-0xa0]
+    2e5e:	mov    QWORD PTR [rbp-0x4d0],rax
+    2e65:	mov    rax,QWORD PTR [rbp-0xf0]
+    2e6c:	imul   rdx,rdx,0x180
+    2e73:	mov    r12,QWORD PTR [rbp-0x98]
+    2e7a:	mov    rbx,QWORD PTR [rbp-0x90]
+    2e81:	mov    r10,QWORD PTR [rbp-0x70]
+    2e85:	mov    r9,QWORD PTR [rbp-0x68]
+    2e89:	mov    QWORD PTR [rbp-0x4d8],rax
+    2e90:	mov    rax,QWORD PTR [rbp-0xe8]
+    2e97:	mov    rcx,rdx
+    2e9a:	mov    r11,QWORD PTR [rbp-0x88]
+    2ea1:	mov    r8,QWORD PTR [rbp-0x60]
+    2ea5:	mov    rdi,QWORD PTR [rbp-0x58]
+    2ea9:	mov    QWORD PTR [rbp-0x4e0],rax
+    2eb0:	mov    rax,QWORD PTR [rbp-0xe0]
+    2eb7:	mov    QWORD PTR [rbp-0x4e8],rax
+    2ebe:	mov    rax,QWORD PTR [rbp-0xd8]
+    2ec5:	mov    QWORD PTR [rbp-0x4f0],rax
+    2ecc:	mov    rax,QWORD PTR [rbp-0xd0]
+    2ed3:	mov    QWORD PTR [rbp-0x4f8],rax
+    2eda:	mov    rax,QWORD PTR [rbp-0xc8]
+    2ee1:	mov    QWORD PTR [rbp-0x500],rax
+    2ee8:	mov    rax,QWORD PTR [rbp-0xb0]
+    2eef:	mov    QWORD PTR [rbp-0x598],rax
+    2ef6:	mov    rax,QWORD PTR [rbp-0x48]
+    2efa:	mov    QWORD PTR [rbp-0x508],rax
+    2f01:	mov    rax,QWORD PTR [rbp-0x370]
+    2f08:	lea    rdx,[rax+0x180]
+    2f0f:	add    rcx,rdx
+    2f12:	mov    QWORD PTR [rbp-0x518],rcx
+    2f19:	mov    QWORD PTR [rbp-0x5a0],r15
+    2f20:	mov    r15,QWORD PTR [rbp-0x598]
+    2f27:	mov    QWORD PTR [rbp-0x510],rsi
+    2f2e:	jmp    2f37 <main+0x9b7>
+    2f30:	add    rdx,0x180
+    2f37:	mov    rcx,QWORD PTR [rax]
+    2f3a:	add    QWORD PTR [rbp-0x458],rcx
+    2f41:	mov    rcx,QWORD PTR [rbp-0x458]
+    2f48:	mov    QWORD PTR [rbp-0x1b0],rcx
+    2f4f:	mov    rsi,QWORD PTR [rax+0x8]
+    2f53:	add    QWORD PTR [rbp-0x460],rsi
+    2f5a:	mov    rcx,QWORD PTR [rbp-0x460]
+    2f61:	mov    QWORD PTR [rbp-0x1a8],rcx
+    2f68:	mov    rsi,QWORD PTR [rax+0x10]
+    2f6c:	add    QWORD PTR [rbp-0x448],rsi
+    2f73:	mov    rcx,QWORD PTR [rbp-0x448]
+    2f7a:	mov    QWORD PTR [rbp-0x1a0],rcx
+    2f81:	mov    rsi,QWORD PTR [rax+0x18]
+    2f85:	add    QWORD PTR [rbp-0x450],rsi
+    2f8c:	mov    rcx,QWORD PTR [rbp-0x450]
+    2f93:	mov    QWORD PTR [rbp-0x198],rcx
+    2f9a:	mov    rsi,QWORD PTR [rax+0x20]
+    2f9e:	add    QWORD PTR [rbp-0x468],rsi
+    2fa5:	mov    rcx,QWORD PTR [rbp-0x468]
+    2fac:	mov    QWORD PTR [rbp-0x190],rcx
+    2fb3:	mov    rsi,QWORD PTR [rax+0x28]
+    2fb7:	add    QWORD PTR [rbp-0x470],rsi
+    2fbe:	mov    rcx,QWORD PTR [rbp-0x470]
+    2fc5:	mov    QWORD PTR [rbp-0x188],rcx
+    2fcc:	mov    rsi,QWORD PTR [rax+0x40]
+    2fd0:	add    QWORD PTR [rbp-0x478],rsi
+    2fd7:	mov    rcx,QWORD PTR [rbp-0x478]
+    2fde:	mov    QWORD PTR [rbp-0x170],rcx
+    2fe5:	mov    rsi,QWORD PTR [rax+0x48]
+    2fe9:	add    QWORD PTR [rbp-0x480],rsi
+    2ff0:	mov    rcx,QWORD PTR [rbp-0x480]
+    2ff7:	mov    QWORD PTR [rbp-0x168],rcx
+    2ffe:	mov    rsi,QWORD PTR [rax+0x50]
+    3002:	add    QWORD PTR [rbp-0x488],rsi
+    3009:	mov    rcx,QWORD PTR [rbp-0x488]
+    3010:	mov    QWORD PTR [rbp-0x160],rcx
+    3017:	mov    rsi,QWORD PTR [rax+0x58]
+    301b:	add    QWORD PTR [rbp-0x490],rsi
+    3022:	mov    rcx,QWORD PTR [rbp-0x490]
+    3029:	mov    QWORD PTR [rbp-0x158],rcx
+    3030:	mov    rsi,QWORD PTR [rax+0x60]
+    3034:	add    QWORD PTR [rbp-0x498],rsi
+    303b:	mov    rcx,QWORD PTR [rbp-0x498]
+    3042:	mov    QWORD PTR [rbp-0x150],rcx
+    3049:	mov    rsi,QWORD PTR [rax+0x68]
+    304d:	add    QWORD PTR [rbp-0x4a0],rsi
+    3054:	mov    rcx,QWORD PTR [rbp-0x4a0]
+    305b:	mov    QWORD PTR [rbp-0x148],rcx
+    3062:	mov    rsi,QWORD PTR [rax+0x80]
+    3069:	add    QWORD PTR [rbp-0x4a8],rsi
+    3070:	mov    rcx,QWORD PTR [rbp-0x4a8]
+    3077:	mov    QWORD PTR [rbp-0x130],rcx
+    307e:	mov    rsi,QWORD PTR [rax+0x88]
+    3085:	add    QWORD PTR [rbp-0x4b0],rsi
+    308c:	mov    rcx,QWORD PTR [rbp-0x4b0]
+    3093:	mov    QWORD PTR [rbp-0x128],rcx
+    309a:	mov    rsi,QWORD PTR [rax+0x90]
+    30a1:	add    QWORD PTR [rbp-0x4b8],rsi
+    30a8:	mov    rcx,QWORD PTR [rbp-0x4b8]
+    30af:	mov    QWORD PTR [rbp-0x120],rcx
+    30b6:	mov    rsi,QWORD PTR [rax+0x98]
+    30bd:	add    QWORD PTR [rbp-0x4c0],rsi
+    30c4:	mov    rcx,QWORD PTR [rbp-0x4c0]
+    30cb:	mov    QWORD PTR [rbp-0x118],rcx
+    30d2:	mov    rsi,QWORD PTR [rax+0xa0]
+    30d9:	add    QWORD PTR [rbp-0x4c8],rsi
+    30e0:	mov    rcx,QWORD PTR [rbp-0x4c8]
+    30e7:	mov    QWORD PTR [rbp-0x110],rcx
+    30ee:	mov    rsi,QWORD PTR [rax+0xa8]
+    30f5:	add    QWORD PTR [rbp-0x4d0],rsi
+    30fc:	mov    rcx,QWORD PTR [rbp-0x4d0]
+    3103:	mov    QWORD PTR [rbp-0x108],rcx
+    310a:	mov    rsi,QWORD PTR [rax+0xc0]
+    3111:	add    QWORD PTR [rbp-0x4d8],rsi
+    3118:	mov    rcx,QWORD PTR [rbp-0x4d8]
+    311f:	mov    QWORD PTR [rbp-0xf0],rcx
+    3126:	mov    rsi,QWORD PTR [rax+0xc8]
+    312d:	add    QWORD PTR [rbp-0x4e0],rsi
+    3134:	mov    rcx,QWORD PTR [rbp-0x4e0]
+    313b:	mov    QWORD PTR [rbp-0xe8],rcx
+    3142:	mov    rsi,QWORD PTR [rax+0xd0]
+    3149:	add    QWORD PTR [rbp-0x4e8],rsi
+    3150:	mov    rcx,QWORD PTR [rbp-0x4e8]
+    3157:	mov    QWORD PTR [rbp-0xe0],rcx
+    315e:	mov    rsi,QWORD PTR [rax+0xd8]
+    3165:	add    QWORD PTR [rbp-0x4f0],rsi
+    316c:	mov    rcx,QWORD PTR [rbp-0x4f0]
+    3173:	mov    QWORD PTR [rbp-0xd8],rcx
+    317a:	mov    rsi,QWORD PTR [rax+0xe0]
+    3181:	add    QWORD PTR [rbp-0x4f8],rsi
+    3188:	mov    rcx,QWORD PTR [rbp-0x4f8]
+    318f:	mov    QWORD PTR [rbp-0xd0],rcx
+    3196:	mov    rsi,QWORD PTR [rax+0xe8]
+    319d:	add    QWORD PTR [rbp-0x500],rsi
+    31a4:	mov    rcx,QWORD PTR [rbp-0x500]
+    31ab:	mov    QWORD PTR [rbp-0xc8],rcx
+    31b2:	add    r15,QWORD PTR [rax+0x100]
+    31b9:	mov    QWORD PTR [rbp-0xb0],r15
+    31c0:	add    r14,QWORD PTR [rax+0x108]
+    31c7:	mov    QWORD PTR [rbp-0xa8],r14
+    31ce:	add    r13,QWORD PTR [rax+0x110]
+    31d5:	mov    QWORD PTR [rbp-0xa0],r13
+    31dc:	add    r12,QWORD PTR [rax+0x118]
+    31e3:	mov    QWORD PTR [rbp-0x98],r12
+    31ea:	add    rbx,QWORD PTR [rax+0x120]
+    31f1:	mov    QWORD PTR [rbp-0x90],rbx
+    31f8:	add    r11,QWORD PTR [rax+0x128]
+    31ff:	mov    QWORD PTR [rbp-0x88],r11
+    3206:	add    r10,QWORD PTR [rax+0x140]
+    320d:	mov    QWORD PTR [rbp-0x70],r10
+    3211:	add    r9,QWORD PTR [rax+0x148]
+    3218:	mov    QWORD PTR [rbp-0x68],r9
+    321c:	add    r8,QWORD PTR [rax+0x150]
+    3223:	mov    QWORD PTR [rbp-0x60],r8
+    3227:	add    rdi,QWORD PTR [rax+0x158]
+    322e:	mov    QWORD PTR [rbp-0x58],rdi
+    3232:	mov    rcx,QWORD PTR [rax+0x160]
+    3239:	add    QWORD PTR [rbp-0x510],rcx
+    3240:	mov    rsi,QWORD PTR [rbp-0x510]
+    3247:	mov    QWORD PTR [rbp-0x50],rsi
+    324b:	mov    rax,QWORD PTR [rax+0x168]
+    3252:	add    QWORD PTR [rbp-0x508],rax
+    3259:	mov    rsi,QWORD PTR [rbp-0x508]
+    3260:	mov    rax,rdx
+    3263:	mov    QWORD PTR [rbp-0x48],rsi
+    3267:	cmp    rdx,QWORD PTR [rbp-0x518]
+    326e:	jne    2f30 <main+0x9b0>
+    3274:	mov    r15,QWORD PTR [rbp-0x5a0]
+    327b:	mov    rdi,QWORD PTR [rbp-0x530]
+    3282:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3287:	lea    rax,[rip+0x2ef8]        # 6186 <_IO_stdin_used+0x186>
+    328e:	mov    QWORD PTR [rbp-0x350],rax
+    3295:	call   2050 <std::chrono::_V2::system_clock::now()@plt>
+    329a:	mov    edi,0x60
+    329f:	mov    QWORD PTR [rbp-0x340],0x0
+    32aa:	mov    QWORD PTR [rbp-0x348],rax
+    32b1:	call   2170 <operator new(unsigned long)@plt>
+    32b6:	mov    r13,rax
+    32b9:	cmp    QWORD PTR [rbp-0x1b0],0x0
+    32c1:	lea    rax,[rax+0x60]
+    32c5:	mov    r12,r13
+    32c8:	je     32da <main+0xd5a>
+    32ca:	mov    QWORD PTR [r13+0x0],0x0
+    32d2:	lea    r12,[r13+0x10]
+    32d6:	mov    QWORD PTR [r13+0x8],r15
+    32da:	cmp    QWORD PTR [rbp-0x170],0x0
+    32e2:	je     330e <main+0xd8e>
+    32e4:	cmp    rax,r12
+    32e7:	je     3ab6 <main+0x1536>
+    32ed:	mov    ebx,0x1
+    32f2:	lea    rdx,[r15+0x40]
+    32f6:	add    r12,0x10
+    32fa:	mov    rcx,r13
+    32fd:	shl    rbx,0x20
+    3301:	mov    QWORD PTR [r12-0x8],rdx
+    3306:	mov    QWORD PTR [r12-0x10],rbx
+    330b:	mov    r13,rcx
+    330e:	cmp    QWORD PTR [rbp-0x130],0x0
+    3316:	je     333f <main+0xdbf>
+    3318:	cmp    rax,r12
+    331b:	je     3a22 <main+0x14a2>
+    3321:	lea    rdx,[r15+0x80]
+    3328:	mov    QWORD PTR [r12],0x1
+    3330:	mov    rcx,r13
+    3333:	add    r12,0x10
+    3337:	mov    QWORD PTR [r12-0x8],rdx
+    333c:	mov    r13,rcx
+    333f:	cmp    QWORD PTR [rbp-0xf0],0x0
+    3347:	je     3377 <main+0xdf7>
+    3349:	cmp    rax,r12
+    334c:	je     3988 <main+0x1408>
+    3352:	lea    rdx,[r15+0xc0]
+    3359:	add    r12,0x10
+    335d:	mov    rcx,r13
+    3360:	movabs rbx,0x100000001
+    336a:	mov    QWORD PTR [r12-0x10],rbx
+    336f:	mov    QWORD PTR [r12-0x8],rdx
+    3374:	mov    r13,rcx
+    3377:	cmp    QWORD PTR [rbp-0xb0],0x0
+    337f:	je     33a8 <main+0xe28>
+    3381:	cmp    r12,rax
+    3384:	je     38f4 <main+0x1374>
+    338a:	lea    rdx,[r15+0x100]
+    3391:	mov    QWORD PTR [r12],0x2
+    3399:	mov    rcx,r13
+    339c:	add    r12,0x10
+    33a0:	mov    QWORD PTR [r12-0x8],rdx
+    33a5:	mov    r13,rcx
+    33a8:	cmp    QWORD PTR [rbp-0x70],0x0
+    33ad:	je     33db <main+0xe5b>
+    33af:	cmp    r12,rax
+    33b2:	je     3875 <main+0x12f5>
+    33b8:	mov    eax,0x80000001
+    33bd:	add    r12,0x10
+    33c1:	mov    r14,r13
+    33c4:	add    rax,rax
+    33c7:	mov    QWORD PTR [r12-0x10],rax
+    33cc:	lea    rax,[r15+0x140]
+    33d3:	mov    QWORD PTR [r12-0x8],rax
+    33d8:	mov    r13,r14
+    33db:	cmp    r12,r13
+    33de:	je     3478 <main+0xef8>
+    33e4:	mov    rbx,r12
+    33e7:	mov    rsi,r12
+    33ea:	mov    rdi,r13
+    33ed:	sub    rbx,r13
+    33f0:	mov    rdx,rbx
+    33f3:	sar    rdx,0x4
+    33f7:	bsr    rdx,rdx
+    33fb:	add    rdx,rdx
+    33fe:	call   42f0 <void std::__introsort_loop<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>)>
+    3403:	cmp    rbx,0x100
+    340a:	jle    376f <main+0x11ef>
+    3410:	lea    rbx,[r13+0x100]
+    3417:	mov    rdi,r13
+    341a:	mov    rsi,rbx
+    341d:	call   4af0 <void std::__insertion_sort<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>) [clone .isra.47]>
+    3422:	mov    rdi,rbx
+    3425:	cmp    r12,rbx
+    3428:	je     3478 <main+0xef8>
+    342a:	nop    WORD PTR [rax+rax*1+0x0]
+    3430:	mov    esi,DWORD PTR [rdi]
+    3432:	mov    r8d,DWORD PTR [rdi+0x4]
+    3436:	mov    rax,rdi
+    3439:	mov    r9,QWORD PTR [rdi+0x8]
+    343d:	jmp    3451 <main+0xed1>
+    343f:	nop
+    3440:	cmp    esi,edx
+    3442:	jge    3465 <main+0xee5>
+    3444:	vmovdqu64 xmm16,XMMWORD PTR [rax]
+    344a:	vmovups XMMWORD PTR [rax+0x10],xmm16
+    3451:	mov    edx,DWORD PTR [rax-0x10]
+    3454:	mov    rcx,rax
+    3457:	sub    rax,0x10
+    345b:	cmp    esi,edx
+    345d:	jne    3440 <main+0xec0>
+    345f:	cmp    r8d,DWORD PTR [rcx-0xc]
+    3463:	jl     3444 <main+0xec4>
+    3465:	add    rdi,0x10
+    3469:	mov    DWORD PTR [rcx],esi
+    346b:	mov    DWORD PTR [rcx+0x4],r8d
+    346f:	mov    QWORD PTR [rcx+0x8],r9
+    3473:	cmp    r12,rdi
+    3476:	jne    3430 <main+0xeb0>
+    3478:	mov    rsi,QWORD PTR [rbp-0x548]
+    347f:	mov    rdi,QWORD PTR [rbp-0x530]
+    3486:	lea    rdx,[rip+0x2ce9]        # 6176 <_IO_stdin_used+0x176>
+    348d:	call   5890 <std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)>
+    3492:	mov    rdi,QWORD PTR [rbp-0x1d0]
+    3499:	lea    rsi,[rip+0x2cde]        # 617e <_IO_stdin_used+0x17e>
+    34a0:	call   21b0 <fopen@plt>
+    34a5:	mov    r14,rax
+    34a8:	test   rax,rax
+    34ab:	je     377f <main+0x11ff>
+    34b1:	mov    rcx,rax
+    34b4:	mov    edx,0x72
+    34b9:	mov    esi,0x1
+    34be:	lea    rdi,[rip+0x2de3]        # 62a8 <_IO_stdin_used+0x2a8>
+    34c5:	call   22e0 <fwrite@plt>
+    34ca:	mov    rbx,r13
+    34cd:	lea    r15,[rip+0x2e4c]        # 6320 <_IO_stdin_used+0x320>
+    34d4:	cmp    r12,r13
+    34d7:	je     358f <main+0x100f>
+    34dd:	nop    DWORD PTR [rax]
+    34e0:	mov    rax,QWORD PTR [rbx+0x8]
+    34e4:	vxorpd xmm1,xmm1,xmm1
+    34e8:	sub    rsp,0x20
+    34ec:	vxorpd xmm4,xmm4,xmm4
+    34f0:	vxorpd xmm0,xmm0,xmm0
+    34f4:	movsxd rcx,DWORD PTR [rbx+0x4]
+    34f8:	movsxd rdx,DWORD PTR [rbx]
+    34fb:	mov    rsi,r15
+    34fe:	mov    r8,QWORD PTR [rax]
+    3501:	vcvtsi2sd xmm1,xmm1,QWORD PTR [rax+0x18]
+    3507:	fild   QWORD PTR [rax+0x28]
+    350a:	mov    rdi,r14
+    350d:	vcvtsi2sd xmm4,xmm4,QWORD PTR [rax+0x10]
+    3513:	vxorpd xmm2,xmm2,xmm2
+    3517:	shl    rcx,0x5
+    351b:	vcvtsi2sd xmm2,xmm2,r8
+    3520:	fld    TBYTE PTR [rip+0x2e3a]        # 6360 <_IO_stdin_used+0x360>
+    3526:	add    rcx,QWORD PTR [rbp-0x3f0]
+    352d:	shl    rdx,0x5
+    3531:	vcvtsi2sd xmm0,xmm0,QWORD PTR [rax+0x8]
+    3537:	add    rdx,QWORD PTR [rbp-0x3d0]
+    353e:	vmulsd xmm1,xmm1,QWORD PTR [rip+0x2e12]        # 6358 <_IO_stdin_used+0x358>
+    3546:	vmulsd xmm4,xmm4,QWORD PTR [rip+0x2e0a]        # 6358 <_IO_stdin_used+0x358>
+    354e:	fmulp  st(1),st
+    3550:	vdivsd xmm3,xmm1,xmm2
+    3554:	fstp   TBYTE PTR [rsp+0x10]
+    3558:	fild   QWORD PTR [rax+0x20]
+    355b:	mov    eax,0x5
+    3560:	fld    TBYTE PTR [rip+0x2e0a]        # 6370 <_IO_stdin_used+0x370>
+    3566:	fmulp  st(1),st
+    3568:	fstp   TBYTE PTR [rsp]
+    356b:	mov    rcx,QWORD PTR [rcx]
+    356e:	mov    rdx,QWORD PTR [rdx]
+    3571:	vdivsd xmm4,xmm4,xmm2
+    3575:	vdivsd xmm2,xmm0,xmm2
+    3579:	call   21f0 <fprintf@plt>
+    357e:	add    rbx,0x10
+    3582:	add    rsp,0x20
+    3586:	cmp    r12,rbx
+    3589:	jne    34e0 <main+0xf60>
+    358f:	mov    rdi,r14
+    3592:	call   2160 <fclose@plt>
+    3597:	sub    r12,r13
+    359a:	mov    rsi,QWORD PTR [rbp-0x1d0]
+    35a1:	lea    rdi,[rip+0x2be5]        # 618d <_IO_stdin_used+0x18d>
+    35a8:	xor    eax,eax
+    35aa:	mov    rdx,r12
+    35ad:	sar    rdx,0x4
+    35b1:	call   2040 <printf@plt>
+    35b6:	mov    rax,QWORD PTR [rbp-0x530]
+    35bd:	mov    rdi,QWORD PTR [rbp-0x1d0]
+    35c4:	add    rax,0x10
+    35c8:	cmp    rdi,rax
+    35cb:	je     35d2 <main+0x1052>
+    35cd:	call   2150 <operator delete(void*)@plt>
+    35d2:	test   r13,r13
+    35d5:	je     35df <main+0x105f>
+    35d7:	mov    rdi,r13
+    35da:	call   2150 <operator delete(void*)@plt>
+    35df:	mov    rdi,QWORD PTR [rbp-0x590]
+    35e6:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    35eb:	mov    rdi,QWORD PTR [rbp-0x370]
+    35f2:	test   rdi,rdi
+    35f5:	je     3601 <main+0x1081>
+    35f7:	mov    esi,0x40
+    35fc:	call   21e0 <operator delete(void*, std::align_val_t)@plt>
+    3601:	lea    rdi,[rbp-0x390]
+    3608:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    360d:	mov    rdi,QWORD PTR [rbp-0x410]
+    3614:	test   rdi,rdi
+    3617:	je     361e <main+0x109e>
+    3619:	call   2150 <operator delete(void*)@plt>
+    361e:	mov    rdi,QWORD PTR [rbp-0x550]
+    3625:	xor    ebx,ebx
+    3627:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    362c:	mov    rdi,QWORD PTR [rbp-0x558]
+    3633:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3638:	mov    rdi,QWORD PTR [rbp-0x560]
+    363f:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    3644:	mov    rdi,QWORD PTR [rbp-0x568]
+    364b:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3650:	mov    rdi,QWORD PTR [rbp-0x570]
+    3657:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    365c:	mov    rdi,QWORD PTR [rbp-0x578]
+    3663:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3668:	mov    rdi,QWORD PTR [rbp-0x540]
+    366f:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    3674:	mov    rdi,QWORD PTR [rbp-0x580]
+    367b:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    3680:	mov    rdi,QWORD PTR [rbp-0x588]
+    3687:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    368c:	lea    rdi,[rbp-0x3b0]
+    3693:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3698:	mov    rax,QWORD PTR [rbp-0x520]
+    369f:	mov    rdi,QWORD PTR [rbp-0x330]
+    36a6:	add    rax,0x10
+    36aa:	cmp    rdi,rax
+    36ad:	je     36b4 <main+0x1134>
+    36af:	call   2150 <operator delete(void*)@plt>
+    36b4:	mov    rax,QWORD PTR [rbp-0x528]
+    36bb:	mov    rdi,QWORD PTR [rbp-0x310]
+    36c2:	add    rax,0x10
+    36c6:	cmp    rdi,rax
+    36c9:	je     36d0 <main+0x1150>
+    36cb:	call   2150 <operator delete(void*)@plt>
+    36d0:	mov    rax,QWORD PTR [rbp-0x548]
+    36d7:	mov    rdi,QWORD PTR [rbp-0x2f0]
+    36de:	add    rax,0x10
+    36e2:	cmp    rdi,rax
+    36e5:	je     36ec <main+0x116c>
+    36e7:	call   2150 <operator delete(void*)@plt>
+    36ec:	mov    rax,QWORD PTR [rbp-0x538]
+    36f3:	mov    rdi,QWORD PTR [rbp-0x2d0]
+    36fa:	add    rax,0x10
+    36fe:	cmp    rdi,rax
+    3701:	je     3708 <main+0x1188>
+    3703:	call   2150 <operator delete(void*)@plt>
+    3708:	lea    rdi,[rbp-0x430]
+    370f:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3714:	lea    rsp,[rbp-0x30]
+    3718:	mov    eax,ebx
+    371a:	pop    rbx
+    371b:	pop    r10
+    371d:	pop    r12
+    371f:	pop    r13
+    3721:	pop    r14
+    3723:	pop    r15
+    3725:	pop    rbp
+    3726:	lea    rsp,[r10-0x8]
+    372a:	ret
+    372b:	nop    DWORD PTR [rax+rax*1+0x0]
+    3730:	add    rbx,0x1
+    3734:	mov    BYTE PTR [rax],0x1
+    3737:	cmp    r13,rbx
+    373a:	jne    2af0 <main+0x570>
+    3740:	jmp    2b46 <main+0x5c6>
+    3745:	mov    rax,QWORD PTR [rip+0x4884]        # 7fd0 <stderr@GLIBC_2.2.5>
+    374c:	mov    rdx,QWORD PTR [rbx]
+    374f:	lea    rsi,[rip+0x2a82]        # 61d8 <_IO_stdin_used+0x1d8>
+    3756:	mov    rdi,QWORD PTR [rax]
+    3759:	xor    eax,eax
+    375b:	call   21f0 <fprintf@plt>
+    3760:	mov    ebx,0x1
+    3765:	jmp    3708 <main+0x1188>
+    3767:	xor    r12d,r12d
+    376a:	jmp    2c63 <main+0x6e3>
+    376f:	mov    rsi,r12
+    3772:	mov    rdi,r13
+    3775:	call   4af0 <void std::__insertion_sort<__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}> >(__gnu_cxx::__normal_iterator<main::Row*, std::vector<main::Row, std::allocator<main::Row> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(main::Row const&, main::Row const&)#1}>) [clone .isra.47]>
+    377a:	jmp    3478 <main+0xef8>
+    377f:	lea    rdi,[rip+0x29fa]        # 6180 <_IO_stdin_used+0x180>
+    3786:	call   2130 <perror@plt>
+    378b:	mov    rax,QWORD PTR [rbp-0x530]
+    3792:	mov    rdi,QWORD PTR [rbp-0x1d0]
+    3799:	add    rax,0x10
+    379d:	cmp    rdi,rax
+    37a0:	je     37a7 <main+0x1227>
+    37a2:	call   2150 <operator delete(void*)@plt>
+    37a7:	test   r13,r13
+    37aa:	je     37b4 <main+0x1234>
+    37ac:	mov    rdi,r13
+    37af:	call   2150 <operator delete(void*)@plt>
+    37b4:	mov    rdi,QWORD PTR [rbp-0x590]
+    37bb:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    37c0:	mov    rdi,QWORD PTR [rbp-0x370]
+    37c7:	test   rdi,rdi
+    37ca:	je     37d6 <main+0x1256>
+    37cc:	mov    esi,0x40
+    37d1:	call   21e0 <operator delete(void*, std::align_val_t)@plt>
+    37d6:	lea    rdi,[rbp-0x390]
+    37dd:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    37e2:	mov    rdi,QWORD PTR [rbp-0x410]
+    37e9:	test   rdi,rdi
+    37ec:	je     37f3 <main+0x1273>
+    37ee:	call   2150 <operator delete(void*)@plt>
+    37f3:	mov    rdi,QWORD PTR [rbp-0x550]
+    37fa:	mov    ebx,0x1
+    37ff:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3804:	mov    rdi,QWORD PTR [rbp-0x558]
+    380b:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3810:	mov    rdi,QWORD PTR [rbp-0x560]
+    3817:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    381c:	mov    rdi,QWORD PTR [rbp-0x568]
+    3823:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3828:	mov    rdi,QWORD PTR [rbp-0x570]
+    382f:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3834:	mov    rdi,QWORD PTR [rbp-0x578]
+    383b:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3840:	mov    rdi,QWORD PTR [rbp-0x540]
+    3847:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    384c:	mov    rdi,QWORD PTR [rbp-0x580]
+    3853:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    3858:	mov    rdi,QWORD PTR [rbp-0x588]
+    385f:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    3864:	lea    rdi,[rbp-0x3b0]
+    386b:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3870:	jmp    3698 <main+0x1118>
+    3875:	mov    rbx,r12
+    3878:	sub    rbx,r13
+    387b:	mov    rcx,rbx
+    387e:	sar    rcx,0x4
+    3882:	je     3b48 <main+0x15c8>
+    3888:	lea    rdx,[rcx+rcx*1]
+    388c:	mov    rax,rdx
+    388f:	cmp    rcx,rdx
+    3892:	jbe    3bda <main+0x165a>
+    3898:	movabs rax,0xfffffffffffffff
+    38a2:	shl    rax,0x4
+    38a6:	mov    rdi,rax
+    38a9:	call   2170 <operator new(unsigned long)@plt>
+    38ae:	mov    r14,rax
+    38b1:	mov    edx,0x80000001
+    38b6:	lea    rax,[r14+rbx*1]
+    38ba:	add    rdx,rdx
+    38bd:	mov    QWORD PTR [rax],rdx
+    38c0:	lea    rdx,[r15+0x140]
+    38c7:	mov    QWORD PTR [rax+0x8],rdx
+    38cb:	cmp    r13,r12
+    38ce:	je     3c33 <main+0x16b3>
+    38d4:	mov    rdx,rbx
+    38d7:	mov    rsi,r13
+    38da:	lea    r12,[r14+rbx*1+0x10]
+    38df:	mov    rdi,r14
+    38e2:	call   2260 <memmove@plt>
+    38e7:	mov    rdi,r13
+    38ea:	call   2150 <operator delete(void*)@plt>
+    38ef:	jmp    33d8 <main+0xe58>
+    38f4:	mov    r14,r12
+    38f7:	mov    ebx,0x1
+    38fc:	sub    r14,r13
+    38ff:	mov    rax,r14
+    3902:	sar    rax,0x4
+    3906:	je     391f <main+0x139f>
+    3908:	lea    rbx,[rax+rax*1]
+    390c:	cmp    rax,rbx
+    390f:	jbe    3b52 <main+0x15d2>
+    3915:	movabs rbx,0xfffffffffffffff
+    391f:	mov    rdi,rbx
+    3922:	shl    rdi,0x4
+    3926:	call   2170 <operator new(unsigned long)@plt>
+    392b:	mov    rcx,rax
+    392e:	lea    rax,[rcx+r14*1]
+    3932:	lea    rdx,[r15+0x100]
+    3939:	mov    QWORD PTR [rax],0x2
+    3940:	mov    QWORD PTR [rax+0x8],rdx
+    3944:	cmp    r13,r12
+    3947:	je     3c20 <main+0x16a0>
+    394d:	mov    rdi,rcx
+    3950:	mov    rdx,r14
+    3953:	mov    rsi,r13
+    3956:	call   2260 <memmove@plt>
+    395b:	mov    rcx,rax
+    395e:	lea    r12,[rax+r14*1+0x10]
+    3963:	mov    rdi,r13
+    3966:	mov    QWORD PTR [rbp-0x448],rcx
+    396d:	call   2150 <operator delete(void*)@plt>
+    3972:	mov    rcx,QWORD PTR [rbp-0x448]
+    3979:	mov    rax,rbx
+    397c:	shl    rax,0x4
+    3980:	add    rax,rcx
+    3983:	jmp    33a5 <main+0xe25>
+    3988:	mov    r14,r12
+    398b:	mov    ebx,0x1
+    3990:	sub    r14,r13
+    3993:	mov    rax,r14
+    3996:	sar    rax,0x4
+    399a:	je     39b3 <main+0x1433>
+    399c:	lea    rbx,[rax+rax*1]
+    39a0:	cmp    rax,rbx
+    39a3:	jbe    3b98 <main+0x1618>
+    39a9:	movabs rbx,0xfffffffffffffff
+    39b3:	mov    rdi,rbx
+    39b6:	shl    rdi,0x4
+    39ba:	call   2170 <operator new(unsigned long)@plt>
+    39bf:	mov    rcx,rax
+    39c2:	movabs rdx,0x100000001
+    39cc:	lea    rax,[rcx+r14*1]
+    39d0:	mov    QWORD PTR [rax],rdx
+    39d3:	lea    rdx,[r15+0xc0]
+    39da:	mov    QWORD PTR [rax+0x8],rdx
+    39de:	cmp    r12,r13
+    39e1:	je     3c0d <main+0x168d>
+    39e7:	mov    rdi,rcx
+    39ea:	mov    rdx,r14
+    39ed:	mov    rsi,r13
+    39f0:	call   2260 <memmove@plt>
+    39f5:	mov    rcx,rax
+    39f8:	lea    r12,[rax+r14*1+0x10]
+    39fd:	mov    rdi,r13
+    3a00:	mov    QWORD PTR [rbp-0x448],rcx
+    3a07:	call   2150 <operator delete(void*)@plt>
+    3a0c:	mov    rcx,QWORD PTR [rbp-0x448]
+    3a13:	mov    rax,rbx
+    3a16:	shl    rax,0x4
+    3a1a:	add    rax,rcx
+    3a1d:	jmp    3374 <main+0xdf4>
+    3a22:	mov    r14,r12
+    3a25:	mov    ebx,0x1
+    3a2a:	sub    r14,r13
+    3a2d:	mov    rax,r14
+    3a30:	sar    rax,0x4
+    3a34:	je     3a4d <main+0x14cd>
+    3a36:	lea    rbx,[rax+rax*1]
+    3a3a:	cmp    rbx,rax
+    3a3d:	jae    3b75 <main+0x15f5>
+    3a43:	movabs rbx,0xfffffffffffffff
+    3a4d:	mov    rdi,rbx
+    3a50:	shl    rdi,0x4
+    3a54:	call   2170 <operator new(unsigned long)@plt>
+    3a59:	mov    rcx,rax
+    3a5c:	lea    rax,[rcx+r14*1]
+    3a60:	lea    rdx,[r15+0x80]
+    3a67:	mov    QWORD PTR [rax],0x1
+    3a6e:	mov    QWORD PTR [rax+0x8],rdx
+    3a72:	cmp    r12,r13
+    3a75:	je     3bfa <main+0x167a>
+    3a7b:	mov    rdi,rcx
+    3a7e:	mov    rdx,r14
+    3a81:	mov    rsi,r13
+    3a84:	call   2260 <memmove@plt>
+    3a89:	mov    rcx,rax
+    3a8c:	lea    r12,[rax+r14*1+0x10]
+    3a91:	mov    rdi,r13
+    3a94:	mov    QWORD PTR [rbp-0x448],rcx
+    3a9b:	call   2150 <operator delete(void*)@plt>
+    3aa0:	mov    rcx,QWORD PTR [rbp-0x448]
+    3aa7:	mov    rax,rbx
+    3aaa:	shl    rax,0x4
+    3aae:	add    rax,rcx
+    3ab1:	jmp    333c <main+0xdbc>
+    3ab6:	mov    r14,r12
+    3ab9:	mov    ebx,0x1
+    3abe:	sub    r14,r13
+    3ac1:	mov    rax,r14
+    3ac4:	sar    rax,0x4
+    3ac8:	je     3ae1 <main+0x1561>
+    3aca:	lea    rbx,[rax+rax*1]
+    3ace:	cmp    rbx,rax
+    3ad1:	jae    3bbb <main+0x163b>
+    3ad7:	movabs rbx,0xfffffffffffffff
+    3ae1:	mov    rdi,rbx
+    3ae4:	shl    rdi,0x4
+    3ae8:	call   2170 <operator new(unsigned long)@plt>
+    3aed:	mov    rcx,rax
+    3af0:	mov    edx,0x1
+    3af5:	lea    rax,[rcx+r14*1]
+    3af9:	shl    rdx,0x20
+    3afd:	mov    QWORD PTR [rax],rdx
+    3b00:	lea    rdx,[r15+0x40]
+    3b04:	mov    QWORD PTR [rax+0x8],rdx
+    3b08:	cmp    r12,r13
+    3b0b:	je     3b1e <main+0x159e>
+    3b0d:	mov    rdi,rcx
+    3b10:	mov    rdx,r14
+    3b13:	mov    rsi,r13
+    3b16:	call   2260 <memmove@plt>
+    3b1b:	mov    rcx,rax
+    3b1e:	mov    rdi,r13
+    3b21:	lea    r12,[rcx+r14*1+0x10]
+    3b26:	mov    QWORD PTR [rbp-0x448],rcx
+    3b2d:	call   2150 <operator delete(void*)@plt>
+    3b32:	mov    rax,rbx
+    3b35:	mov    rcx,QWORD PTR [rbp-0x448]
+    3b3c:	shl    rax,0x4
+    3b40:	add    rax,rcx
+    3b43:	jmp    330b <main+0xd8b>
+    3b48:	mov    eax,0x1
+    3b4d:	jmp    38a2 <main+0x1322>
+    3b52:	movabs rax,0xfffffffffffffff
+    3b5c:	cmp    rbx,rax
+    3b5f:	ja     3c56 <main+0x16d6>
+    3b65:	test   rbx,rbx
+    3b68:	jne    391f <main+0x139f>
+    3b6e:	xor    ecx,ecx
+    3b70:	jmp    392e <main+0x13ae>
+    3b75:	movabs rax,0xfffffffffffffff
+    3b7f:	cmp    rbx,rax
+    3b82:	ja     3c5e <main+0x16de>
+    3b88:	test   rbx,rbx
+    3b8b:	jne    3a4d <main+0x14cd>
+    3b91:	xor    ecx,ecx
+    3b93:	jmp    3a5c <main+0x14dc>
+    3b98:	movabs rax,0xfffffffffffffff
+    3ba2:	cmp    rbx,rax
+    3ba5:	ja     3c66 <main+0x16e6>
+    3bab:	test   rbx,rbx
+    3bae:	jne    39b3 <main+0x1433>
+    3bb4:	xor    ecx,ecx
+    3bb6:	jmp    39c2 <main+0x1442>
+    3bbb:	movabs rax,0xfffffffffffffff
+    3bc5:	cmp    rbx,rax
+    3bc8:	ja     3c46 <main+0x16c6>
+    3bca:	test   rbx,rbx
+    3bcd:	jne    3ae1 <main+0x1561>
+    3bd3:	xor    ecx,ecx
+    3bd5:	jmp    3af0 <main+0x1570>
+    3bda:	movabs rcx,0xfffffffffffffff
+    3be4:	cmp    rdx,rcx
+    3be7:	ja     3c4e <main+0x16ce>
+    3be9:	test   rdx,rdx
+    3bec:	jne    38a2 <main+0x1322>
+    3bf2:	xor    r14d,r14d
+    3bf5:	jmp    38b1 <main+0x1331>
+    3bfa:	lea    r12,[rcx+r14*1+0x10]
+    3bff:	test   r13,r13
+    3c02:	je     3aa7 <main+0x1527>
+    3c08:	jmp    3a91 <main+0x1511>
+    3c0d:	lea    r12,[rcx+r14*1+0x10]
+    3c12:	test   r13,r13
+    3c15:	je     3a13 <main+0x1493>
+    3c1b:	jmp    39fd <main+0x147d>
+    3c20:	lea    r12,[rcx+r14*1+0x10]
+    3c25:	test   r13,r13
+    3c28:	je     3979 <main+0x13f9>
+    3c2e:	jmp    3963 <main+0x13e3>
+    3c33:	lea    r12,[r14+rbx*1+0x10]
+    3c38:	test   r13,r13
+    3c3b:	je     33d8 <main+0xe58>
+    3c41:	jmp    38e7 <main+0x1367>
+    3c46:	mov    rbx,rax
+    3c49:	jmp    3ae1 <main+0x1561>
+    3c4e:	mov    rax,rcx
+    3c51:	jmp    38a2 <main+0x1322>
+    3c56:	mov    rbx,rax
+    3c59:	jmp    391f <main+0x139f>
+    3c5e:	mov    rbx,rax
+    3c61:	jmp    3a4d <main+0x14cd>
+    3c66:	mov    rbx,rax
+    3c69:	jmp    39b3 <main+0x1433>
+    3c6e:	call   2080 <std::__throw_bad_alloc()@plt>
+    3c73:	mov    rbx,rax
+    3c76:	jmp    3c98 <main+0x1718>
+    3c78:	mov    rbx,rax
+    3c7b:	jmp    3d1d <main+0x179d>
+    3c80:	mov    rbx,rax
+    3c83:	jmp    3dfd <main+0x187d>
+    3c88:	mov    rbx,rax
+    3c8b:	jmp    3de9 <main+0x1869>
+    3c90:	mov    rbx,rax
+    3c93:	jmp    3e1e <main+0x189e>
+    3c98:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3c9f:	lea    rax,[r15+0x10]
+    3ca3:	cmp    rdi,rax
+    3ca6:	je     3cb0 <main+0x1730>
+    3ca8:	vzeroupper
+    3cab:	call   2150 <operator delete(void*)@plt>
+    3cb0:	mov    rax,QWORD PTR [rbp-0x548]
+    3cb7:	mov    rdi,QWORD PTR [rbp-0x2f0]
+    3cbe:	add    rax,0x10
+    3cc2:	cmp    rdi,rax
+    3cc5:	je     3ccf <main+0x174f>
+    3cc7:	vzeroupper
+    3cca:	call   2150 <operator delete(void*)@plt>
+    3ccf:	mov    rax,QWORD PTR [rbp-0x538]
+    3cd6:	mov    rdi,QWORD PTR [rbp-0x2d0]
+    3cdd:	add    rax,0x10
+    3ce1:	cmp    rdi,rax
+    3ce4:	je     3cee <main+0x176e>
+    3ce6:	vzeroupper
+    3ce9:	call   2150 <operator delete(void*)@plt>
+    3cee:	lea    rdi,[rbp-0x430]
+    3cf5:	vzeroupper
+    3cf8:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3cfd:	mov    rdi,rbx
+    3d00:	call   22b0 <_Unwind_Resume@plt>
+    3d05:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3d0c:	lea    rax,[r15+0x10]
+    3d10:	cmp    rdi,rax
+    3d13:	je     3d1d <main+0x179d>
+    3d15:	vzeroupper
+    3d18:	call   2150 <operator delete(void*)@plt>
+    3d1d:	mov    rdi,QWORD PTR [rbp-0x560]
+    3d24:	vzeroupper
+    3d27:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    3d2c:	mov    rdi,QWORD PTR [rbp-0x568]
+    3d33:	vzeroupper
+    3d36:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3d3b:	mov    rdi,QWORD PTR [rbp-0x570]
+    3d42:	vzeroupper
+    3d45:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3d4a:	mov    rdi,QWORD PTR [rbp-0x578]
+    3d51:	vzeroupper
+    3d54:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3d59:	mov    rdi,QWORD PTR [rbp-0x540]
+    3d60:	vzeroupper
+    3d63:	call   4ed0 <gendb::MmapColumn<int>::close()>
+    3d68:	mov    rdi,QWORD PTR [rbp-0x580]
+    3d6f:	vzeroupper
+    3d72:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    3d77:	mov    rdi,QWORD PTR [rbp-0x588]
+    3d7e:	vzeroupper
+    3d81:	call   45e0 <std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::~vector()>
+    3d86:	lea    rdi,[rbp-0x3b0]
+    3d8d:	vzeroupper
+    3d90:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3d95:	mov    rax,QWORD PTR [rbp-0x520]
+    3d9c:	mov    rdi,QWORD PTR [rbp-0x330]
+    3da3:	add    rax,0x10
+    3da7:	cmp    rdi,rax
+    3daa:	je     3db1 <main+0x1831>
+    3dac:	call   2150 <operator delete(void*)@plt>
+    3db1:	mov    rax,QWORD PTR [rbp-0x528]
+    3db8:	mov    rdi,QWORD PTR [rbp-0x310]
+    3dbf:	add    rax,0x10
+    3dc3:	cmp    rdi,rax
+    3dc6:	jne    3ca8 <main+0x1728>
+    3dcc:	jmp    3cb0 <main+0x1730>
+    3dd1:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3dd8:	lea    rax,[r15+0x10]
+    3ddc:	cmp    rdi,rax
+    3ddf:	je     3de9 <main+0x1869>
+    3de1:	vzeroupper
+    3de4:	call   2150 <operator delete(void*)@plt>
+    3de9:	mov    rdi,QWORD PTR [rbp-0x558]
+    3df0:	vzeroupper
+    3df3:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    3df8:	jmp    3d1d <main+0x179d>
+    3dfd:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3e04:	lea    rax,[r15+0x10]
+    3e08:	cmp    rdi,rax
+    3e0b:	je     3d2c <main+0x17ac>
+    3e11:	vzeroupper
+    3e14:	call   2150 <operator delete(void*)@plt>
+    3e19:	jmp    3d2c <main+0x17ac>
+    3e1e:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3e25:	lea    rax,[r15+0x10]
+    3e29:	cmp    rdi,rax
+    3e2c:	je     3d59 <main+0x17d9>
+    3e32:	vzeroupper
+    3e35:	call   2150 <operator delete(void*)@plt>
+    3e3a:	jmp    3d59 <main+0x17d9>
+    3e3f:	mov    rbx,rax
+    3e42:	jmp    3d59 <main+0x17d9>
+    3e47:	mov    rbx,rax
+    3e4a:	jmp    3d2c <main+0x17ac>
+    3e4f:	mov    rbx,rax
+    3e52:	jmp    3e59 <main+0x18d9>
+    3e54:	mov    rbx,rax
+    3e57:	jmp    3e7a <main+0x18fa>
+    3e59:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3e60:	lea    rax,[r15+0x10]
+    3e64:	cmp    rdi,rax
+    3e67:	je     3d4a <main+0x17ca>
+    3e6d:	vzeroupper
+    3e70:	call   2150 <operator delete(void*)@plt>
+    3e75:	jmp    3d4a <main+0x17ca>
+    3e7a:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3e81:	lea    rax,[r15+0x10]
+    3e85:	cmp    rdi,rax
+    3e88:	je     3d3b <main+0x17bb>
+    3e8e:	vzeroupper
+    3e91:	call   2150 <operator delete(void*)@plt>
+    3e96:	jmp    3d3b <main+0x17bb>
+    3e9b:	mov    rbx,rax
+    3e9e:	jmp    3d3b <main+0x17bb>
+    3ea3:	mov    rbx,rax
+    3ea6:	jmp    3eb5 <main+0x1935>
+    3ea8:	mov    rbx,rax
+    3eab:	jmp    3cee <main+0x176e>
+    3eb0:	mov    rbx,rax
+    3eb3:	jmp    3ed9 <main+0x1959>
+    3eb5:	vzeroupper
+    3eb8:	jmp    3ee9 <main+0x1969>
+    3eba:	mov    rax,QWORD PTR [rbp-0x530]
+    3ec1:	mov    rdi,QWORD PTR [rbp-0x1d0]
+    3ec8:	add    rax,0x10
+    3ecc:	cmp    rdi,rax
+    3ecf:	je     3ed9 <main+0x1959>
+    3ed1:	vzeroupper
+    3ed4:	call   2150 <operator delete(void*)@plt>
+    3ed9:	test   r13,r13
+    3edc:	je     3eb5 <main+0x1935>
+    3ede:	mov    rdi,r13
+    3ee1:	vzeroupper
+    3ee4:	call   2150 <operator delete(void*)@plt>
+    3ee9:	mov    rdi,QWORD PTR [rbp-0x590]
+    3ef0:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3ef5:	mov    rdi,QWORD PTR [rbp-0x370]
+    3efc:	test   rdi,rdi
+    3eff:	je     3f0b <main+0x198b>
+    3f01:	mov    esi,0x40
+    3f06:	call   21e0 <operator delete(void*, std::align_val_t)@plt>
+    3f0b:	lea    rdi,[rbp-0x390]
+    3f12:	vzeroupper
+    3f15:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3f1a:	jmp    3fff <main+0x1a7f>
+    3f1f:	mov    rbx,rax
+    3f22:	jmp    3dd1 <main+0x1851>
+    3f27:	mov    rbx,rax
+    3f2a:	jmp    3d05 <main+0x1785>
+    3f2f:	mov    rbx,rax
+    3f32:	jmp    3eba <main+0x193a>
+    3f34:	mov    rbx,rax
+    3f37:	jmp    3d4a <main+0x17ca>
+    3f3c:	mov    rbx,rax
+    3f3f:	jmp    3f49 <main+0x19c9>
+    3f41:	mov    rbx,rax
+    3f44:	jmp    3d86 <main+0x1806>
+    3f49:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3f50:	lea    rax,[r15+0x10]
+    3f54:	cmp    rdi,rax
+    3f57:	je     3d68 <main+0x17e8>
+    3f5d:	vzeroupper
+    3f60:	call   2150 <operator delete(void*)@plt>
+    3f65:	jmp    3d68 <main+0x17e8>
+    3f6a:	mov    rbx,rax
+    3f6d:	jmp    3db1 <main+0x1831>
+    3f72:	mov    rbx,rax
+    3f75:	jmp    3f7c <main+0x19fc>
+    3f77:	mov    rbx,rax
+    3f7a:	jmp    3f9d <main+0x1a1d>
+    3f7c:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3f83:	lea    rax,[r15+0x10]
+    3f87:	cmp    rdi,rax
+    3f8a:	je     3d86 <main+0x1806>
+    3f90:	vzeroupper
+    3f93:	call   2150 <operator delete(void*)@plt>
+    3f98:	jmp    3d86 <main+0x1806>
+    3f9d:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3fa4:	lea    rax,[r15+0x10]
+    3fa8:	cmp    rdi,rax
+    3fab:	je     3d77 <main+0x17f7>
+    3fb1:	vzeroupper
+    3fb4:	call   2150 <operator delete(void*)@plt>
+    3fb9:	jmp    3d77 <main+0x17f7>
+    3fbe:	mov    rbx,rax
+    3fc1:	jmp    3d68 <main+0x17e8>
+    3fc6:	mov    rbx,rax
+    3fc9:	jmp    3d77 <main+0x17f7>
+    3fce:	mov    rbx,rax
+    3fd1:	jmp    3fe0 <main+0x1a60>
+    3fd3:	mov    rbx,rax
+    3fd6:	jmp    3ff0 <main+0x1a70>
+    3fd8:	mov    rbx,rax
+    3fdb:	jmp    3cb0 <main+0x1730>
+    3fe0:	mov    rdi,QWORD PTR [rbp-0x1b0]
+    3fe7:	lea    rax,[r15+0x10]
+    3feb:	cmp    rdi,rax
+    3fee:	jne    4021 <main+0x1aa1>
+    3ff0:	lea    rdi,[rbp-0x1d0]
+    3ff7:	vzeroupper
+    3ffa:	call   4f20 <gendb::PhaseTimer::~PhaseTimer()>
+    3fff:	mov    rdi,QWORD PTR [rbp-0x410]
+    4006:	test   rdi,rdi
+    4009:	je     4010 <main+0x1a90>
+    400b:	call   2150 <operator delete(void*)@plt>
+    4010:	mov    rdi,QWORD PTR [rbp-0x550]
+    4017:	call   4e80 <gendb::MmapColumn<signed char>::close()>
+    401c:	jmp    3de9 <main+0x1869>
+    4021:	vzeroupper
+    4024:	call   2150 <operator delete(void*)@plt>
+    4029:	jmp    3ff0 <main+0x1a70>
+    402b:	mov    rbx,rax
+    402e:	jmp    3ccf <main+0x174f>
+    4033:	mov    rbx,rax
+    4036:	jmp    3f0b <main+0x198b>
+    403b:	nop    DWORD PTR [rax+rax*1+0x0]

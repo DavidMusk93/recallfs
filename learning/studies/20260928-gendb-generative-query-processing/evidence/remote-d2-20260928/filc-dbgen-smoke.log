@@ -1,0 +1,269 @@
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/filc-0.684-linux-x86_64.tar.xz: OK
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc++.so.1.0
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib/libc++abi.so.1.0
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_test/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_test_gcverify/libpizlo.so
++ patchelf --set-rpath /data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib64:/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/pizfix/lib pizfix/lib_gcverify/libpizlo.so
++ cd pizfix
++ mkdir os-include
++ cd os-include
++ ln -s /usr/include/linux .
++ test -d /usr/include/x86_64-linux-gnu/asm
++ ln -s /usr/include/x86_64-linux-gnu/asm .
++ ln -s /usr/include/asm-generic .
++ cd ../..
++ set +x
+
+You are all set. Try compiling something with:
+
+    build/bin/clang -o whatever whatever.c -O2 -g
+
+or:
+
+    build/bin/clang++ -o whatever whatever.cpp -O2 -g
+
+Take a look at pizfix/stdfil-include/stdfil.h for Fil-C-specific APIs. You can
+optionally #include <stdfil.h> if you find those APIs useful.
+
+New releases are at: https://github.com/pizlonator/fil-c/releases
+More information on the website: https://fil-c.org/
+
+Have fun and thank you for trying filc-0.684-linux-x86_64.
+== FIL-C instrumentation negative control ==
+== FIL-C build and execution ==
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o build.o build.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o driver.o driver.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bm_utils.o bm_utils.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rnd.o rnd.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o print.o print.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o load_stub.o load_stub.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bcd2.o bcd2.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o speed_seed.o speed_seed.c
+bcd2.c:166:17: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+  166 |                 SET_DIGIT(res, udigit + ldigit, bcd_low, bcd_high);
+      |                 ^
+bcd2.c:51:5: note: expanded from macro 'SET_DIGIT'
+   51 |     else \
+      |     ^
+build.c:109:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  109 |                 sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:109:48: note: use array indexing to silence this warning
+  109 |                 sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+build.c:169:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  169 |                 sprintf(szFormat, O_CLRK_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:169:48: note: use array indexing to silence this warning
+  169 |                 sprintf(szFormat, O_CLRK_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+driver.c:325:4: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+  325 |                         else
+      |                         ^
+driver.c:335:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  335 |                                 tdefs[tnum].loader(&o, upd_num);
+      |                                                   ^
+driver.c:340:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  340 |                                 tdefs[tnum].loader(&supp, upd_num);
+      |                                                   ^
+driver.c:345:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  345 |                                 tdefs[tnum].loader(&cust, upd_num);
+      |                                                   ^
+driver.c:352:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  352 |                                 tdefs[tnum].loader(&part, upd_num);
+      |                                                   ^
+driver.c:357:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  357 |                                 tdefs[tnum].loader(&code, 0);
+      |                                                   ^
+driver.c:362:23: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  362 |                                 tdefs[tnum].loader(&code, 0);
+      |                                                   ^
+build.c:283:47: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  283 |                 sprintf(szFormat, P_MFG_FMT, 1, HUGE_FORMAT + 1);
+      |                                                 ~~~~~~~~~~~~^~~
+build.c:283:47: note: use array indexing to silence this warning
+  283 |                 sprintf(szFormat, P_MFG_FMT, 1, HUGE_FORMAT + 1);
+      |                                                             ^
+      |                                                 &           [  ]
+build.c:284:53: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  284 |                 sprintf(szBrandFormat, P_BRND_FMT, 2, HUGE_FORMAT + 1);
+      |                                                       ~~~~~~~~~~~~^~~
+build.c:284:53: note: use array indexing to silence this warning
+  284 |                 sprintf(szBrandFormat, P_BRND_FMT, 2, HUGE_FORMAT + 1);
+      |                                                                   ^
+      |                                                       &           [  ]
+build.c:322:48: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  322 |                 sprintf(szFormat, S_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                  ~~~~~~~~~~~~^~~
+build.c:322:48: note: use array indexing to silence this warning
+  322 |                 sprintf(szFormat, S_NAME_FMT, 9, HUGE_FORMAT + 1);
+      |                                                              ^
+      |                                                  &           [  ]
+bm_utils.c:574:25: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  574 |                         tdefs[table].gen_seed(1, rowcount);
+      |                                              ^
+bm_utils.c:576:25: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  576 |                         tdefs[table].gen_seed(0, rowcount);
+      |                                              ^
+bm_utils.c:580:38: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  580 |                         tdefs[tdefs[table].child].gen_seed(0,rowcount);
+      |                                                           ^
+bm_utils.c:583:24: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  583 |                 tdefs[table].gen_seed(0, *extra_rows);
+      |                                      ^
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o text.o text.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o permute.o permute.c
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rng64.o rng64.c
+1 warning generated.
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o qgen.o qgen.c
+qgen.c:197:38: warning: format string is empty [-Wformat-zero-length]
+  197 |                         fprintf(ofp, SET_DBASE, db_name);
+      |                                      ^~~~~~~~~
+./tpcd.h:76:19: note: expanded from macro 'SET_DBASE'
+   76 | #define SET_DBASE ""
+      |                   ^~
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o varsub.o varsub.c
+5 warnings generated.
+4 warnings generated.
+7 warnings generated.
+1 warning generated.
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o dbgen build.o driver.o bm_utils.o rnd.o print.o load_stub.o bcd2.o speed_seed.o text.o permute.o rng64.o -lm
+/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dist/build/bin/filcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o qgen build.o bm_utils.o qgen.o rnd.o varsub.o text.o bcd2.o permute.o speed_seed.o rng64.o -lm
+TPC-H Population Generator (Version 2.14.0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+== Native oracle ==
+make: Entering directory '/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dbgen-smoke/native'
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o build.o build.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o driver.o driver.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bm_utils.o bm_utils.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rnd.o rnd.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o print.o print.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o load_stub.o load_stub.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o bcd2.o bcd2.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o speed_seed.o speed_seed.c
+In file included from load_stub.c:32:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from load_stub.c:31:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from load_stub.c:32:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from load_stub.c:31:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from speed_seed.c:53:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from speed_seed.c:51:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from speed_seed.c:53:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from speed_seed.c:51:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from print.c:46:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from print.c:37:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from print.c:46:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from print.c:37:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+In file included from dss.h:81,
+                 from build.c:45:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from build.c:35:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from dss.h:81,
+                 from build.c:45:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from build.c:35:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+bm_utils.c: In function ‘mk_ascdate’:
+bm_utils.c:544:16: warning: implicit declaration of function ‘strdup’ [-Wimplicit-function-declaration]
+         m[i] = strdup(t.alpha);
+                ^~~~~~
+bm_utils.c:544:16: warning: incompatible implicit declaration of built-in function ‘strdup’
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o text.o text.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o permute.o permute.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o rng64.o rng64.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o qgen.o qgen.c
+In file included from qgen.c:39:
+config.h:151: warning: "_POSIX_C_SOURCE" redefined
+ #define _POSIX_C_SOURCE 200112L
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from qgen.c:30:
+/usr/include/features.h:265: note: this is the location of the previous definition
+ # define _POSIX_C_SOURCE 200809L
+
+In file included from qgen.c:39:
+config.h:152: warning: "_POSIX_SOURCE" redefined
+ #define _POSIX_SOURCE
+
+In file included from /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:33,
+                 from /usr/include/stdio.h:27,
+                 from qgen.c:30:
+/usr/include/features.h:263: note: this is the location of the previous definition
+ # define _POSIX_SOURCE 1
+
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64    -c -o varsub.o varsub.c
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o dbgen build.o driver.o bm_utils.o rnd.o print.o load_stub.o bcd2.o speed_seed.o text.o permute.o rng64.o -lm
+gcc -g -DDBNAME=\"dss\" -DMAC -DORACLE -DTPCH -DRNG_TEST -D_FILE_OFFSET_BITS=64  -O -o qgen build.o bm_utils.o qgen.o rnd.o varsub.o text.o bcd2.o permute.o speed_seed.o rng64.o -lm
+make: Leaving directory '/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684/dbgen-smoke/native'
+TPC-H Population Generator (Version 2.14.0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+FIL-C dbgen smoke passed: /data00/benchmarks/gendb-tpch-sf10-20260928/evidence/filc-dbgen-smoke.json

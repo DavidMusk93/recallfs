@@ -1,0 +1,8 @@
+{
+  "duckdb_database_bytes": 5735460864,
+  "gendb_base_file_bytes": 10352198187,
+  "gendb_derived_column_file_bytes": 449902366,
+  "gendb_index_file_bytes": 1061228328,
+  "gendb_total_file_bytes": 11863328881,
+  "raw_tbl_bytes": 11232136268
+}

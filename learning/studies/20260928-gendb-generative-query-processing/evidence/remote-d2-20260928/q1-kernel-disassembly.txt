@@ -1,0 +1,172 @@
+0000000000004bd0 <main._omp_fn.0>:
+    4bd0:	push   r15
+    4bd2:	mov    ecx,0x4
+    4bd7:	mov    r15,rdi
+    4bda:	mov    edx,0x1
+    4bdf:	push   r14
+    4be1:	push   r13
+    4be3:	push   r12
+    4be5:	push   rbp
+    4be6:	push   rbx
+    4be7:	sub    rsp,0x58
+    4beb:	mov    rax,QWORD PTR [rdi+0x50]
+    4bef:	mov    rsi,QWORD PTR [rdi+0x48]
+    4bf3:	xor    edi,edi
+    4bf5:	lea    r8,[rsp+0x40]
+    4bfa:	mov    r14,QWORD PTR [rax]
+    4bfd:	lea    rax,[rsp+0x48]
+    4c02:	mov    QWORD PTR [rsp+0x30],r8
+    4c07:	mov    r9,rax
+    4c0a:	mov    QWORD PTR [rsp+0x38],rax
+    4c0f:	call   2060 <GOMP_loop_dynamic_start@plt>
+    4c14:	test   al,al
+    4c16:	je     4dc6 <main._omp_fn.0+0x1f6>
+    4c1c:	call   2230 <omp_get_thread_num@plt>
+    4c21:	cdqe
+    4c23:	lea    rax,[rax+rax*2]
+    4c27:	shl    rax,0x7
+    4c2b:	add    r14,rax
+    4c2e:	mov    rax,r15
+    4c31:	mov    r15,r14
+    4c34:	mov    r14,rax
+    4c37:	nop    WORD PTR [rax+rax*1+0x0]
+    4c40:	mov    rax,QWORD PTR [rsp+0x48]
+    4c45:	mov    rsi,QWORD PTR [rsp+0x40]
+    4c4a:	mov    QWORD PTR [rsp+0x18],rax
+    4c4f:	mov    rax,QWORD PTR [r14+0x40]
+    4c53:	mov    QWORD PTR [rsp+0x8],rsi
+    4c58:	imul   rsi,rsi,0x186a0
+    4c5f:	mov    rax,QWORD PTR [rax]
+    4c62:	mov    QWORD PTR [rsp+0x20],rax
+    4c67:	nop    WORD PTR [rax+rax*1+0x0]
+    4c70:	mov    rax,QWORD PTR [rsp+0x20]
+    4c75:	mov    rdi,QWORD PTR [rsp+0x8]
+    4c7a:	movzx  edx,BYTE PTR [rax+rdi*1]
+    4c7e:	cmp    dl,0x2
+    4c81:	je     4e60 <main._omp_fn.0+0x290>
+    4c87:	mov    rax,QWORD PTR [r14+0x38]
+    4c8b:	lea    rbx,[rsi+0x186a0]
+    4c92:	mov    rcx,QWORD PTR [r14+0x20]
+    4c96:	mov    QWORD PTR [rsp+0x10],rbx
+    4c9b:	mov    rax,QWORD PTR [rax]
+    4c9e:	mov    rbp,QWORD PTR [rcx]
+    4ca1:	mov    rcx,QWORD PTR [r14+0x28]
+    4ca5:	mov    r8,rax
+    4ca8:	sub    r8,rsi
+    4cab:	cmp    rbx,rax
+    4cae:	mov    eax,0x186a0
+    4cb3:	mov    rdi,QWORD PTR [rcx]
+    4cb6:	cmovbe r8,rax
+    4cba:	mov    rax,QWORD PTR [r14+0x8]
+    4cbe:	mov    rcx,QWORD PTR [r14+0x30]
+    4cc2:	add    rdi,rsi
+    4cc5:	mov    r10,QWORD PTR [rax]
+    4cc8:	mov    rax,QWORD PTR [r14+0x10]
+    4ccc:	mov    r11,QWORD PTR [rax]
+    4ccf:	mov    rax,QWORD PTR [r14+0x18]
+    4cd3:	add    r10,rsi
+    4cd6:	mov    rbx,QWORD PTR [rax]
+    4cd9:	lea    rax,[rsi*4+0x0]
+    4ce1:	add    r11,rsi
+    4ce4:	add    rbp,rax
+    4ce7:	add    rbx,rsi
+    4cea:	add    rsi,QWORD PTR [rcx]
+    4ced:	test   dl,dl
+    4cef:	je     4de0 <main._omp_fn.0+0x210>
+    4cf5:	mov    rdx,QWORD PTR [r14]
+    4cf8:	mov    rcx,QWORD PTR [rdx]
+    4cfb:	test   r8,r8
+    4cfe:	je     4d94 <main._omp_fn.0+0x1c4>
+    4d04:	add    rax,rcx
+    4d07:	mov    QWORD PTR [rsp+0x28],r14
+    4d0c:	xor    edx,edx
+    4d0e:	mov    r14,rax
+    4d11:	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+    4d1c:	nop    DWORD PTR [rax+0x0]
+    4d20:	cmp    DWORD PTR [r14+rdx*4],0x28e7
+    4d28:	jg     4d86 <main._omp_fn.0+0x1b6>
+    4d2a:	movzx  eax,BYTE PTR [rdi+rdx*1]
+    4d2e:	mov    ecx,0x64
+    4d33:	movzx  r13d,BYTE PTR [r10+rdx*1]
+    4d38:	movsxd r9,DWORD PTR [rbp+rdx*4+0x0]
+    4d3d:	sub    ecx,eax
+    4d3f:	movzx  eax,BYTE PTR [rsi+rdx*1]
+    4d43:	movsxd rcx,ecx
+    4d46:	imul   rcx,r9
+    4d4a:	lea    r12,[rax+0x64]
+    4d4e:	movzx  eax,BYTE PTR [r11+rdx*1]
+    4d53:	lea    eax,[rax+r13*2]
+    4d57:	cdqe
+    4d59:	shl    rax,0x6
+    4d5d:	add    rax,r15
+    4d60:	add    QWORD PTR [rax],0x1
+    4d64:	movzx  r13d,BYTE PTR [rbx+rdx*1]
+    4d69:	add    QWORD PTR [rax+0x8],r13
+    4d6d:	movzx  r13d,BYTE PTR [rdi+rdx*1]
+    4d72:	add    QWORD PTR [rax+0x20],rcx
+    4d76:	imul   rcx,r12
+    4d7a:	add    QWORD PTR [rax+0x10],r13
+    4d7e:	add    QWORD PTR [rax+0x18],r9
+    4d82:	add    QWORD PTR [rax+0x28],rcx
+    4d86:	add    rdx,0x1
+    4d8a:	cmp    rdx,r8
+    4d8d:	jne    4d20 <main._omp_fn.0+0x150>
+    4d8f:	mov    r14,QWORD PTR [rsp+0x28]
+    4d94:	add    QWORD PTR [rsp+0x8],0x1
+    4d9a:	mov    rsi,QWORD PTR [rsp+0x10]
+    4d9f:	mov    rax,QWORD PTR [rsp+0x8]
+    4da4:	cmp    QWORD PTR [rsp+0x18],rax
+    4da9:	jg     4c70 <main._omp_fn.0+0xa0>
+    4daf:	mov    rsi,QWORD PTR [rsp+0x38]
+    4db4:	mov    rdi,QWORD PTR [rsp+0x30]
+    4db9:	call   2030 <GOMP_loop_dynamic_next@plt>
+    4dbe:	test   al,al
+    4dc0:	jne    4c40 <main._omp_fn.0+0x70>
+    4dc6:	call   22a0 <GOMP_loop_end@plt>
+    4dcb:	add    rsp,0x58
+    4dcf:	pop    rbx
+    4dd0:	pop    rbp
+    4dd1:	pop    r12
+    4dd3:	pop    r13
+    4dd5:	pop    r14
+    4dd7:	pop    r15
+    4dd9:	ret
+    4dda:	nop    WORD PTR [rax+rax*1+0x0]
+    4de0:	test   r8,r8
+    4de3:	je     4d94 <main._omp_fn.0+0x1c4>
+    4de5:	xor    edx,edx
+    4de7:	nop    WORD PTR [rax+rax*1+0x0]
+    4df0:	movzx  eax,BYTE PTR [rdi+rdx*1]
+    4df4:	mov    r12d,0x64
+    4dfa:	movzx  r13d,BYTE PTR [r10+rdx*1]
+    4dff:	movsxd rcx,DWORD PTR [rbp+rdx*4+0x0]
+    4e04:	sub    r12d,eax
+    4e07:	movzx  eax,BYTE PTR [rsi+rdx*1]
+    4e0b:	movsxd r12,r12d
+    4e0e:	lea    r9,[rax+0x64]
+    4e12:	movzx  eax,BYTE PTR [r11+rdx*1]
+    4e17:	lea    eax,[rax+r13*2]
+    4e1b:	cdqe
+    4e1d:	shl    rax,0x6
+    4e21:	add    rax,r15
+    4e24:	add    QWORD PTR [rax],0x1
+    4e28:	movzx  r13d,BYTE PTR [rbx+rdx*1]
+    4e2d:	add    QWORD PTR [rax+0x8],r13
+    4e31:	movzx  r13d,BYTE PTR [rdi+rdx*1]
+    4e36:	add    rdx,0x1
+    4e3a:	add    QWORD PTR [rax+0x18],rcx
+    4e3e:	imul   rcx,r12
+    4e42:	add    QWORD PTR [rax+0x10],r13
+    4e46:	add    QWORD PTR [rax+0x20],rcx
+    4e4a:	imul   rcx,r9
+    4e4e:	add    QWORD PTR [rax+0x28],rcx
+    4e52:	cmp    rdx,r8
+    4e55:	jne    4df0 <main._omp_fn.0+0x220>
+    4e57:	jmp    4d94 <main._omp_fn.0+0x1c4>
+    4e5c:	nop    DWORD PTR [rax+0x0]
+    4e60:	lea    rax,[rsi+0x186a0]
+    4e67:	mov    QWORD PTR [rsp+0x10],rax
+    4e6c:	jmp    4d94 <main._omp_fn.0+0x1c4>
+    4e71:	nop
+    4e72:	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+    4e7d:	nop    DWORD PTR [rax]

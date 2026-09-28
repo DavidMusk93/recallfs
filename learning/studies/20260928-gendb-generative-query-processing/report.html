@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
-  <title>GenDB：把生成式查询执行用于 Tide</title>
+  <title>GenDB vs DuckDB：复现结果与 Tide 落地边界</title>
   <style>
     :root {
       color-scheme: light;
@@ -279,6 +279,7 @@
     }
 
     .status.reported { color: var(--info); background: var(--info-soft); }
+    .status.measured { color: var(--success); background: var(--success-soft); }
     .status.observed { color: var(--danger); background: var(--danger-soft); }
     .status.proposed { color: var(--violet); background: var(--violet-soft); }
 
@@ -326,22 +327,67 @@
 <body>
   <main>
     <header>
-      <p class="eyebrow">Database systems / research-to-product</p>
-      <h1>GenDB：把生成式查询执行用于 Tide</h1>
-      <p class="lede">论文展示了针对固定 OLAP workload 的巨大特化空间，但其原型不是可直接嵌入生产的数据库内核。正确做法是把 LLM 限定为离线候选生成器，让现有 Catalyst、Velox 和 FringeDB 保持语义与运行时 authority。</p>
+      <p class="eyebrow">TPC-H SF10 / independent reproduction</p>
+      <h1>GenDB vs DuckDB：复现结果与 Tide 落地边界</h1>
+      <p class="lede">在第二台 64 核机器上，GenDB 的五查询诊断性总时延优于 DuckDB，但没有复现论文的全面胜出，且 Q3 未通过严格输出确定性门禁。真正可迁移的能力是按 workload 搜索物理实现，并只晋升经本机验证正确且获胜的 artifact。</p>
       <dl class="meta">
         <dt>Date</dt><dd>2026-09-28</dd>
-        <dt>Input shape</dt><dd>concept</dd>
-        <dt>Subject</dt><dd>GenDB generative query processing and its application to Tide/stream_engine</dd>
+        <dt>Host</dt><dd><code>d2</code> · 2 × 32-core Xeon Platinum 8457C · 251 GiB</dd>
+        <dt>Workload</dt><dd>TPC-H SF10 · Q1/Q3/Q6/Q9/Q18 · 1 warmup + 10 measured hot runs</dd>
+        <dt>Revisions</dt><dd>GenDB <code>b7418071fc51aacd219964e4a68e593234db9237</code> · dbgen <code>32f1c1b92d1664dba542e927d23d86ffa57aa253</code></dd>
       </dl>
-      <aside class="callout warning"><strong>结论：</strong>采用“离线综合 + 独立验证 + 签名 artifact + 在线回退”的机制，不采用“在线 Agent 直接写、编译、执行任意 C++”的产品边界。</aside>
+      <aside class="callout warning"><strong>结论：</strong>部分复现。GenDB 诊断性 aggregate 快 <strong>1.33x</strong>，但只有 Q9/Q18 同时更快且通过严格正确性检查；Q1/Q3/Q6 应回退 DuckDB。采用“离线综合 + 独立验证 + 按查询 admission + 在线回退”，不整体替换通用执行器。</aside>
       <div class="metrics" aria-label="Key metrics">
-        <article class="metric"><strong>2.8x</strong><span>论文报告：TPC-H 对 DuckDB/Umbra</span></article>
-        <article class="metric"><strong>5.0x</strong><span>论文报告：SEC-EDGAR 对 DuckDB</span></article>
-        <article class="metric"><strong>90.9 min</strong><span>TPC-H multi-agent 生成 wall time</span></article>
-        <article class="metric"><strong>5 + 6</strong><span>论文实际展示的查询数量</span></article>
+        <article class="metric"><strong>1.33x</strong><span><code>d2</code> 五查询诊断性总收益</span></article>
+        <article class="metric"><strong>2 / 5</strong><span>更快且通过严格门禁</span></article>
+        <article class="metric"><strong>124.8x</strong><span>Q18 从 iter 0 到 best</span></article>
+        <article class="metric"><strong>1.64x</strong><span>接纳 Q9/Q18 的组合收益</span></article>
       </div>
     </header>
+
+    <section>
+      <h2>独立复现结果</h2>
+      <p class="section-lede">主口径包含结果物化：DuckDB 计 <code>execute + fetchall + CSV</code>，GenDB 计生成程序内部 <code>total</code>（含 CSV，不含进程启动）。两边固定 64 CPU affinity 和跨两 NUMA 节点 interleave；正式样本采用 AB/BA 顺序平衡，每次计时前先运行一次相同系统与查询。</p>
+      <div class="table-wrap">
+        <table data-column-kinds="identifier,measure,measure,measure,text">
+          <colgroup><col style="width:13%"><col style="width:20%"><col style="width:20%"><col style="width:17%"><col style="width:30%"></colgroup>
+          <thead><tr><th>Query</th><th class="measure">DuckDB median</th><th class="measure">GenDB median</th><th class="measure">Speedup</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td><code>Q1</code></td><td class="measure">39.76 ms</td><td class="measure">47.81 ms</td><td class="measure">0.83x</td><td>DuckDB wins</td></tr>
+            <tr><td><code>Q3</code></td><td class="measure">65.13 ms</td><td class="measure">123.74 ms</td><td class="measure">0.53x</td><td>DuckDB wins; strict fail</td></tr>
+            <tr><td><code>Q6</code></td><td class="measure">17.65 ms</td><td class="measure">31.08 ms</td><td class="measure">0.57x</td><td>DuckDB wins</td></tr>
+            <tr><td><code>Q9</code></td><td class="measure">290.08 ms</td><td class="measure">147.35 ms</td><td class="measure">1.97x</td><td>GenDB wins</td></tr>
+            <tr><td><code>Q18</code></td><td class="measure">146.64 ms</td><td class="measure">70.49 ms</td><td class="measure">2.08x</td><td>GenDB wins</td></tr>
+            <tr><td><strong>Sum</strong></td><td class="measure"><strong>559.27 ms</strong></td><td class="measure"><strong>420.47 ms</strong></td><td class="measure"><strong>1.33x</strong></td><td><strong>Diagnostic only</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>GenDB 若计入进程启动，总和为 492.08 ms，收益降到 1.14x。若 dispatcher 仅接纳 Q9/Q18，其余回退 DuckDB，总和为 340.38 ms、收益为 1.64x；计入 GenDB 进程启动后为 381.07 ms、仍有 1.47x。</p>
+      <aside class="callout danger"><strong>Correctness：</strong>Q1/Q6/Q9/Q18 均 11/11 次精确匹配。Q3 仅 8/11 次 canonical SHA-256 匹配；另 3 次将 <code>439855.3250</code> 输出为 <code>.32</code> 而非 <code>.33</code>，且结果 JSON 直接保留具体单元格差异。独立 30 次探针又观察到 8 次 <code>.32</code>，因此 Q3 必须拒绝，而不是用一分容差掩盖。</aside>
+      <aside class="callout info"><strong>测量边界：</strong>自预热后 DuckDB 的位置中位数稳定，但 GenDB 的绝对耗时仍有明显 position sensitivity。最终一轮中，Q9/Q18 在两个位置都获胜，Q1/Q3/Q6 都落后；小幅 iteration 差异仍不能当作已隔离的因果效应。</aside>
+      <p>准备阶段还用 FIL-C 0.684 和独立 GCC 以相同的 <code>MACHINE=MAC DATABASE=ORACLE WORKLOAD=TPCH</code> 配置构建 dbgen；heap-use-after-free 负向控制被 FIL-C 拒绝，SF0.01 八张表逐文件同哈希且行数符合预期。结构化 preparation manifest 进一步绑定源码、参考结果、harness、二进制、存储、DuckDB 文件和 FIL-C 结果，运行前逐项验真。</p>
+    </section>
+
+    <section>
+      <h2>收益来自什么</h2>
+      <p class="section-lede">LLM 不在运行路径中。收益来自它在离线阶段找到并固化的物理结构与执行形态。</p>
+      <div class="table-wrap">
+        <table data-column-kinds="text,text,text,text">
+          <colgroup><col style="width:21%"><col style="width:27%"><col style="width:25%"><col style="width:27%"></colgroup>
+          <thead><tr><th>Mechanism</th><th>Observed evidence</th><th>Why it helps</th><th>Boundary</th></tr></thead>
+          <tbody>
+            <tr><td>Persistent query-shaped state</td><td>Q18 iter 0 → best: 8682.36 → 69.56 ms</td><td>有序索引分组扫描取代 per-thread hash、heap node 和 merge</td><td>索引必须随 snapshot/schema 正确失效</td></tr>
+            <tr><td>Derived direct lookup</td><td>Q9 best: 147.35 ms；比 DuckDB 快 1.97x</td><td>30 MB nibble map 消除 1500 万行 orders scan 和运行时数组初始化</td><td>把 CPU 成本转移为构建、存储和维护成本</td></tr>
+            <tr><td>Narrow representation</td><td>Q1 iter 0 → best: 83.22 → 47.02 ms</td><td>三个 8-byte measure 压为 1 byte，price 压为 4-byte cents</td><td>热点仍是标量整数循环；最终仍比 DuckDB 慢</td></tr>
+            <tr><td>Cache-shaped fused path</td><td>Q3 iter 0 → best: 160.45 → 126.22 ms</td><td>随机 index nested loop 改为顺序 scan 和紧凑 hash state</td><td>在 <code>d2</code> 更慢且未通过确定性门禁</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>代价是额外持久状态：GenDB base columns 为 10.35 GB，general indexes 为 1.06 GB，Q1/Q9 derived columns 为 0.45 GB；总计 11.86 GB，而 DuckDB 文件为 5.74 GB。</p>
+      <p>Q1 的 decimal-scaled integer 合同已穷举全部 10,404,860 个合法 price-cent 值；最坏 <code>sum_charge</code> 为 <code>6.799e18</code>，低于 <code>INT64_MAX</code>。最终 binary 反汇编显示热点为标量 <code>int64 imul/add</code>，所以本轮 1.77x 消融收益不能归因于 SIMD。</p>
+      <aside class="callout info"><strong>关键解释：</strong>GenDB 的产品价值是可执行反馈驱动的 physical-design search。Q1 iteration 1 从 83.22 ms 回退到 85.52 ms；Q18 从 8682.36 ms 降到 69.56 ms 的数量级变化才是本轮最强机制证据。</aside>
+      <p>消融整体状态为 <code>bounded_numeric_failures_recorded</code>：Q1 的旧迭代和 Q3 best 出现过一分以内的非精确输出。被选中的 Q1/Q6/Q9/Q18 变体在本轮 11 次检查中全部精确匹配；Q3 仍按严格主门禁拒绝。</p>
+    </section>
 
     <section>
       <h2>核心机制</h2>
@@ -416,14 +462,14 @@
           <colgroup><col style="width:27%"><col style="width:14%"><col style="width:27%"><col style="width:32%"></colgroup>
           <thead><tr><th>结论</th><th>状态</th><th>证据</th><th>边界</th></tr></thead>
           <tbody>
-            <tr><td>固定 OLAP workload 可以被专用代码加速</td><td>论文报告</td><td>TPC-H 2.8x，SEC-EDGAR 5.0x</td><td>单机、全内存、hot-run、只读、少量查询</td></tr>
-            <tr><td>runtime feedback 有效</td><td>论文报告</td><td>Q18 一轮从 12147 ms 降至 74 ms</td><td>没有证明跨数据分布和机器稳定泛化</td></tr>
+            <tr><td>固定 OLAP workload 可以被专用代码加速</td><td>论文 + 部分复现</td><td>论文 TPC-H 2.77x；<code>d2</code> 诊断值为 1.33x</td><td><code>d2</code> 仅 Q9/Q18 正确且获胜</td></tr>
+            <tr><td>runtime feedback 有效</td><td>论文 + 已复现</td><td><code>d2</code> Q18 从 8682.36 ms 降至 69.56 ms</td><td>没有证明跨数据分布和机器稳定泛化</td></tr>
             <tr><td>结构化多 Agent 有帮助</td><td>论文报告</td><td>SEC-EDGAR ablation 差距明显</td><td>缺少多 seed；TPC-H ablation 标签存在文档不一致</td></tr>
             <tr><td>原型可直接生产化</td><td>不支持</td><td>无事务、恢复、隔离、更新、tail latency 证据</td><td>必须保留传统引擎作为语义 oracle 和回退</td></tr>
           </tbody>
         </table>
       </div>
-      <aside class="callout info">仅按作者 telemetry 粗算，TPC-H 的 90.9 分钟生成时间需要约 14,400 次五查询 workload 重复执行，才能用 594 ms 到 214 ms 的执行差摊平。产品应按节省的 CPU-hours 和模板寿命 admission，而不是按单次 speedup admission。</aside>
+      <aside class="callout info">按作者数字，90.9 分钟生成时间约需 14,400 次五查询 workload 摊平；按本次 559.27 → 420.47 ms 的诊断性净收益则约需 39,300 次，若计 GenDB process wall 则约 81,200 次。产品应按节省的 CPU-hours、正确性和模板寿命 admission。</aside>
     </section>
 
     <section>
@@ -499,7 +545,7 @@
     </section>
 
     <footer>
-      <p>Evidence: arXiv 2603.02081v1; GenDB paper commit <code>b7418071fc51aacd219964e4a68e593234db9237</code>; current commit <code>0ccf053ade163137775cd2e9c6e1288ea89d524b</code>; Tide JSON encoder JIT and FringeDB study notes. Paper performance was not independently reproduced.</p>
+      <p>Evidence: arXiv 2603.02081v1; GenDB paper commit <code>b7418071fc51aacd219964e4a68e593234db9237</code>; <code>d2</code> TPC-H SF10 benchmark with 1 warmup + 10 self-preconditioned, counterbalanced measured runs; structured source/reference/harness/artifact provenance; FIL-C 0.684 dbgen execution with native-output oracle; per-sample strict result hashes; Q3 30-run stability probe; Q1 numeric/codegen proof; iteration ablation; Tide JSON encoder JIT and FringeDB study notes. PMU hardware counters were unavailable in the VM.</p>
       <p>Composed 2026-09-28 by ce-explain</p>
     </footer>
   </main>

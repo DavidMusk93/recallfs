@@ -158,7 +158,7 @@ declares an explicit generation contract. Only local build products such as
 
 | Study | Topic |
 | --- | --- |
-| [GenDB generative query processing](studies/20260928-gendb-generative-query-processing/README.md) | LLM-guided query specialization, implementation audit, and a gated Tide/stream_engine accelerator architecture |
+| [GenDB generative query processing](studies/20260928-gendb-generative-query-processing/README.md) | TPC-H SF10 reproduction, benefit decomposition, implementation audit, and a gated Tide/stream_engine accelerator architecture |
 | [Lock-free SPSC ring buffer](studies/20260927-lock-free-ring-buffer/README.md) | C11 mutex/atomic/index-cache reproduction, memory ordering, cache-line A/B, and benchmark traps |
 | [LSM deletion map](studies/20260927-lsm-deletion-map/README.md) | Snapshot-safe point-to-range tombstone conversion, append-only bitmap boundaries, and FIL-C demo |
 | [RingZero, XDP, and Maglev](studies/20260917-ringzero/README.md) | XDP L4 forwarding, kernel-boundary costs, zero-drop semantics, Maglev trade-offs, and production-gap audit |

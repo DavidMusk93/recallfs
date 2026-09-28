@@ -7,6 +7,7 @@ applies_to:
   - learning/studies/20260928-gendb-generative-query-processing
 depends_on:
   - recallfs-source-gendb-generative-query-processing-v1
+  - recallfs-evidence-gendb-tpch-sf10-reproduction-v1
 supersedes: []
 verified_by:
   - learning/studies/20260928-gendb-generative-query-processing/evidence/source-digests.txt
@@ -196,9 +197,19 @@ must be driven by measured recurrence and saved CPU time, not speedup alone.
 
 - Static syntax checks passed for the inspected orchestrator, template
   extractor, SQL parser, result comparator, and benchmark entry point.
-- GenDB was not installed or run end to end.
-- Benchmark numbers are author-provided artifacts, not independently
-  reproduced measurements.
+- The later
+  [`tpch-sf10-reproduction.md`](tpch-sf10-reproduction.md) study independently
+  rebuilt and executed the five TPC-H queries on `d2`; it measured a diagnostic
+  `1.33x` aggregate advantage, not the paper's `2.77x`. Q3 failed strict output
+  determinism, so only Q9 and Q18 are both correct and faster admission
+  candidates.
+- The reproduction harness now authenticates pinned source, reference output,
+  harness, binary, storage, DuckDB, and FIL-C evidence through a structured
+  preparation manifest. Every timed system execution is self-preconditioned
+  and scheduled in counterbalanced AB/BA blocks; residual GenDB position
+  sensitivity remains visible in the raw result.
+- That run reused the author-generated sources. It does not independently
+  reproduce the LLM generation process.
 - The paper and repository disagree on one TPC-H ablation label: repository
   samples total about 281 ms for `Single-Agent (High-Level)` and 456 ms for
   `Single-Agent (Guided)`, while the paper text names guided as the 281 ms

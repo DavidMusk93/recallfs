@@ -1,0 +1,479 @@
+0000000000029330 B __bss_start
+                 U chdir@@GLIBC_2.2.5
+                 U closedir@@GLIBC_2.2.5
+                 U close@@GLIBC_2.2.5
+0000000000029330 b completed.7325
+0000000000021880 r CSWTCH.124
+                 U __cxa_allocate_exception@@CXXABI_1.3
+                 U __cxa_begin_catch@@CXXABI_1.3
+                 U __cxa_end_catch@@CXXABI_1.3
+                 w __cxa_finalize@@GLIBC_2.2.5
+                 U __cxa_free_exception@@CXXABI_1.3
+                 U __cxa_rethrow@@CXXABI_1.3
+                 U __cxa_throw@@CXXABI_1.3
+0000000000029310 D __data_start
+0000000000029310 W data_start
+0000000000007500 t deregister_tm_clones
+0000000000007570 t __do_global_dtors_aux
+0000000000028b38 t __do_global_dtors_aux_fini_array_entry
+0000000000029318 D __dso_handle
+0000000000029320 V DW.ref.__gcc_personality_v0
+0000000000029328 V DW.ref.__gxx_personality_v0
+0000000000028d50 d _DYNAMIC
+0000000000029330 D _edata
+0000000000029338 B _end
+                 U __errno_location@@GLIBC_2.2.5
+                 U fchmodat@@GLIBC_2.4
+                 U fchmod@@GLIBC_2.2.5
+0000000000020684 T _fini
+                 U fprintf@@GLIBC_2.2.5
+00000000000075b0 t frame_dummy
+0000000000028b30 t __frame_dummy_init_array_entry
+0000000000025cac r __FRAME_END__
+                 U free@@GLIBC_2.2.5
+                 U __fxstat@@GLIBC_2.2.5
+                 U __gcc_personality_v0@@GCC_3.3.1
+                 U getcwd@@GLIBC_2.2.5
+                 U getenv@@GLIBC_2.2.5
+0000000000029000 d _GLOBAL_OFFSET_TABLE_
+                 w __gmon_start__
+0000000000021a38 r __GNU_EH_FRAME_HDR
+                 U GOMP_loop_end_nowait@@GOMP_1.0
+                 U GOMP_loop_ull_dynamic_next@@GOMP_2.0
+                 U GOMP_loop_ull_dynamic_start@@GOMP_2.0
+                 U GOMP_parallel@@GOMP_4.0
+                 U __gxx_personality_v0@@CXXABI_1.3
+0000000000004000 t _init
+0000000000028b38 t __init_array_end
+0000000000028b30 t __init_array_start
+0000000000021000 R _IO_stdin_used
+                 w _ITM_deregisterTMCloneTable
+                 w _ITM_registerTMCloneTable
+0000000000020680 T __libc_csu_fini
+0000000000020620 T __libc_csu_init
+                 U __libc_start_main@@GLIBC_2.2.5
+                 U link@@GLIBC_2.2.5
+                 U __lxstat@@GLIBC_2.2.5
+                 U madvise@@GLIBC_2.2.5
+00000000000057c0 T main
+000000000000a4e0 t main._omp_fn.0
+0000000000009f30 t main._omp_fn.1
+                 U memcmp@@GLIBC_2.2.5
+                 U memcpy@@GLIBC_2.14
+                 U memmove@@GLIBC_2.2.5
+                 U memset@@GLIBC_2.2.5
+                 U mkdir@@GLIBC_2.2.5
+                 U mmap@@GLIBC_2.2.5
+                 U munmap@@GLIBC_2.2.5
+0000000000021a38 R __offload_funcs_end
+0000000000021a38 R __offload_func_table
+0000000000021a38 R __offload_vars_end
+0000000000021a38 R __offload_var_table
+                 U omp_get_max_threads@@OMP_1.0
+                 U omp_get_thread_num@@OMP_1.0
+                 U opendir@@GLIBC_2.2.5
+                 U open@@GLIBC_2.2.5
+                 U printf@@GLIBC_2.2.5
+                 w __pthread_key_create@@GLIBC_2.2.5
+                 U readdir@@GLIBC_2.2.5
+                 U readlink@@GLIBC_2.2.5
+                 U realpath@@GLIBC_2.3
+0000000000007530 t register_tm_clones
+                 U remove@@GLIBC_2.2.5
+                 U rename@@GLIBC_2.2.5
+                 U sendfile@@GLIBC_2.2.5
+                 U snprintf@@GLIBC_2.2.5
+00000000000074d0 T _start
+                 U statvfs@@GLIBC_2.2.5
+                 U stderr@@GLIBC_2.2.5
+                 U strcmp@@GLIBC_2.2.5
+                 U strlen@@GLIBC_2.2.5
+                 U symlink@@GLIBC_2.2.5
+0000000000029330 D __TMC_END__
+                 U truncate@@GLIBC_2.2.5
+                 U _Unwind_Resume@@GCC_3.0
+                 U utimensat@@GLIBC_2.6
+                 U wmemcpy@@GLIBC_2.2.5
+                 U wmemmove@@GLIBC_2.2.5
+                 U wmemset@@GLIBC_2.2.5
+                 U __xstat@@GLIBC_2.2.5
+                 U operator delete(void*)@@GLIBCXX_3.4
+                 U operator delete(void*, unsigned long)@@CXXABI_1.3.9
+000000000000ba70 t (anonymous namespace)::create_dir(std::filesystem::__cxx11::path const&, std::filesystem::perms, std::error_code&) [clone .part.52]
+000000000000a740 t gendb::PhaseTimer::~PhaseTimer()
+000000000000a740 t gendb::PhaseTimer::~PhaseTimer()
+000000000000a680 t MmapFile::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+000000000000a650 t MmapFile::~MmapFile()
+000000000000a650 t MmapFile::~MmapFile()
+000000000000c260 W __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >::stdio_filebuf(int, std::_Ios_Openmode, unsigned long)
+000000000000c260 W __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >::stdio_filebuf(int, std::_Ios_Openmode, unsigned long)
+000000000000aeb0 W __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >::~stdio_filebuf()
+000000000000ae70 W __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >::~stdio_filebuf()
+000000000000ae70 W __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >::~stdio_filebuf()
+0000000000018050 W std::filesystem::__cxx11::filesystem_error::what() const
+000000000001e1a0 T std::filesystem::__cxx11::directory_iterator::operator*() const
+000000000000547a t std::filesystem::__cxx11::directory_iterator::operator*() const [clone .cold.130]
+000000000001d9c0 T std::filesystem::__cxx11::recursive_directory_iterator::depth() const
+000000000001da10 T std::filesystem::__cxx11::recursive_directory_iterator::operator*() const
+000000000001a970 T std::filesystem::__cxx11::path::parent_path() const
+00000000000051f6 t std::filesystem::__cxx11::path::parent_path() const [clone .cold.122]
+0000000000018630 T std::filesystem::__cxx11::path::has_filename() const
+00000000000184d0 T std::filesystem::__cxx11::path::has_root_name() const
+0000000000018540 T std::filesystem::__cxx11::path::has_root_path() const
+000000000001a600 T std::filesystem::__cxx11::path::relative_path() const
+00000000000051b6 t std::filesystem::__cxx11::path::relative_path() const [clone .cold.121]
+000000000001a330 T std::filesystem::__cxx11::path::root_directory() const
+0000000000005196 t std::filesystem::__cxx11::path::root_directory() const [clone .cold.119]
+00000000000185e0 T std::filesystem::__cxx11::path::has_parent_path() const
+000000000001b7f0 T std::filesystem::__cxx11::path::lexically_normal() const
+000000000000529e t std::filesystem::__cxx11::path::lexically_normal() const [clone .cold.125]
+0000000000018570 T std::filesystem::__cxx11::path::has_relative_path() const
+0000000000018690 T std::filesystem::__cxx11::path::_M_find_extension() const
+00000000000184f0 T std::filesystem::__cxx11::path::has_root_directory() const
+000000000001ac00 T std::filesystem::__cxx11::path::lexically_relative(std::filesystem::__cxx11::path const&) const
+0000000000005206 t std::filesystem::__cxx11::path::lexically_relative(std::filesystem::__cxx11::path const&) const [clone .cold.123]
+000000000001b790 T std::filesystem::__cxx11::path::lexically_proximate(std::filesystem::__cxx11::path const&) const
+000000000000528e t std::filesystem::__cxx11::path::lexically_proximate(std::filesystem::__cxx11::path const&) const [clone .cold.124]
+0000000000018230 T std::filesystem::__cxx11::path::compare(std::filesystem::__cxx11::path const&) const
+000000000001a270 T std::filesystem::__cxx11::path::root_name() const
+0000000000005186 t std::filesystem::__cxx11::path::root_name() const [clone .cold.118]
+000000000001a410 T std::filesystem::__cxx11::path::root_path() const
+00000000000051a6 t std::filesystem::__cxx11::path::root_path() const [clone .cold.120]
+                 U std::__basic_file<char>::is_open() const@@GLIBCXX_3.4
+                 U std::runtime_error::what() const@@GLIBCXX_3.4
+                 U std::__codecvt_utf8_base<wchar_t>::do_unshift(__mbstate_t&, char*, char*, char*&) const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_encoding() const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_max_length() const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_always_noconv() const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_in(__mbstate_t&, char const*, char const*, char const*&, wchar_t*, wchar_t*, wchar_t*&) const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_out(__mbstate_t&, wchar_t const*, wchar_t const*, wchar_t const*&, char*, char*, char*&) const@@GLIBCXX_3.4.21
+                 U std::__codecvt_utf8_base<wchar_t>::do_length(__mbstate_t&, char const*, char const*, unsigned long) const@@GLIBCXX_3.4.21
+0000000000018060 W std::__codecvt_abstract_base<wchar_t, char, __mbstate_t>::in(__mbstate_t&, char const*, char const*, char const*&, wchar_t*, wchar_t*, wchar_t*&) const
+0000000000018070 W std::__codecvt_abstract_base<wchar_t, char, __mbstate_t>::out(__mbstate_t&, wchar_t const*, wchar_t const*, wchar_t const*&, char*, char*, char*&) const
+                 U std::ostream& std::ostream::_M_insert<double>(double)@@GLIBCXX_3.4.9
+                 U std::ostream::operator<<(int)@@GLIBCXX_3.4
+                 U std::ostream::operator<<(std::basic_streambuf<char, std::char_traits<char> >*)@@GLIBCXX_3.4
+00000000000101c0 T std::filesystem::equivalent(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+00000000000049d8 t std::filesystem::equivalent(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.187]
+000000000000b190 T std::filesystem::equivalent(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010e00 T std::filesystem::remove_all(std::filesystem::__cxx11::path const&)
+0000000000004cca t std::filesystem::remove_all(std::filesystem::__cxx11::path const&) [clone .cold.200]
+000000000000cbe0 T std::filesystem::remove_all(std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000466e t std::filesystem::remove_all(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.172]
+000000000000cbe0 t std::filesystem::remove_all(std::filesystem::__cxx11::path const&, std::error_code&) [clone .localalias.164]
+0000000000010c00 T std::filesystem::permissions(std::filesystem::__cxx11::path const&, std::filesystem::perms, std::filesystem::perm_options)
+0000000000004c12 t std::filesystem::permissions(std::filesystem::__cxx11::path const&, std::filesystem::perms, std::filesystem::perm_options) [clone .cold.197]
+000000000000bdc0 T std::filesystem::permissions(std::filesystem::__cxx11::path const&, std::filesystem::perms, std::filesystem::perm_options, std::error_code&)
+0000000000010ea0 T std::filesystem::resize_file(std::filesystem::__cxx11::path const&, unsigned long)
+0000000000004d03 t std::filesystem::resize_file(std::filesystem::__cxx11::path const&, unsigned long) [clone .cold.201]
+000000000000b860 T std::filesystem::resize_file(std::filesystem::__cxx11::path const&, unsigned long, std::error_code&)
+000000000000add0 t std::filesystem::resize_file(std::filesystem::__cxx11::path const&, unsigned long, std::error_code&) [clone .part.50]
+000000000000ff00 T std::filesystem::copy_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+00000000000048f4 t std::filesystem::copy_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.183]
+000000000000d4d0 T std::filesystem::copy_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000d800 T std::filesystem::current_path[abi:cxx11](std::error_code&)
+00000000000046ed t std::filesystem::current_path[abi:cxx11](std::error_code&) [clone .cold.175]
+000000000000e070 T std::filesystem::current_path[abi:cxx11]()
+0000000000004721 t std::filesystem::current_path[abi:cxx11]() [clone .cold.176]
+000000000000e110 T std::filesystem::current_path(std::filesystem::__cxx11::path const&)
+000000000000476a t std::filesystem::current_path(std::filesystem::__cxx11::path const&) [clone .cold.177]
+000000000000b150 T std::filesystem::current_path(std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000add0 t std::filesystem::current_path(std::filesystem::__cxx11::path const&, std::error_code&) [clone .part.44]
+000000000000c320 T std::filesystem::do_copy_file(char const*, char const*, std::filesystem::copy_options_existing_file, stat*, stat*, std::error_code&)
+000000000000464d t std::filesystem::do_copy_file(char const*, char const*, std::filesystem::copy_options_existing_file, stat*, stat*, std::error_code&) [clone .cold.171]
+0000000000010cb0 T std::filesystem::read_symlink(std::filesystem::__cxx11::path const&)
+0000000000004c4b t std::filesystem::read_symlink(std::filesystem::__cxx11::path const&) [clone .cold.198]
+000000000000d080 T std::filesystem::read_symlink(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000004685 t std::filesystem::read_symlink(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.173]
+00000000000189b0 T std::filesystem::fs_err_concat(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+000000000000509a t std::filesystem::fs_err_concat(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [clone .cold.111]
+0000000000010110 T std::filesystem::create_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+000000000000499f t std::filesystem::create_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.186]
+000000000000b100 T std::filesystem::create_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000add0 t std::filesystem::create_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&) [clone .part.43]
+0000000000011090 T std::filesystem::symlink_status(std::filesystem::__cxx11::path const&)
+0000000000004dae t std::filesystem::symlink_status(std::filesystem::__cxx11::path const&) [clone .cold.204]
+000000000000bca0 T std::filesystem::symlink_status(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010980 T std::filesystem::hard_link_count(std::filesystem::__cxx11::path const&)
+0000000000004b2e t std::filesystem::hard_link_count(std::filesystem::__cxx11::path const&) [clone .cold.193]
+000000000000b5d0 T std::filesystem::hard_link_count(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010ac0 T std::filesystem::last_write_time(std::filesystem::__cxx11::path const&)
+0000000000004ba0 t std::filesystem::last_write_time(std::filesystem::__cxx11::path const&) [clone .cold.195]
+0000000000010b60 T std::filesystem::last_write_time(std::filesystem::__cxx11::path const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >)
+0000000000004bd9 t std::filesystem::last_write_time(std::filesystem::__cxx11::path const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >) [clone .cold.196]
+000000000000b700 T std::filesystem::last_write_time(std::filesystem::__cxx11::path const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > >, std::error_code&)
+000000000000b640 T std::filesystem::last_write_time(std::filesystem::__cxx11::path const&, std::error_code&)
+00000000000107a0 T std::filesystem::create_directory(std::filesystem::__cxx11::path const&)
+0000000000004a83 t std::filesystem::create_directory(std::filesystem::__cxx11::path const&) [clone .cold.190]
+000000000000bb50 T std::filesystem::create_directory(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010840 T std::filesystem::create_directory(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+0000000000004abc t std::filesystem::create_directory(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.191]
+000000000000bac0 T std::filesystem::create_directory(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010060 T std::filesystem::create_hard_link(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+0000000000004966 t std::filesystem::create_hard_link(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.185]
+000000000000b0c0 T std::filesystem::create_hard_link(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000add0 t std::filesystem::create_hard_link(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&) [clone .part.42]
+0000000000015ab0 T std::filesystem::weakly_canonical(std::filesystem::__cxx11::path const&)
+0000000000004f37 t std::filesystem::weakly_canonical(std::filesystem::__cxx11::path const&) [clone .cold.209]
+00000000000167d0 T std::filesystem::weakly_canonical(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000004fe3 t std::filesystem::weakly_canonical(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.212]
+00000000000121d0 T std::filesystem::create_directories(std::filesystem::__cxx11::path const&)
+0000000000004e0b t std::filesystem::create_directories(std::filesystem::__cxx11::path const&) [clone .cold.206]
+00000000000112a0 T std::filesystem::create_directories(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000004de7 t std::filesystem::create_directories(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.205]
+000000000000d5c0 T std::filesystem::temp_directory_path[abi:cxx11](std::error_code&)
+00000000000046c9 t std::filesystem::temp_directory_path[abi:cxx11](std::error_code&) [clone .cold.174]
+000000000000e1b0 T std::filesystem::temp_directory_path[abi:cxx11]()
+00000000000047a6 t std::filesystem::temp_directory_path[abi:cxx11]() [clone .cold.178]
+000000000000ffb0 T std::filesystem::create_directory_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+000000000000492d t std::filesystem::create_directory_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.184]
+000000000000b140 T std::filesystem::create_directory_symlink(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010320 T std::filesystem::copy(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options)
+0000000000004a4a t std::filesystem::copy(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options) [clone .cold.189]
+000000000000ea60 T std::filesystem::copy(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options, std::error_code&)
+00000000000047ef t std::filesystem::copy(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options, std::error_code&) [clone .cold.179]
+000000000000ea60 t std::filesystem::copy(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options, std::error_code&) [clone .localalias.165]
+0000000000010f40 T std::filesystem::space(std::filesystem::__cxx11::path const&)
+0000000000004d3c t std::filesystem::space(std::filesystem::__cxx11::path const&) [clone .cold.202]
+000000000000b8b0 T std::filesystem::space(std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000add0 t std::filesystem::space(std::filesystem::__cxx11::path const&, std::error_code&) [clone .part.51]
+0000000000010d60 T std::filesystem::remove(std::filesystem::__cxx11::path const&)
+0000000000004c91 t std::filesystem::remove(std::filesystem::__cxx11::path const&) [clone .cold.199]
+000000000000b7b0 T std::filesystem::remove(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000010270 T std::filesystem::rename(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+0000000000004a11 t std::filesystem::rename(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.188]
+000000000000b820 T std::filesystem::rename(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000add0 t std::filesystem::rename(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&) [clone .part.49]
+0000000000010ff0 T std::filesystem::status(std::filesystem::__cxx11::path const&)
+0000000000004d75 t std::filesystem::status(std::filesystem::__cxx11::path const&) [clone .cold.203]
+000000000000b940 T std::filesystem::status(std::filesystem::__cxx11::path const&, std::error_code&)
+00000000000187d0 T std::filesystem::__cxx11::hash_value(std::filesystem::__cxx11::path const&)
+0000000000018c60 T std::filesystem::__cxx11::filesystem_error::_M_gen_what()
+00000000000050b0 t std::filesystem::__cxx11::filesystem_error::_M_gen_what() [clone .cold.112]
+000000000000f940 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code)
+00000000000103d0 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::filesystem::__cxx11::path const&, std::error_code)
+000000000000ddb0 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::error_code)
+000000000000f940 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code)
+00000000000103d0 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::filesystem::__cxx11::path const&, std::error_code)
+000000000000ddb0 W std::filesystem::__cxx11::filesystem_error::filesystem_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::error_code)
+0000000000018210 T std::filesystem::__cxx11::filesystem_error::~filesystem_error()
+0000000000018140 T std::filesystem::__cxx11::filesystem_error::~filesystem_error()
+0000000000018140 T std::filesystem::__cxx11::filesystem_error::~filesystem_error()
+000000000001ef80 T std::filesystem::__cxx11::directory_iterator::increment(std::error_code&)
+000000000001f320 T std::filesystem::__cxx11::directory_iterator::directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*)
+000000000001f320 T std::filesystem::__cxx11::directory_iterator::directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*)
+00000000000054f2 t std::filesystem::__cxx11::directory_iterator::directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*) [clone .cold.132]
+0000000000020480 T std::filesystem::__cxx11::directory_iterator::operator++()
+0000000000005740 t std::filesystem::__cxx11::directory_iterator::operator++() [clone .cold.136]
+000000000001f040 T std::filesystem::__cxx11::recursive_directory_iterator::pop(std::error_code&)
+000000000001f270 T std::filesystem::__cxx11::recursive_directory_iterator::pop()
+00000000000054b6 t std::filesystem::__cxx11::recursive_directory_iterator::pop() [clone .cold.131]
+000000000001f830 T std::filesystem::__cxx11::recursive_directory_iterator::increment(std::error_code&)
+000000000000556c t std::filesystem::__cxx11::recursive_directory_iterator::increment(std::error_code&) [clone .cold.133]
+000000000001db40 T std::filesystem::__cxx11::recursive_directory_iterator::operator=(std::filesystem::__cxx11::recursive_directory_iterator&&)
+000000000001da40 T std::filesystem::__cxx11::recursive_directory_iterator::operator=(std::filesystem::__cxx11::recursive_directory_iterator const&)
+000000000001fe70 T std::filesystem::__cxx11::recursive_directory_iterator::recursive_directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*)
+000000000001fe70 T std::filesystem::__cxx11::recursive_directory_iterator::recursive_directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*)
+00000000000055e0 t std::filesystem::__cxx11::recursive_directory_iterator::recursive_directory_iterator(std::filesystem::__cxx11::path const&, std::filesystem::directory_options, std::error_code*) [clone .cold.135]
+000000000001d930 T std::filesystem::__cxx11::recursive_directory_iterator::~recursive_directory_iterator()
+000000000001d930 T std::filesystem::__cxx11::recursive_directory_iterator::~recursive_directory_iterator()
+000000000001fdc0 T std::filesystem::__cxx11::recursive_directory_iterator::operator++()
+00000000000055a4 t std::filesystem::__cxx11::recursive_directory_iterator::operator++() [clone .cold.134]
+000000000001e230 W std::filesystem::__cxx11::_Dir::advance(bool, std::error_code&)
+000000000001d880 W std::filesystem::__cxx11::_Dir::~_Dir()
+000000000001d880 W std::filesystem::__cxx11::_Dir::~_Dir()
+0000000000019510 T std::filesystem::__cxx11::path::_M_split_cmpts()
+0000000000005102 t std::filesystem::__cxx11::path::_M_split_cmpts() [clone .cold.115]
+000000000001cac0 T std::filesystem::__cxx11::path::_S_convert_loc(char const*, char const*, std::locale const&)
+000000000000538a t std::filesystem::__cxx11::path::_S_convert_loc(char const*, char const*, std::locale const&) [clone .cold.126]
+0000000000019470 T std::filesystem::__cxx11::path::_M_add_filename(unsigned long, unsigned long)
+00000000000050e6 t std::filesystem::__cxx11::path::_M_add_filename(unsigned long, unsigned long) [clone .cold.114]
+00000000000193d0 T std::filesystem::__cxx11::path::_M_add_root_dir(unsigned long)
+00000000000050ca t std::filesystem::__cxx11::path::_M_add_root_dir(unsigned long) [clone .cold.113]
+0000000000019fa0 T std::filesystem::__cxx11::path::remove_filename()
+0000000000019db0 T std::filesystem::__cxx11::path::_M_add_root_name(unsigned long)
+0000000000005144 t std::filesystem::__cxx11::path::_M_add_root_name(unsigned long) [clone .cold.117]
+000000000001ab10 T std::filesystem::__cxx11::path::replace_filename(std::filesystem::__cxx11::path const&)
+0000000000019720 T std::filesystem::__cxx11::path::replace_extension(std::filesystem::__cxx11::path const&)
+000000000000511e t std::filesystem::__cxx11::path::replace_extension(std::filesystem::__cxx11::path const&) [clone .cold.116]
+0000000000018720 T std::filesystem::__cxx11::path::_M_trim()
+000000000000af00 W std::filesystem::__cxx11::path::operator=(std::filesystem::__cxx11::path&&)
+000000000000e250 W std::filesystem::__cxx11::path::path(std::filesystem::__cxx11::path const&)
+000000000000e250 W std::filesystem::__cxx11::path::path(std::filesystem::__cxx11::path const&)
+000000000000ad20 T std::filesystem::__cxx11::path::~path()
+000000000000ad20 T std::filesystem::__cxx11::path::~path()
+000000000000e970 W std::filesystem::__cxx11::path::operator/=(std::filesystem::__cxx11::path const&)
+000000000000f6f0 T std::filesystem::absolute(std::filesystem::__cxx11::path const&)
+000000000000485a t std::filesystem::absolute(std::filesystem::__cxx11::path const&) [clone .cold.181]
+000000000000f380 T std::filesystem::absolute(std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000484a t std::filesystem::absolute(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.180]
+0000000000010a20 T std::filesystem::is_empty(std::filesystem::__cxx11::path const&)
+0000000000004b67 t std::filesystem::is_empty(std::filesystem::__cxx11::path const&) [clone .cold.194]
+000000000000bba0 T std::filesystem::is_empty(std::filesystem::__cxx11::path const&, std::error_code&)
+00000000000166e0 T std::filesystem::relative(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+0000000000004fcb t std::filesystem::relative(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.211]
+0000000000017ab0 T std::filesystem::relative(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000005082 t std::filesystem::relative(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.214]
+0000000000015a00 T std::filesystem::canonical(std::filesystem::__cxx11::path const&)
+0000000000004ef1 t std::filesystem::canonical(std::filesystem::__cxx11::path const&) [clone .cold.208]
+0000000000014e40 T std::filesystem::canonical(std::filesystem::__cxx11::path const&, std::error_code&)
+0000000000004e44 t std::filesystem::canonical(std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.207]
+000000000000fe50 T std::filesystem::copy_file(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options)
+00000000000048bb t std::filesystem::copy_file(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options) [clone .cold.182]
+000000000000caf0 T std::filesystem::copy_file(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::filesystem::copy_options, std::error_code&)
+000000000001d7a0 W std::filesystem::_Dir_base::advance(bool, std::error_code&)
+000000000001d740 W std::filesystem::_Dir_base::_Dir_base(char const*, bool, std::error_code&)
+000000000001d740 W std::filesystem::_Dir_base::_Dir_base(char const*, bool, std::error_code&)
+00000000000108e0 T std::filesystem::file_size(std::filesystem::__cxx11::path const&)
+0000000000004af5 t std::filesystem::file_size(std::filesystem::__cxx11::path const&) [clone .cold.192]
+000000000000b510 T std::filesystem::file_size(std::filesystem::__cxx11::path const&, std::error_code&)
+00000000000165f0 T std::filesystem::proximate(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&)
+0000000000004fb3 t std::filesystem::proximate(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&) [clone .cold.210]
+0000000000017710 T std::filesystem::proximate(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&)
+000000000000505f t std::filesystem::proximate(std::filesystem::__cxx11::path const&, std::filesystem::__cxx11::path const&, std::error_code&) [clone .cold.213]
+000000000000cf30 W std::_Deque_base<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_initialize_map(unsigned long)
+                 U std::logic_error::logic_error(char const*)@@GLIBCXX_3.4.21
+                 U std::logic_error::~logic_error()@@GLIBCXX_3.4
+                 U std::__basic_file<char>::sys_open(int, std::_Ios_Openmode)@@GLIBCXX_3.4
+                 U std::__basic_file<char>::~__basic_file()@@GLIBCXX_3.4
+00000000000180a0 W std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>::~codecvt_utf8()
+0000000000018080 W std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>::~codecvt_utf8()
+0000000000018080 W std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>::~codecvt_utf8()
+                 U std::system_error::~system_error()@@GLIBCXX_3.4.11
+                 U std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::sync()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::close()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::imbue(std::locale const&)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::setbuf(char*, long)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::xsgetn(char*, long)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::xsputn(char const*, long)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::seekoff(long, std::_Ios_Seekdir, std::_Ios_Openmode)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::seekpos(std::fpos<__mbstate_t>, std::_Ios_Openmode)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::overflow(int)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::pbackfail(int)@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::showmanyc()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::underflow()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::basic_filebuf()@@GLIBCXX_3.4
+                 U std::basic_filebuf<char, std::char_traits<char> >::~basic_filebuf()@@GLIBCXX_3.4
+                 U std::runtime_error::runtime_error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@@GLIBCXX_3.4.21
+                 U std::basic_ofstream<char, std::char_traits<char> >::close()@@GLIBCXX_3.4
+                 U std::basic_ofstream<char, std::char_traits<char> >::basic_ofstream(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::_Ios_Openmode)@@GLIBCXX_3.4.21
+                 U std::basic_ofstream<char, std::char_traits<char> >::~basic_ofstream()@@GLIBCXX_3.4
+                 U std::basic_streambuf<char, std::char_traits<char> >::uflow()@@GLIBCXX_3.4
+000000000000adb0 W std::_Sp_counted_ptr<decltype(nullptr), (__gnu_cxx::_Lock_policy)2>::_M_dispose()
+000000000000adc0 W std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>::_M_destroy()
+000000000000cb30 W std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>::_M_release()
+                 U std::__codecvt_utf8_base<wchar_t>::~__codecvt_utf8_base()@@GLIBCXX_3.4.21
+00000000000075c0 t ResultRow* std::__uninitialized_copy<false>::__uninit_copy<std::move_iterator<ResultRow*>, ResultRow*>(std::move_iterator<ResultRow*>, std::move_iterator<ResultRow*>, ResultRow*)
+000000000001d180 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::_M_destroy()
+000000000001d2b0 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::_M_dispose()
+000000000001d1e0 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::_M_get_deleter(std::type_info const&)
+000000000001d230 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+000000000001d160 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+000000000001d160 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+000000000001d190 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::_M_destroy()
+000000000001d680 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::_M_dispose()
+000000000001d1a0 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::_M_get_deleter(std::type_info const&)
+000000000001d220 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+000000000001d170 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+000000000001d170 W std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+                 U std::_V2::system_category()@@GLIBCXX_3.4.21
+                 U std::_V2::generic_category()@@GLIBCXX_3.4.21
+000000000001dc10 W std::filesystem::__cxx11::_Dir& std::deque<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir> >::emplace_back<std::filesystem::__cxx11::_Dir>(std::filesystem::__cxx11::_Dir&&)
+000000000001e0a0 W std::deque<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir> >::_M_pop_back_aux()
+0000000000012530 W void std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_insert_aux<std::filesystem::__cxx11::path::iterator>(std::_Deque_iterator<std::filesystem::__cxx11::path, std::filesystem::__cxx11::path&, std::filesystem::__cxx11::path*>, std::filesystem::__cxx11::path::iterator, std::filesystem::__cxx11::path::iterator, unsigned long)
+0000000000011130 W std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_reallocate_map(unsigned long, bool)
+0000000000014490 W void std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_range_insert_aux<std::filesystem::__cxx11::path::iterator>(std::_Deque_iterator<std::filesystem::__cxx11::path, std::filesystem::__cxx11::path&, std::filesystem::__cxx11::path*>, std::filesystem::__cxx11::path::iterator, std::filesystem::__cxx11::path::iterator, std::forward_iterator_tag)
+0000000000012380 W std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_new_elements_at_back(unsigned long)
+0000000000012270 W std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::_M_new_elements_at_front(unsigned long)
+000000000000c010 W std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::~deque()
+000000000000c010 W std::deque<std::filesystem::__cxx11::path, std::allocator<std::filesystem::__cxx11::path> >::~deque()
+                 U std::chrono::_V2::system_clock::now()@@GLIBCXX_3.4.19
+                 U std::locale::~locale()@@GLIBCXX_3.4
+0000000000009c30 t ResultRow& std::vector<ResultRow, std::allocator<ResultRow> >::emplace_back<ResultRow>(ResultRow&&)
+0000000000009ac0 t std::vector<ResultRow, std::allocator<ResultRow> >::~vector()
+0000000000009ac0 t std::vector<ResultRow, std::allocator<ResultRow> >::~vector()
+000000000000a370 t void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&)
+0000000000019220 W std::filesystem::__cxx11::path::_Cmpt& std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::emplace_back<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::filesystem::__cxx11::path::_Type, unsigned long&>(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::filesystem::__cxx11::path::_Type&&, unsigned long&)
+0000000000019880 W void std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::filesystem::__cxx11::path::_Type, int>(__gnu_cxx::__normal_iterator<std::filesystem::__cxx11::path::_Cmpt*, std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::filesystem::__cxx11::path::_Type&&, int&&)
+0000000000018cf0 W void std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::_M_realloc_insert<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::filesystem::__cxx11::path::_Type, unsigned long&>(__gnu_cxx::__normal_iterator<std::filesystem::__cxx11::path::_Cmpt*, std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> > >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::filesystem::__cxx11::path::_Type&&, unsigned long&)
+000000000000e3a0 W std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::operator=(std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> > const&)
+000000000000aca0 T std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::~vector()
+000000000000aca0 T std::vector<std::filesystem::__cxx11::path::_Cmpt, std::allocator<std::filesystem::__cxx11::path::_Cmpt> >::~vector()
+0000000000009b20 t std::vector<std::vector<ResultRow, std::allocator<ResultRow> >, std::allocator<std::vector<ResultRow, std::allocator<ResultRow> > > >::~vector()
+0000000000009b20 t std::vector<std::vector<ResultRow, std::allocator<ResultRow> >, std::allocator<std::vector<ResultRow, std::allocator<ResultRow> > > >::~vector()
+0000000000009bd0 t std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector()
+0000000000009bd0 t std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector()
+                 U std::codecvt<wchar_t, char, __mbstate_t>::codecvt(unsigned long)@@GLIBCXX_3.4
+000000000000daf0 W std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long)
+000000000000a910 T void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char*>(char*, char*, std::forward_iterator_tag)
+000000000000a7a0 T void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag)
+0000000000007670 t void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag) [clone .constprop.4]
+00000000000188a0 W std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace_aux(unsigned long, unsigned long, unsigned long, char)
+000000000000bf00 W std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::swap(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)
+000000000000ce60 W std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::resize(unsigned long, char)
+000000000000aba0 T std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long)
+000000000000cd90 W std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_assign(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+000000000000ae00 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_create(unsigned long&, unsigned long) [clone .isra.100]
+000000000001d240 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_create(unsigned long&, unsigned long) [clone .isra.66]
+00000000000180d0 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_create(unsigned long&, unsigned long) [clone .isra.68]
+000000000000a9e0 T std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long)
+000000000000a870 T std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&)
+000000000000a870 T std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&)
+000000000000d580 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [clone .constprop.169]
+0000000000007740 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string<std::allocator<char> >(char const*, std::allocator<char> const&) [clone .constprop.3]
+000000000001c7e0 W std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_M_replace(unsigned long, unsigned long, wchar_t const*, unsigned long)
+000000000001c700 W std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::resize(unsigned long, wchar_t)
+000000000001c560 W std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_M_create(unsigned long&, unsigned long)
+000000000001c5c0 W std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >::_M_mutate(unsigned long, unsigned long, wchar_t const*, unsigned long)
+                 U std::ios_base::ios_base()@@GLIBCXX_3.4
+                 U std::ios_base::~ios_base()@@GLIBCXX_3.4
+                 U std::basic_ios<char, std::char_traits<char> >::init(std::basic_streambuf<char, std::char_traits<char> >*)@@GLIBCXX_3.4
+                 U operator new(unsigned long)@@GLIBCXX_3.4
+                 U std::_Hash_bytes(void const*, unsigned long, unsigned long)@@CXXABI_1.3.5
+0000000000007e00 t void std::__adjust_heap<__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, long, ResultRow, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}> >(__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, long, __gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, ResultRow, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>) [clone .isra.91]
+0000000000007aa0 t void std::__insertion_sort<__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}> >(__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>) [clone .isra.152]
+00000000000084a0 t void std::__introsort_loop<__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}> >(__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>, long, __gnu_cxx::__ops::_Iter_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>)
+                 U std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long)@@GLIBCXX_3.4.9
+                 U std::__throw_bad_alloc()@@GLIBCXX_3.4
+                 U std::__throw_logic_error(char const*)@@GLIBCXX_3.4
+                 U std::__throw_length_error(char const*)@@GLIBCXX_3.4
+                 U std::__throw_out_of_range_fmt(char const*, ...)@@GLIBCXX_3.4.20
+00000000000077d0 t void std::__unguarded_linear_insert<__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, __gnu_cxx::__ops::_Val_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}> >(__gnu_cxx::__normal_iterator<ResultRow*, std::vector<ResultRow, std::allocator<ResultRow> > >, __gnu_cxx::__ops::_Val_comp_iter<main::{lambda(ResultRow const&, ResultRow const&)#1}>) [clone .isra.130]
+0000000000012490 W void std::_Destroy<std::_Deque_iterator<std::filesystem::__cxx11::path, std::filesystem::__cxx11::path&, std::filesystem::__cxx11::path*> >(std::_Deque_iterator<std::filesystem::__cxx11::path, std::filesystem::__cxx11::path&, std::filesystem::__cxx11::path*>, std::_Deque_iterator<std::filesystem::__cxx11::path, std::filesystem::__cxx11::path&, std::filesystem::__cxx11::path*>)
+                 U std::terminate()@@GLIBCXX_3.4
+                 U std::codecvt<wchar_t, char, __mbstate_t> const& std::use_facet<std::codecvt<wchar_t, char, __mbstate_t> >(std::locale const&)@@GLIBCXX_3.4
+                 U std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@@GLIBCXX_3.4
+000000000000ac30 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*)
+0000000000004630 t std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, char const*) [clone .cold.0]
+0000000000028b40 V typeinfo for __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >
+0000000000028bd8 V typeinfo for std::filesystem::__cxx11::filesystem_error
+                 U typeinfo for std::logic_error@@GLIBCXX_3.4
+0000000000028c88 V typeinfo for std::_Mutex_base<(__gnu_cxx::_Lock_policy)2>
+0000000000028bf0 V typeinfo for std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>
+                 U typeinfo for std::system_error@@GLIBCXX_3.4.11
+                 U typeinfo for std::basic_filebuf<char, std::char_traits<char> >@@GLIBCXX_3.4
+0000000000028c98 V typeinfo for std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>
+                 U typeinfo for std::__codecvt_utf8_base<wchar_t>@@GLIBCXX_3.4.21
+0000000000028cc8 V typeinfo for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>
+0000000000028cb0 V typeinfo for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>
+0000000000021560 V typeinfo name for __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >
+0000000000021680 V typeinfo name for std::filesystem::__cxx11::filesystem_error
+00000000000218a0 V typeinfo name for std::_Mutex_base<(__gnu_cxx::_Lock_policy)2>
+00000000000216c0 V typeinfo name for std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>
+0000000000021900 V typeinfo name for std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>
+00000000000218d0 V typeinfo name for std::_Sp_make_shared_tag
+00000000000219a0 V typeinfo name for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>
+0000000000021940 V typeinfo name for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>
+                 U vtable for __cxxabiv1::__class_type_info@@CXXABI_1.3
+                 U vtable for __cxxabiv1::__si_class_type_info@@CXXABI_1.3
+0000000000028b58 V vtable for __gnu_cxx::stdio_filebuf<char, std::char_traits<char> >
+0000000000028c08 V vtable for std::filesystem::__cxx11::filesystem_error
+                 U vtable for std::ostream@@GLIBCXX_3.4
+0000000000028c30 V vtable for std::codecvt_utf8<wchar_t, 1114111ul, (std::codecvt_mode)0>
+                 U vtable for std::basic_filebuf<char, std::char_traits<char> >@@GLIBCXX_3.4
+                 U vtable for std::basic_streambuf<char, std::char_traits<char> >@@GLIBCXX_3.4
+0000000000028d18 V vtable for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack, std::allocator<std::filesystem::__cxx11::recursive_directory_iterator::_Dir_stack>, (__gnu_cxx::_Lock_policy)2>
+0000000000028ce0 V vtable for std::_Sp_counted_ptr_inplace<std::filesystem::__cxx11::_Dir, std::allocator<std::filesystem::__cxx11::_Dir>, (__gnu_cxx::_Lock_policy)2>
+                 U vtable for std::basic_ios<char, std::char_traits<char> >@@GLIBCXX_3.4
+0000000000021a28 u std::_Sp_make_shared_tag::_S_ti()::__tag

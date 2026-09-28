@@ -1,0 +1,28 @@
+== PMU access probe ==
+0.30,msec,task-clock,300409,100.00,0.349,CPUs utilized
+<not supported>,,cycles,0,100.00,,
+<not supported>,,instructions,0,100.00,,
+<not supported>,,cache-misses,0,100.00,,
+== GenDB vs DuckDB ==
+Q1: DuckDB 39.76 ms, GenDB 47.81 ms, speedup 0.83x
+Q3: sample 0 recording bounded-numeric correctness failure
+Q3: sample 5 recording bounded-numeric correctness failure
+Q3: sample 6 recording bounded-numeric correctness failure
+Q3: DuckDB 65.13 ms, GenDB 123.74 ms, speedup 0.53x
+Q6: DuckDB 17.65 ms, GenDB 31.08 ms, speedup 0.57x
+Q9: DuckDB 290.08 ms, GenDB 147.35 ms, speedup 1.97x
+Q18: DuckDB 146.64 ms, GenDB 70.49 ms, speedup 2.08x
+== GenDB iteration ablation ==
+Q1/iter_0: 83.22 ms
+Q1/iter_1: 85.52 ms
+Q1/iter_2: 76.35 ms
+Q1/iter_3: 47.02 ms
+Q3/iter_0: 160.45 ms
+Q3/iter_1: 126.22 ms
+Q6/iter_0: 26.50 ms
+Q9/iter_0: 146.61 ms
+Q9/iter_1: 148.62 ms
+Q9/iter_2: 94.82 ms
+Q18/iter_0: 8682.36 ms
+Q18/iter_1: 69.56 ms
+Benchmark complete: /data00/benchmarks/gendb-tpch-sf10-20260928/evidence/run

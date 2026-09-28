@@ -9,6 +9,7 @@ applies_to:
 depends_on:
   - recallfs-source-gendb-generative-query-processing-v1
   - recallfs-evidence-gendb-implementation-audit-v1
+  - recallfs-evidence-gendb-tpch-sf10-reproduction-v1
   - projects/stream_engine/docs/jit/json_encoder_llvm_jit_plan.md
   - projects/stream_engine/docs/jit/json_encoder_v2_negative_optimization_case.md
   - projects/stream_engine/docs/jit/json_encoder_v2_optimization_journal.md
@@ -17,6 +18,8 @@ supersedes: []
 verified_by:
   - learning/studies/20260928-gendb-generative-query-processing/evidence/source-digests.txt
   - learning/studies/20260928-gendb-generative-query-processing/evidence/implementation-audit.md
+  - learning/studies/20260928-gendb-generative-query-processing/evidence/remote-d2-20260928/run/benchmark-results.json
+  - learning/studies/20260928-gendb-generative-query-processing/evidence/remote-d2-20260928/run/ablation-results.json
   - learning/studies/20260928-gendb-generative-query-processing/report.html
 ---
 
@@ -31,7 +34,8 @@ verified_by:
 >
 > 浏览器版：[report.html](report.html)。
 
-本文严格区分论文报告、上游代码事实、RecallFS 已有运行经验和产品建议。
+本文严格区分论文报告、上游代码事实、`d2` 独立复现、RecallFS 已有运行经验和
+产品建议。
 
 ## 1. 结论先行
 
@@ -39,6 +43,12 @@ GenDB 证明了一个值得投入的方向：
 
 > 对**高频、只读、分析型、输入语义稳定**的查询模板，离线搜索一个针对数据分布
 > 和硬件特化的执行程序，可以显著快于通用执行器。
+
+独立 SF10 复现把这个结论收窄了：五查询诊断性 aggregate 上 GenDB 比 DuckDB
+快 `1.33x`，但只赢 Q9 和 Q18；Q1、Q3、Q6 均回退，而且 Q3 的并行浮点归约
+未通过严格输出确定性门禁。若 dispatcher 只接纳 Q9/Q18，aggregate 可到
+`1.64x`。所以真正可迁移的能力是“搜索、验证、选择和回退”，不是把某台机器上
+生成的 binary 当作普适优化。
 
 它没有证明可以用 LLM 取代数据库内核。论文和实现都没有覆盖生产数据库最难的
 语义：事务、Multi-Version Concurrency Control（MVCC）、并发更新、容灾恢复、
@@ -146,10 +156,89 @@ hash table 布局、共享方式与 cache footprint。这里的普遍结论是�
 | SEC-EDGAR，6 个查询 | 328 ms | DuckDB + GenDB indexes 1,549 ms | 5.0x |
 
 这些结果来自 384 GB 内存、64 hardware threads、全部数据驻留内存的单机。
-每个系统测三个 hot run。本文没有独立复现，不能把数字外推到 Tide 的分布式、
-流式或混合 workload。
+每个系统测三个 hot run。以下独立复现使用不同机器和更对称的结果输出口径，
+不能把任何一组数字直接外推到 Tide 的分布式、流式或混合 workload。
 
-## 5. 经济性：先算摊销点
+## 5. 独立复现：收益存在，但不是全面胜出
+
+完整方法与原始证据见
+[`evidence/tpch-sf10-reproduction.md`](evidence/tpch-sf10-reproduction.md)。
+`d2` 是双路 64 物理核 Xeon Platinum 8457C、251 GiB 内存的 KVM 主机。实验固定
+GenDB 论文 commit、dbgen commit、64 CPU affinity 和跨两 NUMA 节点 interleave；
+两边读取同一批 SF10 `.tbl`，每题 1 次预热、10 次正式测量。
+正式样本采用 AB/BA 顺序平衡；每个被计时执行之前，同一系统先执行一次不计时
+的同查询，以降低执行位置、频率状态和热度差异。
+
+准备阶段先以 FIL-C `0.684` 编译并执行固定版本 dbgen；SF0.01 八张表与独立 GCC
+构建在相同的 `MACHINE=MAC DATABASE=ORACLE WORKLOAD=TPCH` 配置下逐文件
+同哈希且行数符合预期，heap-use-after-free 负向控制也被 FIL-C 拒绝。结构化
+preparation manifest 绑定源码、参考结果、harness、二进制、存储、DuckDB 文件
+和 FIL-C 证据，正式运行前逐项验真。
+
+主口径让两边都产出完整 CSV：
+
+- DuckDB：`execute + fetchall + CSV serialization`；
+- GenDB：程序内部 `total`，包含 CSV output，不含外部进程启动。
+
+| Query | DuckDB median | GenDB median | Speedup | 结论 |
+| --- | ---: | ---: | ---: | --- |
+| Q1 | 39.76 ms | 47.81 ms | 0.83x | DuckDB 胜 |
+| Q3 | 65.13 ms | 123.74 ms | 0.53x | DuckDB 胜且 correctness fail |
+| Q6 | 17.65 ms | 31.08 ms | 0.57x | DuckDB 胜 |
+| Q9 | 290.08 ms | 147.35 ms | 1.97x | GenDB 胜 |
+| Q18 | 146.64 ms | 70.49 ms | 2.08x | GenDB 胜 |
+| **五查询总和** | **559.27 ms** | **420.47 ms** | **1.33x** | **诊断性部分复现** |
+
+GenDB 若计入进程启动，总和为 `492.08 ms`，收益降到 `1.14x`。按查询只接纳
+Q9/Q18、其余回退 DuckDB，总和为 `340.38 ms`、相对全 DuckDB 为 `1.64x`；
+计入 GenDB 进程启动后为 `381.07 ms`，仍有 `1.47x`。
+
+位置分层显示最终一轮的 Q9/Q18 在 AB/BA 两个位置都获胜，Q1/Q3/Q6 都落后。
+GenDB 各位置的绝对耗时仍有明显差异，因此小幅 iteration 差异不能当作已隔离的
+因果效应。
+
+Q1/Q6/Q9/Q18 的 11 次检查均同时精确匹配 DuckDB 和作者 SF10 参考结果。Q3
+只有 8/11 次 canonical SHA-256 精确匹配；另 3 次将精确值 `439855.3250`
+输出为 `.32` 而不是 `.33`，且差异保存在结果 JSON 中。独立 30 次稳定性
+探针还观察到 `.33` 22 次、`.32` 8 次。差异不超过一分且不改变排序，但严格门禁
+必须拒绝该 artifact；性能数据仅保留用于诊断。
+
+与论文相比，DuckDB aggregate 只变化 `-5.9%`，GenDB 却慢 `96.2%`。因此
+`2.77x -> 1.33x` 的复现差距主要来自特化 artifact 的可移植性，而不是本次
+DuckDB baseline 明显偏慢。不同 CPU/cache/NUMA、GCC 版本和每进程 OpenMP
+启动是合理解释，但本实验未逐项隔离，不能宣称单一因果。
+
+同机消融进一步确认 runtime feedback 的价值：
+
+| Query | Iteration 0 | Selected best | Improvement | 主要变化 |
+| --- | ---: | ---: | ---: | --- |
+| Q1 | 83.22 ms | 47.02 ms | 1.77x | double 列压窄为整数列 |
+| Q3 | 160.45 ms | 126.22 ms | 1.27x | 随机索引探测改为顺序扫描 |
+| Q6 | 26.50 ms | 26.50 ms | 1.00x | 无优化轮次 |
+| Q9 | 146.61 ms | 94.82 ms | 1.55x | 持久 order-year nibble + 紧凑列 |
+| Q18 | 8682.36 ms | 69.56 ms | 124.81x | per-thread hash 改为有序索引分组扫描 |
+
+Q18 是最强证据：第一版生成代码并不好，真正的数量级收益来自 profile 揭示
+hash aggregation 的 512 MB bucket 和数百万 heap node 后，下一轮彻底换算法。
+Q1 的 iteration 1 从 `83.22 ms` 回退到 `85.52 ms`，也说明搜索过程并不单调；
+稳定、数量级的 Q18 变化才是最强机制证据。所以 GenDB 的核心收益是
+**可执行反馈约束下的物理实现搜索**，而不是 LLM 第一次生成代码的能力。
+
+存储代价也不能隐藏：
+
+| Artifact | Size |
+| --- | ---: |
+| Raw TPC-H `.tbl` | 11.23 GB |
+| DuckDB database | 5.74 GB |
+| GenDB base columns | 10.35 GB |
+| GenDB general indexes | 1.06 GB |
+| GenDB query-derived columns | 0.45 GB |
+| GenDB total | 11.86 GB |
+
+GenDB 的 1.06 GB 通用索引和 0.45 GB 查询派生列，把一部分在线工作前移到了存储
+构建与失效管理。该成本必须进入 admission，而不能只展示 hot-query latency。
+
+## 6. 经济性：先算摊销点
 
 使用专用 artifact 的前提不是“它更快”，而是收益能够覆盖生成、构建、验证、
 部署和维护成本。最小模型是：
@@ -178,6 +267,10 @@ $$
 - TPC-H 约需重复 14,400 轮五查询 workload 才摊平生成 wall time；
 - SEC-EDGAR 约需重复 6,900 轮六查询 workload 才摊平。
 
+按本次诊断性 `138.81 ms` 净收益重算，TPC-H 需要约 `39,300` 轮；按 GenDB
+process wall 则约 `81,200` 轮。若逐查询回退负收益 artifact，摊销会改善，但仍
+必须加入 storage build、验证、发布、失效和额外空间成本。
+
 因此 admission policy 应排序：
 
 1. 总 CPU-hours 或资源成本，而不是单次 speedup；
@@ -188,7 +281,7 @@ $$
 
 短查询即使有高倍 speedup，也可能不值得生成。
 
-## 6. 上游实现不能直接进生产
+## 7. 上游实现不能直接进生产
 
 完整代码审计见
 [`evidence/implementation-audit.md`](evidence/implementation-audit.md)。最关键的
@@ -211,9 +304,9 @@ $$
 
 因此，可复用的是思想和部分 artifact shape，不是上游 orchestrator。
 
-## 7. Tide/stream_engine 的目标架构
+## 8. Tide/stream_engine 的目标架构
 
-### 7.1 所有权边界
+### 8.1 所有权边界
 
 ```text
 Online data plane
@@ -251,7 +344,7 @@ query telemetry -> workload fingerprint -> candidate IR
 - verifier 通过标准；
 - fallback 和熔断策略。
 
-### 7.2 插件接口
+### 8.2 插件接口
 
 遵循 Everything is a plugin，但 hot path 不使用通用虚调用广播。建议接口面：
 
@@ -268,7 +361,7 @@ query telemetry -> workload fingerprint -> candidate IR
 Agent 可以实现多个 `CandidateGenerator`，例如 rule-based、LLM、search 或人工提交；
 下游门禁不感知候选来自哪种模型。
 
-### 7.3 Artifact identity
+### 8.3 Artifact identity
 
 cache key 至少包含：
 
@@ -292,7 +385,7 @@ logical_plan_digest
 和 cardinality guard，可绑定“允许的 stats 区间”；若使用 query-specific derived
 data，则必须绑定 snapshot/partition epoch。
 
-## 8. 最小可行落地顺序
+## 9. 最小可行落地顺序
 
 ### L0：离线 advisor
 
@@ -332,7 +425,7 @@ Velox plan。先 shadow，再 1%、10%、50% canary。
 storage migration workflow 创建新版本。旧版本保持可读，promotion 与 query
 artifact 分离，禁止 Agent 原地修改生产布局。
 
-## 9. 必须建立的门禁
+## 10. 必须建立的门禁
 
 | Gate | 最低要求 | 失败动作 |
 | --- | --- | --- |
@@ -354,7 +447,7 @@ artifact 分离，禁止 Agent 原地修改生产布局。
 
 否则 Agent 会对一个固定 oracle 过拟合，而不是生成语义正确的程序。
 
-## 10. Worked Example
+## 11. Worked Example
 
 以 stream_engine 的固定 schema JSON encoder 为第一目标：
 
@@ -376,7 +469,7 @@ artifact 分离，禁止 Agent 原地修改生产布局。
 - failure 可以局部回退；
 - 现有证据已经说明哪些 execution shape 有效。
 
-## 11. Reconciliation Anchors
+## 12. Reconciliation Anchors
 
 | ID | 输入 | 预期 |
 | --- | --- | --- |
@@ -391,7 +484,7 @@ artifact 分离，禁止 Agent 原地修改生产布局。
 当前研究验证了上游在 `GDB-APP-1`、`GDB-APP-2` 和安全隔离上的缺口；其余是
 Tide 产品化前必须实现的验收合同，不是已完成能力。
 
-## 12. 最终判断
+## 13. 最终判断
 
 **建议采用 GenDB 的思想，但不要采用其产品边界。**
 

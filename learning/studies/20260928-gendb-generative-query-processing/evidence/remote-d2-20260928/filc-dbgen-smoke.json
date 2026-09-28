@@ -1,0 +1,39 @@
+{
+  "container_image": "debian@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a",
+  "dbgen_commit": "32f1c1b92d1664dba542e927d23d86ffa57aa253",
+  "dbgen_flags": "MACHINE=MAC DATABASE=ORACLE WORKLOAD=TPCH; CC differs only between FIL-C and native oracle",
+  "filc_archive_sha256": "eefb594bcbc1261a18dfa8b50041674635f53df2b5fe067915b5652adaed4e3f",
+  "filc_matches_native_sha256": true,
+  "filc_tool_root": "/data00/benchmarks/gendb-tpch-sf10-20260928/.tmp/fil-c/fil-c-0.684",
+  "filc_version": "0.684",
+  "filcc_sha256": "5f431bb27ce9d19ffb4534df74417e5352d14ad9673845543f2131662845eb8e",
+  "native_negative_control_exit_status": 0,
+  "native_oracle": "GCC build from the same clean pinned source",
+  "negative_control": "heap-use-after-free",
+  "negative_control_detected": true,
+  "negative_control_exit_status": 133,
+  "output_sha256": {
+    "customer.tbl": "6b690cce995cb715861ebf2c77aa02c61406e3a0ddcd3326d1ecfa969b9163f8",
+    "lineitem.tbl": "ee411d23efcd2943ef70489799e37dfc24543dbd03b461a88e16fd82a95765e4",
+    "nation.tbl": "66f96949939fa8fdf1c4ffed1e5f6c2842fe11a14b51fdc6ed1e17460031e8c5",
+    "orders.tbl": "07cc8b362fda6d0b503c4d6c5d228817548e0688a3b21b590c52bb47b7b79c0f",
+    "part.tbl": "896e14465325110dd9cf05a16972028a58be0010959262176ecd97f4db1702f8",
+    "partsupp.tbl": "5947b5ebab042b49148f82c1324ad122f7e0d98cfadcbef12da0a5e239e09e79",
+    "region.tbl": "6022658d673924389b54dcb70fa8c3d6da1b0d7afa3c1c017bab62a019df404f",
+    "supplier.tbl": "9dc1002ee774699a092ed83ba278caf466d62a15d7e35bb6ed9293475528734b"
+  },
+  "performance_evidence": false,
+  "row_counts": {
+    "customer.tbl": 1500,
+    "lineitem.tbl": 60175,
+    "nation.tbl": 25,
+    "orders.tbl": 15000,
+    "part.tbl": 2000,
+    "partsupp.tbl": 8000,
+    "region.tbl": 5,
+    "supplier.tbl": 100
+  },
+  "schema_version": 1,
+  "scope": "TPC-H dbgen SF0.01 executed path",
+  "status": "pass"
+}

@@ -1,0 +1,4 @@
+0.30,msec,task-clock,300409,100.00,0.349,CPUs utilized
+<not supported>,,cycles,0,100.00,,
+<not supported>,,instructions,0,100.00,,
+<not supported>,,cache-misses,0,100.00,,
