@@ -51,6 +51,7 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
 | `.trae/skills/html-report/` | 自包含技术 HTML 报告的生成与浏览器验收入口 |
 | `.trae/skills/apple-design/` | HTML/UI 的排版、材质、反馈与无障碍设计原则 |
 | `.trae/skills/fixed-point-optimization/` | 定点数优化场景发现、数值证明、codegen 与 benchmark 门禁 |
+| `skills/nmem-memory-protocol/` | nmem 主动检索、结构化写入与 immutable 关联协议 |
 
 ## 3. 算法训练摘要
 
@@ -83,9 +84,23 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
 - **C 正确性工具链**：C 代码必须先使用 [FIL-C](https://fil-c.org/) 编译和测试；FIL-C 用于验证被执行路径的功能正确性、内存安全和未定义行为边界，不作为完整证明或性能基线。将 FIL-C 及其宿主适配封装在仓库 `.tmp/fil-c/`，不得提交编译器、VM 镜像或构建产物；若当前平台不能原生运行 FIL-C，使用其官方支持的隔离 Linux 环境，不得静默降级为系统 Clang。
 - **C benchmark 工具链**：性能测试必须在目标机器上切换到原生 C 编译器，并使用适合该机器和生产语义的最佳优化配置；默认至少包含 `-O3 -march=native -mtune=native -DNDEBUG`，工具链稳定支持时再启用 LTO。benchmark 前仍须通过 FIL-C 正确性验证；优化构建必须保留始终启用的结果校验和可观察 sink，并通过反汇编或负向测试确认待测工作未被 DCE、循环交换或合并。测量时固定 CPU/NUMA，记录 CPU 拓扑、编译器版本、完整 flags、source/binary digest、频率策略和重复次数，并用 wall time 与硬件计数器交叉验证；PMU 不可用时须记录原因，退化为拓扑 + wall time 证据，不得静默换用 VM、模拟器或安全插桩计数。不得把 FIL-C、VM、模拟器或安全插桩运行时间当作目标 CPU 的性能结论。
 - **工具实现**：有长期复用价值的工具优先使用 Rust 实现，并按领域放入 `tools/$domain/`；工具二进制和临时输出写入 `.tmp/`。
-- **唯一跨会话记忆源**：nmem 保存跨会话的经验、设计理由和决策历史；active tracked design 约束当前实现目标，不再将其他记忆文件作为长期沉淀。
-- **格式化写入**：写入 nmem 前先组织标题、结论、背景、约束、证据和后续动作；复杂流程使用 `text` 代码块中的 ASCII graph，图内不得使用 CJK、全角符号或 Unicode box drawing。
-- **Immutable memory**：已写入的记忆不可原地改写或删除。新认识应创建为新记忆，并通过 `EVOLVES` 或显式语义关系（如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
+- **唯一跨会话记忆源**：nmem 是 Agent 唯一的持久记忆。仓库文档、源码、
+  runtime evidence 和会话上下文是当前工作的权威或证据，不得另建 memory 文件、
+  本地 notes 或其他长期记忆后端替代 nmem。
+- **主动检索**：任务涉及当前仓库或模块、既有决策、历史事故、用户偏好、既有
+  benchmark 或继续先前工作时，Agent 必须在分析和修改前主动检索 nmem，不得等待
+  用户再次提醒。纯翻译、格式化、日期查询等与历史无关的自包含任务可以跳过。
+- **结构化 Markdown**：写入 nmem 的内容必须使用结构化 Markdown，按需包含标题、
+  结论、背景、约束、证据和后续动作。流程、设计、状态机或依赖关系必须使用
+  `text` 代码块中的 ASCII graph；图内不得使用 CJK、全角符号或 Unicode box
+  drawing。
+- **Immutable memory**：写入前先检索相关记忆。不得原地修改、覆盖或删除已有
+  memory；补充、修正或演进必须新增 memory，并使用 `EVOLVES` 或显式语义关系
+  （如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
+- **执行协议**：所有 nmem 读写必须遵循
+  [`skills/nmem-memory-protocol/SKILL.md`](skills/nmem-memory-protocol/SKILL.md)。
+  nmem 不可用时不得静默改用其他记忆系统；若任务依赖历史上下文则阻断，否则可按
+  tracked authority 继续，但必须明确报告未完成的记忆检索或写入。
 
 ## 6. Docs 作为 Agent Context
 
