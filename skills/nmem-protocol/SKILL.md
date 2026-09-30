@@ -1,9 +1,9 @@
 ---
-name: "nmem-memory-protocol"
+name: "nmem-protocol"
 description: "Enforces nmem-only immutable memory. Invoke for existing projects, prior decisions, continued work, ambiguous context, or durable knowledge."
 ---
 
-# nmem Memory Protocol
+# nmem Protocol
 
 Use this protocol whenever a task may depend on durable context or produces
 knowledge that should survive the current session.

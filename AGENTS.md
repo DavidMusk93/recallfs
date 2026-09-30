@@ -51,7 +51,7 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
 | `.trae/skills/html-report/` | 自包含技术 HTML 报告的生成与浏览器验收入口 |
 | `.trae/skills/apple-design/` | HTML/UI 的排版、材质、反馈与无障碍设计原则 |
 | `.trae/skills/fixed-point-optimization/` | 定点数优化场景发现、数值证明、codegen 与 benchmark 门禁 |
-| `skills/nmem-memory-protocol/` | nmem 主动检索、结构化写入与 immutable 关联协议 |
+| `skills/nmem-protocol/` | nmem 主动检索、结构化写入与 immutable 关联协议 |
 
 ## 3. 算法训练摘要
 
@@ -98,7 +98,7 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
   memory；补充、修正或演进必须新增 memory，并使用 `EVOLVES` 或显式语义关系
   （如 `supports`、`depends_on`、`contradicts`）连接已有记忆。
 - **执行协议**：所有 nmem 读写必须遵循
-  [`skills/nmem-memory-protocol/SKILL.md`](skills/nmem-memory-protocol/SKILL.md)。
+  [`skills/nmem-protocol/SKILL.md`](skills/nmem-protocol/SKILL.md)。
   nmem 不可用时不得静默改用其他记忆系统；若任务依赖历史上下文则阻断，否则可按
   tracked authority 继续，但必须明确报告未完成的记忆检索或写入。
 
