@@ -52,6 +52,7 @@ RecallFS 的价值不是为文章或论文制作一次性 demo，而是探索机
 | `.trae/skills/apple-design/` | HTML/UI 的排版、材质、反馈与无障碍设计原则 |
 | `.trae/skills/fixed-point-optimization/` | 定点数优化场景发现、数值证明、codegen 与 benchmark 门禁 |
 | `skills/nmem-protocol/` | nmem 主动检索、结构化写入与 immutable 关联协议 |
+| `skills/tool-discovery/` | 先查已有工具；可复用能力收成 `tools/$domain/` Rust applet |
 
 ## 3. 算法训练摘要
 

@@ -1,5 +1,7 @@
 # Tool Usage
 
+可复用能力的发现与沉淀见 `skills/tool-discovery/SKILL.md`。
+
 目标：让 agent 可以主动补齐工具链，同时避免污染系统环境。
 
 ## 守则
