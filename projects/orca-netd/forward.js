@@ -53,6 +53,63 @@ function ipv4Parts(host) {
   return parts
 }
 
+function isCgnat(host) {
+  const parts = ipv4Parts(host)
+  return !!parts && parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127
+}
+
+// First client bytes may be "ORCA1 <cgnat>:6768\n" so one listener can reach
+// more than one runtime. Anything else is the real stream and uses DEST_*.
+function takeDest(cfg, client, cb) {
+  const magic = 'ORCA1 '
+  let buf = Buffer.alloc(0)
+  let finished = false
+  function finish(host, port, rest) {
+    if (finished) return
+    finished = true
+    clearTimeout(timer)
+    client.removeListener('readable', pull)
+    client.removeListener('error', onErr)
+    if (rest.length) client.unshift(rest)
+    cb(null, host, port)
+  }
+  function onErr(err) {
+    if (finished) return
+    finished = true
+    clearTimeout(timer)
+    client.removeListener('readable', pull)
+    cb(err)
+  }
+  function pull() {
+    if (finished) return
+    let chunk
+    while ((chunk = client.read()) !== null) buf = Buffer.concat([buf, chunk])
+    if (!buf.length) return
+    const prefix = buf.subarray(0, Math.min(buf.length, magic.length)).toString('utf8')
+    if (!magic.startsWith(prefix)) {
+      finish(cfg.destHost, cfg.destPort, buf)
+      return
+    }
+    const nl = buf.indexOf(0x0a)
+    if (nl < 0) {
+      if (buf.length > 64) finish(cfg.destHost, cfg.destPort, buf)
+      return
+    }
+    const line = buf.subarray(0, nl).toString('utf8').replace(/\r$/, '')
+    const match = /^ORCA1 (\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/.exec(line)
+    const port = match && Number(match[2])
+    if (!match || !isCgnat(match[1]) || port !== 6768) {
+      finish(cfg.destHost, cfg.destPort, buf)
+      return
+    }
+    finish(match[1], port, buf.subarray(nl + 1))
+  }
+  const timer = setTimeout(() => finish(cfg.destHost, cfg.destPort, buf), 3000)
+  client.on('error', onErr)
+  client.on('readable', pull)
+  pull()
+}
+
 function log(cfg, msg) {
   const line = new Date().toISOString() + ' ' + msg + '\n'
   try {
@@ -115,22 +172,29 @@ function start(cfg) {
     process.exit(1)
   }
   const server = net.createServer((client) => {
-    socksDial(cfg, cfg.destHost, cfg.destPort, (err, upstream) => {
-      if (err || !upstream) {
-        log(cfg, 'dial fail ' + (err && err.message))
+    takeDest(cfg, client, (err, host, port) => {
+      if (err) {
+        log(cfg, 'dest ' + err.message)
         client.destroy()
         return
       }
-      log(cfg, 'bridged ' + cfg.destHost + ':' + cfg.destPort)
-      const drop = (e) => {
-        if (e) log(cfg, 'pipe ' + e.message)
-        client.destroy()
-        upstream.destroy()
-      }
-      client.on('error', drop)
-      upstream.on('error', drop)
-      client.pipe(upstream)
-      upstream.pipe(client)
+      socksDial(cfg, host, port, (dialErr, upstream) => {
+        if (dialErr || !upstream) {
+          log(cfg, 'dial fail ' + host + ':' + port + ' ' + (dialErr && dialErr.message))
+          client.destroy()
+          return
+        }
+        log(cfg, 'bridged ' + host + ':' + port)
+        const drop = (e) => {
+          if (e) log(cfg, 'pipe ' + e.message)
+          client.destroy()
+          upstream.destroy()
+        }
+        client.on('error', drop)
+        upstream.on('error', drop)
+        client.pipe(upstream)
+        upstream.pipe(client)
+      })
     })
   })
   server.on('error', (err) => {
@@ -143,7 +207,7 @@ function start(cfg) {
   return server
 }
 
-module.exports = { loadConfig, ipv4Parts, socksDial, start }
+module.exports = { loadConfig, ipv4Parts, isCgnat, takeDest, socksDial, start }
 
 if (require.main === module) {
   start(loadConfig())

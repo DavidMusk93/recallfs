@@ -5,11 +5,14 @@
 ```text
 Orca Electron net.Socket
         |  socks-cgnat-preload.js   (must stay JS)
+        |  first bytes: ORCA1 <cgnat>:6768
         v
 127.0.0.1:16768  forward.js
         |  SOCKS5 127.0.0.1:1055
         v
-netd userspace ---- DERP ----> remote Orca :6768
+netd userspace ---- DERP ----> that runtime :6768
+
+没有这行头时，仍拨 `ORCA_NETD_DEST_HOST`（现在是 cc）。头只接受 `100.64.0.0/10` 的 `:6768`，所以同一个监听可以同时到 cc 和 d2。
 ```
 
 预加载留在 JavaScript：它改的是本进程里 Electron 的 `net.Socket.prototype.connect`，还要解开 Node 24 已经规范化过的参数数组。转发进程由 Tunnel Manager 的 `orca-netd` 服务拉起，不再用 LaunchAgent。

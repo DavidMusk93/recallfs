@@ -168,10 +168,116 @@ async function checkBridge() {
   }
 }
 
+function checkHeader() {
+  const sock = new net.Socket()
+  const chunks = []
+  sock.write = (chunk) => {
+    chunks.push(chunk)
+    return true
+  }
+  sock.end = () => {}
+  preload.armDestHeader(sock, '100.82.237.65:6768')
+  sock.write('GET / HTTP/1.1\r\n')
+  const first = Buffer.isBuffer(chunks[0]) ? chunks[0] : Buffer.from(chunks[0])
+  assert.equal(first.toString(), 'ORCA1 100.82.237.65:6768\nGET / HTTP/1.1\r\n')
+  sock.write('more')
+  assert.equal(chunks[1], 'more')
+}
+
+// Node's http client writes after Socket.connect replaces `write`.
+function checkHttpHeader() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer((sock) => {
+      let buf = Buffer.alloc(0)
+      sock.on('data', (chunk) => {
+        buf = Buffer.concat([buf, chunk])
+        if (!buf.includes('\r\n\r\n') && buf.length < 180) return
+        sock.end()
+        server.close()
+        const text = buf.toString('utf8')
+        try {
+          assert.ok(text.startsWith('ORCA1 100.82.237.65:6768\nGET /web-index.html '), text.slice(0, 80))
+          assert.equal(text.indexOf('ORCA1 '), text.lastIndexOf('ORCA1 '))
+          resolve()
+        } catch (err) {
+          reject(err)
+        }
+      })
+    })
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port
+      const child = spawn(process.execPath, ['-e', "require('http').get('http://100.82.237.65:6768/web-index.html', (res) => res.resume()).on('error', () => {})"], {
+        env: {
+          ...process.env,
+          ORCA_NETD_FORWARD_PORT: String(port),
+          ORCA_NETD_PRELOAD_KEEP: '1',
+          NODE_OPTIONS: '--require ' + path.join(root, 'socks-cgnat-preload.js')
+        },
+        stdio: 'ignore'
+      })
+      const timer = setTimeout(() => {
+        child.kill('SIGTERM')
+        server.close()
+        reject(new Error('http header timeout'))
+      }, 4000)
+      server.on('close', () => {
+        clearTimeout(timer)
+        child.kill('SIGTERM')
+      })
+    })
+  })
+}
+
+async function checkHeaderBridge() {
+  const hinted = '100.82.237.65'
+  const socks = await fakeSocks(hinted, 6768)
+  const probe = await listen(() => {})
+  const port = probe.address().port
+  await new Promise((resolve) => probe.close(resolve))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'orca-netd-hdr-'))
+  const child = spawn(process.execPath, [path.join(root, 'forward.js')], {
+    env: {
+      ...process.env,
+      ORCA_NETD_STATE_DIR: dir,
+      ORCA_NETD_CONFIG: path.join(dir, 'missing.env'),
+      ORCA_NETD_FORWARD_PORT: String(port),
+      ORCA_NETD_SOCKS_HOST: '127.0.0.1',
+      ORCA_NETD_SOCKS_PORT: String(socks.address().port),
+      ORCA_NETD_DEST_HOST: '10.1.2.3',
+      ORCA_NETD_DEST_PORT: '6768'
+    },
+    stdio: ['ignore', 'ignore', 'pipe']
+  })
+  let stderr = ''
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk
+  })
+  try {
+    await waitForPort(port)
+    const reply = await new Promise((resolve, reject) => {
+      const socket = net.connect(port, '127.0.0.1', () => {
+        socket.write('ORCA1 ' + hinted + ':6768\nping')
+      })
+      const chunks = []
+      socket.on('data', (chunk) => chunks.push(chunk))
+      socket.on('end', () => resolve(Buffer.concat(chunks).toString()))
+      socket.on('error', reject)
+      setTimeout(() => reject(new Error('header bridge timeout ' + stderr)), 3000)
+    })
+    assert.equal(reply, 'pong')
+  } finally {
+    child.kill('SIGTERM')
+    await new Promise((resolve) => socks.close(resolve))
+  }
+}
+
 async function main() {
   checkCgnat()
   checkRewrite()
+  checkHeader()
+  await checkHttpHeader()
   await checkBridge()
+  await checkHeaderBridge()
   console.log('orca-netd self-check ok')
 }
 

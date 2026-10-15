@@ -37,6 +37,79 @@ function parsedConnect(args) {
   return null
 }
 
+function asBuffer(chunk, encoding) {
+  if (Buffer.isBuffer(chunk)) return chunk
+  if (typeof chunk === 'string') {
+    return Buffer.from(chunk, typeof encoding === 'string' ? encoding : 'utf8')
+  }
+  return Buffer.alloc(0)
+}
+
+// Node's Socket.connect assigns its own `write` and overwrites anything set
+// before it returns. Hook `_write` first (the prototype write always lands
+// there) and wrap `write` again after connect returns.
+function armDestHeader(sock, dest) {
+  if (sock.__orcaNetdHeaderArmed === dest && sock.write && sock.write.__orcaNetd) return
+  if (!sock.__orcaNetdTake) {
+    const header = Buffer.from('ORCA1 ' + dest + '\n')
+    let sent = false
+    sock.__orcaNetdTake = function take() {
+      if (sent) return null
+      sent = true
+      return header
+    }
+  }
+  const take = sock.__orcaNetdTake
+
+  const origLow = sock._write
+  const origLowv = sock._writev
+  if (typeof origLow === 'function' && !origLow.__orcaNetd) {
+    sock._write = function patchedLow(data, encoding, cb) {
+      const h = take()
+      if (!h) return origLow.call(this, data, encoding, cb)
+      return origLow.call(this, Buffer.concat([h, asBuffer(data, encoding)]), encoding, cb)
+    }
+    sock._write.__orcaNetd = true
+  }
+  if (typeof origLowv === 'function' && !origLowv.__orcaNetd) {
+    sock._writev = function patchedLowv(chunks, cb) {
+      const h = take()
+      if (!h) return origLowv.call(this, chunks, cb)
+      return origLowv.call(this, [{ chunk: h, encoding: 'buffer' }].concat(chunks), cb)
+    }
+    sock._writev.__orcaNetd = true
+  }
+
+  const origWrite = sock.write
+  const origEnd = sock.end
+  function patchedWrite(chunk, encoding, cb) {
+    const h = take()
+    if (!h) return origWrite.call(this, chunk, encoding, cb)
+    if (typeof encoding === 'function') {
+      cb = encoding
+      encoding = undefined
+    }
+    return origWrite.call(this, Buffer.concat([h, asBuffer(chunk, encoding)]), cb)
+  }
+  patchedWrite.__orcaNetd = true
+  function patchedEnd(chunk, encoding, cb) {
+    if (chunk === undefined || typeof chunk === 'function') {
+      return origEnd.apply(this, arguments)
+    }
+    const h = take()
+    if (!h) return origEnd.call(this, chunk, encoding, cb)
+    if (typeof encoding === 'function') {
+      cb = encoding
+      encoding = undefined
+    }
+    return origEnd.call(this, Buffer.concat([h, asBuffer(chunk, encoding)]), cb)
+  }
+  patchedEnd.__orcaNetd = true
+  sock.write = patchedWrite
+  sock.end = patchedEnd
+  sock.__orcaNetdHeaderArmed = dest
+}
+
 function rewrite(args, parsed) {
   const options = {
     ...parsed.options,
@@ -69,10 +142,17 @@ if (!net.Socket.prototype.__orcaNetdPatched) {
     const host = parsed && (parsed.options.host || parsed.options.hostname)
     const port = parsed && Number(parsed.options.port)
     if (!parsed || !isCgnat(host) || !port) return orig.apply(this, args)
-    this.__orcaNetdDest = host + ':' + port
-    return orig.apply(this, rewrite(args, parsed))
+    const dest = host + ':' + port
+    this.__orcaNetdDest = dest
+    // _write is hooked inside armDestHeader. connect() then replaces `write`,
+    // so arm again after it returns and once the socket actually connects.
+    armDestHeader(this, dest)
+    const ret = orig.apply(this, rewrite(args, parsed))
+    armDestHeader(this, dest)
+    if (typeof this.once === 'function') this.once('connect', () => armDestHeader(this, dest))
+    return ret
   }
   net.Socket.prototype.__orcaNetdPatched = true
 }
 
-module.exports = { isCgnat, parsedConnect, rewrite }
+module.exports = { isCgnat, parsedConnect, rewrite, armDestHeader }
