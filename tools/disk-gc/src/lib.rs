@@ -14,6 +14,9 @@
 //!   `git diff --binary HEAD` are saved under the run dir; a detached HEAD is
 //!   pinned with `refs/disk-gc/<run>/<name>` so its commits stay reachable.
 //!   Untracked files are listed in status.txt but not copied.
+//! - A worktree that is still in use is kept, but build outputs inside it
+//!   (blade `build64_*`, out-of-source CMake, cargo `target`, kache, ccache)
+//!   are their own candidates and can be removed on the cache age.
 
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{self, File, OpenOptions};
@@ -38,7 +41,10 @@ usage: disk-gc <plan|apply> [options]
 candidates:
   --root DIR            discover linked git worktrees and build dirs under DIR
                         (build dir = CACHEDIR.TAG, out-of-source CMakeCache.txt,
-                        blade build64_* next to BLADE_ROOT, .ccache)
+                        blade build64_* within 2 parents of BLADE_ROOT, .ccache,
+                        kache cache, cargo target next to Cargo.toml).
+                        Linked worktrees are searched inside even past --max-depth,
+                        so a live worktree can still lose its stale build output.
   --max-depth N         discovery depth below each --root (default 6)
   --cache DIR           DIR as a single build-cache candidate
   --cache-children DIR  every child of DIR as a build-cache candidate
@@ -418,6 +424,11 @@ fn classify_worktree(dir: &Path, admin: PathBuf) -> Candidate {
     }
 }
 
+/// How many extra directory levels to search inside a linked worktree.
+/// Build trees on d2 sit at `worktree/.tmp/cmake-build` and `worktree/pgo/build64_*`,
+/// which are past `--max-depth` when the worktree itself is already deep.
+const WORKTREE_BUILD_EXTRA_DEPTH: usize = 4;
+
 pub fn build_dir_rule(dir: &Path) -> Option<&'static str> {
     let name = dir.file_name()?.to_str()?;
     let has = |n: &str| fs::symlink_metadata(dir.join(n)).is_ok();
@@ -429,22 +440,72 @@ pub fn build_dir_rule(dir: &Path) -> Option<&'static str> {
     if has("CMakeCache.txt") && !has("CMakeLists.txt") {
         return Some("out-of-source CMake build dir");
     }
-    if name.starts_with("build64_")
-        && dir
-            .parent()
-            .map(|p| p.join("BLADE_ROOT").exists())
-            .unwrap_or(false)
-    {
+    if name.starts_with("build64_") && blade_root_near(dir) {
         return Some("blade output dir");
     }
     if name == ".ccache" {
         return Some("ccache dir");
     }
+    if is_kache_cache(name) && (has("index.db") || has("index.db-wal") || has("blobs")) {
+        return Some("kache cache dir");
+    }
+    if name == "target" && cargo_target(dir) {
+        return Some("cargo target dir");
+    }
     None
+}
+
+/// `build64_*` next to `BLADE_ROOT`, or one level down (`pgo/build64_release`).
+fn blade_root_near(dir: &Path) -> bool {
+    let mut p = dir.parent();
+    for _ in 0..2 {
+        let Some(parent) = p else {
+            return false;
+        };
+        if fs::symlink_metadata(parent.join("BLADE_ROOT")).is_ok() {
+            return true;
+        }
+        p = parent.parent();
+    }
+    false
+}
+
+fn is_kache_cache(name: &str) -> bool {
+    matches!(name, "kache-cache" | "kache-local" | "kache-v1") || name.starts_with("kache-")
+}
+
+fn cargo_target(dir: &Path) -> bool {
+    let Some(parent) = dir.parent() else {
+        return false;
+    };
+    if fs::symlink_metadata(parent.join("Cargo.toml")).is_err() {
+        return false;
+    }
+    ["debug", "release", ".rustc_info.json"]
+        .iter()
+        .any(|n| fs::symlink_metadata(dir.join(n)).is_ok())
 }
 
 pub fn discover(root: &Path, max_depth: usize, out: &mut Vec<Candidate>, warns: &mut Vec<String>) {
     discover_dir(root, 0, max_depth, out, warns);
+}
+
+fn child_dirs(dir: &Path, warns: &mut Vec<String>) -> Vec<PathBuf> {
+    let rd = match fs::read_dir(dir) {
+        Ok(r) => r,
+        Err(e) => {
+            warns.push(format!("discover {}: {e}", dir.display()));
+            return vec![];
+        }
+    };
+    let mut subdirs: Vec<PathBuf> = rd
+        .flatten()
+        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+        .filter(|e| e.file_name() != ".git" && e.file_name() != "node_modules")
+        .map(|e| e.path())
+        .collect();
+    subdirs.sort();
+    subdirs
 }
 
 fn discover_dir(
@@ -456,6 +517,13 @@ fn discover_dir(
 ) {
     if let Some(GitLink::Worktree { admin }) = read_link_file(dir) {
         out.push(classify_worktree(dir, admin));
+        // Keep the worktree itself subject to the worktree age, but still
+        // collect build outputs inside it. Those are the multi-hundred-GB
+        // cmake/blade trees that were invisible when discovery stopped here.
+        let inner_max = max_depth.max(depth.saturating_add(WORKTREE_BUILD_EXTRA_DEPTH));
+        for sub in child_dirs(dir, warns) {
+            discover_dir(&sub, depth + 1, inner_max, out, warns);
+        }
         return;
     }
     if depth > 0 {
@@ -473,21 +541,7 @@ fn discover_dir(
     if depth >= max_depth {
         return;
     }
-    let rd = match fs::read_dir(dir) {
-        Ok(r) => r,
-        Err(e) => {
-            warns.push(format!("discover {}: {e}", dir.display()));
-            return;
-        }
-    };
-    let mut subdirs: Vec<PathBuf> = rd
-        .flatten()
-        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
-        .filter(|e| e.file_name() != ".git" && e.file_name() != "node_modules")
-        .map(|e| e.path())
-        .collect();
-    subdirs.sort();
-    for sub in subdirs {
+    for sub in child_dirs(dir, warns) {
         discover_dir(&sub, depth + 1, max_depth, out, warns);
     }
 }
@@ -1315,5 +1369,73 @@ mod tests {
         assert!(!c.apply && c.orphans && c.worktree_days == 30);
         assert!(parse_args(&["plan".to_string()]).is_err());
         assert!(parse_args(&["nuke".to_string()]).is_err());
+    }
+
+    #[test]
+    fn worktree_inner_build_dirs_are_candidates() {
+        let root = std::env::temp_dir().join(format!("disk-gc-discover-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let wt = root.join("wt");
+        fs::create_dir_all(&wt).unwrap();
+        fs::write(wt.join(".git"), "gitdir: /repo/.git/worktrees/wt\n").unwrap();
+        fs::write(wt.join("BLADE_ROOT"), "").unwrap();
+        for rel in [
+            "build64_release",
+            "pgo/build64_release",
+            "foo/bar/build64_release",
+            ".tmp/cmake-build",
+            ".tmp/kache-cache",
+            "crate/target/release",
+            "insrc",
+            "src",
+        ] {
+            fs::create_dir_all(wt.join(rel)).unwrap();
+        }
+        fs::write(wt.join(".tmp/cmake-build/CMakeCache.txt"), "x").unwrap();
+        fs::write(wt.join("insrc/CMakeCache.txt"), "x").unwrap();
+        fs::write(wt.join("insrc/CMakeLists.txt"), "x").unwrap();
+        fs::write(wt.join(".tmp/kache-cache/index.db"), "x").unwrap();
+        fs::write(wt.join("crate/Cargo.toml"), "[package]\n").unwrap();
+        fs::write(wt.join("crate/target/.rustc_info.json"), "{}\n").unwrap();
+        fs::write(wt.join("src/a.c"), "int a;\n").unwrap();
+
+        let mut out = vec![];
+        let mut warns = vec![];
+        // max-depth 1 would miss every build dir if discovery stopped at the worktree
+        discover(&root, 1, &mut out, &mut warns);
+        let rels: Vec<String> = out
+            .iter()
+            .map(|c| {
+                c.path
+                    .strip_prefix(&root)
+                    .unwrap_or(&c.path)
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            })
+            .collect();
+        let has = |s: &str| rels.iter().any(|p| p == s);
+        assert!(has("wt"), "{rels:?}");
+        assert!(has("wt/build64_release"), "{rels:?}");
+        assert!(has("wt/pgo/build64_release"), "{rels:?}");
+        assert!(
+            !has("wt/foo/bar/build64_release"),
+            "blade match must not walk 3 parents: {rels:?}"
+        );
+        assert!(has("wt/.tmp/cmake-build"), "{rels:?}");
+        assert!(!has("wt/insrc"), "in-source cmake is source: {rels:?}");
+        assert!(has("wt/.tmp/kache-cache"), "{rels:?}");
+        assert!(has("wt/crate/target"), "{rels:?}");
+        assert!(!rels.iter().any(|p| p.contains("/src")), "{rels:?}");
+        let rule = |suffix: &str| {
+            out.iter()
+                .find(|c| c.path.ends_with(suffix))
+                .map(|c| c.rule.as_str())
+                .unwrap_or("")
+        };
+        assert_eq!(rule("build64_release"), "blade output dir");
+        assert_eq!(rule("cmake-build"), "out-of-source CMake build dir");
+        assert_eq!(rule("kache-cache"), "kache cache dir");
+        assert_eq!(rule("target"), "cargo target dir");
+        let _ = fs::remove_dir_all(&root);
     }
 }

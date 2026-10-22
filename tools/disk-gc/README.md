@@ -18,7 +18,7 @@ disk is already full.
 | --- | --- | --- |
 | `worktree` | `.git` file -> `<common>/worktrees/<name>` whose `gitdir` points back | unused >= `--worktree-days` (30) and `git` can read it |
 | `orphan-worktree` | admin dir missing, moved, or owned by another path | same age **and** `--orphans` |
-| `build-cache` | `CACHEDIR.TAG`, out-of-source `CMakeCache.txt`, blade `build64_*` next to `BLADE_ROOT`, `.ccache`, `--cache`, `--cache-children` | unused >= `--cache-days` (7) and >= `--min-size` |
+| `build-cache` | `CACHEDIR.TAG`, out-of-source `CMakeCache.txt`, blade `build64_*` within 2 parents of `BLADE_ROOT` (covers `pgo/build64_*`), `.ccache`, kache dir with `index.db` / `blobs`, cargo `target` next to `Cargo.toml`, `--cache`, `--cache-children`. Also searched **inside** a linked worktree, including one that is itself kept | unused >= `--cache-days` (7) and >= `--min-size` |
 | `stale-tmp` | children of `--tmp` (skips dot entries, `systemd-private-*`) | unused >= `--tmp-days` (30) and >= `--min-size` |
 
 "Unused" = newest `max(mtime, ctime)` over the whole tree (plus worktree

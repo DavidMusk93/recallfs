@@ -186,6 +186,12 @@ fn fresh_or_busy_worktrees_are_kept() {
     ]);
     assert!(String::from_utf8_lossy(&out.stdout).contains("fresh:"));
 
+    // in-use detection reads /proc. macOS has no /proc; d2 (Linux) covers it.
+    if !Path::new("/proc").is_dir() {
+        let _ = fs::remove_dir_all(&d);
+        return;
+    }
+
     let mut child = Command::new("sleep")
         .arg("30")
         .current_dir(&wt)
@@ -269,5 +275,71 @@ fn stale_tmp_skips_dot_entries_and_protected() {
     assert!(!t.join("old").exists());
     assert!(t.join(".X11-unix").exists());
     assert!(t.join("keepme").exists());
+    let _ = fs::remove_dir_all(&d);
+}
+
+#[test]
+fn live_worktree_keeps_source_and_drops_inner_build_dirs() {
+    let d = scratch("inner");
+    let repo = repo_with_commit(&d);
+    fs::write(repo.join("BLADE_ROOT"), "").unwrap();
+    sh(&repo, &["git", "add", "BLADE_ROOT"]);
+    sh(&repo, &["git", "commit", "-qm", "blade"]);
+    let wt = d.join("wt");
+    sh(
+        &repo,
+        &["git", "worktree", "add", "-q", "-b", "inner", s(&wt)],
+    );
+    fs::write(wt.join("src.c"), "int live;\n").unwrap();
+    let blade = wt.join("build64_release");
+    fs::create_dir_all(&blade).unwrap();
+    fs::write(blade.join("a.o"), vec![0u8; 64]).unwrap();
+    let pgo = wt.join("pgo/build64_release");
+    fs::create_dir_all(&pgo).unwrap();
+    fs::write(pgo.join("a.o"), vec![0u8; 64]).unwrap();
+    let cmake = wt.join(".tmp/cmake-build");
+    fs::create_dir_all(&cmake).unwrap();
+    fs::write(cmake.join("CMakeCache.txt"), "x").unwrap();
+    let kache = wt.join(".tmp/kache-cache");
+    fs::create_dir_all(&kache).unwrap();
+    fs::write(kache.join("index.db"), "x").unwrap();
+    let cargo_target = wt.join("crate/target/release");
+    fs::create_dir_all(&cargo_target).unwrap();
+    fs::write(wt.join("crate/Cargo.toml"), "[package]\nname=\"c\"\n").unwrap();
+    fs::write(wt.join("crate/target/.rustc_info.json"), "{}\n").unwrap();
+    let insrc = wt.join("insrc");
+    fs::create_dir_all(&insrc).unwrap();
+    fs::write(insrc.join("CMakeCache.txt"), "x").unwrap();
+    fs::write(insrc.join("CMakeLists.txt"), "project(x)\n").unwrap();
+
+    let state = d.join("state");
+    disk_gc(&[
+        "apply",
+        "--root",
+        s(&d),
+        "--worktree-days",
+        "30",
+        "--cache-days",
+        "0",
+        "--min-size",
+        "0",
+        "--state-dir",
+        s(&state),
+    ]);
+    assert!(wt.exists(), "fresh worktree stays");
+    assert!(wt.join("src.c").exists(), "untracked source stays");
+    assert!(repo.join("a.txt").exists());
+    assert!(
+        !blade.exists(),
+        "stale blade output inside a live worktree goes"
+    );
+    assert!(!pgo.exists(), "pgo/build64_* is blade output");
+    assert!(!cmake.exists());
+    assert!(!kache.exists());
+    assert!(!wt.join("crate/target").exists());
+    assert!(
+        insrc.join("CMakeLists.txt").exists(),
+        "in-source cmake stays"
+    );
     let _ = fs::remove_dir_all(&d);
 }
