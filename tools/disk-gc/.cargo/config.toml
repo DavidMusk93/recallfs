@@ -1,0 +1,3 @@
+# Build outputs belong to the repository .tmp/ (gitignored), not to tools/.
+[build]
+target-dir = "../../.tmp/disk-gc/target"

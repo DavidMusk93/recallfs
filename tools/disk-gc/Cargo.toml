@@ -1,0 +1,13 @@
+[package]
+name = "disk-gc"
+version = "0.1.0"
+edition = "2021"
+description = "Reclaim disk space from stale build caches, stale git worktrees and stale tmp entries"
+publish = false
+
+# std only on purpose: the tool must build on a host whose disk is already full
+# and must not need a crates registry download.
+[dependencies]
+
+[profile.release]
+opt-level = 3
