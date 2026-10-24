@@ -22,6 +22,8 @@ resolve via api.fxtwitter.com  -->  best MP4 rendition per video
 
 | Decision | Reason |
 | --- | --- |
+| Compare the HLS master ladder against the progressive MP4 ladder, take the taller one | X advertises the same encode twice; the MP4 list can stop at 720p while an HLS rendition exists above it. `resolve` prints both so "is this the best copy?" is answerable without downloading. |
+| Report the artifact's own measured height/bitrate (ffprobe), not the API label | fxtwitter's `bitrate` field is a nominal ladder name: post 2093971248846143696 is labelled `2176000` but is encoded at ~1.03 Mbps. Measured numbers are what the viewer sees. |
 | Metadata from `api.fxtwitter.com`, fallback `api.vxtwitter.com` | `cdn.syndication.twimg.com` now returns `TweetTombstone` for unauthenticated lookups; bytes still come from `video.twimg.com`. |
 | Progressive MP4 only, HLS via ffmpeg as fallback | X's `vid/avc1/.../x.mp4` renditions already carry AAC audio, so no remux is needed in the common path. |
 | Explicit `--proxy` (else env) | Downloads from this network need the local xray proxy; leaving it implicit made results host-dependent. |
@@ -34,14 +36,18 @@ resolve via api.fxtwitter.com  -->  best MP4 rendition per video
 
 ```bash
 cd tools/media/videodl
-cargo build --release      # binary at target/release/videodl
-cargo test                 # 31 unit tests, no network
+# Build output goes under .tmp/ per repo policy, so the applet directory stays
+# source-only.
+CARGO_TARGET_DIR=../../../.tmp/videodl/target cargo build --release
+CARGO_TARGET_DIR=../../../.tmp/videodl/target cargo test   # 34 unit tests, no network
 ```
+
+Binary: `.tmp/videodl/target/release/videodl`.
 
 ## Usage
 
 ```bash
-# 1. Inspect what would be downloaded (no bytes fetched)
+# 1. Inspect what would be downloaded: mp4 max, HLS ladder, chosen rendition
 videodl --proxy http://127.0.0.1:2081 resolve https://x.com/user/status/123
 
 # 2. Download to a local staging directory
@@ -86,8 +92,12 @@ Output naming: `01-title-20260830.mp4` when manifest metadata exists, otherwise
 - Remote skips require a byte-size match against the local file.
 - Uploads assert the server-reported size equals the local size and print the
   ostore sha256, so a partial upload cannot be mistaken for success.
-- `--max-height` (default 1080) caps rendition choice; the tool never silently
+- `--max-height` (default 2160) caps rendition choice; the tool never silently
   falls back to a taller rendition.
+- A post whose upload was already soft stays soft: X serves only its own
+  transcode ladder, so 720p @ ~0.9 Mbps is the ceiling for such posts and no
+  client-side flag can change it. Check `resolve` output before assuming a bad
+  download.
 
 ## Files
 
@@ -95,7 +105,7 @@ Output naming: `01-title-20260830.mp4` when manifest metadata exists, otherwise
 src/main.rs       CLI, naming, orchestration, summary tables
 src/manifest.rs   loose list parsing + status-id extraction
 src/twitter.rs    metadata mirror parsing, rendition selection
-src/download.rs   resumable fetch, MP4 verification, HLS fallback
+src/download.rs   resumable fetch, HLS remux via ffmpeg, MP4 verification + ffprobe
 src/xstream.rs    cookie -> ostore token handshake, list/stat/put/delete
 src/progress.rs   shared byte meter for downloads and uploads
 ```

@@ -177,8 +177,16 @@ pub fn verify_mp4(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// HLS fallback: X only serves `m3u8` for some renditions; remux with ffmpeg.
-pub fn fetch_hls(url: &str, dest: &Path, proxy: Option<&str>, force: bool) -> Result<Outcome> {
+/// HLS download: X advertises audio as a separate `EXT-X-MEDIA` group, so a
+/// bare variant playlist has no sound. Hand ffmpeg a one-rendition master
+/// playlist that pins the chosen video rendition to its audio group.
+pub fn fetch_hls(
+    rendition: &crate::twitter::HlsRendition,
+    audio: Option<&crate::twitter::HlsAudio>,
+    dest: &Path,
+    proxy: Option<&str>,
+    force: bool,
+) -> Result<Outcome> {
     if dest.exists() && !force && verify_mp4(dest).is_ok() {
         return Ok(Outcome {
             bytes: fs::metadata(dest)?.len(),
@@ -188,31 +196,107 @@ pub fn fetch_hls(url: &str, dest: &Path, proxy: Option<&str>, force: bool) -> Re
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent)?;
     }
+    let playlist = dest.with_extension("playlist.m3u8");
+    let mut text = String::from("#EXTM3U\n#EXT-X-VERSION:6\n");
+    let group = "audio";
+    if let Some(audio) = audio {
+        text.push_str(&format!(
+            "#EXT-X-MEDIA:NAME=\"Audio\",TYPE=AUDIO,GROUP-ID=\"{group}\",AUTOSELECT=YES,DEFAULT=YES,URI=\"{}\"\n",
+            audio.url
+        ));
+    }
+    text.push_str(&format!(
+        "#EXT-X-STREAM-INF:BANDWIDTH={},RESOLUTION={}x{}{}\n{}\n",
+        rendition.bandwidth.max(1),
+        rendition.height.unwrap_or(0),
+        rendition.height.unwrap_or(0),
+        if audio.is_some() {
+            format!(",AUDIO=\"{group}\"")
+        } else {
+            String::new()
+        },
+        rendition.url
+    ));
+    fs::write(&playlist, &text)?;
+
+    let part = part_path(dest);
     let mut cmd = Command::new("ffmpeg");
-    cmd.args(["-hide_banner", "-loglevel", "warning", "-y", "-i", url])
-        .args(["-c", "copy", "-movflags", "+faststart"])
-        .arg(dest);
+    cmd.args([
+        "-hide_banner",
+        "-loglevel",
+        "warning",
+        "-y",
+        "-protocol_whitelist",
+        "file,http,https,tcp,tls,crypto",
+    ])
+    .arg("-i")
+    .arg(&playlist)
+    .args(["-c", "copy", "-movflags", "+faststart", "-f", "mp4"])
+    .arg(&part);
     if let Some(proxy) = proxy {
-        cmd.env("HTTP_PROXY", proxy)
-            .env("HTTPS_PROXY", proxy)
-            .env("http_proxy", proxy)
-            .env("https_proxy", proxy);
+        for key in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"] {
+            cmd.env(key, proxy);
+        }
     }
     let out = cmd
         .output()
-        .context("ffmpeg is required for HLS-only renditions but could not be started")?;
+        .context("ffmpeg is required for HLS renditions but could not be started")?;
+    let _ = fs::remove_file(&playlist);
     if !out.status.success() {
+        let _ = fs::remove_file(&part);
         bail!(
             "ffmpeg failed ({}): {}",
             out.status,
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
+    fs::rename(&part, dest)?;
     verify_mp4(dest)?;
     Ok(Outcome {
         bytes: fs::metadata(dest)?.len(),
         skipped: false,
     })
+}
+
+/// Measured quality of the file on disk, e.g. `1280x720 @ 1.03 Mbps`.
+///
+/// Uses ffprobe when present; the values are the artifact's own, not the
+/// ladder labels the API advertises.
+pub fn probe_quality(path: &Path) -> Option<String> {
+    let dims = Command::new("ffprobe")
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=p=0",
+        ])
+        .arg(path)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())?;
+    let dims = String::from_utf8_lossy(&dims.stdout).trim().to_string();
+    let (w, h) = dims.split_once(',')?;
+    let rate = Command::new("ffprobe")
+        .args([
+            "-v",
+            "error",
+            "-show_entries",
+            "format=bit_rate",
+            "-of",
+            "csv=p=0",
+        ])
+        .arg(path)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+    Some(format!("{w}x{h} @ {:.2} Mbps", rate as f64 / 1_000_000.0))
 }
 
 #[cfg(test)]

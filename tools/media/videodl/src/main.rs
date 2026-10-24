@@ -82,6 +82,9 @@ struct TargetArgs {
     /// Manifest files with `N. title | YYYY-MM-DD | url` lines
     #[arg(long, short = 'f')]
     manifest: Vec<PathBuf>,
+    /// Report the rendition that would be chosen under this height cap
+    #[arg(long, default_value_t = 2160)]
+    max_height: u32,
 }
 
 #[derive(Args, Debug)]
@@ -92,8 +95,8 @@ struct DownloadArgs {
     /// Local output directory
     #[arg(long, short = 'o', default_value = ".tmp/videos")]
     out: PathBuf,
-    /// Skip renditions taller than this
-    #[arg(long, default_value_t = 1080)]
+    /// Skip renditions taller than this (X tops out at 2160)
+    #[arg(long, default_value_t = 2160)]
     max_height: u32,
     /// Re-download and re-upload even if the artifacts already exist
     #[arg(long)]
@@ -113,7 +116,7 @@ struct SyncArgs {
     /// Remote directory on the drive
     #[arg(long)]
     remote_dir: String,
-    #[arg(long, default_value_t = 1080)]
+    #[arg(long, default_value_t = 2160)]
     max_height: u32,
     #[arg(long)]
     force: bool,
@@ -170,22 +173,38 @@ fn run() -> Result<()> {
                         continue;
                     }
                 };
-                let variants: Vec<_> = resolved
-                    .best_variants(None)
-                    .into_iter()
-                    .map(|(i, v)| {
-                        json!({
-                            "video": i + 1,
-                            "container": match v.container {
-                                twitter::Container::Mp4 => "mp4",
-                                twitter::Container::Hls => "m3u8",
-                            },
-                            "height": v.height,
-                            "bitrate": v.bitrate,
-                            "url": v.url,
-                        })
-                    })
-                    .collect();
+                let mut variants = Vec::new();
+                for (i, video) in resolved.videos.iter().enumerate() {
+                    let master = video
+                        .variants
+                        .iter()
+                        .find(|v| v.container == twitter::Container::Hls)
+                        .and_then(|v| twitter::fetch_hls_master(&client, &v.url).ok());
+                    let mp4_max = twitter::pick_variant(video, None)
+                        .filter(|v| v.container == twitter::Container::Mp4)
+                        .map(|v| {
+                            json!({
+                                "container": "mp4",
+                                "height": v.height,
+                                "label_bitrate": v.bitrate,
+                            })
+                        });
+                    variants.push(json!({
+                        "video": i + 1,
+                        "duration_s": video.duration_s,
+                        "mp4_max": mp4_max,
+                        "hls_ladder": master.as_ref().map(|m| {
+                            let mut rows: Vec<_> = m
+                                .renditions
+                                .iter()
+                                .map(|r| json!({"height": r.height, "avg_bandwidth": r.bandwidth}))
+                                .collect();
+                            rows.sort_by_key(|r| -(r["avg_bandwidth"].as_u64().unwrap_or(0) as i64));
+                            rows
+                        }),
+                        "chosen": twitter::choose(video, master.as_ref(), Some(args.max_height)).map(|c| c.label()),
+                    }));
+                }
                 out.push(json!({
                     "status_id": resolved.id,
                     "author": resolved.author_handle,
@@ -195,8 +214,7 @@ fn run() -> Result<()> {
                     "text": resolved.text,
                     "title": item.entry.as_ref().and_then(|e| e.title.clone()),
                     "date": item.entry.as_ref().and_then(|e| e.date.clone()),
-                    "duration_s": resolved.videos.first().and_then(|v| v.duration_s),
-                    "variants": variants,
+                    "renditions": variants,
                 }));
             }
             println!("{}", serde_json::to_string_pretty(&out)?);
@@ -419,6 +437,7 @@ impl Report {
 
 struct Row {
     id: String,
+    quality: String,
     title: String,
     local: String,
     bytes: u64,
@@ -458,7 +477,20 @@ fn download_all(
             }
         };
         let stem = file_stem(item.entry.as_ref(), &resolved);
-        let best = resolved.best_variants(Some(max_height));
+        let best: Vec<twitter::Choice> = {
+            let mut out = Vec::new();
+            for video in &resolved.videos {
+                let master = video
+                    .variants
+                    .iter()
+                    .find(|v| v.container == twitter::Container::Hls)
+                    .and_then(|v| twitter::fetch_hls_master(client, &v.url).ok());
+                if let Some(choice) = twitter::choose(video, master.as_ref(), Some(max_height)) {
+                    out.push(choice);
+                }
+            }
+            out
+        };
         if best.is_empty() {
             report
                 .failures
@@ -478,7 +510,7 @@ fn download_all(
         );
         let mut total = 0u64;
         let mut skipped_all = true;
-        for (n, (_video_idx, variant)) in best.iter().enumerate() {
+        for (n, choice) in best.iter().enumerate() {
             let dest = out.join(format!(
                 "{}{}.mp4",
                 stem,
@@ -488,29 +520,50 @@ fn download_all(
                     format!("-{}", n + 1)
                 }
             ));
-            let outcome = match variant.container {
-                twitter::Container::Mp4 => {
-                    download::fetch(client, &variant.url, &dest, force, retries)?
+            let outcome = match choice {
+                twitter::Choice::Mp4(variant) => {
+                    download::fetch(client, &variant.url, &dest, force, retries)
                 }
-                twitter::Container::Hls => download::fetch_hls(&variant.url, &dest, proxy, force)?,
+                twitter::Choice::Hls(rendition) => {
+                    let audio = resolved
+                        .videos
+                        .iter()
+                        .flat_map(|v| v.variants.iter())
+                        .find(|v| v.container == twitter::Container::Hls)
+                        .and_then(|m| twitter::fetch_hls_master(client, &m.url).ok())
+                        .and_then(|m| m.audio_for(rendition).cloned());
+                    download::fetch_hls(rendition, audio.as_ref(), &dest, proxy, force)
+                }
+            };
+            let outcome = match outcome {
+                Ok(o) => o,
+                Err(e) => {
+                    let source = match choice {
+                        twitter::Choice::Mp4(v) => v.url.clone(),
+                        twitter::Choice::Hls(r) => r.url.clone(),
+                    };
+                    report.failures.push((id.clone(), source, format!("{e:#}")));
+                    continue;
+                }
             };
             total += outcome.bytes;
             skipped_all &= outcome.skipped;
             println!(
-                "  {} {} {}",
+                "  {} {} {} [{}]",
                 if outcome.skipped { "have" } else { "got " },
                 dest.display(),
-                progress::human(outcome.bytes)
+                progress::human(outcome.bytes),
+                download::probe_quality(&dest).unwrap_or_else(|| choice.label())
             );
         }
+        let local = out.join(format!("{stem}.mp4"));
+        let quality = download::probe_quality(&local).unwrap_or_else(|| best[0].label());
         report.rows.push(Row {
             id,
-            local: out
-                .join(format!("{stem}.mp4"))
-                .to_string_lossy()
-                .to_string(),
+            local: local.to_string_lossy().to_string(),
             title: stem,
             bytes: total,
+            quality,
             videos: best.len(),
             skipped: skipped_all,
         });
@@ -521,15 +574,16 @@ fn download_all(
 fn print_table(rows: &[Row], uploaded: Option<&Vec<(String, String, u64, bool)>>) {
     println!();
     println!(
-        "{:<20} {:<44} {:>10} {:>4}  state",
-        "status", "file", "size", "vids"
+        "{:<20} {:<44} {:>10} {:<22} vids  state",
+        "status", "file", "size", "quality (measured)"
     );
     for row in rows {
         println!(
-            "{:<20} {:<44} {:>10} {:>4}  {}",
+            "{:<20} {:<44} {:>10} {:<22} {:>4}  {}",
             row.id,
             truncate_left(&row.title, 44),
             progress::human(row.bytes),
+            row.quality,
             row.videos,
             if row.skipped { "cached" } else { "downloaded" }
         );

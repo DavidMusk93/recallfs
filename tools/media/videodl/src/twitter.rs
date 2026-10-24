@@ -48,15 +48,220 @@ pub struct Resolved {
     pub videos: Vec<VideoAsset>,
 }
 
-impl Resolved {
-    /// Highest quality variant per video, honouring a height ceiling.
-    pub fn best_variants(&self, max_height: Option<u32>) -> Vec<(usize, Variant)> {
-        self.videos
+/// One rendition advertised by an HLS master playlist.
+#[derive(Debug, Clone)]
+pub struct HlsRendition {
+    pub url: String,
+    pub height: Option<u32>,
+    pub bandwidth: u64,
+    pub audio_group: Option<String>,
+}
+
+/// One audio group advertised by an HLS master playlist.
+#[derive(Debug, Clone)]
+pub struct HlsAudio {
+    pub group: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct HlsMaster {
+    pub renditions: Vec<HlsRendition>,
+    pub audios: Vec<HlsAudio>,
+}
+
+impl HlsMaster {
+    pub fn best(&self, max_height: Option<u32>) -> Option<&HlsRendition> {
+        self.renditions
             .iter()
-            .enumerate()
-            .filter_map(|(i, v)| pick_variant(v, max_height).map(|best| (i, best.clone())))
-            .collect()
+            .filter(|r| max_height.is_none_or(|cap| r.height.is_none_or(|h| h <= cap)))
+            .max_by_key(|r| (r.height.unwrap_or(0), r.bandwidth))
     }
+
+    pub fn audio_for(&self, rendition: &HlsRendition) -> Option<&HlsAudio> {
+        let group = rendition.audio_group.as_deref()?;
+        self.audios.iter().find(|a| a.group == group)
+    }
+}
+
+/// What we actually download for one video.
+#[derive(Debug, Clone)]
+pub enum Choice {
+    Mp4(Variant),
+    Hls(HlsRendition),
+}
+
+impl Choice {
+    pub fn height(&self) -> Option<u32> {
+        match self {
+            Choice::Mp4(v) => v.height,
+            Choice::Hls(r) => r.height,
+        }
+    }
+
+    pub fn bandwidth(&self) -> u64 {
+        match self {
+            Choice::Mp4(v) => v.bitrate,
+            Choice::Hls(r) => r.bandwidth,
+        }
+    }
+
+    pub fn label(&self) -> String {
+        let kind = match self {
+            Choice::Mp4(_) => "mp4",
+            Choice::Hls(_) => "hls",
+        };
+        format!(
+            "{kind} {} @ {:.2} Mbps",
+            self.height()
+                .map(|h| format!("{h}p"))
+                .unwrap_or_else(|| "?".into()),
+            self.bandwidth() as f64 / 1_000_000.0
+        )
+    }
+}
+
+/// Choose the best rendition per video across both transport lists.
+///
+/// X publishes the same encode ladder twice (progressive MP4 + HLS). HLS is
+/// used only when it is strictly taller, because it costs an ffmpeg remux; this
+/// keeps the common case a single plain MP4 download.
+pub fn choose(
+    video: &VideoAsset,
+    master: Option<&HlsMaster>,
+    max_height: Option<u32>,
+) -> Option<Choice> {
+    let mp4 = pick_variant(video, max_height).filter(|v| v.container == Container::Mp4);
+    let hls = master.and_then(|m| m.best(max_height));
+    match (mp4, hls) {
+        (Some(mp4), Some(hls)) => {
+            if hls.height.unwrap_or(0) > mp4.height.unwrap_or(0) {
+                Some(Choice::Hls(hls.clone()))
+            } else {
+                Some(Choice::Mp4(mp4.clone()))
+            }
+        }
+        (Some(mp4), None) => Some(Choice::Mp4(mp4.clone())),
+        (None, Some(hls)) => Some(Choice::Hls(hls.clone())),
+        (None, None) => None,
+    }
+}
+
+/// Fetch and parse an HLS master playlist.
+pub fn fetch_hls_master(client: &Client, master_url: &str) -> Result<HlsMaster> {
+    let body = get_text(client, master_url, 2)?;
+    let base = reqwest::Url::parse(master_url).context("parse master playlist url")?;
+    let mut master = HlsMaster::default();
+    let mut pending: Option<(Option<u32>, u64, Option<String>)> = None;
+    for line in body.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("#EXT-X-MEDIA:") {
+            let attrs = parse_attrs(rest);
+            if attrs.get("TYPE").map(String::as_str) == Some("AUDIO") {
+                if let (Some(group), Some(uri)) = (attrs.get("GROUP-ID"), attrs.get("URI")) {
+                    master.audios.push(HlsAudio {
+                        group: group.clone(),
+                        url: join_url(&base, uri),
+                    });
+                }
+            }
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("#EXT-X-STREAM-INF:") {
+            let attrs = parse_attrs(rest);
+            let height = attrs
+                .get("RESOLUTION")
+                .and_then(|r| r.split_once('x').map(|(_, h)| h.to_string()))
+                .and_then(|h| h.parse::<u32>().ok());
+            let bandwidth = attrs
+                .get("AVERAGE-BANDWIDTH")
+                .or_else(|| attrs.get("BANDWIDTH"))
+                .and_then(|b| b.parse::<u64>().ok())
+                .unwrap_or(0);
+            pending = Some((height, bandwidth, attrs.get("AUDIO").cloned()));
+            continue;
+        }
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
+        if let Some((height, bandwidth, audio_group)) = pending.take() {
+            master.renditions.push(HlsRendition {
+                url: join_url(&base, line),
+                height,
+                bandwidth,
+                audio_group,
+            });
+        }
+    }
+    if master.renditions.is_empty() {
+        bail!("no renditions in HLS master {master_url}");
+    }
+    Ok(master)
+}
+
+fn parse_attrs(input: &str) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    let mut key = String::new();
+    let mut value = String::new();
+    let mut in_value = false;
+    let mut in_quotes = false;
+    for ch in input.chars() {
+        match ch {
+            '"' => in_quotes = !in_quotes,
+            '=' if !in_value && !in_quotes => {
+                in_value = true;
+            }
+            ',' if !in_quotes => {
+                if !key.is_empty() {
+                    out.insert(key.trim().to_string(), value.trim().to_string());
+                }
+                key.clear();
+                value.clear();
+                in_value = false;
+            }
+            c => {
+                if in_value {
+                    value.push(c);
+                } else {
+                    key.push(c);
+                }
+            }
+        }
+    }
+    if !key.is_empty() {
+        out.insert(key.trim().to_string(), value.trim().to_string());
+    }
+    out
+}
+
+fn join_url(base: &reqwest::Url, reference: &str) -> String {
+    base.join(reference)
+        .map(|u| u.to_string())
+        .unwrap_or_else(|_| reference.to_string())
+}
+
+fn get_text(client: &Client, url: &str, retries: u32) -> Result<String> {
+    let mut last = None;
+    for attempt in 0..=retries {
+        match client.get(url).send() {
+            Ok(resp) => {
+                let status = resp.status();
+                let body = resp.text().unwrap_or_default();
+                if status.is_success() {
+                    return Ok(body);
+                }
+                last = Some(anyhow!("{url} -> HTTP {status}"));
+                if status.is_client_error() && status.as_u16() != 429 {
+                    break;
+                }
+            }
+            Err(e) => last = Some(anyhow!("{url}: {e}")),
+        }
+        if attempt < retries {
+            std::thread::sleep(Duration::from_millis(400 * (1 << attempt)));
+        }
+    }
+    Err(last.unwrap_or_else(|| anyhow!("{url}: no attempt made")))
 }
 
 /// Prefer the tallest MP4 that stays within `max_height`, breaking ties on
@@ -404,6 +609,111 @@ mod tests {
     }
 
     #[test]
+    fn parses_hls_master_attrs() {
+        let text = concat!(
+            "#EXTM3U\n",
+            "#EXT-X-MEDIA:NAME=\"Audio\",TYPE=AUDIO,GROUP-ID=\"audio-128000\",AUTOSELECT=YES,URI=\"/a/pl/mp4a/128k/x.m3u8\"\n",
+            "#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1022814,BANDWIDTH=1844582,RESOLUTION=1280x720,CODECS=\"mp4a.40.2,avc1.640020\",AUDIO=\"audio-128000\"\n",
+            "/a/pl/avc1/1280x720/v.m3u8\n"
+        );
+        let base = reqwest::Url::parse("https://video.twimg.com/amplify_video/1/pl/m.m3u8?tag=29")
+            .unwrap();
+        let mut master = HlsMaster::default();
+        let mut pending = None;
+        for line in text.lines() {
+            if let Some(rest) = line.strip_prefix("#EXT-X-MEDIA:") {
+                let a = parse_attrs(rest);
+                if a.get("TYPE").map(String::as_str) == Some("AUDIO") {
+                    master.audios.push(HlsAudio {
+                        group: a["GROUP-ID"].clone(),
+                        url: join_url(&base, &a["URI"]),
+                    });
+                }
+            } else if let Some(rest) = line.strip_prefix("#EXT-X-STREAM-INF:") {
+                let a = parse_attrs(rest);
+                let h = a["RESOLUTION"]
+                    .split_once('x')
+                    .map(|(_, h)| h.parse::<u32>().unwrap());
+                pending = Some((
+                    h,
+                    a["AVERAGE-BANDWIDTH"].parse::<u64>().unwrap(),
+                    a.get("AUDIO").cloned(),
+                ));
+            } else if !line.starts_with('#') && !line.is_empty() {
+                let (height, bandwidth, audio_group) = pending.take().unwrap();
+                master.renditions.push(HlsRendition {
+                    url: join_url(&base, line),
+                    height,
+                    bandwidth,
+                    audio_group,
+                });
+            }
+        }
+        assert_eq!(master.audios.len(), 1);
+        assert_eq!(master.audios[0].group, "audio-128000");
+        assert!(master.audios[0].url.ends_with("/a/pl/mp4a/128k/x.m3u8"));
+        let best = master.best(None).unwrap();
+        assert_eq!(best.height, Some(720));
+        assert_eq!(best.bandwidth, 1_022_814);
+        assert_eq!(master.audio_for(best).unwrap().group, "audio-128000");
+    }
+
+    #[test]
+    fn choose_prefers_taller_hls_only() {
+        let v = asset(vec![mp4(
+            "https://video.twimg.com/v/vid/avc1/1280x720/a.mp4",
+            2_176_000,
+        )]);
+        let same_ladder = HlsMaster {
+            renditions: vec![HlsRendition {
+                url: "https://video.twimg.com/v/pl/avc1/1280x720/x.m3u8".into(),
+                height: Some(720),
+                bandwidth: 1_022_814,
+                audio_group: None,
+            }],
+            audios: vec![],
+        };
+        assert!(matches!(
+            choose(&v, Some(&same_ladder), None),
+            Some(Choice::Mp4(_))
+        ));
+
+        let taller = HlsMaster {
+            renditions: vec![HlsRendition {
+                url: "https://video.twimg.com/v/pl/avc1/1920x1080/x.m3u8".into(),
+                height: Some(1080),
+                bandwidth: 5_000_000,
+                audio_group: None,
+            }],
+            audios: vec![],
+        };
+        let picked = choose(&v, Some(&taller), None).unwrap();
+        assert!(matches!(picked, Choice::Hls(_)));
+        assert_eq!(picked.height(), Some(1080));
+    }
+
+    #[test]
+    fn choose_respects_height_cap() {
+        let v = asset(vec![mp4(
+            "https://video.twimg.com/v/vid/avc1/1280x720/a.mp4",
+            2_176_000,
+        )]);
+        let taller = HlsMaster {
+            renditions: vec![HlsRendition {
+                url: "https://video.twimg.com/v/pl/avc1/1920x1080/x.m3u8".into(),
+                height: Some(1080),
+                bandwidth: 5_000_000,
+                audio_group: None,
+            }],
+            audios: vec![],
+        };
+        assert!(matches!(
+            choose(&v, Some(&taller), Some(720)),
+            Some(Choice::Mp4(_))
+        ));
+    }
+
+    #[test]
     fn created_date_parsing() {
         assert_eq!(
             parse_created_date("Sun Aug 30 07:57:04 +0000 2026").as_deref(),
@@ -435,9 +745,10 @@ mod tests {
         let r = parse_fx(&payload).unwrap();
         assert_eq!(r.author_handle, "ShenqiaoQuella");
         assert_eq!(r.created_date.as_deref(), Some("2026-08-30"));
-        let best = r.best_variants(None);
-        assert_eq!(best.len(), 1);
-        assert_eq!(best[0].1.height, Some(720));
+        assert_eq!(r.videos.len(), 1);
+        let best = choose(&r.videos[0], None, None).expect("choice");
+        assert_eq!(best.height(), Some(720));
+        assert!(matches!(best, Choice::Mp4(_)));
     }
 
     #[test]
