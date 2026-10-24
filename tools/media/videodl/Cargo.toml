@@ -1,0 +1,25 @@
+[package]
+name = "videodl"
+version = "0.1.0"
+edition = "2021"
+description = "Download X/Twitter videos and push them to an xstream ostore drive"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "videodl"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+percent-encoding = "2"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "socks", "gzip"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

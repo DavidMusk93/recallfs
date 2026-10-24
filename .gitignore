@@ -14,3 +14,6 @@ learning/studies/*/demo/build/
 learning/algorithms/target/
 learning/algorithms/**/target/
 learning/algorithms/Cargo.lock
+
+# Rust applet build output (tools/$domain/<applet>)
+tools/**/target/
