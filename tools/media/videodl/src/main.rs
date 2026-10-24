@@ -240,7 +240,7 @@ fn run() -> Result<()> {
             let items = collect_targets(&args.targets, &args.manifest)?;
             let xs = connect_xstream(&cli)?;
             xs.mkdir(&args.remote_dir)?;
-            let report = download_all(
+            let mut report = download_all(
                 &client,
                 &items,
                 &args.out,
@@ -264,16 +264,26 @@ fn run() -> Result<()> {
                         continue;
                     }
                 }
-                let put = xs.put(&remote, local)?;
-                if put.size != row.bytes {
-                    bail!(
-                        "{}: uploaded {} bytes but local file is {}",
-                        remote,
-                        put.size,
-                        row.bytes
-                    );
+                match xs.put(&remote, local, args.retries) {
+                    Ok(put) if put.size == row.bytes => {
+                        uploaded.push((name, remote, put.size, false))
+                    }
+                    Ok(put) => {
+                        report.failures.push((
+                            row.id.clone(),
+                            remote.clone(),
+                            format!(
+                                "server stored {} bytes, local file is {}",
+                                put.size, row.bytes
+                            ),
+                        ));
+                    }
+                    Err(e) => {
+                        report
+                            .failures
+                            .push((row.id.clone(), remote.clone(), format!("{e:#}")));
+                    }
                 }
-                uploaded.push((name, remote, put.size, false));
             }
             print_table(&report.rows, Some(&uploaded));
             report.exit_if_failed()?;
@@ -302,7 +312,7 @@ fn run() -> Result<()> {
                         }
                     }
                 }
-                let put = xs.put(&remote, file)?;
+                let put = xs.put(&remote, file, 3)?;
                 if put.size != size {
                     bail!(
                         "{remote}: server reports {} bytes, local {}",

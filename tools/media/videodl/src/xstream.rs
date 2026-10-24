@@ -14,7 +14,7 @@
 //! did-you-type-it-right gate rather than sent to the server.
 
 use crate::progress::Handle;
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use reqwest::blocking::{Body, Client as HttpClient};
 use reqwest::header::{ACCEPT, CONTENT_TYPE, COOKIE};
@@ -76,8 +76,12 @@ impl Client {
     /// Fetch the ostore base URL + bearer token using the `xstream_auth` cookie.
     pub fn connect(base: &str, cookie: &str) -> Result<Self> {
         let base = base.trim_end_matches('/');
+        // reqwest's blocking client defaults to a 30s *whole-request* timeout,
+        // which aborts any upload bigger than ~100 MiB. Requests set their own
+        // size-derived budget instead (see `put`), so disable the client default.
         let http = HttpClient::builder()
             .connect_timeout(Duration::from_secs(20))
+            .timeout(None)
             .user_agent(format!("videodl/{}", env!("CARGO_PKG_VERSION")))
             .build()
             .context("build HTTP client")?;
@@ -178,8 +182,43 @@ impl Client {
     }
 
     /// Stream one local file to an exact remote path (parents auto-created).
-    pub fn put(&self, remote_path: &str, local: &Path) -> Result<PutResponse> {
+    ///
+    /// The per-request timeout is derived from the file size assuming a floor of
+    /// 64 KiB/s, so a slow uplink is not punished while a dead connection still
+    /// fails in bounded time. Failures retry from scratch (ostore has no
+    /// resumable upload) after removing the partial object.
+    pub fn put(&self, remote_path: &str, local: &Path, retries: u32) -> Result<PutResponse> {
         let size = fs::metadata(local)?.len();
+        let budget = Duration::from_secs(60) + Duration::from_secs(size / (64 * 1024));
+        let mut last = None;
+        for attempt in 0..=retries {
+            match self.put_once(remote_path, local, size, budget) {
+                Ok(resp) => return Ok(resp),
+                Err(e) => {
+                    eprintln!(
+                        "  upload attempt {}/{} failed: {e:#}",
+                        attempt + 1,
+                        retries + 1
+                    );
+                    last = Some(e);
+                    // A half-written object must not survive a retry.
+                    let _ = self.delete(remote_path);
+                    if attempt < retries {
+                        std::thread::sleep(Duration::from_millis(1_000 * (1 << attempt)));
+                    }
+                }
+            }
+        }
+        Err(last.unwrap_or_else(|| anyhow!("upload failed without an error")))
+    }
+
+    fn put_once(
+        &self,
+        remote_path: &str,
+        local: &Path,
+        size: u64,
+        budget: Duration,
+    ) -> Result<PutResponse> {
         let url = format!(
             "{}/api/files/{}",
             self.ostore,
@@ -198,6 +237,7 @@ impl Client {
             .bearer_auth(&self.token)
             .header(CONTENT_TYPE, "application/octet-stream")
             .header(ACCEPT, "application/json")
+            .timeout(budget)
             .body(body)
             .send()
             .with_context(|| format!("PUT {url}"))?;
